@@ -1,0 +1,41 @@
+{allRecommendations: 0, filteredRecommendations: 0, firstThreeRecommendations: 0, showRecommendationModal: false}
+g3843efb5b24a09d1ca1f2d31a9d9663703f10c5aa76e2688f93eb0f3a981f638dc8c2c4756dfe0d332edd3610b4126f138ccaf3be8304e855c1684bb41580bf9_1280.jpg:1  GET https://pixabay.com/get/g3843efb5b24a09d1ca1f2d31a9d9663703f10c5aa76e2688f93eb0f3a981f638dc8c2c4756dfe0d332edd3610b4126f138ccaf3be8304e855c1684bb41580bf9_1280.jpg 400 (Bad Request)
+Image
+(anonymous) @ imageCache.ts:35
+preloadImage @ imageCache.ts:19
+handleMouseEnter @ restaurant-card.tsx:72
+callCallback2 @ chunk-RPCDYKBN.js?v=e1756ed8:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=e1756ed8:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=e1756ed8:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=e1756ed8:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=e1756ed8:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=e1756ed8:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=e1756ed8:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=e1756ed8:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=e1756ed8:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=e1756ed8:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=e1756ed8:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=e1756ed8:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=e1756ed8:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=e1756ed8:5472
+dispatchContinuousEvent @ chunk-RPCDYKBN.js?v=e1756ed8:5461Understand this error
+g3843efb5b24a09d1ca1f2d31a9d9663703f10c5aa76e2688f93eb0f3a981f638dc8c2c4756dfe0d332edd3610b4126f138ccaf3be8304e855c1684bb41580bf9_1280.jpg:1  GET https://pixabay.com/get/g3843efb5b24a09d1ca1f2d31a9d9663703f10c5aa76e2688f93eb0f3a981f638dc8c2c4756dfe0d332edd3610b4126f138ccaf3be8304e855c1684bb41580bf9_1280.jpg 400 (Bad Request)
+Image
+(anonymous) @ imageCache.ts:35
+preloadImage @ imageCache.ts:19
+handleMouseEnter @ restaurant-card.tsx:72
+callCallback2 @ chunk-RPCDYKBN.js?v=e1756ed8:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=e1756ed8:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=e1756ed8:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=e1756ed8:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=e1756ed8:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=e1756ed8:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=e1756ed8:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=e1756ed8:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=e1756ed8:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=e1756ed8:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=e1756ed8:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=e1756ed8:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=e1756ed8:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=e1756ed8:5472
+dispatchContinuousEvent @ chunk-RPCDYKBN.js?v=e1756ed8:5461Understand this error

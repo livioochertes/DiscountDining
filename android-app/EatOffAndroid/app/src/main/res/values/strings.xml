@@ -1,0 +1,77 @@
+<resources>
+    <string name="app_name">EatOff</string>
+    <string name="app_description">Restaurant Voucher Platform</string>
+    
+    <!-- Login Screen -->
+    <string name="welcome_message">Welcome to EatOff</string>
+    <string name="login_subtitle">Sign in to discover amazing restaurants</string>
+    <string name="email_hint">Email</string>
+    <string name="password_hint">Password</string>
+    <string name="sign_in">Sign In</string>
+    <string name="test_connection">Test Server Connection</string>
+    <string name="demo_credentials">Demo Credentials:\nEmail: demo@example.com\nPassword: DemoPassword123!</string>
+    
+    <!-- Main Screen -->
+    <string name="restaurants_title">Available Restaurants</string>
+    <string name="loading_restaurants">Loading restaurants...</string>
+    <string name="no_restaurants">No restaurants found</string>
+    <string name="network_error">Network error. Please check your connection.</string>
+    <string name="refresh">Pull to refresh</string>
+    
+    <!-- Restaurant Card -->
+    <string name="voucher_packages">Voucher Packages</string>
+    <string name="view_menu">View Menu</string>
+    <string name="rating_format">%.1f</string>
+    <string name="delivery_available">Delivery Available</string>
+    <string name="takeout_available">Takeout Available</string>
+    <string name="dine_in_available">Dine-in Available</string>
+    
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_vouchers">Vouchers</string>
+    <string name="nav_orders">Orders</string>
+    <string name="nav_profile">Profile</string>
+    
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="retry">Retry</string>
+    <string name="loading">Loading...</string>
+    <string name="error">Error</string>
+    <string name="success">Success</string>
+    
+    <!-- Status Messages -->
+    <string name="login_successful">Login successful!</string>
+    <string name="login_failed">Login failed</string>
+    <string name="connection_testing">Testing connection...</string>
+    <string name="connection_successful">Connected successfully!</string>
+    <string name="connection_failed">Connection failed</string>
+    <string name="logging_in">Logging in...</string>
+    
+    <!-- Voucher Package -->
+    <string name="meals_format">%d meals</string>
+    <string name="price_format">€%.2f</string>
+    <string name="discount_format">%d%% OFF</string>
+    <string name="save_amount">Save %s</string>
+    <string name="validity_months">Valid for %d months</string>
+    
+    <!-- Profile -->
+    <string name="profile_title">Profile</string>
+    <string name="account_balance">Account Balance</string>
+    <string name="loyalty_points">Loyalty Points</string>
+    <string name="membership_tier">Membership Tier</string>
+    <string name="logout">Logout</string>
+    
+    <!-- Orders -->
+    <string name="orders_title">My Orders</string>
+    <string name="order_history">Order History</string>
+    <string name="no_orders">No orders yet</string>
+    
+    <!-- Vouchers -->
+    <string name="vouchers_title">My Vouchers</string>
+    <string name="active_vouchers">Active Vouchers</string>
+    <string name="expired_vouchers">Expired Vouchers</string>
+    <string name="no_vouchers">No vouchers available</string>
+    <string name="view_qr_code">View QR Code</string>
+    
+</resources>

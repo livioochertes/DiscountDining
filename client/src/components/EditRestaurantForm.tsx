@@ -1,0 +1,509 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Clock, Truck, MapPin, DollarSign } from "lucide-react";
+
+// Operating hours schema
+const operatingHoursSchema = z.object({
+  monday: z.object({
+    open: z.string().optional(),
+    close: z.string().optional(),
+    closed: z.boolean().default(false),
+  }),
+  tuesday: z.object({
+    open: z.string().optional(),
+    close: z.string().optional(),
+    closed: z.boolean().default(false),
+  }),
+  wednesday: z.object({
+    open: z.string().optional(),
+    close: z.string().optional(),
+    closed: z.boolean().default(false),
+  }),
+  thursday: z.object({
+    open: z.string().optional(),
+    close: z.string().optional(),
+    closed: z.boolean().default(false),
+  }),
+  friday: z.object({
+    open: z.string().optional(),
+    close: z.string().optional(),
+    closed: z.boolean().default(false),
+  }),
+  saturday: z.object({
+    open: z.string().optional(),
+    close: z.string().optional(),
+    closed: z.boolean().default(false),
+  }),
+  sunday: z.object({
+    open: z.string().optional(),
+    close: z.string().optional(),
+    closed: z.boolean().default(false),
+  }),
+});
+
+// Restaurant edit schema
+const editRestaurantSchema = z.object({
+  name: z.string().min(1, "Restaurant name is required"),
+  cuisine: z.string().min(1, "Cuisine type is required"),
+  location: z.string().min(1, "Location is required"),
+  address: z.string().min(1, "Address is required"),
+  phone: z.string().optional(),
+  email: z.string().email("Valid email is required").optional().or(z.literal("")),
+  description: z.string().min(1, "Description is required"),
+  priceRange: z.string().min(1, "Price range is required"),
+  imageUrl: z.string().optional(),
+  operatingHours: operatingHoursSchema,
+  // Service options
+  offersDelivery: z.boolean().default(false),
+  offersTakeout: z.boolean().default(true),
+  dineInAvailable: z.boolean().default(true),
+  // Delivery settings (conditional on delivery availability)
+  deliveryRadius: z.string().optional(),
+  deliveryFee: z.string().optional(),
+  minimumDeliveryOrder: z.string().optional(),
+});
+
+type EditRestaurantFormData = z.infer<typeof editRestaurantSchema>;
+
+interface EditRestaurantFormProps {
+  restaurant: any;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRestaurantFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  // Parse existing operating hours
+  const parseOperatingHours = (hoursString: string | null) => {
+    if (!hoursString) {
+      return {
+        monday: { open: "09:00", close: "22:00", closed: false },
+        tuesday: { open: "09:00", close: "22:00", closed: false },
+        wednesday: { open: "09:00", close: "22:00", closed: false },
+        thursday: { open: "09:00", close: "22:00", closed: false },
+        friday: { open: "09:00", close: "22:00", closed: false },
+        saturday: { open: "09:00", close: "22:00", closed: false },
+        sunday: { open: "09:00", close: "22:00", closed: false },
+      };
+    }
+
+    try {
+      return JSON.parse(hoursString);
+    } catch {
+      return {
+        monday: { open: "09:00", close: "22:00", closed: false },
+        tuesday: { open: "09:00", close: "22:00", closed: false },
+        wednesday: { open: "09:00", close: "22:00", closed: false },
+        thursday: { open: "09:00", close: "22:00", closed: false },
+        friday: { open: "09:00", close: "22:00", closed: false },
+        saturday: { open: "09:00", close: "22:00", closed: false },
+        sunday: { open: "09:00", close: "22:00", closed: false },
+      };
+    }
+  };
+
+  const form = useForm<EditRestaurantFormData>({
+    resolver: zodResolver(editRestaurantSchema),
+    defaultValues: {
+      name: restaurant.name || "",
+      cuisine: restaurant.cuisine || "",
+      location: restaurant.location || "",
+      address: restaurant.address || "",
+      phone: restaurant.phone || "",
+      email: restaurant.email || "",
+      description: restaurant.description || "",
+      priceRange: restaurant.priceRange || "",
+      imageUrl: restaurant.imageUrl || "",
+      operatingHours: parseOperatingHours(restaurant.operatingHours),
+      // Service options
+      offersDelivery: restaurant.offersDelivery || false,
+      offersTakeout: restaurant.offersTakeout !== false, // Default to true
+      dineInAvailable: restaurant.dineInAvailable !== false, // Default to true
+      // Delivery settings
+      deliveryRadius: restaurant.deliveryRadius ? restaurant.deliveryRadius.toString() : "",
+      deliveryFee: restaurant.deliveryFee ? restaurant.deliveryFee.toString() : "",
+      minimumDeliveryOrder: restaurant.minimumDeliveryOrder ? restaurant.minimumDeliveryOrder.toString() : "",
+    },
+  });
+
+  const { watch, setValue, getValues } = form;
+  const operatingHours = watch("operatingHours");
+
+  const onSubmit = async (data: EditRestaurantFormData) => {
+    setIsSubmitting(true);
+    try {
+      const formData = {
+        ...data,
+        operatingHours: JSON.stringify(data.operatingHours),
+        // Convert string delivery values to proper numbers/decimals
+        deliveryRadius: data.deliveryRadius ? parseFloat(data.deliveryRadius) : null,
+        deliveryFee: data.deliveryFee ? parseFloat(data.deliveryFee) : null,
+        minimumDeliveryOrder: data.minimumDeliveryOrder ? parseFloat(data.minimumDeliveryOrder) : null,
+      };
+
+      await apiRequest("PUT", `/api/restaurant-portal/restaurants/${restaurant.id}`, formData);
+
+      toast({
+        title: "Success",
+        description: "Restaurant updated successfully!",
+      });
+
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update restaurant",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const cuisineOptions = [
+    "Italian", "Chinese", "Japanese", "Indian", "Mexican", "French", "Thai", "Greek", 
+    "American", "Mediterranean", "Korean", "Vietnamese", "Turkish", "Lebanese", 
+    "Spanish", "German", "Brazilian", "Ethiopian", "Moroccan", "Peruvian", "Other"
+  ];
+
+  const priceRanges = ["$", "$$", "$$$", "$$$$"];
+
+  const days = [
+    { key: "monday", label: "Monday" },
+    { key: "tuesday", label: "Tuesday" },
+    { key: "wednesday", label: "Wednesday" },
+    { key: "thursday", label: "Thursday" },
+    { key: "friday", label: "Friday" },
+    { key: "saturday", label: "Saturday" },
+    { key: "sunday", label: "Sunday" },
+  ];
+
+  const handleDayToggle = (day: string, checked: boolean) => {
+    setValue(`operatingHours.${day}.closed` as any, checked);
+    if (checked) {
+      setValue(`operatingHours.${day}.open` as any, "");
+      setValue(`operatingHours.${day}.close` as any, "");
+    }
+  };
+
+  const handleTimeChange = (day: string, timeType: "open" | "close", value: string) => {
+    setValue(`operatingHours.${day}.${timeType}` as any, value);
+  };
+
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      {/* Basic Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Basic Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Restaurant Name *</Label>
+              <Input
+                id="name"
+                {...form.register("name")}
+                placeholder="Enter restaurant name"
+              />
+              {form.formState.errors.name && (
+                <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="cuisine">Cuisine Type *</Label>
+              <Select
+                value={form.watch("cuisine")}
+                onValueChange={(value) => form.setValue("cuisine", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select cuisine type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cuisineOptions.map((cuisine) => (
+                    <SelectItem key={cuisine} value={cuisine}>
+                      {cuisine}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.cuisine && (
+                <p className="text-sm text-red-500 mt-1">{form.formState.errors.cuisine.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="location">Location/City *</Label>
+              <Input
+                id="location"
+                {...form.register("location")}
+                placeholder="e.g., Downtown, Milan"
+              />
+              {form.formState.errors.location && (
+                <p className="text-sm text-red-500 mt-1">{form.formState.errors.location.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="priceRange">Price Range *</Label>
+              <Select
+                value={form.watch("priceRange")}
+                onValueChange={(value) => form.setValue("priceRange", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select price range" />
+                </SelectTrigger>
+                <SelectContent>
+                  {priceRanges.map((range) => (
+                    <SelectItem key={range} value={range}>
+                      {range}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.priceRange && (
+                <p className="text-sm text-red-500 mt-1">{form.formState.errors.priceRange.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="address">Full Address *</Label>
+            <Input
+              id="address"
+              {...form.register("address")}
+              placeholder="Complete street address"
+            />
+            {form.formState.errors.address && (
+              <p className="text-sm text-red-500 mt-1">{form.formState.errors.address.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description *</Label>
+            <Textarea
+              id="description"
+              {...form.register("description")}
+              placeholder="Describe your restaurant, specialties, atmosphere..."
+              rows={3}
+            />
+            {form.formState.errors.description && (
+              <p className="text-sm text-red-500 mt-1">{form.formState.errors.description.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                {...form.register("phone")}
+                placeholder="Restaurant phone number"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                {...form.register("email")}
+                placeholder="Restaurant email"
+              />
+              {form.formState.errors.email && (
+                <p className="text-sm text-red-500 mt-1">{form.formState.errors.email.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="imageUrl">Restaurant Image URL</Label>
+            <Input
+              id="imageUrl"
+              {...form.register("imageUrl")}
+              placeholder="URL to restaurant image"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Operating Hours */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Operating Hours
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {days.map((day) => (
+            <div key={day.key} className="flex items-center gap-4 p-3 border rounded-lg">
+              <div className="w-24">
+                <Label className="font-medium">{day.label}</Label>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={operatingHours[day.key]?.closed || false}
+                  onCheckedChange={(checked) => handleDayToggle(day.key, checked as boolean)}
+                />
+                <Label className="text-sm">Closed</Label>
+              </div>
+
+              {!operatingHours[day.key]?.closed && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    value={operatingHours[day.key]?.open || ""}
+                    onChange={(e) => handleTimeChange(day.key, "open", e.target.value)}
+                    className="w-32"
+                  />
+                  <span className="text-sm text-gray-500">to</span>
+                  <Input
+                    type="time"
+                    value={operatingHours[day.key]?.close || ""}
+                    onChange={(e) => handleTimeChange(day.key, "close", e.target.value)}
+                    className="w-32"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Service Options */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Truck className="h-5 w-5" />
+            Service Options
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Service Type Checkboxes */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="dineInAvailable"
+                checked={form.watch("dineInAvailable")}
+                onCheckedChange={(checked) => form.setValue("dineInAvailable", checked as boolean)}
+              />
+              <Label htmlFor="dineInAvailable" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Dine-In Available
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="offersTakeout"
+                checked={form.watch("offersTakeout")}
+                onCheckedChange={(checked) => form.setValue("offersTakeout", checked as boolean)}
+              />
+              <Label htmlFor="offersTakeout" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Takeout Available
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="offersDelivery"
+                checked={form.watch("offersDelivery")}
+                onCheckedChange={(checked) => form.setValue("offersDelivery", checked as boolean)}
+              />
+              <Label htmlFor="offersDelivery" className="flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                Delivery Available
+              </Label>
+            </div>
+          </div>
+
+          {/* Delivery Settings - Only show if delivery is enabled */}
+          {form.watch("offersDelivery") && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <h4 className="font-semibold text-lg">Delivery Settings</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="deliveryRadius">Delivery Radius (km)</Label>
+                    <Input
+                      id="deliveryRadius"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="50"
+                      {...form.register("deliveryRadius")}
+                      placeholder="e.g., 5.0"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="deliveryFee">Delivery Fee (€)</Label>
+                    <Input
+                      id="deliveryFee"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...form.register("deliveryFee")}
+                      placeholder="e.g., 2.50"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="minimumDeliveryOrder">Minimum Order (€)</Label>
+                    <Input
+                      id="minimumDeliveryOrder"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...form.register("minimumDeliveryOrder")}
+                      placeholder="e.g., 15.00"
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3 pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Updating..." : "Update Restaurant"}
+        </Button>
+      </div>
+    </form>
+  );
+}

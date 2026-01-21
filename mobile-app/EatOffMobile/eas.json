@@ -1,0 +1,32 @@
+{
+  "cli": {
+    "version": ">= 8.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "developmentClient": false,
+      "credentialsSource": "remote"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "credentialsSource": "remote"
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "credentialsSource": "remote"
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

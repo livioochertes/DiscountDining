@@ -1,0 +1,49 @@
+~/.../mobile-app/EatOffMobile$ ./build-clean.sh
+Building EatOff APK with clean dependencies...
+Cleaning dependencies...
+Installing dependencies...
+npm error code ERESOLVE
+npm error ERESOLVE unable to resolve dependency tree
+npm error
+npm error While resolving: eatoffmobile@1.0.0
+npm error Found: react@18.2.0
+npm error node_modules/react
+npm error   react@"18.2.0" from the root project
+npm error
+npm error Could not resolve dependency:
+npm error peer react@">= 18.3.1" from react-native-maps@1.24.3
+npm error node_modules/react-native-maps
+npm error   react-native-maps@"^1.8.0" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error /home/runner/.npm/_logs/2025-07-08T20_39_17_937Z-eresolve-report.txt
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-07-08T20_39_17_937Z-debug-0.log
+Starting clean build process...
+When prompted about keystore generation, answer 'y' (yes)
+
+Resolved "preview" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "preview" environment on EAS.
+
+✔ EAS Build does not officially support building managed project with Expo SDK < 41. Do you want to proceed? … yes
+✔ Using remote Android credentials (Expo server)
+✔ Using Keystore from configuration: Build Credentials XOA53BWpNJ (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+✔ Compressed project files 2s (41.7 MB)
+✔ Uploaded to EAS 7s
+
+See logs: https://expo.dev/accounts/livioochertes/projects/rest-express/builds/804b1a57-d8e4-409c-af82-90357177ec57
+
+Waiting for build to complete. You can press Ctrl+C to exit.
+✖ Build failed
+
+🤖 Android build failed:
+Gradle build failed with unknown error. See logs for the "Run gradlew" (https://expo.dev/accounts/livioochertes/projects/rest-express/builds/804b1a57-d8e4-409c-af82-90357177ec57#run-gradlew) phase for more information.
+
+Build completed. Check your EAS dashboard:
+https://expo.dev/accounts/livioochertes/projects/rest-express

@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "9c95bc63-78aa-424d-ac44-3d6d573ce426"
+      }
+    },
+    "android": {
+      "package": "com.livioochertes.restexpress"
+    },
+    "ios": {
+      "bundleIdentifier": "y",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}
