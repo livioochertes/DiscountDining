@@ -11,6 +11,10 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.1",
+    "@capacitor/cli": "^7.4.5",
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/ios": "^8.0.1",
     "@expo/cli": "^0.24.20",
     "@google-cloud/storage": "^7.16.0",
     "@hookform/resolvers": "^3.10.0",
