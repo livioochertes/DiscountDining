@@ -1,0 +1,560 @@
+/* Uppy File Upload Styles - Must be first */
+@import "@uppy/core/dist/style.min.css";
+@import "@uppy/dashboard/dist/style.min.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Uppy modal wrapper */
+.uppy-modal-wrapper .uppy-Dashboard--modal {
+  position: static !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: auto !important;
+}
+
+.uppy-modal-wrapper .uppy-Dashboard--modal .uppy-Dashboard-overlay {
+  display: none !important;
+}
+
+.uppy-modal-wrapper .uppy-Dashboard--modal .uppy-Dashboard-inner {
+  position: static !important;
+  transform: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 8px !important;
+}
+
+/* Ensure Uppy content is fully visible */
+.uppy-modal-wrapper .uppy-Dashboard {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 8px !important;
+}
+
+/* Force visibility for debugging */
+.uppy-modal-wrapper * {
+  visibility: visible !important;
+}
+
+/* CRITICAL: Force all Radix tooltip elements to render with maximum z-index */
+[data-radix-tooltip-content],
+[data-radix-popper-content-wrapper],
+[data-radix-tooltip-portal] {
+  z-index: 2147483647 !important;
+  position: fixed !important;
+}
+
+/* Professional tooltip styling */
+.radix-tooltip-override {
+  z-index: 2147483647 !important;
+  position: fixed !important;
+  pointer-events: auto !important;
+  background: linear-gradient(135deg, #1f2937 0%, #374151 100%) !important;
+  border: 1px solid #4b5563 !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #f9fafb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2) !important;
+  max-width: 240px !important;
+  word-wrap: break-word !important;
+  animation: tooltip-fade-in 0.2s ease-out !important;
+}
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Admin page structure adjustments */
+.admin-page-wrapper {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-navigation-container {
+  position: relative;
+  z-index: 2;
+}
+
+.admin-content-container {
+  position: relative;
+  z-index: 1;
+}
+
+
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(210, 22%, 22%);
+  --muted: hsl(210, 40%, 98%);
+  --muted-foreground: hsl(215, 16%, 47%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(210, 22%, 22%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(210, 22%, 22%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(214, 32%, 91%);
+  --primary: hsl(28, 100%, 56%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(28, 20%, 95%);
+  --secondary-foreground: hsl(28, 30%, 25%);
+  --accent: hsl(28, 80%, 65%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(210, 22%, 22%);
+  --radius: 0.5rem;
+  --chart-1: hsl(28, 100%, 56%);
+  --chart-2: hsl(28, 80%, 45%);
+  --chart-3: hsl(28, 60%, 35%);
+  --chart-4: hsl(28, 90%, 65%);
+  --chart-5: hsl(28, 70%, 50%);
+  --sidebar-background: hsl(0, 0%, 98%);
+  --sidebar-foreground: hsl(240, 5.3%, 26.1%);
+  --sidebar-primary: hsl(240, 5.9%, 10%);
+  --sidebar-primary-foreground: hsl(0, 0%, 98%);
+  --sidebar-accent: hsl(240, 4.8%, 95.9%);
+  --sidebar-accent-foreground: hsl(240, 5.9%, 10%);
+  --sidebar-border: hsl(220, 13%, 91%);
+  --sidebar-ring: hsl(217, 10%, 64.9%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(28, 100%, 56%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(28, 15%, 20%);
+  --secondary-foreground: hsl(28, 20%, 85%);
+  --accent: hsl(28, 80%, 65%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+  --sidebar-background: hsl(240, 5.9%, 10%);
+  --sidebar-foreground: hsl(240, 4.8%, 95.9%);
+  --sidebar-primary: hsl(224, 71.4%, 4.1%);
+  --sidebar-primary-foreground: hsl(210, 20%, 98%);
+  --sidebar-accent: hsl(240, 3.7%, 15.9%);
+  --sidebar-accent-foreground: hsl(240, 4.8%, 95.9%);
+  --sidebar-border: hsl(240, 3.7%, 15.9%);
+  --sidebar-ring: hsl(240, 4.9%, 83.9%);
+}
+
+/* Modal and Dialog Positioning - CRITICAL FIX for all modals */
+[data-radix-dialog-overlay] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  animation: fadeIn 0.2s ease-out !important;
+}
+
+/* Prevent body scroll when modal is open */
+body:has([data-radix-dialog-overlay]) {
+  overflow: hidden !important;
+}
+
+/* AI Recommendation Modal - Perfect Viewport Centering */
+.ai-recommendation-modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 10000 !important;
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1rem !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  pointer-events: all !important;
+  backdrop-filter: blur(4px) !important;
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+  touch-action: none !important;
+}
+
+/* Ensure modal content is properly contained and styled */
+.ai-recommendation-modal .modal-content {
+  max-width: 48rem !important;
+  max-height: 85vh !important;
+  width: 100% !important;
+  position: relative !important;
+  transform: none !important;
+  margin: 0 auto !important;
+  background: white !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  pointer-events: all !important;
+  animation: modalFadeIn 0.2s ease-out !important;
+  overscroll-behavior: contain !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent !important;
+}
+
+/* Custom scrollbar for modal content */
+.ai-recommendation-modal .modal-content::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.ai-recommendation-modal .modal-content::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.ai-recommendation-modal .modal-content::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5) !important;
+  border-radius: 3px !important;
+}
+
+.ai-recommendation-modal .modal-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.7) !important;
+}
+
+/* Dark mode support for modal content */
+.dark .ai-recommendation-modal .modal-content {
+  background: rgb(31, 41, 55) !important;
+  border: 1px solid rgb(55, 65, 81) !important;
+}
+
+/* Modal fade in animation */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Body lock class for preventing scroll when modal is open */
+.modal-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100vh !important;
+  top: 0 !important;
+  left: 0 !important;
+}
+
+html.modal-open {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+/* Ensure body has proper layout behavior */
+body {
+  padding-top: 0;
+  margin: 0;
+  overflow-x: hidden; /* Prevent horizontal scrollbar */
+}
+
+/* Ensure fixed header stays fixed */
+header[class*="fixed"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  z-index: 50 !important;
+}
+
+/* Hide browser extension overlays that interfere with header */
+grammarly-extension,
+grammarly-desktop-integration,
+.__grammarly_editor {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Ensure our header has maximum z-index over browser extensions */
+header {
+  z-index: 2147483647 !important;
+  isolation: isolate !important;
+}
+
+/* Language Selector Dropdown - Works properly with fixed header */
+.language-selector-dropdown {
+  z-index: 9999 !important;
+}
+
+/* Allow body scrolling when dropdown is open */
+body:has([data-radix-dropdown-menu-content]) {
+  overflow: auto !important;
+}
+
+/* Clean modal overlay positioning */
+[data-radix-dialog-overlay][data-state="open"] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 49999 !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Enrollment modal - let overlay handle centering */
+.enrollment-modal[data-radix-dialog-content] {
+  position: relative !important;
+  width: min(90vw, 768px) !important;
+  max-height: 85vh !important;
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  overflow-y: auto !important;
+}
+
+.dark .enrollment-modal[data-radix-dialog-content] {
+  background: hsl(240, 10%, 3.9%) !important;
+  border: 1px solid hsl(240, 3.7%, 15.9%) !important;
+}
+
+/* Smooth animations for modal appearance */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+/* Scroll Performance Optimizations */
+html {
+  scroll-behavior: auto;
+}
+
+* {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Optimize scrolling performance for the main page */
+.transform-gpu {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+}
+
+/* Optimize grid rendering */
+[data-tour="restaurant-grid"] {
+  contain: layout;
+}
+
+/* Smooth scrolling for all scrollable containers */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Onboarding Tour Animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes glow {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(255, 165, 0, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(255, 165, 0, 0.6);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Modal and popover z-index fixes */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
+[data-radix-select-content] {
+  z-index: 9999 !important;
+}
+
+[data-radix-popover-content] {
+  z-index: 9999 !important;
+}
+
+/* Native select dropdown styling for opaque background */
+select {
+  background-color: white !important;
+}
+
+select option {
+  background-color: white !important;
+  color: #1f2937 !important;
+}
+
+.dark select {
+  background-color: #111827 !important;
+}
+
+.dark select option {
+  background-color: #111827 !important;
+  color: #f3f4f6 !important;
+}
+
+.reservation-modal [data-radix-dialog-content] {
+  z-index: 50 !important;
+}
+
+/* Simple but effective image optimization */
+.restaurant-card img {
+  /* Smooth transitions for loading */
+  transition: opacity 0.2s ease;
+  
+  /* Prevent layout shifts */
+  object-fit: cover;
+  
+  /* Basic GPU acceleration */
+  transform: translateZ(0);
+  will-change: auto;
+}
+
+/* Loading placeholder with shimmer */
+.restaurant-card img:not([src]),
+.restaurant-card img[src=""] {
+  background: linear-gradient(90deg, #f0f0f0 25%, transparent 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Clean performance optimizations */
+.restaurant-card {
+  /* Basic acceleration for smooth interactions */
+  transform: translateZ(0);
+  will-change: auto;
+  
+  /* Contain paint for better performance */
+  contain: layout paint;
+}
+
+.restaurant-grid {
+  /* Optimize scrolling performance */
+  contain: layout paint;
+}
+
+/* Filter box dimension control */
+.filter-box-compact {
+  /* When not authenticated - compact size, natural height */
+  max-height: fit-content !important;
+  height: auto !important;
+}
+
+.filter-box-expanded {
+  /* When authenticated - will be controlled by inline styles to match restaurant area */
+  /* Inline styles will override this when needed */
+}
+
+/* AI Recommendation Modal Styles */
+.ai-recommendation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+  /* Prevent scrolling and pointer events on background */
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.ai-recommendation-modal .modal-content {
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 100%;
+  overflow-y: auto;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+
+.dark .ai-recommendation-modal .modal-content {
+  background: rgb(17 24 39);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}

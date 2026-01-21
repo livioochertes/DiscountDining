@@ -1,0 +1,73 @@
+✅ 1. Structură generală API & Frontend
+🔹 Structură de date (Back-end / API response)
+Ar trebui să trimiți doar datele esențiale pentru listare inițială (homepage, pagină de listă):
+
+json
+Copy
+Edit
+{
+  "id": "rest123",
+  "name": "Pizzeria Napoli",
+  "coverImage": "https://cdn.marketplace.com/images/pizzeria-napoli.webp",
+  "tags": ["Pizza", "Italian", "Livrare rapidă"],
+  "rating": 4.7,
+  "deliveryTime": "25-35 min",
+  "shortDescription": "Pizza autentică italiană, preparată cu ingrediente proaspete.",
+  "slug": "pizzeria-napoli"
+}
+➡️ Apoi, când userul intră pe pagina restaurantului (/restaurant/pizzeria-napoli), faci un lazy load cu:
+
+meniu complet
+
+descrieri detaliate
+
+galerii
+
+✅ 2. Optimizarea imaginilor
+🔹 Formate și server:
+Folosește WebP (compresie mare, calitate bună)
+
+Găzduire pe CDN (Cloudflare Images, Vercel, ImageKit, Cloudinary)
+
+Fă resize dinamic (thumbnail, medium, full)
+
+🔹 Lazy Loading:
+<img loading="lazy"> pentru toate imaginile care nu sunt în viewport inițial
+
+Preload pentru primele 1-2 imagini (ex: logo restaurant sau cover)
+
+✅ 3. Tehnologii Frontend recomandate
+Zonă	Tehnologie recomandată
+Framework	React, Next.js (ideal SSR/SSG)
+Styling	Tailwind CSS, Material UI
+Lazy loading	React LazyLoad, IntersectionObserver
+Pagination	Infinite scroll sau paginare clasică (cu debounce)
+
+✅ 4. Caching & viteză
+Server-side rendering sau static generation (SSG) cu cache:
+
+Ex: Next.js getStaticProps() pentru restaurante populare
+
+Redis cache pentru restaurante / meniuri frecvent accesate
+
+IndexedDB sau localStorage pentru caching la client (doar temporar)
+
+✅ 5. UX plăcut
+🔹 Micro-animări:
+Hover pe carduri
+
+Loading skeletons (react-loading-skeleton, shadcn/ui)
+
+Transitions cu Framer Motion
+
+🔹 Navigare rapidă:
+Autocompletare în search
+
+Scroll to top pe fiecare load
+
+Fallback dacă imaginea nu se încarcă (onError)
+
+✅ Exemple bune de urmat
+Glovo, Uber Eats, DoorDash – toate încarcă lazy restaurantele, iar meniurile apar doar după click.
+
+Next.js + Cloudinary + Tailwind e o combinație foarte eficientă.

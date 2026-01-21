@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Dietary Profile</title>
+</head>
+<body>
+    <h2>Test Dietary Profile Saving</h2>
+    <button onclick="testAuth()">Check Auth Status</button>
+    <button onclick="testProfileSave()">Test Profile Save</button>
+    <button onclick="testProfileGet()">Test Profile Get</button>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        async function testAuth() {
+            try {
+                const response = await fetch('/api/auth/user', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                results.innerHTML = `<p>Auth Status: ${response.status}</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                results.innerHTML = `<p>Auth Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function testProfileGet() {
+            try {
+                const response = await fetch('/api/dietary/profile', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                results.innerHTML = `<p>Profile Get: ${response.status}</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                results.innerHTML = `<p>Profile Get Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function testProfileSave() {
+            try {
+                const profileData = {
+                    age: 30,
+                    height: 175,
+                    weight: "70",
+                    gender: "male",
+                    activityLevel: "moderate",
+                    healthGoal: "weight_loss",
+                    targetWeight: "65",
+                    dietaryPreferences: ["vegetarian"],
+                    allergies: ["nuts"],
+                    foodIntolerances: ["lactose"],
+                    dislikedIngredients: ["mushrooms"],
+                    preferredCuisines: ["italian", "mediterranean"],
+                    healthConditions: [],
+                    calorieTarget: 2000,
+                    proteinTarget: 120,
+                    carbTarget: 200,
+                    fatTarget: 70,
+                    budgetRange: "medium",
+                    diningFrequency: "weekly"
+                };
+                
+                const response = await fetch('/api/dietary/profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(profileData)
+                });
+                
+                const data = await response.json();
+                results.innerHTML = `<p>Profile Save: ${response.status}</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                results.innerHTML = `<p>Profile Save Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
