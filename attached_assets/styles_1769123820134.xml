@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        <!-- Standard system bar handling - NO edge-to-edge to prevent overlap on tablets -->
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">default</item>
+        <item name="android:statusBarColor">#ffffff</item>
+        <item name="android:navigationBarColor">#ffffff</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:navigationBarDividerColor" tools:targetApi="o_mr1">#e5e5e5</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+        <!-- Standard system bar handling for splash screen -->
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">default</item>
+        <item name="android:statusBarColor">#ffffff</item>
+        <item name="android:navigationBarColor">#ffffff</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>
