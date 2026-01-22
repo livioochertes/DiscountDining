@@ -75,7 +75,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   }, [handleScroll]);
 
   return (
-    <div className="h-screen bg-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-white flex flex-col overflow-hidden pt-[env(safe-area-inset-top)]">
       {/* Main Content - Scrollable */}
       <main 
         ref={mainRef}
