@@ -158,7 +158,7 @@ export default function MobileHome() {
                   key={restaurant.id}
                   name={restaurant.name}
                   image={restaurant.imageUrl}
-                  rating={restaurant.rating || 4.5}
+                  rating={Number(restaurant.rating) || 4.5}
                   cashbackPercent={restaurant.cashbackPercent || 3}
                   onClick={() => setLocation(`/m/restaurant/${restaurant.id}`)}
                 />
