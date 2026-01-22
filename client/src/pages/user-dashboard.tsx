@@ -600,6 +600,45 @@ export default function UserDashboard() {
                     <p className="text-sm text-purple-600">{t.membershipTier || 'Membership Tier'}</p>
                   </div>
                 </div>
+                
+                {/* QR Code for Loyalty */}
+                <div className="mt-6 pt-6 border-t">
+                  <div className="flex flex-col sm:flex-row items-center gap-6 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-6 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <div 
+                        className="bg-white p-3 rounded-lg shadow-md"
+                        dangerouslySetInnerHTML={{
+                          __html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+                            <rect width="100" height="100" fill="white"/>
+                            <rect x="10" y="10" width="25" height="25" fill="black"/>
+                            <rect x="65" y="10" width="25" height="25" fill="black"/>
+                            <rect x="10" y="65" width="25" height="25" fill="black"/>
+                            <rect x="15" y="15" width="15" height="15" fill="white"/>
+                            <rect x="70" y="15" width="15" height="15" fill="white"/>
+                            <rect x="15" y="70" width="15" height="15" fill="white"/>
+                            <rect x="18" y="18" width="9" height="9" fill="black"/>
+                            <rect x="73" y="18" width="9" height="9" fill="black"/>
+                            <rect x="18" y="73" width="9" height="9" fill="black"/>
+                            <rect x="40" y="10" width="5" height="5" fill="black"/>
+                            <rect x="50" y="10" width="5" height="5" fill="black"/>
+                            <rect x="40" y="20" width="5" height="5" fill="black"/>
+                            <rect x="45" y="25" width="5" height="5" fill="black"/>
+                            <rect x="40" y="40" width="20" height="20" fill="black"/>
+                            <rect x="45" y="45" width="10" height="10" fill="white"/>
+                            <rect x="48" y="48" width="4" height="4" fill="black"/>
+                          </svg>`
+                        }}
+                      />
+                    </div>
+                    <div className="text-center sm:text-left flex-1">
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-2">Codul tău de fidelitate</h4>
+                      <p className="text-3xl font-bold text-primary tracking-widest mb-2">{user?.customerCode || 'CLI-DEMO01'}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Arată acest cod la restaurant pentru plăți și reduceri de fidelitate
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
