@@ -184,7 +184,13 @@ export default function LoyaltyManagement({ restaurants }: LoyaltyManagementProp
 
   const handleSaveCategory = () => {
     const data = {
-      ...categoryForm,
+      name: categoryForm.name,
+      description: categoryForm.description,
+      discountPercentage: categoryForm.discountPercentage,
+      minVisits: parseInt(categoryForm.minVisits) || 0,
+      minSpend: parseFloat(categoryForm.minSpend) || 0,
+      color: categoryForm.color,
+      isDefault: categoryForm.isDefault,
       restaurantId: selectedRestaurantId
     };
     
