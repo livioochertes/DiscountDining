@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
+import { Capacitor } from '@capacitor/core';
 import { Home, Search, Brain, Wallet, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -74,8 +75,15 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     };
   }, [handleScroll]);
 
+  // On native Android, use fixed padding since safe-area-inset-top returns 0 in non-overlay mode
+  const isNative = Capacitor.isNativePlatform();
+  const isAndroid = Capacitor.getPlatform() === 'android';
+
   return (
-    <div className="h-screen bg-white flex flex-col overflow-hidden safe-area-top">
+    <div className={cn(
+      "h-screen bg-white flex flex-col overflow-hidden",
+      isAndroid ? "pt-6" : "safe-area-top"
+    )}>
       {/* Main Content - Scrollable, starts below system status bar */}
       <main 
         ref={mainRef}
