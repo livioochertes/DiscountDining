@@ -82,7 +82,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   return (
     <div className={cn(
       "h-screen bg-white flex flex-col overflow-hidden",
-      isAndroid ? "pt-6" : "safe-area-top"
+      isAndroid ? "pt-8" : "safe-area-top"
     )}>
       {/* Main Content - Scrollable, starts below system status bar */}
       <main 
