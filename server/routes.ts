@@ -2015,8 +2015,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register order routes
   registerOrderRoutes(app);
 
-  // Register restaurant routes
-  app.use("/api", restaurantRoutes);
+  // Note: restaurant portal routes are already registered at /api/restaurant-portal
+  // The public /api/restaurants endpoint is defined above without requireAuth
 
   // Object storage routes to serve uploaded files
   app.get("/objects/:objectPath(*)", async (req, res) => {
