@@ -21,6 +21,9 @@ import {
   restaurantAvailability,
   eatoffVouchers,
   deferredPayments,
+  loyaltyCategories,
+  loyalCustomers,
+  paymentRequests,
   type Restaurant, 
   type InsertRestaurant,
   type VoucherPackage,
@@ -62,7 +65,13 @@ import {
   type RestaurantAvailability,
   type InsertRestaurantAvailability,
   type EatoffVoucher,
-  type InsertEatoffVoucher
+  type InsertEatoffVoucher,
+  type LoyaltyCategory,
+  type InsertLoyaltyCategory,
+  type LoyalCustomer,
+  type InsertLoyalCustomer,
+  type PaymentRequest,
+  type InsertPaymentRequest
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, ne } from "drizzle-orm";
@@ -299,6 +308,33 @@ export interface IStorage {
   getDeferredPaymentsPendingCharge(): Promise<any[]>;
   updateDeferredPaymentStatus(id: number, status: string, paymentIntentId?: string): Promise<void>;
   getDeferredPaymentsByCustomer(customerId: number): Promise<any[]>;
+
+  // Loyalty System operations
+  getLoyaltyCategoriesByRestaurant(restaurantId: number): Promise<LoyaltyCategory[]>;
+  getLoyaltyCategoryById(id: number): Promise<LoyaltyCategory | undefined>;
+  createLoyaltyCategory(category: InsertLoyaltyCategory): Promise<LoyaltyCategory>;
+  updateLoyaltyCategory(id: number, updates: Partial<InsertLoyaltyCategory>): Promise<LoyaltyCategory | undefined>;
+  deleteLoyaltyCategory(id: number): Promise<boolean>;
+
+  // Loyal Customers operations
+  getLoyalCustomersByRestaurant(restaurantId: number): Promise<LoyalCustomer[]>;
+  getLoyalCustomersByCustomer(customerId: number): Promise<LoyalCustomer[]>;
+  getLoyalCustomer(customerId: number, restaurantId: number): Promise<LoyalCustomer | undefined>;
+  createLoyalCustomer(loyalCustomer: InsertLoyalCustomer): Promise<LoyalCustomer>;
+  updateLoyalCustomer(id: number, updates: Partial<InsertLoyalCustomer>): Promise<LoyalCustomer | undefined>;
+  enrollCustomerToRestaurant(customerCode: string, restaurantId: number): Promise<LoyalCustomer | null>;
+
+  // Payment Request operations
+  getPaymentRequestById(id: number): Promise<PaymentRequest | undefined>;
+  getPaymentRequestsByRestaurant(restaurantId: number): Promise<PaymentRequest[]>;
+  getPaymentRequestsByCustomer(customerId: number): Promise<PaymentRequest[]>;
+  getPendingPaymentRequestsByCustomer(customerId: number): Promise<PaymentRequest[]>;
+  createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
+  updatePaymentRequest(id: number, updates: Partial<InsertPaymentRequest>): Promise<PaymentRequest | undefined>;
+  
+  // Customer code generation
+  generateCustomerCode(customerId: number): Promise<string>;
+  getCustomerByCode(customerCode: string): Promise<Customer | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -2900,6 +2936,173 @@ export class DatabaseStorage implements IStorage {
       console.error('Error updating financial tracking:', error);
       throw error; // Re-throw so the calling function can handle it
     }
+  }
+
+  // Loyalty System implementations
+  async getLoyaltyCategoriesByRestaurant(restaurantId: number): Promise<LoyaltyCategory[]> {
+    const categories = await db.select().from(loyaltyCategories)
+      .where(eq(loyaltyCategories.restaurantId, restaurantId))
+      .orderBy(loyaltyCategories.sortOrder);
+    return categories;
+  }
+
+  async getLoyaltyCategoryById(id: number): Promise<LoyaltyCategory | undefined> {
+    const [category] = await db.select().from(loyaltyCategories)
+      .where(eq(loyaltyCategories.id, id));
+    return category;
+  }
+
+  async createLoyaltyCategory(category: InsertLoyaltyCategory): Promise<LoyaltyCategory> {
+    const [created] = await db.insert(loyaltyCategories).values(category).returning();
+    return created;
+  }
+
+  async updateLoyaltyCategory(id: number, updates: Partial<InsertLoyaltyCategory>): Promise<LoyaltyCategory | undefined> {
+    const [updated] = await db.update(loyaltyCategories)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(loyaltyCategories.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteLoyaltyCategory(id: number): Promise<boolean> {
+    const result = await db.delete(loyaltyCategories).where(eq(loyaltyCategories.id, id));
+    return true;
+  }
+
+  // Loyal Customers implementations
+  async getLoyalCustomersByRestaurant(restaurantId: number): Promise<LoyalCustomer[]> {
+    const loyals = await db.select().from(loyalCustomers)
+      .where(eq(loyalCustomers.restaurantId, restaurantId));
+    return loyals;
+  }
+
+  async getLoyalCustomersByCustomer(customerId: number): Promise<LoyalCustomer[]> {
+    const loyals = await db.select().from(loyalCustomers)
+      .where(eq(loyalCustomers.customerId, customerId));
+    return loyals;
+  }
+
+  async getLoyalCustomer(customerId: number, restaurantId: number): Promise<LoyalCustomer | undefined> {
+    const [loyal] = await db.select().from(loyalCustomers)
+      .where(and(
+        eq(loyalCustomers.customerId, customerId),
+        eq(loyalCustomers.restaurantId, restaurantId)
+      ));
+    return loyal;
+  }
+
+  async createLoyalCustomer(loyalCustomer: InsertLoyalCustomer): Promise<LoyalCustomer> {
+    const [created] = await db.insert(loyalCustomers).values(loyalCustomer).returning();
+    return created;
+  }
+
+  async updateLoyalCustomer(id: number, updates: Partial<InsertLoyalCustomer>): Promise<LoyalCustomer | undefined> {
+    const [updated] = await db.update(loyalCustomers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(loyalCustomers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async enrollCustomerToRestaurant(customerCode: string, restaurantId: number): Promise<LoyalCustomer | null> {
+    // Find customer by their unique code
+    const customer = await this.getCustomerByCode(customerCode);
+    if (!customer) return null;
+
+    // Check if already enrolled
+    const existing = await this.getLoyalCustomer(customer.id, restaurantId);
+    if (existing) return existing;
+
+    // Get default loyalty category for restaurant
+    const categories = await this.getLoyaltyCategoriesByRestaurant(restaurantId);
+    const defaultCategory = categories.find(c => c.isDefault) || categories[0];
+
+    // Create loyal customer relationship
+    const loyalCustomer = await this.createLoyalCustomer({
+      customerId: customer.id,
+      restaurantId,
+      categoryId: defaultCategory?.id || null,
+      customerCode,
+      isActive: true
+    });
+
+    return loyalCustomer;
+  }
+
+  // Payment Request implementations
+  async getPaymentRequestById(id: number): Promise<PaymentRequest | undefined> {
+    const [request] = await db.select().from(paymentRequests)
+      .where(eq(paymentRequests.id, id));
+    return request;
+  }
+
+  async getPaymentRequestsByRestaurant(restaurantId: number): Promise<PaymentRequest[]> {
+    const requests = await db.select().from(paymentRequests)
+      .where(eq(paymentRequests.restaurantId, restaurantId))
+      .orderBy(desc(paymentRequests.createdAt));
+    return requests;
+  }
+
+  async getPaymentRequestsByCustomer(customerId: number): Promise<PaymentRequest[]> {
+    const requests = await db.select().from(paymentRequests)
+      .where(eq(paymentRequests.customerId, customerId))
+      .orderBy(desc(paymentRequests.createdAt));
+    return requests;
+  }
+
+  async getPendingPaymentRequestsByCustomer(customerId: number): Promise<PaymentRequest[]> {
+    const requests = await db.select().from(paymentRequests)
+      .where(and(
+        eq(paymentRequests.customerId, customerId),
+        eq(paymentRequests.status, 'pending')
+      ))
+      .orderBy(desc(paymentRequests.createdAt));
+    return requests;
+  }
+
+  async createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest> {
+    const [created] = await db.insert(paymentRequests).values(request).returning();
+    return created;
+  }
+
+  async updatePaymentRequest(id: number, updates: Partial<InsertPaymentRequest>): Promise<PaymentRequest | undefined> {
+    const [updated] = await db.update(paymentRequests)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(paymentRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Customer code generation
+  async generateCustomerCode(customerId: number): Promise<string> {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = 'CLI-';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    // Ensure unique
+    const existing = await this.getCustomerByCode(code);
+    if (existing) {
+      return this.generateCustomerCode(customerId); // Retry if collision
+    }
+    
+    // Update customer with the code
+    await db.update(customers)
+      .set({ 
+        customerCode: code,
+        isProfileComplete: true 
+      })
+      .where(eq(customers.id, customerId));
+    
+    return code;
+  }
+
+  async getCustomerByCode(customerCode: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers)
+      .where(eq(customers.customerCode, customerCode));
+    return customer;
   }
 
 }

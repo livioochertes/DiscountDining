@@ -13,6 +13,7 @@ import { registerDietaryRoutes } from "./dietaryRoutes";
 import { walletRoutes } from "./walletRoutes";
 import { registerReservationRoutes } from "./reservationRoutes";
 import orderCreationRoutes from "./orderCreationRoutes";
+import { loyaltyRoutes } from "./loyaltyRoutes";
 import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { setupMultiAuth, isAuthenticated } from "./multiAuth";
@@ -144,6 +145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Wallet system routes
   app.use('/api', walletRoutes);
+
+  // Loyalty system routes
+  app.use('/api/loyalty', loyaltyRoutes);
 
   // Dietary recommendation routes
   registerDietaryRoutes(app);
