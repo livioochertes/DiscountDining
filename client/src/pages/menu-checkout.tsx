@@ -25,10 +25,10 @@ import type { UserAddress } from "@shared/schema";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
-}
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+// Gracefully handle missing key for mobile builds
+const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY 
+  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
+  : null;
 
 // Mixed Payment Form Component for points + card payments
 const MixedPaymentForm = ({ orderDetails, restaurantId, items, customerInfo, pointsToUse, mixedPaymentMutation }: {
