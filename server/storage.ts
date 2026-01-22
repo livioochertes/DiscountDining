@@ -1327,7 +1327,9 @@ export class MemStorage implements IStorage {
       dislikes: ["spicy_food"],
       healthConditions: [],
       createdAt: new Date(),
-      customerCode: "CLI-DEMO01"
+      customerCode: "CLI-DEMO01",
+      customerQrCode: null,
+      isProfileComplete: true
     };
     this.customers.set(customer.id, customer);
 
