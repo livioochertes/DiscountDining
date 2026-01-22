@@ -28,11 +28,10 @@ import {
   ArrowDownLeft
 } from "lucide-react";
 
-// Initialize Stripe
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
-}
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+// Initialize Stripe - gracefully handle missing key for mobile builds
+const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY 
+  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
+  : null;
 
 // Stripe Checkout Form Component
 const WalletStripeCheckout = ({ amount, customerId, onSuccess }: { 
