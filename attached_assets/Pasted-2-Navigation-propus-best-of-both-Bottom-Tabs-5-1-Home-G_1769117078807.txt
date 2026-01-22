@@ -1,0 +1,215 @@
+2) Navigation propus (best of both)
+
+✅ Bottom Tabs (5)
+	1.	Home (Glovo feel)
+	2.	Explore (Glovo)
+	3.	AI Menu (feature killer)
+	4.	Wallet (Revolut)
+	5.	Profile
+
+Wallet e tab separat (Revolut)
+Explore e tab separat (Glovo)
+
+⸻
+
+3) UI Style Guide (cum le combini fără conflict)
+
+A) Design language general = Revolut (base layer)
+	•	mult alb / spațiu
+	•	typography clean
+	•	iconografie consistentă
+	•	cards elegante
+	•	tranzacții + breakdown-uri impecabile
+
+B) Accent layer = Glovo (discovery)
+	•	chips & categories colorate
+	•	campaign banners
+	•	restaurant grid/list rapid
+	•	badges promo
+
+Cheia e următoarea:
+
+✅ Revolut dă “încredere”
+✅ Glovo dă “energie”
+
+⸻
+
+4) Home Screen – exact mixul Revolut x Glovo
+
+HOME (structură recomandată)
+
+1) Wallet hero card (Revolut)
+
+Card mare sus:
+	•	Sold disponibil / economii / cashback
+	•	“Cumpără voucher”
+	•	“Folosește voucher”
+	•	“Cashback pending”
+
+Cardul acesta definește că aplicația e “serioasă”, nu doar marketplace.
+
+2) Search (Glovo)
+
+Search bar mare: “Caută restaurant sau produs”
+
+3) Categories (Glovo)
+
+Chips: Pizza / Burger / Healthy / Cafenea / Discounts
+
+4) AI Recommendations (EatOff unique)
+
+“Recomandat pentru tine azi”
+	•	6 produse, nu restaurante
+	•	fit score / kcal
+
+5) Deals (Glovo)
+
+Banners cu “-xx%”, “voucher network”, “cashback x2”
+
+⸻
+
+5) Explore tab – 100% Glovo
+
+Explore trebuie să fie rapid, “scroll addiction”.
+	•	chips filters
+	•	restaurant cards
+	•	badge “voucher accepted”
+	•	badge “cashback 5%”
+	•	sort: “Best deals”
+
+✅ aici nu încarci userul cu financiar.
+
+⸻
+
+6) Wallet tab – 100% Revolut
+
+Aici nu trebuie să pară marketplace.
+
+Wallet structure (Revolut style)
+
+Top: totals + quick actions
+
+Sections (tabs):
+	•	Vouchere EatOff (Network)
+	•	Vouchere Restaurant
+	•	Cashback
+	•	Credit Line
+
+Transaction feed
+
+Exact ca Revolut:
+	•	icon
+	•	merchant
+	•	categorie
+	•	+cashback / -voucher spend
+	•	status pending/complete
+
+UX super important:
+	•	claritate completă la bani
+	•	“fees” transparente (credit +5%)
+
+⸻
+
+7) Credit vouchers — UX fintech obligatoriu
+
+Pentru partea de credit, userul trebuie să simtă că e produs financiar sigur.
+
+Ecran credit:
+	•	“Your limit”
+	•	“available now”
+	•	“Cost: +5%”
+	•	“Pay in restaurants”
+	•	buton Apply / Request approval
+	•	status clar: pending / approved
+
+✅ “Learn more” (termeni)
+✅ “Risk & compliance” discret dar vizibil
+
+⸻
+
+8) Restaurant Page – hybrid
+
+Restaurant Page trebuie să fie:
+
+partea de sus (Glovo)
+	•	imagini, rating, timp, badge
+
+widget loyalty (Revolut feel)
+	•	“Cashback balance at this restaurant”
+	•	progress bar până la reward
+	•	“Voucher available”
+	•	“Buy voucher” CTA
+
+meniul + AI overlay (EatOff unique)
+
+Badge pe produse:
+	•	✅ “Good for you”
+	•	⚠️ “Contains allergen”
+
+⸻
+
+9) AI Menu – feature killer, design premium
+
+Aici trebuie să fie:
+	•	foarte clean
+	•	aproape medical / nutriție
+	•	recomandări clare
+
+În AI tab:
+	•	quick filters: calorii, diet, alergeni
+	•	produse în listă
+	•	“why recommended?” (explicabilitate)
+
+Stil: mai aproape de Revolut, nu Glovo.
+
+⸻
+
+10) Top 10 componente UI pe care le definești (pentru uniformitate)
+	1.	WalletCard (hero)
+	2.	ActionRow (Buy voucher / Use / Cashback / Credit)
+	3.	DealBanner
+	4.	CategoryChips
+	5.	RestaurantCard
+	6.	VoucherCard
+	7.	CashbackProgress
+	8.	TransactionRow
+	9.	ProductCardAI
+	10.	BottomSheetProduct
+
+Cu aceste 10 componente, 80% din app e consistentă.
+
+⸻
+
+11) Copy / Microcopy style (super important)
+
+Ca să unești Glovo și Revolut, copy-ul trebuie să fie:
+
+Revolut tone (în wallet):
+	•	“Available balance”
+	•	“Pending cashback”
+	•	“Fees included”
+	•	“Transaction details”
+
+Glovo tone (în explore):
+	•	“Recomandate”
+	•	“Cele mai rapide”
+	•	“Promoții azi”
+	•	“Best deals”
+
+⸻
+
+Dacă vrei, următorul pas pot să ți-l livrez foarte concret:
+
+✅ Figma-ready: 12 ecrane MVP (listă + layout exact)
+	•	Home
+	•	Explore
+	•	Restaurant
+	•	Product sheet
+	•	Cart
+	•	Checkout voucher-first
+	•	Wallet (overview)
+	•	Voucher details
+	•	Cashback details
+	•	Credit line
+	•	AI menu
+	•	Profile

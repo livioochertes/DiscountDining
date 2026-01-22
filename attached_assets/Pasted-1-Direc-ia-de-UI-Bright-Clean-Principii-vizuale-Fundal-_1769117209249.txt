@@ -1,0 +1,256 @@
+1) Direcția de UI: “Bright Clean”
+
+Principii vizuale
+
+✅ Fundal alb, fără blocuri grele
+✅ Cards mari, rotunjite (2xl)
+✅ Umbre foarte discrete
+✅ Mult spațiu (padding mare)
+✅ Typography modernă, lizibilă
+✅ Accent color doar pentru acțiuni importante
+
+Ce evităm:
+
+❌ prea multe culori
+❌ gradients agresive
+❌ iconuri neuniforme
+❌ badge-uri stridente tip “promo roșu mare”
+
+⸻
+
+2) Layout system (pentru consistență)
+	•	Grid: 8px
+	•	Padding ecran: 16px
+	•	Card padding: 16px
+	•	Spacing vertical: 12–20px
+	•	Radius:
+	•	Cards: 20–24px
+	•	Buttons: 16px
+	•	Chips: 999px (pill)
+
+⸻
+
+3) Typography (Wolt + Revolut vibe)
+	•	Title XL: 24–28 (semibold)
+	•	Section title: 18–20
+	•	Body: 15–16
+	•	Caption: 12–13
+
+Tone: foarte “calm”, fără bold excesiv.
+
+⸻
+
+4) Culori recomandate (basic palette)
+	•	Background: #FFFFFF
+	•	Surface/Card: #FFFFFF
+	•	Border: #EAECEF
+	•	Text primary: #111111
+	•	Text secondary: #667085 (gen Revolut)
+	•	Success: verde soft
+	•	Warning: orange soft
+
+🎯 Accent (brand EatOff): un verde/teal curat sau blue modern (nu neon).
+
+Revolut e albastru, Wolt e turcoaz → perfect pentru voi să combinați.
+
+⸻
+
+5) Componente standard (EatOff Design System)
+
+A) WalletCard (componenta principală)
+
+Card mare sus:
+	•	“Balance”
+	•	“Active vouchers”
+	•	“Cashback available”
+	•	CTA: “Buy voucher”
+	•	CTA secundar: “Use voucher”
+
+Important: ăsta e “Revolut anchor”.
+
+B) ActionRow (4 icon buttons)
+	•	Buy voucher
+	•	AI Menu
+	•	Cashback
+	•	Credit
+
+C) DealBanner
+
+Minimal:
+	•	titlu
+	•	subtext
+	•	CTA mic
+
+D) Chips / Filters
+
+Pills:
+	•	Voucher
+	•	Cashback
+	•	Healthy
+	•	Under 30 min
+
+E) RestaurantCard
+	•	image
+	•	name
+	•	rating
+	•	cashback %
+	•	badges minimaliste
+
+F) VoucherCard
+	•	tip (Network / Restaurant)
+	•	discount / credit / cashback
+	•	expiry
+	•	CTA
+
+G) TransactionRow
+
+Exact ca Revolut:
+	•	icon + merchant
+	•	amount
+	•	status
+	•	cashback line
+
+⸻
+
+6) 12 Ecrane MVP (Figma-ready list)
+
+1) Splash
+	•	logo EatOff pe alb
+	•	fără animații complexe
+
+⸻
+
+2) Onboarding (3 slides)
+	1.	“Loialitate & cashback”
+	2.	“Vouchere cu discount”
+	3.	“AI recomandări după profil”
+
+CTA:
+	•	Continue
+	•	Skip
+
+⸻
+
+3) Home (cel mai important)
+
+Structura:
+	1.	WalletCard (Hero)
+	2.	ActionRow icons
+	3.	Search bar
+	4.	AI recommendations preview (3 produse)
+	5.	Deals banners
+	6.	Favorite restaurants section
+
+💡 Home-ul trebuie să fie “calm”, nu aglomerat.
+
+⸻
+
+4) Explore (Restaurants)
+	•	Search + chips
+	•	listă restaurante
+	•	sort (sheet)
+
+Badges:
+	•	“Accepts EatOff voucher”
+	•	“Cashback 5%”
+	•	“Recommended”
+
+⸻
+
+5) Restaurant page
+
+Header clean:
+	•	image
+	•	name
+	•	rating
+	•	cashback widget (card mic)
+	•	“Buy voucher” / “Use voucher”
+	•	menu cu tabs
+
+⸻
+
+6) Product bottom sheet
+	•	poză
+	•	kcal (dacă există)
+	•	allergens icons
+	•	extras
+	•	add
+
+⸻
+
+7) Cart
+	•	items
+	•	delivery/pickup toggle (dacă restaurant suportă)
+	•	apply voucher preview
+	•	CTA: checkout
+
+⸻
+
+8) Checkout (Voucher-first)
+	1.	Best voucher auto-selected
+	2.	Payment method
+	3.	Place order
+
+Foarte clar:
+	•	subtotal
+	•	discount
+	•	final
+
+⸻
+
+9) Wallet overview
+
+Top:
+	•	total balance
+	•	cashback
+	•	active vouchers
+
+Tabs:
+	•	Network vouchers
+	•	Restaurant vouchers
+	•	Cashback
+	•	Credit
+
+⸻
+
+10) Voucher details
+	•	voucher value
+	•	discount logic
+	•	where can be used
+	•	QR / Code
+	•	Terms
+
+⸻
+
+11) Cashback page
+	•	available/pending
+	•	progress la reward
+	•	tranzacții
+
+⸻
+
+12) AI Menu tab
+	•	profil summary (diet/allergens/calories)
+	•	filters
+	•	recommended items list
+
+“Explain why” (tap):
+	•	“low sugar”
+	•	“under 600 kcal”
+	•	“no gluten”
+
+⸻
+
+7) Cum arată “Glovo elementele” în bright clean?
+
+Le păstrăm ca funcție, dar le “calmăm” vizual:
+
+✅ chips
+✅ discovery
+✅ restaurant list
+✅ tracking (optional)
+
+Dar UI-ul e:
+	•	mai alb
+	•	mai premium
+	•	mai structurat
