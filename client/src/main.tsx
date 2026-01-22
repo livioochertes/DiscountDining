@@ -7,7 +7,8 @@ import "./index.css";
 if (Capacitor.isNativePlatform()) {
   import("@capacitor/status-bar").then(({ StatusBar, Style }) => {
     StatusBar.setStyle({ style: Style.Dark });
-    StatusBar.setOverlaysWebView({ overlay: true });
+    StatusBar.setBackgroundColor({ color: '#ffffff' });
+    StatusBar.setOverlaysWebView({ overlay: false });
   }).catch(() => {
     // StatusBar plugin not available
   });

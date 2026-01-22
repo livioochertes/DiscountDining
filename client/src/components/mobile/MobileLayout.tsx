@@ -76,17 +76,11 @@ export function MobileLayout({ children }: MobileLayoutProps) {
 
   return (
     <div className="h-screen bg-white flex flex-col overflow-hidden">
-      {/* Fixed status bar background */}
-      <div 
-        className="fixed top-0 left-0 right-0 bg-white z-[100]" 
-        style={{ height: 'env(safe-area-inset-top, 0px)' }}
-      />
-      
-      {/* Main Content - Scrollable with top padding for status bar */}
+      {/* Main Content - Scrollable, starts below system status bar */}
       <main 
         ref={mainRef}
         className={cn(
-          "flex-1 overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)]",
+          "flex-1 overflow-y-auto overscroll-contain",
           isCompact ? "pb-16" : "pb-20"
         )}
       >
