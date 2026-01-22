@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
@@ -17,7 +18,8 @@ interface Transaction {
 }
 
 export default function MobileWallet() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<WalletTab>('vouchers');
 
   const { data: userStats } = useQuery<any>({
@@ -29,6 +31,46 @@ export default function MobileWallet() {
     queryKey: ['/api/user-vouchers'],
     enabled: !!user,
   });
+
+  if (isLoading) {
+    return (
+      <MobileLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <MobileLayout>
+        <div className="flex flex-col items-center justify-center px-6 py-12 text-center min-h-[60vh]">
+          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+            <Wallet className="w-10 h-10 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            Your Digital Wallet
+          </h2>
+          <p className="text-gray-500 mb-8 max-w-sm">
+            Create an account to manage your vouchers, earn cashback, and access exclusive deals from partner restaurants.
+          </p>
+          <button
+            onClick={() => setLocation('/register')}
+            className="w-full max-w-xs bg-primary text-white font-semibold py-4 px-6 rounded-2xl mb-3 hover:bg-primary/90 transition-colors"
+          >
+            Create Account
+          </button>
+          <button
+            onClick={() => setLocation('/login')}
+            className="w-full max-w-xs bg-gray-100 text-gray-700 font-medium py-4 px-6 rounded-2xl hover:bg-gray-200 transition-colors"
+          >
+            Already have an account? Sign In
+          </button>
+        </div>
+      </MobileLayout>
+    );
+  }
 
   const mockTransactions: Transaction[] = [
     { id: 1, type: 'voucher_purchase', merchant: 'Bella Vista', amount: -50, date: '2025-01-22', status: 'completed' },

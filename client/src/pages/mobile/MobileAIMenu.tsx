@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Brain, Filter, Flame, Leaf, AlertTriangle, Info, ChevronRight } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
@@ -31,7 +32,8 @@ interface RecommendedItem {
 }
 
 export default function MobileAIMenu() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
 
@@ -44,6 +46,54 @@ export default function MobileAIMenu() {
     queryKey: ['/api/ai-recommendations'],
     enabled: !!user,
   });
+
+  if (isLoading) {
+    return (
+      <MobileLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <MobileLayout>
+        <div className="flex flex-col items-center justify-center px-6 py-12 text-center min-h-[60vh]">
+          <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-6">
+            <Brain className="w-10 h-10 text-purple-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            AI-Powered Recommendations
+          </h2>
+          <p className="text-gray-500 mb-4 max-w-sm">
+            Get personalized meal suggestions based on your dietary preferences, health goals, and taste profile.
+          </p>
+          <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mb-8 max-w-sm">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-purple-700 text-left">
+                Create an account to unlock personalized AI recommendations tailored just for you!
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setLocation('/register')}
+            className="w-full max-w-xs bg-primary text-white font-semibold py-4 px-6 rounded-2xl mb-3 hover:bg-primary/90 transition-colors"
+          >
+            Create Account
+          </button>
+          <button
+            onClick={() => setLocation('/login')}
+            className="w-full max-w-xs bg-gray-100 text-gray-700 font-medium py-4 px-6 rounded-2xl hover:bg-gray-200 transition-colors"
+          >
+            Already have an account? Sign In
+          </button>
+        </div>
+      </MobileLayout>
+    );
+  }
 
   const mockRecommendations: RecommendedItem[] = [
     {
