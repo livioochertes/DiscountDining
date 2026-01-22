@@ -99,6 +99,7 @@ npx cap open ios          # Open iOS project in Xcode
 
 ## Recent Changes
 
+- **2025-01-22**: Implemented dynamic status bar height detection using `StatusBar.getInfo()` for proper spacing across all Android devices
 - **2025-01-22**: Implemented complete mobile UX with 5-tab navigation (Home, Explore, AI Menu, Wallet, Profile)
 - **2025-01-22**: Added mobile detection hooks, auto-redirect for Capacitor apps, and mobile-specific components
 - **2025-01-21**: Added Capacitor for native Android/iOS mobile app builds
