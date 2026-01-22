@@ -30,8 +30,8 @@ export function MobileLayout({ children }: MobileLayoutProps) {
         {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-2 safe-area-bottom z-50">
+      {/* Bottom Navigation - Compact with icons only */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-1.5 safe-area-bottom z-50">
         <div className="flex items-center justify-around max-w-lg mx-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -42,27 +42,16 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                 key={tab.id}
                 onClick={() => setLocation(tab.path)}
                 className={cn(
-                  "flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 min-w-[64px]",
+                  "flex items-center justify-center p-3 rounded-full transition-all duration-200",
                   active 
-                    ? "text-primary" 
-                    : "text-gray-400 hover:text-gray-600"
+                    ? "text-primary bg-primary/10" 
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                 )}
               >
-                <div className={cn(
-                  "p-2 rounded-full transition-all duration-200",
-                  active && "bg-primary/10"
-                )}>
-                  <Icon className={cn(
-                    "w-5 h-5 transition-all",
-                    active && "stroke-[2.5px]"
-                  )} />
-                </div>
-                <span className={cn(
-                  "text-[11px] mt-0.5 font-medium",
-                  active && "font-semibold"
-                )}>
-                  {tab.label}
-                </span>
+                <Icon className={cn(
+                  "w-6 h-6 transition-all",
+                  active && "stroke-[2.5px]"
+                )} />
               </button>
             );
           })}
