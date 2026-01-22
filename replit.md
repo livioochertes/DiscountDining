@@ -30,8 +30,40 @@ Native mobile apps are built using Capacitor, which wraps the web app:
 - **Android**: `android/` directory - Open with Android Studio
 - **iOS**: `ios/` directory - Open with Xcode
 
+#### Mobile UX Architecture
+
+The app has a dual-layout approach:
+- **Web (desktop)**: Existing layout with Header/Footer
+- **Mobile (Capacitor/responsive)**: Separate layout inspired by Revolut + Glovo
+
+**Mobile Detection**:
+- `client/src/hooks/useIsMobile.ts` - Hooks for screen size and Capacitor detection
+- Auto-redirect to `/m` routes when running in Capacitor
+
+**Mobile Routes** (`/m/*`):
+- `/m` - Home (wallet hero, search, categories, AI recommendations)
+- `/m/explore` - Restaurant discovery with filters
+- `/m/ai-menu` - AI-powered food recommendations
+- `/m/wallet` - Balance, vouchers, cashback, transactions
+- `/m/profile` - User settings and QR code
+
+**Mobile Components** (`client/src/components/mobile/`):
+- `MobileLayout.tsx` - 5-tab bottom navigation
+- `WalletCard.tsx` - Hero card with balance display
+- `CategoryChips.tsx` - Horizontal scrollable filters
+- `RestaurantCard.tsx` - Restaurant listing cards
+- `DealBanner.tsx` - Promotional banners
+
+**Design System**: "Bright Clean"
+- Background: White (#FFFFFF)
+- Secondary text: Gray (#667085)
+- Accent: Teal/green primary
+- Rounded corners: 20-24px
+- Spacing: 8px grid
+
 #### Mobile Build Commands
 ```bash
+./mobile-build.sh         # Build with mobile env vars
 npm run build              # Build web assets
 npx cap sync              # Sync web assets to native platforms
 npx cap open android      # Open Android project in Android Studio
@@ -67,6 +99,8 @@ npx cap open ios          # Open iOS project in Xcode
 
 ## Recent Changes
 
+- **2025-01-22**: Implemented complete mobile UX with 5-tab navigation (Home, Explore, AI Menu, Wallet, Profile)
+- **2025-01-22**: Added mobile detection hooks, auto-redirect for Capacitor apps, and mobile-specific components
 - **2025-01-21**: Added Capacitor for native Android/iOS mobile app builds
 - Converted QR Payment Modal to inline expandable Card component
 - Fixed React hooks order violation in WalletPage

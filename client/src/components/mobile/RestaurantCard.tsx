@@ -82,7 +82,7 @@ export function RestaurantCard({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-medium text-gray-700">{rating.toFixed(1)}</span>
+              <span className="text-sm font-medium text-gray-700">{typeof rating === 'number' ? rating.toFixed(1) : '0.0'}</span>
             </div>
             <div className="flex items-center gap-1 text-gray-500">
               <Clock className="w-4 h-4" />
@@ -132,7 +132,7 @@ export function RestaurantCardSmall({
       <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
       <div className="flex items-center gap-1 mt-0.5">
         <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-        <span className="text-xs text-gray-600">{rating.toFixed(1)}</span>
+        <span className="text-xs text-gray-600">{typeof rating === 'number' ? rating.toFixed(1) : '0.0'}</span>
       </div>
     </button>
   );
