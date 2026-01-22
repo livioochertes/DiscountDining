@@ -48,6 +48,14 @@ import CookieConsent from "@/components/CookieConsent";
 import NotFound from "@/pages/not-found";
 import { Header } from "@/components/Header";
 import { Star, Wallet, User } from "lucide-react";
+
+// Mobile pages
+import MobileHome from "@/pages/mobile/MobileHome";
+import MobileExplore from "@/pages/mobile/MobileExplore";
+import MobileAIMenu from "@/pages/mobile/MobileAIMenu";
+import MobileWallet from "@/pages/mobile/MobileWallet";
+import MobileProfile from "@/pages/mobile/MobileProfile";
+import { useIsMobileApp } from "@/hooks/useIsMobile";
 import { useLocation } from "wouter";
 import eatOffLogo from "@assets/EatOff_Logo_1750512988041.png";
 
@@ -228,6 +236,13 @@ function Router() {
   // Standard routes for non-restaurant users
   return (
     <Switch>
+      {/* Mobile App Routes */}
+      <Route path="/m" component={MobileHome} />
+      <Route path="/m/explore" component={MobileExplore} />
+      <Route path="/m/ai-menu" component={MobileAIMenu} />
+      <Route path="/m/wallet" component={MobileWallet} />
+      <Route path="/m/profile" component={MobileProfile} />
+      
       {/* User Section */}
       <Route path="/" component={Marketplace} />
       <Route path="/login" component={Login} />
@@ -284,7 +299,20 @@ function Router() {
 }
 
 function App() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const isMobileApp = useIsMobileApp();
+  
+  // Auto-redirect to mobile layout for Capacitor apps
+  const [hasRedirected, setHasRedirected] = useState(false);
+  
+  if (isMobileApp && location === '/' && !hasRedirected) {
+    setHasRedirected(true);
+    setTimeout(() => setLocation('/m'), 0);
+    return null;
+  }
+  
+  // Mobile routes - render without Header/Footer
+  const isMobileRoute = location.startsWith('/m');
   
   // Check if we're on admin routes - if so, render admin pages without main header/footer
   if (location.startsWith('/admin')) {
@@ -301,6 +329,22 @@ function App() {
                 <Route path="/admin/settings" component={AdminDashboard} />
                 <Route component={AdminDashboard} />
               </Switch>
+              <Toaster />
+            </CartProvider>
+          </LanguageProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // Mobile layout - clean, no header/footer
+  if (isMobileRoute) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <LanguageProvider>
+            <CartProvider>
+              <Router />
               <Toaster />
             </CartProvider>
           </LanguageProvider>
