@@ -1,0 +1,57 @@
+(base) 192:discountdining liviu$ npx cap add android
+ℹ Installing android dependencies – Skipping: already installed
+✔ Adding native android project in: /Users/liviu/Documents/GitHub/DiscountDining/android in 32.47ms
+⠇ addError running gradle sync 
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not initialize class org.codehaus.groovy.runtime.InvokerHelper
+> Exception java.lang.NoClassDefFoundError: Could not initialize class org.codehaus.groovy.reflection.ReflectionCache [in thread "Daemon worker"]
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 475ms
+
+Unable to infer default Android SDK settings. This is fine, just run npx cap open android and import and sync gradle manually
+✔ Syncing Gradle in 1.42s
+✔ add in 1.46s
+✔ Copying web assets from public to android/app/src/main/assets/public in 10.26ms
+✖ Copying native bridge: ENOENT: no such file or directory, lstat '/Users/liviu/Documents/GitHub/DiscountDining/node_modules/@capacitor/core/native-bridge.js'
+✖ copy: ENOENT: no such file or directory, lstat '/Users/liviu/Documents/GitHub/DiscountDining/node_modules/@capacitor/core/native-bridge.js'
+[error] [Error: ENOENT: no such file or directory, lstat '/Users/liviu/Documents/GitHub/DiscountDining/node_modules/@capacitor/core/native-bridge.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'lstat',
+  path: '/Users/liviu/Documents/GitHub/DiscountDining/node_modules/@capacitor/core/native-bridge.js'
+}
+✔ Updating Android plugins in 31.60ms
+  Found 0 Capacitor plugins for android:
+✔ update android in 36.99ms
+
+Now you can run npx cap open android to launch Android Studio
+(base) 192:discountdining liviu$ npx cap add ios
+ℹ Installing iOS dependencies – Skipping: already installed
+✔ Adding native xcode project in: /Users/liviu/Documents/GitHub/DiscountDining/ios in 14.94ms
+✔ add in 15.99ms
+✔ Copying web assets from public to ios/App/public in 3.37ms
+✖ Copying native bridge: ENOENT: no such file or directory, lstat '/Users/liviu/Documents/GitHub/DiscountDining/node_modules/@capacitor/core/native-bridge.js'
+✖ copy: ENOENT: no such file or directory, lstat '/Users/liviu/Documents/GitHub/DiscountDining/node_modules/@capacitor/core/native-bridge.js'
+[error] [Error: ENOENT: no such file or directory, lstat '/Users/liviu/Documents/GitHub/DiscountDining/node_modules/@capacitor/core/native-bridge.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'lstat',
+  path: '/Users/liviu/Documents/GitHub/DiscountDining/node_modules/@capacitor/core/native-bridge.js'
+}
+✔ Updating iOS plugins in 25.81ms
+  Found 0 Capacitor plugins for ios:
+✖ Updating iOS native dependencies with "pod install" (may take several minutes): 
+✖ update ios: 
+[error] Analyzing dependencies
+[!] CocoaPods could not find compatible versions for pod "Capacitor":
+  In Podfile:
+    Capacitor (from `../../node_modules/@capacitor/ios`)
+
+Specs satisfying the `Capacitor (from `../../node_modules/@capacitor/ios`)` dependency were found, but they required a higher minimum deployment target.
