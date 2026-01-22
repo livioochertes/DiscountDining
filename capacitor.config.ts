@@ -17,11 +17,6 @@ const config: CapacitorConfig = {
       iosSpinnerStyle: 'small',
       splashFullScreen: false,
       splashImmersive: false
-    },
-    StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#ffffff',
-      overlaysWebView: false
     }
   }
 };
