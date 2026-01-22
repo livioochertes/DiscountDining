@@ -248,6 +248,14 @@ export default function Profile() {
 
   // Display authenticated user information
   const displayName = user?.name || user?.email || 'User';
+  
+  // Debug: Log user object to check customerCode
+  console.log("Profile user data:", { 
+    id: user?.id, 
+    customerCode: user?.customerCode,
+    hasCustomerCode: !!user?.customerCode,
+    fullUser: user 
+  });
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
