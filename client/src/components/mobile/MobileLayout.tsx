@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Capacitor } from '@capacitor/core';
+import { StatusBar } from '@capacitor/status-bar';
 import { Home, Search, Brain, Wallet, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,12 +17,46 @@ const tabs = [
   { id: 'profile', path: '/m/profile', icon: User, label: 'Profile' },
 ];
 
+const DEFAULT_STATUS_BAR_HEIGHT = 40;
+
 export function MobileLayout({ children }: MobileLayoutProps) {
   const [location, setLocation] = useLocation();
   const [isCompact, setIsCompact] = useState(false);
+  const [statusBarHeight, setStatusBarHeight] = useState(DEFAULT_STATUS_BAR_HEIGHT);
   const mainRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isNative = Capacitor.isNativePlatform();
+  const isAndroid = Capacitor.getPlatform() === 'android';
+
+  useEffect(() => {
+    async function getStatusBarHeight() {
+      if (isAndroid && isNative) {
+        try {
+          const info = await StatusBar.getInfo();
+          setStatusBarHeight(info.height && info.height > 0 ? info.height : DEFAULT_STATUS_BAR_HEIGHT);
+        } catch (e) {
+          setStatusBarHeight(DEFAULT_STATUS_BAR_HEIGHT);
+        }
+      }
+    }
+    getStatusBarHeight();
+
+    const handleResize = () => {
+      if (isAndroid && isNative) {
+        getStatusBarHeight();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [isAndroid, isNative]);
 
   const isActive = (path: string) => {
     if (path === '/m') return location === '/m' || location === '/m/';
@@ -75,15 +110,14 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     };
   }, [handleScroll]);
 
-  // On native Android, use fixed padding since safe-area-inset-top returns 0 in non-overlay mode
-  const isNative = Capacitor.isNativePlatform();
-  const isAndroid = Capacitor.getPlatform() === 'android';
-
   return (
-    <div className={cn(
-      "h-screen bg-white flex flex-col overflow-hidden",
-      isAndroid ? "pt-10" : "safe-area-top"
-    )}>
+    <div 
+      className={cn(
+        "h-screen bg-white flex flex-col overflow-hidden",
+        !isAndroid && "safe-area-top"
+      )}
+      style={isAndroid ? { paddingTop: statusBarHeight } : undefined}
+    >
       {/* Main Content - Scrollable, starts below system status bar */}
       <main 
         ref={mainRef}
