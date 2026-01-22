@@ -361,6 +361,13 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(404).json({ message: 'User not found' });
       }
 
+      // Debug: Log customer data including customerCode
+      console.log('Auth user data:', {
+        id: customer.id,
+        customerCode: customer.customerCode,
+        hasCustomerCode: !!customer.customerCode
+      });
+
       res.json({
         id: customer.id,
         customerId: customer.id,
