@@ -1,0 +1,75 @@
+queryClient.ts:41  GET https://0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/customers/1/points 500 (Internal Server Error)
+(anonymous) @ queryClient.ts:41
+fetchFn @ @tanstack_react-query.js?v=7f62c048:840
+run @ @tanstack_react-query.js?v=7f62c048:494
+start @ @tanstack_react-query.js?v=7f62c048:536
+fetch @ @tanstack_react-query.js?v=7f62c048:926
+executeFetch_fn @ @tanstack_react-query.js?v=7f62c048:2211
+setOptions @ @tanstack_react-query.js?v=7f62c048:1955
+(anonymous) @ @tanstack_react-query.js?v=7f62c048:3032
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=7f62c048:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=7f62c048:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=7f62c048:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=7f62c048:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=7f62c048:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=7f62c048:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=7f62c048:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=7f62c048:19416
+commitRoot @ chunk-RPCDYKBN.js?v=7f62c048:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=7f62c048:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=7f62c048:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=7f62c048:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=7f62c048:555
+flush @ @tanstack_react-query.js?v=7f62c048:569
+batch @ @tanstack_react-query.js?v=7f62c048:587
+dispatch_fn @ @tanstack_react-query.js?v=7f62c048:996
+setData @ @tanstack_react-query.js?v=7f62c048:696
+onSuccess @ @tanstack_react-query.js?v=7f62c048:897
+resolve @ @tanstack_react-query.js?v=7f62c048:456
+Promise.then
+run @ @tanstack_react-query.js?v=7f62c048:498
+start @ @tanstack_react-query.js?v=7f62c048:536
+fetch @ @tanstack_react-query.js?v=7f62c048:926
+executeFetch_fn @ @tanstack_react-query.js?v=7f62c048:2211
+onSubscribe @ @tanstack_react-query.js?v=7f62c048:1898
+subscribe @ @tanstack_react-query.js?v=7f62c048:24
+(anonymous) @ @tanstack_react-query.js?v=7f62c048:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=7f62c048:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=7f62c048:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=7f62c048:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=7f62c048:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=7f62c048:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=7f62c048:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=7f62c048:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=7f62c048:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=7f62c048:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=7f62c048:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=7f62c048:19432
+commitRoot @ chunk-RPCDYKBN.js?v=7f62c048:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=7f62c048:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=7f62c048:18718
+workLoop @ chunk-RPCDYKBN.js?v=7f62c048:197
+flushWork @ chunk-RPCDYKBN.js?v=7f62c048:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=7f62c048:384Understand this error
+queryClient.ts:41  GET https://0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/restaurant-portal/auth/user 401 (Unauthorized)
+(anonymous) @ queryClient.ts:41
+fetchFn @ @tanstack_react-query.js?v=7f62c048:840
+run @ @tanstack_react-query.js?v=7f62c048:494
+start @ @tanstack_react-query.js?v=7f62c048:536
+fetch @ @tanstack_react-query.js?v=7f62c048:926
+executeFetch_fn @ @tanstack_react-query.js?v=7f62c048:2211
+fetch @ @tanstack_react-query.js?v=7f62c048:2011
+refetch @ @tanstack_react-query.js?v=7f62c048:2001
+onFocus @ @tanstack_react-query.js?v=7f62c048:749
+(anonymous) @ @tanstack_react-query.js?v=7f62c048:1112
+(anonymous) @ @tanstack_react-query.js?v=7f62c048:1111
+batch @ @tanstack_react-query.js?v=7f62c048:583
+onFocus @ @tanstack_react-query.js?v=7f62c048:1110
+(anonymous) @ @tanstack_react-query.js?v=7f62c048:1601
+await in (anonymous)
+(anonymous) @ @tanstack_react-query.js?v=7f62c048:313
+onFocus @ @tanstack_react-query.js?v=7f62c048:312
+(anonymous) @ @tanstack_react-query.js?v=7f62c048:299
+listener @ @tanstack_react-query.js?v=7f62c048:270Understand this error
+queryClient.ts:41  GET https://0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/restaurant-portal/auth/user 401 (Unauthorized)
