@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import CustomerQRCodeCard from "@/components/CustomerQRCodeCard";
 
 // Dietary Profile Component
 function DietaryProfileCard({ userId }: { userId?: string }) {
@@ -352,6 +353,9 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Customer QR Code Section */}
+        {user?.customerId && <CustomerQRCodeCard customerId={user.customerId} />}
 
         {/* Dietary Profile & AI Recommendations Section */}
         {user?.id && <DietaryProfileCard userId={user.id.toString()} />}

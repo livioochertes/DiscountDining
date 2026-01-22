@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle } from "lucide-react";
+import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import BankingInformationForm from "@/components/BankingInformationForm";
 import { EditRestaurantForm } from "@/components/EditRestaurantForm";
+import LoyaltyManagement from "@/components/LoyaltyManagement";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -878,7 +879,7 @@ export default function RestaurantPortal() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-7 h-auto">
+          <TabsList className="grid w-full grid-cols-8 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-1 text-xs px-2">
               <BarChart3 className="w-3 h-3" />
               {t.overview}
@@ -898,6 +899,10 @@ export default function RestaurantPortal() {
             <TabsTrigger value="packages" className="flex items-center gap-1 text-xs px-2">
               <Package className="w-3 h-3" />
               {t.packages}
+            </TabsTrigger>
+            <TabsTrigger value="loyalty" className="flex items-center gap-1 text-xs px-2">
+              <Users className="w-3 h-3" />
+              Fidelizare
             </TabsTrigger>
             <TabsTrigger value="menu" className="flex items-center gap-1 text-xs px-2">
               <Menu className="w-3 h-3" />
@@ -1809,6 +1814,11 @@ export default function RestaurantPortal() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Loyalty Tab */}
+          <TabsContent value="loyalty" className="space-y-6">
+            <LoyaltyManagement restaurants={restaurants} />
           </TabsContent>
 
           {/* Settings Tab */}
