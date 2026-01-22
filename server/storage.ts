@@ -1326,7 +1326,8 @@ export class MemStorage implements IStorage {
       allergies: ["nuts", "dairy"],
       dislikes: ["spicy_food"],
       healthConditions: [],
-      createdAt: new Date()
+      createdAt: new Date(),
+      customerCode: "CLI-DEMO01"
     };
     this.customers.set(customer.id, customer);
 

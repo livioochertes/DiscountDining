@@ -363,12 +363,14 @@ export function registerUserAuthRoutes(app: Express) {
 
       res.json({
         id: customer.id,
+        customerId: customer.id,
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
         membershipTier: customer.membershipTier,
         loyaltyPoints: customer.loyaltyPoints,
-        balance: customer.balance
+        balance: customer.balance,
+        customerCode: customer.customerCode
       });
     } catch (error) {
       console.error('Get user error:', error);
