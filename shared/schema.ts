@@ -175,6 +175,11 @@ export const customers = pgTable("customers", {
   profilePicture: text("profile_picture"), // URL to user's profile picture
   balance: decimal("balance", { precision: 10, scale: 2 }).default("0.00"),
   
+  // Unique customer code and QR for loyalty/payment
+  customerCode: text("customer_code").unique(), // Unique code like "CLI-ABC123"
+  customerQrCode: text("customer_qr_code"), // Base64 QR code image
+  isProfileComplete: boolean("is_profile_complete").default(false), // True when mandatory fields are filled
+  
   // Points system
   loyaltyPoints: integer("loyalty_points").default(0),
   totalPointsEarned: integer("total_points_earned").default(0),
@@ -1249,3 +1254,100 @@ export type InsertRestaurantFinancials = z.infer<typeof insertRestaurantFinancia
 
 export type EatoffDailySummary = typeof eatoffDailySummary.$inferSelect;
 export type InsertEatoffDailySummary = z.infer<typeof insertEatoffDailySummarySchema>;
+
+// Loyalty categories for restaurant fidelity programs
+export const loyaltyCategories = pgTable("loyalty_categories", {
+  id: serial("id").primaryKey(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  name: text("name").notNull(), // Bronze, Silver, Gold, Platinum, VIP, etc.
+  description: text("description"),
+  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }).notNull(), // Discount for this tier
+  minVisits: integer("min_visits").default(0), // Minimum visits to reach this tier
+  minSpend: decimal("min_spend", { precision: 10, scale: 2 }).default("0.00"), // Minimum total spend to reach this tier
+  color: text("color").default("#808080"), // Display color for the tier
+  icon: text("icon"), // Optional icon name
+  sortOrder: integer("sort_order").default(0), // Order in which tiers are displayed
+  isDefault: boolean("is_default").default(false), // Default tier for new loyal customers
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Loyal customers - relationship between customers and restaurants
+export const loyalCustomers = pgTable("loyal_customers", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  categoryId: integer("category_id").references(() => loyaltyCategories.id),
+  customerCode: text("customer_code").notNull(), // Customer's unique code used for enrollment
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  totalVisits: integer("total_visits").default(0),
+  totalSpend: decimal("total_spend", { precision: 10, scale: 2 }).default("0.00"),
+  lastVisitAt: timestamp("last_visit_at"),
+  notes: text("notes"), // Restaurant notes about this customer
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Payment requests initiated by restaurants
+export const paymentRequests = pgTable("payment_requests", {
+  id: serial("id").primaryKey(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"), // What the payment is for
+  
+  // Status flow: pending -> confirmed/rejected/expired
+  status: text("status").notNull().default("pending"), // pending, confirmed, rejected, expired, completed
+  
+  // Customer's scanned code
+  customerCode: text("customer_code").notNull(),
+  
+  // Loyalty discount applied
+  loyaltyDiscountApplied: decimal("loyalty_discount_applied", { precision: 10, scale: 2 }).default("0.00"),
+  finalAmount: decimal("final_amount", { precision: 10, scale: 2 }).notNull(), // After discount
+  
+  // Payment details
+  paymentMethod: text("payment_method"), // wallet, card, points
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  
+  // Timestamps
+  expiresAt: timestamp("expires_at").notNull(), // Request expires after X minutes
+  confirmedAt: timestamp("confirmed_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for loyalty and payment tables
+export const insertLoyaltyCategorySchema = createInsertSchema(loyaltyCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLoyalCustomerSchema = createInsertSchema(loyalCustomers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  enrolledAt: true,
+});
+
+export const insertPaymentRequestSchema = createInsertSchema(paymentRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  confirmedAt: true,
+  completedAt: true,
+});
+
+// Loyalty and payment types
+export type LoyaltyCategory = typeof loyaltyCategories.$inferSelect;
+export type InsertLoyaltyCategory = z.infer<typeof insertLoyaltyCategorySchema>;
+
+export type LoyalCustomer = typeof loyalCustomers.$inferSelect;
+export type InsertLoyalCustomer = z.infer<typeof insertLoyalCustomerSchema>;
+
+export type PaymentRequest = typeof paymentRequests.$inferSelect;
+export type InsertPaymentRequest = z.infer<typeof insertPaymentRequestSchema>;
