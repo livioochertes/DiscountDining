@@ -322,44 +322,77 @@ export default function Profile() {
                     <span className="text-sm text-gray-600">Loyalty Points:</span>
                     <p className="font-medium text-lg">{user?.loyaltyPoints || 0} points</p>
                   </div>
-                  <div className="pt-4">
-                    <Button 
-                      onClick={async () => {
-                        try {
-                          // Set authentication data to null immediately
-                          queryClient.setQueryData(["/api/auth/user"], null);
-                          
-                          // Make logout API call in background
-                          fetch("/api/auth/logout", { 
-                            method: "POST",
-                            credentials: "include"
-                          }).catch(console.error);
-                          
-                          // Navigate immediately
-                          setLocation("/");
-                        } catch (error) {
-                          console.error("Logout error:", error);
-                          queryClient.setQueryData(["/api/auth/user"], null);
-                          setLocation("/");
-                        }
-                      }}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      Sign Out
-                    </Button>
-                  </div>
                 </div>
               </div>
+              
+              {/* QR Code for Restaurant Scanning */}
+              {user?.customerCode && (
+                <div className="md:col-span-2 mt-4 pt-4 border-t">
+                  <div className="flex flex-col sm:flex-row items-center gap-4 bg-gradient-to-r from-primary/5 to-primary/10 p-4 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <div 
+                        className="bg-white p-2 rounded-lg shadow-sm"
+                        dangerouslySetInnerHTML={{
+                          __html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="80" height="80">
+                            <rect width="100" height="100" fill="white"/>
+                            <rect x="10" y="10" width="25" height="25" fill="black"/>
+                            <rect x="65" y="10" width="25" height="25" fill="black"/>
+                            <rect x="10" y="65" width="25" height="25" fill="black"/>
+                            <rect x="15" y="15" width="15" height="15" fill="white"/>
+                            <rect x="70" y="15" width="15" height="15" fill="white"/>
+                            <rect x="15" y="70" width="15" height="15" fill="white"/>
+                            <rect x="18" y="18" width="9" height="9" fill="black"/>
+                            <rect x="73" y="18" width="9" height="9" fill="black"/>
+                            <rect x="18" y="73" width="9" height="9" fill="black"/>
+                            <rect x="40" y="10" width="5" height="5" fill="black"/>
+                            <rect x="50" y="10" width="5" height="5" fill="black"/>
+                            <rect x="40" y="20" width="5" height="5" fill="black"/>
+                            <rect x="45" y="25" width="5" height="5" fill="black"/>
+                            <rect x="40" y="40" width="20" height="20" fill="black"/>
+                            <rect x="45" y="45" width="10" height="10" fill="white"/>
+                            <rect x="48" y="48" width="4" height="4" fill="black"/>
+                          </svg>`
+                        }}
+                      />
+                    </div>
+                    <div className="text-center sm:text-left flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-1">Codul tău de fidelitate</h4>
+                      <p className="text-2xl font-bold text-primary tracking-wider">{user.customerCode}</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Arată acest cod la restaurant pentru plăți și reduceri de fidelitate
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 pt-4 border-t">
+              <Button 
+                onClick={async () => {
+                  try {
+                    queryClient.setQueryData(["/api/auth/user"], null);
+                    fetch("/api/auth/logout", { 
+                      method: "POST",
+                      credentials: "include"
+                    }).catch(console.error);
+                    setLocation("/");
+                  } catch (error) {
+                    console.error("Logout error:", error);
+                    queryClient.setQueryData(["/api/auth/user"], null);
+                    setLocation("/");
+                  }
+                }}
+                variant="outline"
+              >
+                Sign Out
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Customer QR Code Section */}
-        {user?.customerId && <CustomerQRCodeCard customerId={user.customerId} />}
-
         {/* Payment Requests Section */}
-        {user?.customerId && <PaymentRequestsCard customerId={user.customerId} />}
+        {user?.id && <PaymentRequestsCard customerId={user.id} />}
 
         {/* Dietary Profile & AI Recommendations Section */}
         {user?.id && <DietaryProfileCard userId={user.id.toString()} />}
