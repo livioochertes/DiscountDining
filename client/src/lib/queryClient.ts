@@ -1,6 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const IS_CROSS_ORIGIN = !!API_BASE_URL;
 
 function getFullUrl(url: string): string {
   if (url.startsWith('http')) {
@@ -21,12 +22,17 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(getFullUrl(url), {
+  const fetchOptions: RequestInit = {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  };
+  
+  if (!IS_CROSS_ORIGIN) {
+    fetchOptions.credentials = "include";
+  }
+  
+  const res = await fetch(getFullUrl(url), fetchOptions);
 
   await throwIfResNotOk(res);
   return res;
@@ -38,9 +44,13 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(getFullUrl(queryKey[0] as string), {
-      credentials: "include",
-    });
+    const fetchOptions: RequestInit = {};
+    
+    if (!IS_CROSS_ORIGIN) {
+      fetchOptions.credentials = "include";
+    }
+    
+    const res = await fetch(getFullUrl(queryKey[0] as string), fetchOptions);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
