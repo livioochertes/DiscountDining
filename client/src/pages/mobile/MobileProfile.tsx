@@ -27,7 +27,7 @@ export default function MobileProfile() {
     try {
       await apiRequest('POST', '/api/auth/logout');
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      setLocation('/login');
+      setLocation('/m/signin');
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -57,16 +57,16 @@ export default function MobileProfile() {
             Sign up to access your profile, manage your preferences, and track your loyalty rewards.
           </p>
           <button
-            onClick={() => setLocation('/register')}
+            onClick={() => setLocation('/m/signin')}
             className="w-full max-w-xs bg-primary text-white font-semibold py-4 px-6 rounded-2xl mb-3 hover:bg-primary/90 transition-colors"
           >
-            Create Account
+            Conectare
           </button>
           <button
-            onClick={() => setLocation('/login')}
+            onClick={() => setLocation('/m/signin')}
             className="w-full max-w-xs bg-gray-100 text-gray-700 font-medium py-4 px-6 rounded-2xl hover:bg-gray-200 transition-colors"
           >
-            Already have an account? Sign In
+            Ai deja cont? Autentifică-te
           </button>
         </div>
       </MobileLayout>

@@ -138,7 +138,7 @@ export default function MobileRestaurantDetail() {
 
   const handleAddToCart = (item: MenuItem) => {
     if (!user) {
-      setLocation('/login?redirect=' + encodeURIComponent(`/m/restaurant/${restaurantId}`));
+      setLocation('/m/signin');
       return;
     }
     console.log('Add to cart:', item);
@@ -146,7 +146,7 @@ export default function MobileRestaurantDetail() {
 
   const handleBuyVoucher = (pkg: VoucherPackage) => {
     if (!user) {
-      setLocation('/login?redirect=' + encodeURIComponent(`/m/restaurant/${restaurantId}`));
+      setLocation('/m/signin');
       return;
     }
     if (pkg.type === 'eatoff') {
