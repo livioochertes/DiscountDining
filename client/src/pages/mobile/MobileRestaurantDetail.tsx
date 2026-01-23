@@ -109,7 +109,7 @@ export default function MobileRestaurantDetail() {
   const { data: restaurantData, isLoading } = useQuery({
     queryKey: ['/api/restaurants', restaurantId, 'full'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/restaurants/${restaurantId}/full`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/restaurants/${restaurantId}/full`);
       if (!res.ok) throw new Error('Failed to fetch restaurant');
       return res.json();
     },
@@ -119,7 +119,7 @@ export default function MobileRestaurantDetail() {
   const { data: packages = [] } = useQuery<VoucherPackage[]>({
     queryKey: ['/api/restaurants', restaurantId, 'packages'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/restaurants/${restaurantId}/packages`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/restaurants/${restaurantId}/packages`);
       if (!res.ok) throw new Error('Failed to fetch packages');
       return res.json();
     },

@@ -19,7 +19,7 @@ export default function MobileHome() {
   const { data: restaurants = [] } = useQuery<any[]>({
     queryKey: ['/api/restaurants'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/restaurants`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/restaurants`);
       if (!res.ok) throw new Error('Failed to fetch restaurants');
       return res.json();
     }
