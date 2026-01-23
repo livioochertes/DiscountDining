@@ -95,7 +95,7 @@ export default function MobileExplore() {
       const url = selectedCity === 'Toate locațiile' 
         ? `${API_BASE_URL}/api/restaurants`
         : `${API_BASE_URL}/api/restaurants?location=${encodeURIComponent(selectedCity)}`;
-      const res = await fetch(url, { credentials: 'include' });
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch restaurants');
       return res.json();
     }
@@ -104,7 +104,7 @@ export default function MobileExplore() {
   const { data: vouchers = [], isLoading: vouchersLoading } = useQuery<EatoffVoucher[]>({
     queryKey: ['/api/eatoff-vouchers'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/eatoff-vouchers`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE_URL}/api/eatoff-vouchers`);
       if (!res.ok) throw new Error('Failed to fetch vouchers');
       return res.json();
     }
