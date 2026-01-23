@@ -624,6 +624,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint for EatOff vouchers (available to all users including guests)
+  app.get("/api/eatoff-vouchers", async (req, res) => {
+    try {
+      const vouchers = await storage.getEatoffVouchers();
+      const activeVouchers = vouchers.filter(v => v.isActive);
+      res.json(activeVouchers);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching vouchers: " + error.message });
+    }
+  });
+
   app.get("/api/restaurants/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
