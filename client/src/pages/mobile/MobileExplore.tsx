@@ -7,6 +7,8 @@ import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCard } from '@/components/mobile/RestaurantCard';
 import { cn } from '@/lib/utils';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 const CITIES = [
   'Toate locațiile',
   'Bucharest',
@@ -91,9 +93,9 @@ export default function MobileExplore() {
     queryKey: ['/api/restaurants', selectedCity],
     queryFn: async () => {
       const url = selectedCity === 'Toate locațiile' 
-        ? '/api/restaurants'
-        : `/api/restaurants?location=${encodeURIComponent(selectedCity)}`;
-      const res = await fetch(url);
+        ? `${API_BASE_URL}/api/restaurants`
+        : `${API_BASE_URL}/api/restaurants?location=${encodeURIComponent(selectedCity)}`;
+      const res = await fetch(url, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch restaurants');
       return res.json();
     }
@@ -102,7 +104,7 @@ export default function MobileExplore() {
   const { data: vouchers = [], isLoading: vouchersLoading } = useQuery<EatoffVoucher[]>({
     queryKey: ['/api/eatoff-vouchers'],
     queryFn: async () => {
-      const res = await fetch('/api/eatoff-vouchers');
+      const res = await fetch(`${API_BASE_URL}/api/eatoff-vouchers`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch vouchers');
       return res.json();
     }

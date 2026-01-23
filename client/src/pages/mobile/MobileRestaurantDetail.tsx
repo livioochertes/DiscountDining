@@ -6,6 +6,8 @@ import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 interface MenuItem {
   id: number;
   name: string;
@@ -107,7 +109,7 @@ export default function MobileRestaurantDetail() {
   const { data: restaurantData, isLoading } = useQuery({
     queryKey: ['/api/restaurants', restaurantId, 'full'],
     queryFn: async () => {
-      const res = await fetch(`/api/restaurants/${restaurantId}/full`);
+      const res = await fetch(`${API_BASE_URL}/api/restaurants/${restaurantId}/full`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch restaurant');
       return res.json();
     },
@@ -117,7 +119,7 @@ export default function MobileRestaurantDetail() {
   const { data: packages = [] } = useQuery<VoucherPackage[]>({
     queryKey: ['/api/restaurants', restaurantId, 'packages'],
     queryFn: async () => {
-      const res = await fetch(`/api/restaurants/${restaurantId}/packages`);
+      const res = await fetch(`${API_BASE_URL}/api/restaurants/${restaurantId}/packages`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch packages');
       return res.json();
     },

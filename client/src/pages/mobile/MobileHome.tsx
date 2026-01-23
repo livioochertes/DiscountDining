@@ -9,6 +9,8 @@ import { RestaurantCardSmall } from '@/components/mobile/RestaurantCard';
 import { DealBanner, SmallDealCard } from '@/components/mobile/DealBanner';
 import { useAuth } from '@/hooks/useAuth';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 export default function MobileHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -17,7 +19,7 @@ export default function MobileHome() {
   const { data: restaurants = [] } = useQuery<any[]>({
     queryKey: ['/api/restaurants'],
     queryFn: async () => {
-      const res = await fetch('/api/restaurants');
+      const res = await fetch(`${API_BASE_URL}/api/restaurants`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch restaurants');
       return res.json();
     }
