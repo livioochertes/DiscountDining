@@ -34,8 +34,9 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     async function getStatusBarHeight() {
       if (isAndroid && isNative) {
         try {
-          const info = await StatusBar.getInfo();
-          setStatusBarHeight(info.height && info.height > 0 ? info.height : DEFAULT_STATUS_BAR_HEIGHT);
+          const info = await StatusBar.getInfo() as any;
+          const height = info?.height ?? DEFAULT_STATUS_BAR_HEIGHT;
+          setStatusBarHeight(height > 0 ? height : DEFAULT_STATUS_BAR_HEIGHT);
         } catch (e) {
           setStatusBarHeight(DEFAULT_STATUS_BAR_HEIGHT);
         }
