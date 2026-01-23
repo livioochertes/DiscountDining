@@ -8,6 +8,7 @@ import { RestaurantCard } from '@/components/mobile/RestaurantCard';
 import { cn } from '@/lib/utils';
 
 const CITIES = [
+  'Toate locațiile',
   'Bucharest',
   'Cluj-Napoca',
   'Timișoara',
@@ -82,14 +83,17 @@ export default function MobileExplore() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers'>('restaurants');
-  const [selectedCity, setSelectedCity] = useState('Bucharest');
+  const [selectedCity, setSelectedCity] = useState('Toate locațiile');
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
   const { data: restaurants = [], isLoading: restaurantsLoading } = useQuery<any[]>({
     queryKey: ['/api/restaurants', selectedCity],
     queryFn: async () => {
-      const res = await fetch(`/api/restaurants?location=${encodeURIComponent(selectedCity)}`);
+      const url = selectedCity === 'Toate locațiile' 
+        ? '/api/restaurants'
+        : `/api/restaurants?location=${encodeURIComponent(selectedCity)}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch restaurants');
       return res.json();
     }
