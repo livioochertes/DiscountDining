@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCard } from '@/components/mobile/RestaurantCard';
 import { cn } from '@/lib/utils';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const isNativePlatform = Capacitor.isNativePlatform();
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 
 const CITIES = [
   'Toate locațiile',
