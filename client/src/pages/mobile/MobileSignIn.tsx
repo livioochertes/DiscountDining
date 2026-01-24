@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const isNativePlatform = Capacitor.isNativePlatform();
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 const DEFAULT_STATUS_BAR_HEIGHT = 40;
 
 export default function MobileSignIn() {

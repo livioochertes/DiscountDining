@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useRoute } from 'wouter';
 import { ArrowLeft, Star, MapPin, Clock, Ticket, ShoppingBag, Heart, Share2, ChevronRight } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const isNativePlatform = Capacitor.isNativePlatform();
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 
 interface MenuItem {
   id: number;
