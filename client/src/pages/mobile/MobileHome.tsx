@@ -16,13 +16,35 @@ export default function MobileHome() {
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const { data: restaurants = [] } = useQuery<any[]>({
+  const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
     queryKey: ['/api/restaurants'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/restaurants`);
-      if (!res.ok) throw new Error('Failed to fetch restaurants');
-      return res.json();
+      const url = `${API_BASE_URL}/api/restaurants`;
+      console.log('[MobileHome] Fetching restaurants from:', url);
+      console.log('[MobileHome] API_BASE_URL value:', API_BASE_URL);
+      try {
+        const res = await fetch(url);
+        console.log('[MobileHome] Response status:', res.status);
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('[MobileHome] Error response:', text);
+          throw new Error('Failed to fetch restaurants');
+        }
+        const data = await res.json();
+        console.log('[MobileHome] Restaurants loaded:', data.length);
+        return data;
+      } catch (err) {
+        console.error('[MobileHome] Fetch error:', err);
+        throw err;
+      }
     }
+  });
+
+  console.log('[MobileHome] State:', {
+    API_BASE_URL,
+    restaurantsLoading,
+    restaurantsCount: restaurants.length,
+    error: restaurantsError?.message
   });
 
   const { data: userStats } = useQuery<any>({
