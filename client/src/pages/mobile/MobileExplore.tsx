@@ -89,25 +89,62 @@ export default function MobileExplore() {
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
-  const { data: restaurants = [], isLoading: restaurantsLoading } = useQuery<any[]>({
+  const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
     queryKey: ['/api/restaurants', selectedCity],
     queryFn: async () => {
       const url = selectedCity === 'Toate locațiile' 
         ? `${API_BASE_URL}/api/restaurants`
         : `${API_BASE_URL}/api/restaurants?location=${encodeURIComponent(selectedCity)}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch restaurants');
-      return res.json();
+      console.log('[MobileExplore] Fetching restaurants from:', url);
+      try {
+        const res = await fetch(url);
+        console.log('[MobileExplore] Restaurants response status:', res.status);
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('[MobileExplore] Restaurants error response:', text);
+          throw new Error('Failed to fetch restaurants');
+        }
+        const data = await res.json();
+        console.log('[MobileExplore] Restaurants loaded:', data.length);
+        return data;
+      } catch (err) {
+        console.error('[MobileExplore] Fetch error:', err);
+        throw err;
+      }
     }
   });
 
-  const { data: vouchers = [], isLoading: vouchersLoading } = useQuery<EatoffVoucher[]>({
+  const { data: vouchers = [], isLoading: vouchersLoading, error: vouchersError } = useQuery<EatoffVoucher[]>({
     queryKey: ['/api/eatoff-vouchers'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/eatoff-vouchers`);
-      if (!res.ok) throw new Error('Failed to fetch vouchers');
-      return res.json();
+      const url = `${API_BASE_URL}/api/eatoff-vouchers`;
+      console.log('[MobileExplore] Fetching vouchers from:', url);
+      try {
+        const res = await fetch(url);
+        console.log('[MobileExplore] Vouchers response status:', res.status);
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('[MobileExplore] Vouchers error response:', text);
+          throw new Error('Failed to fetch vouchers');
+        }
+        const data = await res.json();
+        console.log('[MobileExplore] Vouchers loaded:', data.length);
+        return data;
+      } catch (err) {
+        console.error('[MobileExplore] Fetch error:', err);
+        throw err;
+      }
     }
+  });
+
+  console.log('[MobileExplore] State:', { 
+    API_BASE_URL, 
+    restaurantsLoading, 
+    vouchersLoading, 
+    restaurantsCount: restaurants.length,
+    vouchersCount: vouchers.length,
+    restaurantsError: restaurantsError?.message,
+    vouchersError: vouchersError?.message
   });
 
   const filteredRestaurants = restaurants.filter((r: any) => {
