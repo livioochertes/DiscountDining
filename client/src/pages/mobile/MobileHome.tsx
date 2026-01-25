@@ -203,6 +203,7 @@ export default function MobileHome() {
   const { 
     city: gpsCity, 
     isLoading: isDetectingLocation,
+    error: gpsError,
     requestGpsLocation
   } = useUserLocation();
 
@@ -421,20 +422,20 @@ export default function MobileHome() {
               onClick={() => setLocation('/m/explore')}
               className="flex items-center gap-1 mt-1 text-xs text-primary"
             >
-              {isDetectingLocation ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  <span>Detecting location...</span>
-                </>
-              ) : gpsCity ? (
+              {gpsCity ? (
                 <>
                   <MapPin className="w-3 h-3" />
                   <span>{gpsCity}</span>
                 </>
+              ) : isDetectingLocation && !gpsError ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>{t.detecting}</span>
+                </>
               ) : (
                 <>
                   <MapPin className="w-3 h-3" />
-                  <span>All locations</span>
+                  <span>{t.allLocations}</span>
                 </>
               )}
             </button>
