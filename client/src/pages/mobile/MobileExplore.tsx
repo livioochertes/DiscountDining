@@ -27,6 +27,7 @@ const CITIES = [
 
 interface EatoffVoucher {
   id: number;
+  restaurantId: number;
   name: string;
   description: string;
   mealCount: number;
