@@ -139,6 +139,17 @@ export default function MobileHome() {
     }
   });
 
+  const { data: favoriteRestaurants = [] } = useQuery<any[]>({
+    queryKey: ['/api/customers', user?.id, 'favorite-restaurants'],
+    queryFn: async () => {
+      const url = `${API_BASE_URL}/api/customers/${user?.id}/favorite-restaurants`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch favorites');
+      return res.json();
+    },
+    enabled: !!user?.id
+  });
+
   const { data: userStats } = useQuery<any>({
     queryKey: ['/api/users/stats'],
     enabled: !!user,
@@ -218,8 +229,8 @@ export default function MobileHome() {
           onSelect={setSelectedCategory}
         />
 
-        {/* Your Favorites - only shown when logged in and has favorites */}
-        {user && restaurants.length > 0 && (
+        {/* Your Favorites - only shown when logged in and has favorites from purchases */}
+        {user && favoriteRestaurants.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-gray-900">Your favorites</h2>
@@ -232,7 +243,7 @@ export default function MobileHome() {
             </div>
             <div className="overflow-x-auto scrollbar-hide">
               <div className="flex gap-3">
-                {restaurants.slice(0, 4).map((restaurant: any) => (
+                {favoriteRestaurants.slice(0, 4).map((restaurant: any) => (
                   <RestaurantCardSmall
                     key={restaurant.id}
                     name={restaurant.name}
