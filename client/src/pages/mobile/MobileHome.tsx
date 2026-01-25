@@ -234,7 +234,8 @@ export default function MobileHome() {
       discountPercentage: p.discountPercentage,
       validityDays: (p.validityMonths || 1) * 30,
       isActive: p.isActive,
-      isCredit: false
+      isCredit: false,
+      voucherType: 'discount' as const
     }));
     
     const mappedCreditVouchers = creditVouchers.filter(v => v.isActive).map(v => ({
@@ -244,13 +245,20 @@ export default function MobileHome() {
       description: v.description || '',
       mealCount: 0,
       totalValue: String(v.totalValue),
-      bonusPercentage: String(v.bonusPercentage || '0'),
-      discountPercentage: String(v.discountPercentage || '0'),
+      bonusPercentage: v.bonusPercentage ? String(v.bonusPercentage) : '0',
+      discountPercentage: v.discountPercentage ? String(v.discountPercentage) : '0',
       validityDays: v.validityDays || (v.validityMonths ? v.validityMonths * 30 : 30),
       isActive: v.isActive,
       isCredit: true,
       voucherType: v.voucherType || 'immediate'
     }));
+    
+    console.log('[MobileHome] Credit vouchers mapped:', mappedCreditVouchers.map(v => ({
+      name: v.name, voucherType: v.voucherType, bonus: v.bonusPercentage, discount: v.discountPercentage
+    })));
+    console.log('[MobileHome] Discount packages mapped:', mappedDiscountPackages.map(v => ({
+      name: v.name, voucherType: v.voucherType, discount: v.discountPercentage
+    })));
     
     return [...mappedDiscountPackages, ...mappedCreditVouchers];
   }, [discountPackages, creditVouchers]);
@@ -301,6 +309,19 @@ export default function MobileHome() {
       )
     }))
     .filter(item => item.vouchers.length > 0);
+
+  console.log('[MobileHome] Restaurants with vouchers:', restaurantsWithVouchers.map(r => ({
+    restaurantName: r.restaurant.name,
+    restaurantId: r.restaurant.id,
+    vouchers: r.vouchers.map(v => ({
+      name: v.name,
+      voucherType: v.voucherType,
+      isCredit: v.isCredit,
+      restaurantId: v.restaurantId,
+      bonus: v.bonusPercentage,
+      discount: v.discountPercentage
+    }))
+  })));
 
   const handleVoucherClick = (restaurantId: number, voucherId: number, isCredit: boolean) => {
     if (isCredit) {
