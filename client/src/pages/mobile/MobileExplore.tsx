@@ -38,6 +38,7 @@ interface EatoffVoucher {
   validityDays: number;
   isActive: boolean;
   isCredit?: boolean;
+  voucherType?: string;
 }
 
 interface VoucherPackage {
@@ -62,13 +63,13 @@ function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
   
-  const isCredit = voucher.isCredit === true;
+  const isPayLater = voucher.voucherType === 'pay_later';
   
   let displayPercent: number;
   let prefix: string;
   let bgColor: string;
   
-  if (isCredit) {
+  if (isPayLater) {
     displayPercent = bonusPercent;
     prefix = '+';
     bgColor = 'bg-red-500';
@@ -311,7 +312,8 @@ export default function MobileExplore() {
       discountPercentage: String(v.discountPercentage || '0'),
       validityDays: v.validityDays || (v.validityMonths ? v.validityMonths * 30 : 30),
       isActive: v.isActive,
-      isCredit: true
+      isCredit: true,
+      voucherType: v.voucherType || 'immediate'
     }));
     
     return [...mappedDiscountPackages, ...mappedCreditVouchers];
