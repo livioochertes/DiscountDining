@@ -674,6 +674,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all active discount voucher packages (for mobile listing)
+  app.get("/api/voucher-packages", async (req, res) => {
+    try {
+      const packages = await storage.getAllActivePackages();
+      res.json(packages);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching voucher packages: " + error.message });
+    }
+  });
+
   // Voucher package endpoints
   app.get("/api/restaurants/:id/packages", async (req, res) => {
     try {

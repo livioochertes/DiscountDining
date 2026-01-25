@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface EatoffVoucher {
   id: number;
-  restaurantId: number;
+  restaurantId?: number;
   name: string;
   description: string;
   mealCount: number;
@@ -20,6 +20,19 @@ interface EatoffVoucher {
   bonusPercentage: string;
   discountPercentage: string;
   validityDays: number;
+  isActive: boolean;
+  isCredit?: boolean;
+}
+
+interface VoucherPackage {
+  id: number;
+  restaurantId: number;
+  name: string;
+  description: string;
+  mealCount: number;
+  pricePerMeal: string;
+  discountPercentage: string;
+  validityMonths: number;
   isActive: boolean;
 }
 
@@ -171,15 +184,43 @@ export default function MobileHome() {
     error: restaurantsError?.message
   });
 
-  const { data: vouchers = [] } = useQuery<EatoffVoucher[]>({
+  const { data: creditVouchers = [] } = useQuery<EatoffVoucher[]>({
     queryKey: ['/api/eatoff-vouchers'],
     queryFn: async () => {
-      const url = `${API_BASE_URL}/api/eatoff-vouchers`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch vouchers');
+      const res = await fetch(`${API_BASE_URL}/api/eatoff-vouchers`);
+      if (!res.ok) throw new Error('Failed to fetch credit vouchers');
       return res.json();
     }
   });
+
+  const { data: discountPackages = [] } = useQuery<VoucherPackage[]>({
+    queryKey: ['/api/voucher-packages'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/voucher-packages`);
+      if (!res.ok) throw new Error('Failed to fetch discount packages');
+      return res.json();
+    }
+  });
+
+  const vouchers: EatoffVoucher[] = [
+    ...discountPackages.filter(p => p.isActive).map(p => ({
+      id: p.id,
+      restaurantId: p.restaurantId,
+      name: p.name,
+      description: p.description || '',
+      mealCount: p.mealCount,
+      totalValue: String(parseFloat(p.pricePerMeal) * p.mealCount),
+      bonusPercentage: '0',
+      discountPercentage: p.discountPercentage,
+      validityDays: (p.validityMonths || 1) * 30,
+      isActive: p.isActive,
+      isCredit: false
+    })),
+    ...creditVouchers.filter(v => v.isActive).map(v => ({
+      ...v,
+      isCredit: true
+    }))
+  ];
 
   const { data: favoriteRestaurants = [] } = useQuery<any[]>({
     queryKey: ['/api/customers', user?.id, 'favorite-restaurants'],
@@ -214,7 +255,9 @@ export default function MobileHome() {
     .slice(0, 4)
     .map((restaurant: any) => ({
       restaurant,
-      vouchers: activeVouchers
+      vouchers: activeVouchers.filter(v => 
+        v.isCredit || v.restaurantId === restaurant.id
+      )
     }))
     .filter(item => item.vouchers.length > 0);
 
