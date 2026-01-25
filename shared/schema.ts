@@ -104,6 +104,8 @@ export const restaurants = pgTable("restaurants", {
   imageUrl: text("image_url"),
   rating: decimal("rating", { precision: 2, scale: 1 }).default("0.0"),
   reviewCount: integer("review_count").default(0),
+  googleRating: decimal("google_rating", { precision: 2, scale: 1 }), // Google Maps rating
+  googleReviewCount: integer("google_review_count"), // Number of Google reviews
   priceRange: text("price_range").notNull(), // €, €€, €€€
   features: text("features").array(),
   
@@ -1319,6 +1321,42 @@ export const paymentRequests = pgTable("payment_requests", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Customer favorites - restaurants marked as favorite by customers
+export const customerFavorites = pgTable("customer_favorites", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Customer reviews - ratings and reviews for restaurants
+export const customerReviews = pgTable("customer_reviews", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  rating: integer("rating").notNull(), // 1-5 stars
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCustomerFavoriteSchema = createInsertSchema(customerFavorites).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCustomerReviewSchema = createInsertSchema(customerReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CustomerFavorite = typeof customerFavorites.$inferSelect;
+export type InsertCustomerFavorite = z.infer<typeof insertCustomerFavoriteSchema>;
+
+export type CustomerReview = typeof customerReviews.$inferSelect;
+export type InsertCustomerReview = z.infer<typeof insertCustomerReviewSchema>;
 
 // Insert schemas for loyalty and payment tables
 export const insertLoyaltyCategorySchema = createInsertSchema(loyaltyCategories).omit({

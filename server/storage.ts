@@ -71,7 +71,13 @@ import {
   type LoyalCustomer,
   type InsertLoyalCustomer,
   type PaymentRequest,
-  type InsertPaymentRequest
+  type InsertPaymentRequest,
+  customerFavorites,
+  customerReviews,
+  type CustomerFavorite,
+  type InsertCustomerFavorite,
+  type CustomerReview,
+  type InsertCustomerReview
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, ne } from "drizzle-orm";
@@ -335,6 +341,20 @@ export interface IStorage {
   // Customer code generation
   generateCustomerCode(customerId: number): Promise<string>;
   getCustomerByCode(customerCode: string): Promise<Customer | undefined>;
+
+  // Customer Favorites operations
+  getCustomerFavorites(customerId: number): Promise<CustomerFavorite[]>;
+  addCustomerFavorite(favorite: InsertCustomerFavorite): Promise<CustomerFavorite>;
+  removeCustomerFavorite(customerId: number, restaurantId: number): Promise<boolean>;
+  isRestaurantFavorite(customerId: number, restaurantId: number): Promise<boolean>;
+
+  // Customer Reviews operations
+  getReviewsByRestaurant(restaurantId: number): Promise<CustomerReview[]>;
+  getReviewsByCustomer(customerId: number): Promise<CustomerReview[]>;
+  createReview(review: InsertCustomerReview): Promise<CustomerReview>;
+  updateReview(id: number, updates: Partial<InsertCustomerReview>): Promise<CustomerReview | undefined>;
+  deleteReview(id: number): Promise<boolean>;
+  getRestaurantAverageRating(restaurantId: number): Promise<{ avgRating: number; count: number }>;
 }
 
 export class MemStorage implements IStorage {
@@ -3106,6 +3126,105 @@ export class DatabaseStorage implements IStorage {
     const [customer] = await db.select().from(customers)
       .where(eq(customers.customerCode, customerCode));
     return customer;
+  }
+
+  // Customer Favorites operations
+  async getCustomerFavorites(customerId: number): Promise<CustomerFavorite[]> {
+    const favorites = await db.select().from(customerFavorites)
+      .where(eq(customerFavorites.customerId, customerId));
+    return favorites;
+  }
+
+  async addCustomerFavorite(favorite: InsertCustomerFavorite): Promise<CustomerFavorite> {
+    const [created] = await db.insert(customerFavorites).values(favorite).returning();
+    return created;
+  }
+
+  async removeCustomerFavorite(customerId: number, restaurantId: number): Promise<boolean> {
+    const result = await db.delete(customerFavorites)
+      .where(and(
+        eq(customerFavorites.customerId, customerId),
+        eq(customerFavorites.restaurantId, restaurantId)
+      ));
+    return true;
+  }
+
+  async isRestaurantFavorite(customerId: number, restaurantId: number): Promise<boolean> {
+    const [favorite] = await db.select().from(customerFavorites)
+      .where(and(
+        eq(customerFavorites.customerId, customerId),
+        eq(customerFavorites.restaurantId, restaurantId)
+      ));
+    return !!favorite;
+  }
+
+  // Customer Reviews operations
+  async getReviewsByRestaurant(restaurantId: number): Promise<CustomerReview[]> {
+    const reviews = await db.select().from(customerReviews)
+      .where(eq(customerReviews.restaurantId, restaurantId))
+      .orderBy(desc(customerReviews.createdAt));
+    return reviews;
+  }
+
+  async getReviewsByCustomer(customerId: number): Promise<CustomerReview[]> {
+    const reviews = await db.select().from(customerReviews)
+      .where(eq(customerReviews.customerId, customerId))
+      .orderBy(desc(customerReviews.createdAt));
+    return reviews;
+  }
+
+  async createReview(review: InsertCustomerReview): Promise<CustomerReview> {
+    const [created] = await db.insert(customerReviews).values(review).returning();
+    
+    // Update restaurant rating
+    const { avgRating, count } = await this.getRestaurantAverageRating(review.restaurantId);
+    await db.update(restaurants)
+      .set({ rating: avgRating.toFixed(1), reviewCount: count })
+      .where(eq(restaurants.id, review.restaurantId));
+    
+    return created;
+  }
+
+  async updateReview(id: number, updates: Partial<InsertCustomerReview>): Promise<CustomerReview | undefined> {
+    const [updated] = await db.update(customerReviews)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(customerReviews.id, id))
+      .returning();
+    
+    if (updated) {
+      const { avgRating, count } = await this.getRestaurantAverageRating(updated.restaurantId);
+      await db.update(restaurants)
+        .set({ rating: avgRating.toFixed(1), reviewCount: count })
+        .where(eq(restaurants.id, updated.restaurantId));
+    }
+    
+    return updated;
+  }
+
+  async deleteReview(id: number): Promise<boolean> {
+    const [review] = await db.select().from(customerReviews).where(eq(customerReviews.id, id));
+    if (!review) return false;
+    
+    await db.delete(customerReviews).where(eq(customerReviews.id, id));
+    
+    const { avgRating, count } = await this.getRestaurantAverageRating(review.restaurantId);
+    await db.update(restaurants)
+      .set({ rating: avgRating.toFixed(1), reviewCount: count })
+      .where(eq(restaurants.id, review.restaurantId));
+    
+    return true;
+  }
+
+  async getRestaurantAverageRating(restaurantId: number): Promise<{ avgRating: number; count: number }> {
+    const reviews = await db.select().from(customerReviews)
+      .where(eq(customerReviews.restaurantId, restaurantId));
+    
+    if (reviews.length === 0) {
+      return { avgRating: 0, count: 0 };
+    }
+    
+    const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+    return { avgRating: sum / reviews.length, count: reviews.length };
   }
 
 }
