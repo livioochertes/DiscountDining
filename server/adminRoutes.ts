@@ -125,9 +125,12 @@ export function registerAdminRoutes(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // For demo purposes, accept any 6-digit 2FA code
-      if (!twoFactorCode || twoFactorCode.length !== 6) {
-        return res.status(400).json({ message: "2FA code required" });
+      // Skip 2FA for default admin account
+      if (email !== 'admin@eatoff.com') {
+        // For demo purposes, accept any 6-digit 2FA code
+        if (!twoFactorCode || twoFactorCode.length !== 6) {
+          return res.status(400).json({ message: "2FA code required" });
+        }
       }
 
       // Create session token (simplified for MemStorage)
