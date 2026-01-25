@@ -99,6 +99,7 @@ npx cap open ios          # Open iOS project in Xcode
 
 ## Recent Changes
 
+- **2025-01-25**: Fixed home page voucher list auto-refresh - now updates automatically when vouchers are created/updated/deleted from Admin or Restaurant Portal
 - **2025-01-25**: Migrated EatOff vouchers from in-memory storage to PostgreSQL database for data persistence
 - **2025-01-25**: Changed storage export from MemStorage to DatabaseStorage - all data now persists in PostgreSQL
 - **2025-01-25**: Added automatic seeding of EatOff vouchers to database if table is empty
