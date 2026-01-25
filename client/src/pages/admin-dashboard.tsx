@@ -233,7 +233,7 @@ function EatOffVoucherManagement() {
   });
 
   // Fetch EatOff vouchers
-  const { data: eatoffVouchers, isLoading: vouchersLoading } = useQuery({
+  const { data: eatoffVouchers, isLoading: vouchersLoading, refetch: refetchEatoffVouchers } = useQuery({
     queryKey: ['/api/admin/eatoff-vouchers'],
     queryFn: async () => {
       const token = localStorage.getItem('adminToken');
@@ -425,6 +425,70 @@ function EatOffVoucherManagement() {
                         />
                       </div>
                     )}
+                  </div>
+                  <div className="flex items-center gap-2 mr-4">
+                    <div className="flex flex-col items-center">
+                      <label className="text-xs text-gray-500 mb-1">Priority</label>
+                      <select
+                        value={voucher.priority ?? 3}
+                        onChange={async (e) => {
+                          const priority = parseInt(e.target.value);
+                          try {
+                            const token = localStorage.getItem('adminToken');
+                            await fetch(`/api/admin/eatoff-vouchers/${voucher.id}/priority`, {
+                              method: 'PATCH',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({ priority })
+                            });
+                            refetchEatoffVouchers();
+                            await queryClient.invalidateQueries({ queryKey: ['/api/eatoff-vouchers'] });
+                            await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+                            toast({ title: "Priority updated" });
+                          } catch (error) {
+                            toast({ title: "Error updating priority", variant: "destructive" });
+                          }
+                        }}
+                        className="w-16 p-1 text-sm border rounded"
+                      >
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <label className="text-xs text-gray-500 mb-1">Position</label>
+                      <input
+                        type="number"
+                        value={voucher.position ?? 0}
+                        min="0"
+                        onChange={async (e) => {
+                          const position = parseInt(e.target.value) || 0;
+                          try {
+                            const token = localStorage.getItem('adminToken');
+                            await fetch(`/api/admin/eatoff-vouchers/${voucher.id}/priority`, {
+                              method: 'PATCH',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({ position })
+                            });
+                            refetchEatoffVouchers();
+                            await queryClient.invalidateQueries({ queryKey: ['/api/eatoff-vouchers'] });
+                            await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+                            toast({ title: "Position updated" });
+                          } catch (error) {
+                            toast({ title: "Error updating position", variant: "destructive" });
+                          }
+                        }}
+                        className="w-16 p-1 text-sm border rounded"
+                      />
+                    </div>
                   </div>
                   <div className="flex space-x-2">
                     <Button
@@ -2015,7 +2079,7 @@ export default function AdminDashboard() {
                   </div>
                   {restaurants?.map((restaurant) => (
                     <div key={restaurant.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
+                      <div className="flex-1">
                         <h4 className="font-medium">{restaurant.name}</h4>
                         <p className="text-sm text-muted-foreground">{restaurant.email}</p>
                         <div className="flex space-x-2 mt-2">
@@ -2025,6 +2089,68 @@ export default function AdminDashboard() {
                           <Badge variant={restaurant.isActive ? "default" : "destructive"}>
                             {restaurant.isActive ? "Active" : "Suspended"}
                           </Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mr-4">
+                        <div className="flex flex-col items-center">
+                          <label className="text-xs text-gray-500 mb-1">Priority</label>
+                          <select
+                            value={(restaurant as any).priority ?? 3}
+                            onChange={async (e) => {
+                              const priority = parseInt(e.target.value);
+                              try {
+                                const token = localStorage.getItem('adminToken');
+                                await fetch(`/api/admin/restaurants/${restaurant.id}/priority`, {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({ priority })
+                                });
+                                await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
+                                await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+                                toast({ title: "Priority updated" });
+                              } catch (error) {
+                                toast({ title: "Error updating priority", variant: "destructive" });
+                              }
+                            }}
+                            className="w-16 p-1 text-sm border rounded"
+                          >
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                          </select>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <label className="text-xs text-gray-500 mb-1">Position</label>
+                          <input
+                            type="number"
+                            value={(restaurant as any).position ?? 0}
+                            min="0"
+                            onChange={async (e) => {
+                              const position = parseInt(e.target.value) || 0;
+                              try {
+                                const token = localStorage.getItem('adminToken');
+                                await fetch(`/api/admin/restaurants/${restaurant.id}/priority`, {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({ position })
+                                });
+                                await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
+                                await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+                                toast({ title: "Position updated" });
+                              } catch (error) {
+                                toast({ title: "Error updating position", variant: "destructive" });
+                              }
+                            }}
+                            className="w-16 p-1 text-sm border rounded"
+                          />
                         </div>
                       </div>
                       <div className="flex space-x-2">
