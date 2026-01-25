@@ -125,9 +125,14 @@ export function registerAdminRoutes(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Skip 2FA for default admin account
-      if (email !== 'admin@eatoff.com') {
-        // For demo purposes, accept any 6-digit 2FA code
+      // For default admin, accept "123456" as fixed 2FA code
+      if (email === 'admin@eatoff.com') {
+        if (twoFactorCode && twoFactorCode !== '123456') {
+          return res.status(401).json({ message: "Invalid 2FA code" });
+        }
+        // Allow login without 2FA or with correct code for default admin
+      } else {
+        // For other admins, require any 6-digit 2FA code
         if (!twoFactorCode || twoFactorCode.length !== 6) {
           return res.status(400).json({ message: "2FA code required" });
         }
