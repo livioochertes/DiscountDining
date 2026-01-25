@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Search, Bell, Store, ChevronRight, Star } from 'lucide-react';
+import { Search, Bell, Store, ChevronRight, Star, MapPin, Loader2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { WalletCard, ActionRow } from '@/components/mobile/WalletCard';
@@ -11,6 +11,7 @@ import { DealBanner, SmallDealCard } from '@/components/mobile/DealBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSelector from '@/components/LanguageSelector';
+import { useUserLocation } from '@/hooks/useUserLocation';
 
 interface EatoffVoucher {
   id: number;
@@ -97,21 +98,31 @@ function RestaurantVoucherRowHome({ data, onVoucherClick }: {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
     .sort((a, b) => {
+      // First sort by priority (lower number = higher priority)
+      const aPriority = (a as any).priority ?? 3;
+      const bPriority = (b as any).priority ?? 3;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      
+      // Then by position within same priority
+      const aPosition = (a as any).position ?? 0;
+      const bPosition = (b as any).position ?? 0;
+      if (aPosition !== bPosition) return aPosition - bPosition;
+      
       const aIsPayLater = a.voucherType === 'pay_later';
       const bIsPayLater = b.voucherType === 'pay_later';
-      const aDiscount = parseFloat(a.discountPercentage) || 0;
-      const bDiscount = parseFloat(b.discountPercentage) || 0;
-      const aBonus = parseFloat(a.bonusPercentage) || 0;
-      const bBonus = parseFloat(b.bonusPercentage) || 0;
       
       // Discount vouchers first, pay_later at the end
       if (!aIsPayLater && bIsPayLater) return -1;
       if (aIsPayLater && !bIsPayLater) return 1;
       
       // Both discount: sort by discount descending
+      const aDiscount = parseFloat(a.discountPercentage) || 0;
+      const bDiscount = parseFloat(b.discountPercentage) || 0;
       if (!aIsPayLater && !bIsPayLater) return bDiscount - aDiscount;
       
       // Both pay_later: sort by bonus ascending
+      const aBonus = parseFloat(a.bonusPercentage) || 0;
+      const bBonus = parseFloat(b.bonusPercentage) || 0;
       return aBonus - bBonus;
     });
   
@@ -187,11 +198,20 @@ export default function MobileHome() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // GPS location hook
+  const { 
+    city: gpsCity, 
+    isLoading: isDetectingLocation,
+    requestGpsLocation
+  } = useUserLocation();
 
   const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
-    queryKey: ['/api/restaurants'],
+    queryKey: ['/api/restaurants', gpsCity],
     queryFn: async () => {
-      const url = `${API_BASE_URL}/api/restaurants`;
+      const url = gpsCity 
+        ? `${API_BASE_URL}/api/restaurants?location=${encodeURIComponent(gpsCity)}`
+        : `${API_BASE_URL}/api/restaurants`;
       console.log('[MobileHome] Fetching restaurants from:', url);
       console.log('[MobileHome] API_BASE_URL value:', API_BASE_URL);
       try {
@@ -297,21 +317,30 @@ export default function MobileHome() {
   const activeVouchers = vouchers
     .filter(v => v.isActive)
     .sort((a, b) => {
+      // First sort by priority (lower number = higher priority)
+      const aPriority = (a as any).priority ?? 3;
+      const bPriority = (b as any).priority ?? 3;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      
+      // Then by position within same priority
+      const aPosition = (a as any).position ?? 0;
+      const bPosition = (b as any).position ?? 0;
+      if (aPosition !== bPosition) return aPosition - bPosition;
+      
+      // Then voucher type (discount first, pay_later last)
       const aIsPayLater = a.voucherType === 'pay_later';
       const bIsPayLater = b.voucherType === 'pay_later';
-      const aDiscount = parseFloat(a.discountPercentage) || 0;
-      const bDiscount = parseFloat(b.discountPercentage) || 0;
-      const aBonus = parseFloat(a.bonusPercentage) || 0;
-      const bBonus = parseFloat(b.bonusPercentage) || 0;
-      
-      // Discount vouchers first (non-pay_later), then pay_later at the end
       if (!aIsPayLater && bIsPayLater) return -1;
       if (aIsPayLater && !bIsPayLater) return 1;
       
       // Both are discount vouchers: sort by discount descending (biggest first)
+      const aDiscount = parseFloat(a.discountPercentage) || 0;
+      const bDiscount = parseFloat(b.discountPercentage) || 0;
       if (!aIsPayLater && !bIsPayLater) return bDiscount - aDiscount;
       
       // Both are pay_later: sort by bonus ascending (smallest cost first)
+      const aBonus = parseFloat(a.bonusPercentage) || 0;
+      const bBonus = parseFloat(b.bonusPercentage) || 0;
       return aBonus - bBonus;
     });
 
@@ -320,8 +349,19 @@ export default function MobileHome() {
     activeVouchers.filter(v => !v.isCredit && v.restaurantId).map(v => v.restaurantId)
   );
   
-  // Prioritize restaurants that have their own vouchers
+  // Sort restaurants by: 1) priority (1 = highest), 2) position, 3) own vouchers
   const sortedRestaurants = [...restaurants].sort((a: any, b: any) => {
+    // First sort by priority (lower number = higher priority)
+    const aPriority = a.priority ?? 3;
+    const bPriority = b.priority ?? 3;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    
+    // Then by position within same priority
+    const aPosition = a.position ?? 0;
+    const bPosition = b.position ?? 0;
+    if (aPosition !== bPosition) return aPosition - bPosition;
+    
+    // Finally, prioritize restaurants that have their own vouchers
     const aHasOwn = restaurantIdsWithOwnVouchers.has(a.id);
     const bHasOwn = restaurantIdsWithOwnVouchers.has(b.id);
     if (aHasOwn && !bHasOwn) return -1;
@@ -376,6 +416,28 @@ export default function MobileHome() {
             <h1 className="text-xl font-bold text-gray-900">
               {user?.name || t.guest}
             </h1>
+            {/* Location indicator */}
+            <button 
+              onClick={() => setLocation('/m/explore')}
+              className="flex items-center gap-1 mt-1 text-xs text-primary"
+            >
+              {isDetectingLocation ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Detecting location...</span>
+                </>
+              ) : gpsCity ? (
+                <>
+                  <MapPin className="w-3 h-3" />
+                  <span>{gpsCity}</span>
+                </>
+              ) : (
+                <>
+                  <MapPin className="w-3 h-3" />
+                  <span>All locations</span>
+                </>
+              )}
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <LanguageSelector />

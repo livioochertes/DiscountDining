@@ -1807,6 +1807,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Update restaurant priority and position
+  app.patch("/api/admin/restaurants/:id/priority", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { priority, position } = req.body;
+      
+      const updates: any = {};
+      if (priority !== undefined) updates.priority = priority;
+      if (position !== undefined) updates.position = position;
+      
+      const restaurant = await storage.updateRestaurant(id, updates);
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+      
+      res.json(restaurant);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating restaurant priority: " + error.message });
+    }
+  });
+
+  // Admin: Update EatOff voucher priority and position
+  app.patch("/api/admin/eatoff-vouchers/:id/priority", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { priority, position } = req.body;
+      
+      const updates: any = {};
+      if (priority !== undefined) updates.priority = priority;
+      if (position !== undefined) updates.position = position;
+      
+      const voucher = await storage.updateEatoffVoucher(id, updates);
+      if (!voucher) {
+        return res.status(404).json({ message: "Voucher not found" });
+      }
+      
+      res.json(voucher);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error updating voucher priority: " + error.message });
+    }
+  });
+
   // EatOff Admin Financial Dashboard API endpoints
   app.get("/api/admin/financial-overview", async (req, res) => {
     try {

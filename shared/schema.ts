@@ -128,6 +128,11 @@ export const restaurants = pgTable("restaurants", {
   isApproved: boolean("is_approved").default(false),
   isActive: boolean("is_active").default(true),
   approvedAt: timestamp("approved_at"), // When restaurant was approved
+  
+  // Display priority and ordering
+  priority: integer("priority").default(3), // 1 = highest priority, 5 = lowest
+  position: integer("position").default(0), // Order within same priority level
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -411,6 +416,10 @@ export const eatoffVouchers = pgTable("eatoff_vouchers", {
   
   // Status and availability
   isActive: boolean("is_active").default(false),
+  
+  // Display priority and ordering
+  priority: integer("priority").default(3), // 1 = highest priority, 5 = lowest
+  position: integer("position").default(0), // Order within same priority level
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

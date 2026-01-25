@@ -117,6 +117,9 @@ The app supports 6 languages with automatic detection:
 
 ## Recent Changes
 
+- **2025-01-25**: Added priority (1-5) and position inline controls in Admin Dashboard for both restaurants and EatOff vouchers with PATCH API endpoints
+- **2025-01-25**: Updated voucher sorting across all mobile views (MobileHome, MobileExplore, per-restaurant rows) to use priority → position → voucher type → discount/bonus
+- **2025-01-25**: Fixed cache invalidation for EatOff voucher priority updates to include /api/eatoff-vouchers and /api/restaurants queries
 - **2025-01-25**: Complete multi-language implementation for all mobile pages - replaced all hardcoded Romanian text with translation keys across MobileHome, MobileExplore, MobileRestaurantDetail, MobileWallet, MobileProfile, MobileAIMenu, MobileSignIn
 - **2025-01-25**: Added language selector to mobile header with 6 language options and auto-detection from browser
 - **2025-01-25**: Fixed home page voucher list auto-refresh - now updates automatically when vouchers are created/updated/deleted from Admin or Restaurant Portal

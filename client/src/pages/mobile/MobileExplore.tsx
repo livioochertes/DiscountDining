@@ -1,29 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X, Star } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X, Star, Loader2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCard } from '@/components/mobile/RestaurantCard';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useUserLocation, AVAILABLE_CITIES } from '@/hooks/useUserLocation';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 
 const CITIES_EN = [
   'All locations',
-  'Bucharest',
-  'Cluj-Napoca',
-  'Timișoara',
-  'Iași',
-  'Constanța',
-  'Craiova',
-  'Brașov',
-  'Galați',
-  'Ploiești',
-  'Oradea'
+  ...AVAILABLE_CITIES
 ];
 
 interface EatoffVoucher {
@@ -108,21 +100,31 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
     .sort((a, b) => {
+      // First sort by priority (lower number = higher priority)
+      const aPriority = (a as any).priority ?? 3;
+      const bPriority = (b as any).priority ?? 3;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      
+      // Then by position within same priority
+      const aPosition = (a as any).position ?? 0;
+      const bPosition = (b as any).position ?? 0;
+      if (aPosition !== bPosition) return aPosition - bPosition;
+      
       const aIsPayLater = a.voucherType === 'pay_later';
       const bIsPayLater = b.voucherType === 'pay_later';
-      const aDiscount = parseFloat(a.discountPercentage) || 0;
-      const bDiscount = parseFloat(b.discountPercentage) || 0;
-      const aBonus = parseFloat(a.bonusPercentage) || 0;
-      const bBonus = parseFloat(b.bonusPercentage) || 0;
       
       // Discount vouchers first, pay_later at the end
       if (!aIsPayLater && bIsPayLater) return -1;
       if (aIsPayLater && !bIsPayLater) return 1;
       
       // Both discount: sort by discount descending
+      const aDiscount = parseFloat(a.discountPercentage) || 0;
+      const bDiscount = parseFloat(b.discountPercentage) || 0;
       if (!aIsPayLater && !bIsPayLater) return bDiscount - aDiscount;
       
       // Both pay_later: sort by bonus ascending
+      const aBonus = parseFloat(a.bonusPercentage) || 0;
+      const bBonus = parseFloat(b.bonusPercentage) || 0;
       return aBonus - bBonus;
     });
   
@@ -242,13 +244,30 @@ export default function MobileExplore() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   
+  // GPS location hook
+  const { 
+    city: gpsCity, 
+    isLoading: isDetectingLocation, 
+    error: locationError,
+    isGpsEnabled,
+    setManualCity,
+    requestGpsLocation,
+    clearLocation
+  } = useUserLocation();
+  
   const urlParams = new URLSearchParams(window.location.search);
   const tabFromUrl = urlParams.get('tab') === 'vouchers' ? 'vouchers' : 'restaurants';
   
   const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers'>(tabFromUrl);
-  const [selectedCity, setSelectedCity] = useState('All locations');
+  const [selectedCity, setSelectedCity] = useState<string>(() => gpsCity || 'All locations');
   const [showCityPicker, setShowCityPicker] = useState(false);
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  
+  // Sync selected city with GPS detected city
+  useEffect(() => {
+    if (gpsCity && !showCityPicker) {
+      setSelectedCity(gpsCity);
+    }
+  }, [gpsCity, showCityPicker]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -378,21 +397,30 @@ export default function MobileExplore() {
   const activeVouchers = vouchers
     .filter(v => v.isActive)
     .sort((a, b) => {
+      // First sort by priority (lower number = higher priority)
+      const aPriority = (a as any).priority ?? 3;
+      const bPriority = (b as any).priority ?? 3;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      
+      // Then by position within same priority
+      const aPosition = (a as any).position ?? 0;
+      const bPosition = (b as any).position ?? 0;
+      if (aPosition !== bPosition) return aPosition - bPosition;
+      
+      // Then voucher type (discount first, pay_later last)
       const aIsPayLater = a.voucherType === 'pay_later';
       const bIsPayLater = b.voucherType === 'pay_later';
-      const aDiscount = parseFloat(a.discountPercentage) || 0;
-      const bDiscount = parseFloat(b.discountPercentage) || 0;
-      const aBonus = parseFloat(a.bonusPercentage) || 0;
-      const bBonus = parseFloat(b.bonusPercentage) || 0;
-      
-      // Discount vouchers first (non-pay_later), then pay_later at the end
       if (!aIsPayLater && bIsPayLater) return -1;
       if (aIsPayLater && !bIsPayLater) return 1;
       
       // Both are discount vouchers: sort by discount descending (biggest first)
+      const aDiscount = parseFloat(a.discountPercentage) || 0;
+      const bDiscount = parseFloat(b.discountPercentage) || 0;
       if (!aIsPayLater && !bIsPayLater) return bDiscount - aDiscount;
       
       // Both are pay_later: sort by bonus ascending (smallest cost first)
+      const aBonus = parseFloat(a.bonusPercentage) || 0;
+      const bBonus = parseFloat(b.bonusPercentage) || 0;
       return aBonus - bBonus;
     });
 
@@ -401,8 +429,19 @@ export default function MobileExplore() {
     activeVouchers.filter(v => !v.isCredit && v.restaurantId).map(v => v.restaurantId)
   );
   
-  // Prioritize restaurants that have their own vouchers
+  // Sort restaurants by: 1) priority (1 = highest), 2) position, 3) own vouchers
   const sortedRestaurants = [...restaurants].sort((a: any, b: any) => {
+    // First sort by priority (lower number = higher priority)
+    const aPriority = a.priority ?? 3;
+    const bPriority = b.priority ?? 3;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    
+    // Then by position within same priority
+    const aPosition = a.position ?? 0;
+    const bPosition = b.position ?? 0;
+    if (aPosition !== bPosition) return aPosition - bPosition;
+    
+    // Finally, prioritize restaurants that have their own vouchers
     const aHasOwn = restaurantIdsWithOwnVouchers.has(a.id);
     const bHasOwn = restaurantIdsWithOwnVouchers.has(b.id);
     if (aHasOwn && !bHasOwn) return -1;
@@ -430,40 +469,21 @@ export default function MobileExplore() {
   };
 
   const detectLocation = () => {
-    if (!navigator.geolocation) {
+    if (!isGpsEnabled) {
       alert(t.gpsNotAvailable);
       return;
     }
-
-    setIsDetectingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-          );
-          const data = await response.json();
-          const city = data.address?.city || data.address?.town || data.address?.municipality || 'Bucharest';
-          
-          const matchedCity = CITIES_EN.find(c => 
-            city.toLowerCase().includes(c.toLowerCase()) || 
-            c.toLowerCase().includes(city.toLowerCase())
-          );
-          
-          setSelectedCity(matchedCity || city);
-        } catch (error) {
-          console.error('Error detecting location:', error);
-        } finally {
-          setIsDetectingLocation(false);
-        }
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        setIsDetectingLocation(false);
-        alert(t.couldNotDetectLocation);
-      }
-    );
+    requestGpsLocation();
+  };
+  
+  const handleCitySelect = (city: string) => {
+    setSelectedCity(city);
+    if (city !== 'All locations') {
+      setManualCity(city);
+    } else {
+      clearLocation();
+    }
+    setShowCityPicker(false);
   };
 
   const isLoading = activeTab === 'restaurants' ? restaurantsLoading : vouchersLoading;
@@ -637,10 +657,7 @@ export default function MobileExplore() {
               {CITIES_EN.map((city) => (
                 <button
                   key={city}
-                  onClick={() => {
-                    setSelectedCity(city);
-                    setShowCityPicker(false);
-                  }}
+                  onClick={() => handleCitySelect(city)}
                   className={cn(
                     "w-full text-left px-4 py-3 rounded-xl transition-colors",
                     selectedCity === city 
