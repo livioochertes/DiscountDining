@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Search, Bell, Store, ChevronRight, Star } from 'lucide-react';
@@ -195,7 +195,7 @@ export default function MobileHome() {
     error: restaurantsError?.message
   });
 
-  const { data: creditVouchers = [] } = useQuery<EatoffVoucher[]>({
+  const { data: creditVouchers = [] } = useQuery<any[]>({
     queryKey: ['/api/eatoff-vouchers'],
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/api/eatoff-vouchers`);
@@ -213,8 +213,8 @@ export default function MobileHome() {
     }
   });
 
-  const vouchers: EatoffVoucher[] = [
-    ...discountPackages.filter(p => p.isActive).map(p => ({
+  const vouchers: EatoffVoucher[] = useMemo(() => {
+    const mappedDiscountPackages = discountPackages.filter(p => p.isActive).map(p => ({
       id: p.id,
       restaurantId: p.restaurantId,
       name: p.name,
@@ -226,8 +226,9 @@ export default function MobileHome() {
       validityDays: (p.validityMonths || 1) * 30,
       isActive: p.isActive,
       isCredit: false
-    })),
-    ...creditVouchers.filter(v => v.isActive).map(v => ({
+    }));
+    
+    const mappedCreditVouchers = creditVouchers.filter(v => v.isActive).map(v => ({
       id: v.id,
       restaurantId: 0,
       name: v.name,
@@ -236,11 +237,13 @@ export default function MobileHome() {
       totalValue: String(v.totalValue),
       bonusPercentage: String(v.bonusPercentage || '0'),
       discountPercentage: String(v.discountPercentage || '0'),
-      validityDays: v.validityDays || 30,
+      validityDays: v.validityDays || (v.validityMonths ? v.validityMonths * 30 : 30),
       isActive: v.isActive,
       isCredit: true
-    }))
-  ];
+    }));
+    
+    return [...mappedDiscountPackages, ...mappedCreditVouchers];
+  }, [discountPackages, creditVouchers]);
 
   const { data: favoriteRestaurants = [] } = useQuery<any[]>({
     queryKey: ['/api/customers', user?.id, 'favorite-restaurants'],

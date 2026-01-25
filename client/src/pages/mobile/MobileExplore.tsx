@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X, Star } from 'lucide-react';
@@ -62,10 +62,21 @@ function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
   
-  const isCredit = bonusPercent > 0;
-  const displayPercent = isCredit ? bonusPercent : discountPercent;
-  const prefix = isCredit ? '+' : '-';
-  const bgColor = isCredit ? 'bg-red-500' : 'bg-green-500';
+  const isCredit = voucher.isCredit === true;
+  
+  let displayPercent: number;
+  let prefix: string;
+  let bgColor: string;
+  
+  if (isCredit) {
+    displayPercent = bonusPercent;
+    prefix = '+';
+    bgColor = 'bg-red-500';
+  } else {
+    displayPercent = discountPercent;
+    prefix = '-';
+    bgColor = 'bg-green-500';
+  }
   
   return (
     <button
@@ -254,7 +265,7 @@ export default function MobileExplore() {
     }
   });
 
-  const { data: creditVouchers = [], isLoading: creditVouchersLoading } = useQuery<EatoffVoucher[]>({
+  const { data: creditVouchers = [], isLoading: creditVouchersLoading } = useQuery<any[]>({
     queryKey: ['/api/eatoff-vouchers'],
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/api/eatoff-vouchers`);
@@ -272,8 +283,8 @@ export default function MobileExplore() {
     }
   });
 
-  const vouchers: EatoffVoucher[] = [
-    ...discountPackages.filter(p => p.isActive).map(p => ({
+  const vouchers: EatoffVoucher[] = useMemo(() => {
+    const mappedDiscountPackages = discountPackages.filter(p => p.isActive).map(p => ({
       id: p.id,
       restaurantId: p.restaurantId,
       name: p.name,
@@ -286,12 +297,25 @@ export default function MobileExplore() {
       validityDays: (p.validityMonths || 1) * 30,
       isActive: p.isActive,
       isCredit: false
-    })),
-    ...creditVouchers.filter(v => v.isActive).map(v => ({
-      ...v,
+    }));
+    
+    const mappedCreditVouchers = creditVouchers.filter(v => v.isActive).map(v => ({
+      id: v.id,
+      restaurantId: 0,
+      name: v.name,
+      description: v.description || '',
+      mealCount: 0,
+      pricePerMeal: '0',
+      totalValue: String(v.totalValue),
+      bonusPercentage: String(v.bonusPercentage || '0'),
+      discountPercentage: String(v.discountPercentage || '0'),
+      validityDays: v.validityDays || (v.validityMonths ? v.validityMonths * 30 : 30),
+      isActive: v.isActive,
       isCredit: true
-    }))
-  ];
+    }));
+    
+    return [...mappedDiscountPackages, ...mappedCreditVouchers];
+  }, [discountPackages, creditVouchers]);
   
   const vouchersLoading = creditVouchersLoading || discountPackagesLoading;
 
