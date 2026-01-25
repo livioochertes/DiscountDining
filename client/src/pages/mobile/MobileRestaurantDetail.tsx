@@ -61,8 +61,12 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPackage; onClick: () => void; isHighlighted?: boolean }) {
   const discount = parseFloat(pkg.discountPercentage) || 0;
   const pricePerMeal = parseFloat(pkg.pricePerMeal) || 0;
-  const totalPrice = pricePerMeal * pkg.mealCount;
   const isEatOff = pkg.type === 'eatoff';
+  
+  // For EatOff vouchers, use totalValue; for restaurant vouchers, calculate from pricePerMeal
+  const totalPrice = pkg.totalValue 
+    ? parseFloat(pkg.totalValue) 
+    : pricePerMeal * pkg.mealCount;
   
   return (
     <button
