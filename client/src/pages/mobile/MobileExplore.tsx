@@ -65,6 +65,13 @@ function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
   
   const isPayLater = voucher.voucherType === 'pay_later';
   
+  // DEBUG
+  console.log('[VoucherChip Explore]', {
+    name: voucher.name, voucherType: voucher.voucherType, 
+    bonus: voucher.bonusPercentage, discount: voucher.discountPercentage,
+    isPayLater, bonusPercent, discountPercent
+  });
+  
   let displayPercent: number;
   let prefix: string;
   let bgColor: string;
@@ -83,6 +90,7 @@ function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
     <button
       onClick={onClick}
       className="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200 hover:border-primary/50 transition-all"
+      title={`DEBUG: type=${voucher.voucherType}, bonus=${voucher.bonusPercentage}, discount=${voucher.discountPercentage}`}
     >
       <span className={`${bgColor} text-white text-xs font-bold px-2 py-1 rounded-md whitespace-nowrap`}>
         {prefix}{displayPercent.toFixed(0)}%
@@ -400,7 +408,6 @@ export default function MobileExplore() {
   });
 
   const restaurantsWithVouchers: RestaurantWithVouchers[] = sortedRestaurants
-    .slice(0, 7)
     .filter((r: any) => {
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
