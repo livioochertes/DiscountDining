@@ -46,10 +46,21 @@ function VoucherChipHome({ voucher, onClick }: { voucher: EatoffVoucher; onClick
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
   
-  const isCredit = bonusPercent > 0;
-  const displayPercent = isCredit ? bonusPercent : discountPercent;
-  const prefix = isCredit ? '+' : '-';
-  const bgColor = isCredit ? 'bg-red-500' : 'bg-green-500';
+  const isCredit = voucher.isCredit === true;
+  
+  let displayPercent: number;
+  let prefix: string;
+  let bgColor: string;
+  
+  if (isCredit) {
+    displayPercent = bonusPercent;
+    prefix = '+';
+    bgColor = 'bg-red-500';
+  } else {
+    displayPercent = discountPercent;
+    prefix = '-';
+    bgColor = 'bg-green-500';
+  }
   
   return (
     <button
@@ -224,7 +235,7 @@ export default function MobileHome() {
       mealCount: 0,
       totalValue: String(v.totalValue),
       bonusPercentage: String(v.bonusPercentage || '0'),
-      discountPercentage: '0',
+      discountPercentage: String(v.discountPercentage || '0'),
       validityDays: v.validityDays || 30,
       isActive: v.isActive,
       isCredit: true
