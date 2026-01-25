@@ -45,7 +45,7 @@ function VoucherChipHome({ voucher, onClick }: { voucher: EatoffVoucher; onClick
 
 function RestaurantVoucherRowHome({ data, onVoucherClick }: { 
   data: RestaurantWithVouchers; 
-  onVoucherClick: (restaurantId: number) => void;
+  onVoucherClick: (restaurantId: number, voucherId: number) => void;
 }) {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
@@ -101,7 +101,7 @@ function RestaurantVoucherRowHome({ data, onVoucherClick }: {
               <VoucherChipHome 
                 key={voucher.id} 
                 voucher={voucher}
-                onClick={() => onVoucherClick(restaurant.id)}
+                onClick={() => onVoucherClick(restaurant.id, voucher.id)}
               />
             ))}
           </div>
@@ -177,7 +177,7 @@ export default function MobileHome() {
   });
 
   const activeVouchers = vouchers
-    .filter(v => v.isActive && parseFloat(v.bonusPercentage) > 0)
+    .filter(v => v.isActive && parseFloat(v.bonusPercentage) > 0 && !v.name.toLowerCase().includes('credit'))
     .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage));
 
   const restaurantsWithVouchers: RestaurantWithVouchers[] = restaurants
@@ -188,8 +188,8 @@ export default function MobileHome() {
     }))
     .filter(item => item.vouchers.length > 0);
 
-  const handleVoucherClick = (restaurantId: number) => {
-    setLocation(`/m/restaurant/${restaurantId}?tab=vouchers`);
+  const handleVoucherClick = (restaurantId: number, voucherId: number) => {
+    setLocation(`/m/restaurant/${restaurantId}?tab=vouchers&voucherId=${voucherId}&from=vouchers`);
   };
 
   const handleBuyVoucher = () => setLocation('/m/explore?tab=vouchers');
