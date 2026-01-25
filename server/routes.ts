@@ -1063,19 +1063,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get favorite restaurants based on purchase history and orders
+  // Get favorite restaurants based on purchase history, orders, and marked favorites
   app.get("/api/customers/:id/favorite-restaurants", async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
       
-      // Get voucher purchases and orders
-      const [vouchers, orders] = await Promise.all([
+      // Get voucher purchases, orders, and marked favorites
+      const [vouchers, orders, markedFavorites] = await Promise.all([
         storage.getPurchasedVouchersByCustomer(customerId),
-        storage.getOrdersByCustomer(customerId)
+        storage.getOrdersByCustomer(customerId),
+        storage.getCustomerFavorites(customerId)
       ]);
       
-      // Count interactions per restaurant (voucher purchases + orders)
+      // Count interactions per restaurant (voucher purchases + orders + marked favorites)
       const restaurantScores = new Map<number, number>();
+      
+      // Add marked favorites (weight: 5 points - highest priority)
+      for (const fav of markedFavorites) {
+        const score = restaurantScores.get(fav.restaurantId) || 0;
+        restaurantScores.set(fav.restaurantId, score + 5);
+      }
       
       // Add voucher purchases (weight: 2 points each)
       for (const voucher of vouchers) {
@@ -1099,13 +1106,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .slice(0, 10)
         .map(([id]) => id);
       
+      // Create a set of marked favorite IDs for quick lookup
+      const markedFavoriteIds = new Set(markedFavorites.map(f => f.restaurantId));
+      
       // Fetch restaurant details
       const favoriteRestaurants = await Promise.all(
         sortedRestaurantIds.map(async (restaurantId) => {
           const restaurant = await storage.getRestaurantById(restaurantId);
           return restaurant ? {
             ...restaurant,
-            interactionScore: restaurantScores.get(restaurantId)
+            interactionScore: restaurantScores.get(restaurantId),
+            isMarkedFavorite: markedFavoriteIds.has(restaurantId)
           } : null;
         })
       );
@@ -1113,6 +1124,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(favoriteRestaurants.filter(r => r !== null));
     } catch (error: any) {
       res.status(500).json({ message: "Error fetching favorite restaurants: " + error.message });
+    }
+  });
+
+  // Get customer's marked favorites
+  app.get("/api/customers/:id/favorites", async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      const favorites = await storage.getCustomerFavorites(customerId);
+      res.json(favorites);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching favorites: " + error.message });
+    }
+  });
+
+  // Check if restaurant is favorite
+  app.get("/api/customers/:customerId/favorites/:restaurantId", async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      const restaurantId = parseInt(req.params.restaurantId);
+      const isFavorite = await storage.isRestaurantFavorite(customerId, restaurantId);
+      res.json({ isFavorite });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error checking favorite: " + error.message });
+    }
+  });
+
+  // Add restaurant to favorites
+  app.post("/api/customers/:customerId/favorites/:restaurantId", async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      const restaurantId = parseInt(req.params.restaurantId);
+      
+      // Check if already favorite
+      const existing = await storage.isRestaurantFavorite(customerId, restaurantId);
+      if (existing) {
+        return res.json({ message: "Already a favorite", isFavorite: true });
+      }
+      
+      await storage.addCustomerFavorite({ customerId, restaurantId });
+      res.json({ message: "Added to favorites", isFavorite: true });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error adding favorite: " + error.message });
+    }
+  });
+
+  // Remove restaurant from favorites
+  app.delete("/api/customers/:customerId/favorites/:restaurantId", async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.customerId);
+      const restaurantId = parseInt(req.params.restaurantId);
+      await storage.removeCustomerFavorite(customerId, restaurantId);
+      res.json({ message: "Removed from favorites", isFavorite: false });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error removing favorite: " + error.message });
+    }
+  });
+
+  // Get reviews for a restaurant
+  app.get("/api/restaurants/:id/reviews", async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.params.id);
+      const reviews = await storage.getReviewsByRestaurant(restaurantId);
+      res.json(reviews);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching reviews: " + error.message });
+    }
+  });
+
+  // Get combined rating for a restaurant (Google + EatOff)
+  app.get("/api/restaurants/:id/rating", async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.params.id);
+      const restaurant = await storage.getRestaurantById(restaurantId);
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+      
+      const { avgRating: eatoffRating, count: eatoffCount } = await storage.getRestaurantAverageRating(restaurantId);
+      const googleRating = restaurant.googleRating ? parseFloat(restaurant.googleRating) : null;
+      const googleCount = restaurant.googleReviewCount || 0;
+      
+      // Calculate combined rating with weighted average
+      let combinedRating = 0;
+      let totalCount = 0;
+      
+      if (googleRating && googleCount > 0) {
+        combinedRating += googleRating * googleCount;
+        totalCount += googleCount;
+      }
+      
+      if (eatoffRating > 0 && eatoffCount > 0) {
+        combinedRating += eatoffRating * eatoffCount;
+        totalCount += eatoffCount;
+      }
+      
+      const finalRating = totalCount > 0 ? combinedRating / totalCount : 0;
+      
+      res.json({
+        combinedRating: Math.round(finalRating * 10) / 10,
+        totalReviews: totalCount,
+        eatoffRating,
+        eatoffReviewCount: eatoffCount,
+        googleRating,
+        googleReviewCount: googleCount
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching rating: " + error.message });
+    }
+  });
+
+  // Create a review
+  app.post("/api/restaurants/:id/reviews", async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.params.id);
+      const { customerId, rating, comment } = req.body;
+      
+      if (!customerId || !rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: "Valid customerId and rating (1-5) required" });
+      }
+      
+      const review = await storage.createReview({
+        customerId,
+        restaurantId,
+        rating,
+        comment
+      });
+      
+      res.json(review);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error creating review: " + error.message });
     }
   });
 
