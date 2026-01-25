@@ -1697,6 +1697,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Address endpoints
+  app.get("/api/user-vouchers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const vouchers = await storage.getPurchasedVouchersWithRestaurantDetails(userId);
+      const activeVouchers = vouchers.filter(v => v.status === "active");
+      res.json(activeVouchers);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching vouchers: " + error.message });
+    }
+  });
+
   app.get("/api/user/addresses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
