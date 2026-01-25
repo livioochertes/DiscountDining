@@ -27,7 +27,7 @@ const CITIES = [
 
 interface EatoffVoucher {
   id: number;
-  restaurantId: number;
+  restaurantId?: number;
   name: string;
   description: string;
   mealCount: number;
@@ -36,6 +36,19 @@ interface EatoffVoucher {
   bonusPercentage: string;
   discountPercentage: string;
   validityDays: number;
+  isActive: boolean;
+  isCredit?: boolean;
+}
+
+interface VoucherPackage {
+  id: number;
+  restaurantId: number;
+  name: string;
+  description: string;
+  mealCount: number;
+  pricePerMeal: string;
+  discountPercentage: string;
+  validityMonths: number;
   isActive: boolean;
 }
 
@@ -241,28 +254,46 @@ export default function MobileExplore() {
     }
   });
 
-  const { data: vouchers = [], isLoading: vouchersLoading, error: vouchersError } = useQuery<EatoffVoucher[]>({
+  const { data: creditVouchers = [], isLoading: creditVouchersLoading } = useQuery<EatoffVoucher[]>({
     queryKey: ['/api/eatoff-vouchers'],
     queryFn: async () => {
-      const url = `${API_BASE_URL}/api/eatoff-vouchers`;
-      console.log('[MobileExplore] Fetching vouchers from:', url);
-      try {
-        const res = await fetch(url);
-        console.log('[MobileExplore] Vouchers response status:', res.status);
-        if (!res.ok) {
-          const text = await res.text();
-          console.error('[MobileExplore] Vouchers error response:', text);
-          throw new Error('Failed to fetch vouchers');
-        }
-        const data = await res.json();
-        console.log('[MobileExplore] Vouchers loaded:', data.length);
-        return data;
-      } catch (err) {
-        console.error('[MobileExplore] Fetch error:', err);
-        throw err;
-      }
+      const res = await fetch(`${API_BASE_URL}/api/eatoff-vouchers`);
+      if (!res.ok) throw new Error('Failed to fetch credit vouchers');
+      return res.json();
     }
   });
+
+  const { data: discountPackages = [], isLoading: discountPackagesLoading } = useQuery<VoucherPackage[]>({
+    queryKey: ['/api/voucher-packages'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/voucher-packages`);
+      if (!res.ok) throw new Error('Failed to fetch discount packages');
+      return res.json();
+    }
+  });
+
+  const vouchers: EatoffVoucher[] = [
+    ...discountPackages.filter(p => p.isActive).map(p => ({
+      id: p.id,
+      restaurantId: p.restaurantId,
+      name: p.name,
+      description: p.description || '',
+      mealCount: p.mealCount,
+      pricePerMeal: p.pricePerMeal,
+      totalValue: String(parseFloat(p.pricePerMeal) * p.mealCount),
+      bonusPercentage: '0',
+      discountPercentage: p.discountPercentage,
+      validityDays: (p.validityMonths || 1) * 30,
+      isActive: p.isActive,
+      isCredit: false
+    })),
+    ...creditVouchers.filter(v => v.isActive).map(v => ({
+      ...v,
+      isCredit: true
+    }))
+  ];
+  
+  const vouchersLoading = creditVouchersLoading || discountPackagesLoading;
 
   console.log('[MobileExplore] State:', { 
     API_BASE_URL, 
@@ -270,8 +301,7 @@ export default function MobileExplore() {
     vouchersLoading, 
     restaurantsCount: restaurants.length,
     vouchersCount: vouchers.length,
-    restaurantsError: restaurantsError?.message,
-    vouchersError: vouchersError?.message
+    restaurantsError: restaurantsError?.message
   });
 
   const filteredRestaurants = restaurants.filter((r: any) => {
@@ -315,7 +345,9 @@ export default function MobileExplore() {
     })
     .map((restaurant: any) => ({
       restaurant,
-      vouchers: activeVouchers
+      vouchers: activeVouchers.filter(v => 
+        v.isCredit || v.restaurantId === restaurant.id
+      )
     }))
     .filter(item => item.vouchers.length > 0);
 

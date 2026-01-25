@@ -117,6 +117,7 @@ export interface IStorage {
 
   // Voucher package operations
   getPackagesByRestaurant(restaurantId: number): Promise<VoucherPackage[]>;
+  getAllActivePackages(): Promise<VoucherPackage[]>;
   getPackageById(id: number): Promise<VoucherPackage | undefined>;
   createPackage(packageData: InsertVoucherPackage): Promise<VoucherPackage>;
   updatePackage(id: number, packageData: Partial<InsertVoucherPackage>): Promise<VoucherPackage | undefined>;
@@ -1618,6 +1619,12 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.id - a.id);
   }
 
+  async getAllActivePackages(): Promise<VoucherPackage[]> {
+    return Array.from(this.voucherPackages.values())
+      .filter(p => p.isActive)
+      .sort((a, b) => b.id - a.id);
+  }
+
   async getPackageById(id: number): Promise<VoucherPackage | undefined> {
     return this.voucherPackages.get(id);
   }
@@ -2285,6 +2292,10 @@ export class DatabaseStorage implements IStorage {
 
   async getPackagesByRestaurant(restaurantId: number): Promise<VoucherPackage[]> {
     return await db.select().from(voucherPackages).where(and(eq(voucherPackages.restaurantId, restaurantId), eq(voucherPackages.isActive, true))).orderBy(desc(voucherPackages.id));
+  }
+
+  async getAllActivePackages(): Promise<VoucherPackage[]> {
+    return await db.select().from(voucherPackages).where(eq(voucherPackages.isActive, true)).orderBy(desc(voucherPackages.id));
   }
 
   async getPackageById(id: number): Promise<VoucherPackage | undefined> {
