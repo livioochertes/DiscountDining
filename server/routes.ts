@@ -171,8 +171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      // Get active vouchers
-      const vouchers = await storage.getPurchasedVouchersByCustomer(customerId);
+      // Get active vouchers with restaurant details
+      const vouchers = await storage.getPurchasedVouchersWithRestaurantDetails(customerId);
       const activeVouchers = vouchers.filter(v => v.status === "active");
 
       // Mock general vouchers for now
