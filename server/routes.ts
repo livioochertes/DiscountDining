@@ -1063,6 +1063,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get favorite restaurants based on purchase history and orders
+  app.get("/api/customers/:id/favorite-restaurants", async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      
+      // Get voucher purchases and orders
+      const [vouchers, orders] = await Promise.all([
+        storage.getPurchasedVouchersByCustomer(customerId),
+        storage.getOrdersByCustomer(customerId)
+      ]);
+      
+      // Count interactions per restaurant (voucher purchases + orders)
+      const restaurantScores = new Map<number, number>();
+      
+      // Add voucher purchases (weight: 2 points each)
+      for (const voucher of vouchers) {
+        if (voucher.restaurantId) {
+          const score = restaurantScores.get(voucher.restaurantId) || 0;
+          restaurantScores.set(voucher.restaurantId, score + 2);
+        }
+      }
+      
+      // Add orders (weight: 1 point each)
+      for (const order of orders) {
+        if (order.restaurantId) {
+          const score = restaurantScores.get(order.restaurantId) || 0;
+          restaurantScores.set(order.restaurantId, score + 1);
+        }
+      }
+      
+      // Sort by score and get top restaurants
+      const sortedRestaurantIds = Array.from(restaurantScores.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([id]) => id);
+      
+      // Fetch restaurant details
+      const favoriteRestaurants = await Promise.all(
+        sortedRestaurantIds.map(async (restaurantId) => {
+          const restaurant = await storage.getRestaurantById(restaurantId);
+          return restaurant ? {
+            ...restaurant,
+            interactionScore: restaurantScores.get(restaurantId)
+          } : null;
+        })
+      );
+      
+      res.json(favoriteRestaurants.filter(r => r !== null));
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching favorite restaurants: " + error.message });
+    }
+  });
+
   // Complete purchase for Pay Later vouchers after setup intent confirmation
   app.post("/api/complete-pay-later-purchase", async (req, res) => {
     try {
