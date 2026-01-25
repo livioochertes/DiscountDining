@@ -83,13 +83,21 @@ function RestaurantVoucherRowHome({ data, onVoucherClick }: {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
     .sort((a, b) => {
+      const aIsPayLater = a.voucherType === 'pay_later';
+      const bIsPayLater = b.voucherType === 'pay_later';
       const aDiscount = parseFloat(a.discountPercentage) || 0;
       const bDiscount = parseFloat(b.discountPercentage) || 0;
       const aBonus = parseFloat(a.bonusPercentage) || 0;
       const bBonus = parseFloat(b.bonusPercentage) || 0;
-      if (aBonus === 0 && bBonus > 0) return -1;
-      if (aBonus > 0 && bBonus === 0) return 1;
-      if (aBonus === 0 && bBonus === 0) return bDiscount - aDiscount;
+      
+      // Discount vouchers first, pay_later at the end
+      if (!aIsPayLater && bIsPayLater) return -1;
+      if (aIsPayLater && !bIsPayLater) return 1;
+      
+      // Both discount: sort by discount descending
+      if (!aIsPayLater && !bIsPayLater) return bDiscount - aDiscount;
+      
+      // Both pay_later: sort by bonus ascending
       return aBonus - bBonus;
     });
   
@@ -266,13 +274,21 @@ export default function MobileHome() {
   const activeVouchers = vouchers
     .filter(v => v.isActive)
     .sort((a, b) => {
+      const aIsPayLater = a.voucherType === 'pay_later';
+      const bIsPayLater = b.voucherType === 'pay_later';
       const aDiscount = parseFloat(a.discountPercentage) || 0;
       const bDiscount = parseFloat(b.discountPercentage) || 0;
       const aBonus = parseFloat(a.bonusPercentage) || 0;
       const bBonus = parseFloat(b.bonusPercentage) || 0;
-      if (aBonus === 0 && bBonus > 0) return -1;
-      if (aBonus > 0 && bBonus === 0) return 1;
-      if (aBonus === 0 && bBonus === 0) return bDiscount - aDiscount;
+      
+      // Discount vouchers first (non-pay_later), then pay_later at the end
+      if (!aIsPayLater && bIsPayLater) return -1;
+      if (aIsPayLater && !bIsPayLater) return 1;
+      
+      // Both are discount vouchers: sort by discount descending (biggest first)
+      if (!aIsPayLater && !bIsPayLater) return bDiscount - aDiscount;
+      
+      // Both are pay_later: sort by bonus ascending (smallest cost first)
       return aBonus - bBonus;
     });
 
