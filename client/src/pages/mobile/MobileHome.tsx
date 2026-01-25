@@ -49,6 +49,17 @@ function VoucherChipHome({ voucher, onClick }: { voucher: EatoffVoucher; onClick
   
   const isPayLater = voucher.voucherType === 'pay_later';
   
+  // DEBUG: Log what data VoucherChipHome receives
+  console.log('[VoucherChipHome] Rendering:', {
+    name: voucher.name,
+    voucherType: voucher.voucherType,
+    bonusPercentage: voucher.bonusPercentage,
+    discountPercentage: voucher.discountPercentage,
+    isPayLater,
+    bonusPercent,
+    discountPercent
+  });
+  
   let displayPercent: number;
   let prefix: string;
   let bgColor: string;
@@ -67,6 +78,7 @@ function VoucherChipHome({ voucher, onClick }: { voucher: EatoffVoucher; onClick
     <button
       onClick={onClick}
       className="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200 hover:border-primary/50 transition-all"
+      title={`DEBUG: voucherType=${voucher.voucherType}, bonus=${voucher.bonusPercentage}, discount=${voucher.discountPercentage}`}
     >
       <span className={`${bgColor} text-white text-xs font-bold px-2 py-1 rounded-md whitespace-nowrap`}>
         {prefix}{displayPercent.toFixed(0)}%
