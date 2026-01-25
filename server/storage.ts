@@ -2161,7 +2161,7 @@ export class MemStorage implements IStorage {
   private async seedAdminUser() {
     // Create default admin user for testing Pay Later vouchers
     const bcrypt = await import('bcryptjs');
-    const passwordHash = await bcrypt.hash('admin123', 10);
+    const passwordHash = await bcrypt.hash('eatoff2024', 10);
     
     const adminUser: AdminUser = {
       id: this.currentAdminUserId++,
@@ -2178,7 +2178,7 @@ export class MemStorage implements IStorage {
     };
 
     this.adminUsers.set(adminUser.id, adminUser);
-    console.log('Seeded default admin user: admin@eatoff.com / admin123');
+    console.log('Seeded default admin user: admin@eatoff.com / eatoff2024');
   }
 }
 
