@@ -135,8 +135,15 @@ export function useUserLocation(): UseUserLocationResult {
     setIsLoading(true);
     setError(null);
 
+    // Manual timeout fallback - ensures isLoading resets even if geolocation hangs
+    const manualTimeout = setTimeout(() => {
+      setIsLoading(false);
+      setError('Location detection timed out');
+    }, 6000);
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        clearTimeout(manualTimeout);
         const { latitude, longitude } = position.coords;
         const detectedCity = findClosestCity(latitude, longitude);
         
@@ -152,6 +159,7 @@ export function useUserLocation(): UseUserLocationResult {
         setIsLoading(false);
       },
       (err) => {
+        clearTimeout(manualTimeout);
         console.error('GPS error:', err);
         switch (err.code) {
           case err.PERMISSION_DENIED:
@@ -169,9 +177,9 @@ export function useUserLocation(): UseUserLocationResult {
         setIsLoading(false);
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes cache
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 600000 // 10 minutes cache
       }
     );
   }, [saveLocation]);
