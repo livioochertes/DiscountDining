@@ -279,6 +279,8 @@ function EatOffVoucherManagement() {
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/eatoff-vouchers'] });
       // Also invalidate restaurant packages to refresh EatOff vouchers in restaurants
       await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+      // Invalidate home page voucher lists
+      await queryClient.invalidateQueries({ queryKey: ['/api/eatoff-vouchers'] });
     } catch (error) {
       toast({
         title: "Error",
@@ -311,6 +313,8 @@ function EatOffVoucherManagement() {
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/eatoff-vouchers'] });
       // Also invalidate restaurant packages to refresh EatOff vouchers in restaurants
       await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+      // Invalidate home page voucher lists
+      await queryClient.invalidateQueries({ queryKey: ['/api/eatoff-vouchers'] });
     } catch (error) {
       toast({
         title: "Error",
@@ -1420,6 +1424,8 @@ export default function AdminDashboard() {
       
       // Invalidate the restaurant details cache to refresh voucher packages
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants', selectedRestaurant.id, 'details'] });
+      // Invalidate home page voucher lists
+      await queryClient.invalidateQueries({ queryKey: ['/api/voucher-packages'] });
       console.log('Cache invalidated for restaurant:', selectedRestaurant.id);
     } catch (error) {
       console.error('Failed to create voucher package:', error);
@@ -1459,6 +1465,8 @@ export default function AdminDashboard() {
       setIsEditVoucherPackageModalOpen(false);
       setEditingVoucherPackage(null);
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants', selectedRestaurant?.id, 'details'] });
+      // Invalidate home page voucher lists
+      await queryClient.invalidateQueries({ queryKey: ['/api/voucher-packages'] });
     } catch (error) {
       console.error('Failed to update voucher package:', error);
       toast({
@@ -1491,6 +1499,8 @@ export default function AdminDashboard() {
       });
 
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants', selectedRestaurant?.id, 'details'] });
+      // Invalidate home page voucher lists
+      await queryClient.invalidateQueries({ queryKey: ['/api/voucher-packages'] });
     } catch (error) {
       console.error('Failed to delete voucher package:', error);
       toast({
