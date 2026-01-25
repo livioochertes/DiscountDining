@@ -70,6 +70,10 @@ npx cap open android      # Open Android project in Android Studio
 npx cap open ios          # Open iOS project in Xcode
 ```
 
+#### Mobile Permissions
+- **iOS**: Location permissions configured in `ios/App/App/Info.plist` (NSLocationWhenInUseUsageDescription)
+- **Android**: Location permissions configured in `android/app/src/main/AndroidManifest.xml` (ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION)
+
 ### Key Files
 
 - `client/src/App.tsx` - Main React app with routing
