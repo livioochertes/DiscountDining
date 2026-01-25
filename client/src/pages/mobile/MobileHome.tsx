@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, Store, ChevronRight } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { WalletCard, ActionRow } from '@/components/mobile/WalletCard';
@@ -9,6 +9,86 @@ import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCardSmall } from '@/components/mobile/RestaurantCard';
 import { DealBanner, SmallDealCard } from '@/components/mobile/DealBanner';
 import { useAuth } from '@/hooks/useAuth';
+
+interface EatoffVoucher {
+  id: number;
+  name: string;
+  description: string;
+  mealCount: number;
+  totalValue: string;
+  bonusPercentage: string;
+  validityDays: number;
+  isActive: boolean;
+}
+
+interface RestaurantWithVouchers {
+  restaurant: any;
+  vouchers: EatoffVoucher[];
+}
+
+function VoucherChipHome({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
+  const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
+  const totalValue = parseFloat(voucher.totalValue) || 0;
+  
+  return (
+    <button
+      onClick={onClick}
+      className="flex-shrink-0 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl p-3 text-left border border-primary/30 hover:border-primary/50 transition-all hover:scale-[1.02] min-w-[120px] max-w-[140px]"
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          +{bonusPercent}%
+        </span>
+      </div>
+      <p className="text-xs text-gray-600 font-medium line-clamp-1 mb-1">{voucher.name}</p>
+      <p className="text-lg font-bold text-primary">{totalValue.toFixed(0)} RON</p>
+    </button>
+  );
+}
+
+function RestaurantVoucherRowHome({ data, onVoucherClick }: { 
+  data: RestaurantWithVouchers; 
+  onVoucherClick: (restaurantId: number) => void;
+}) {
+  const { restaurant, vouchers } = data;
+  const sortedVouchers = [...vouchers]
+    .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage))
+    .slice(0, 3);
+  
+  return (
+    <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-12 h-12 rounded-2xl bg-gray-100 overflow-hidden flex-shrink-0">
+          {restaurant.imageUrl ? (
+            <img 
+              src={restaurant.imageUrl} 
+              alt={restaurant.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40">
+              <Store className="w-5 h-5 text-primary" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 truncate text-sm">{restaurant.name}</h3>
+          <p className="text-xs text-gray-500">{restaurant.cuisine || 'Restaurant'}</p>
+        </div>
+      </div>
+      
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        {sortedVouchers.map((voucher) => (
+          <VoucherChipHome 
+            key={voucher.id} 
+            voucher={voucher}
+            onClick={() => onVoucherClick(restaurant.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
@@ -49,12 +129,38 @@ export default function MobileHome() {
     error: restaurantsError?.message
   });
 
+  const { data: vouchers = [] } = useQuery<EatoffVoucher[]>({
+    queryKey: ['/api/eatoff-vouchers'],
+    queryFn: async () => {
+      const url = `${API_BASE_URL}/api/eatoff-vouchers`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch vouchers');
+      return res.json();
+    }
+  });
+
   const { data: userStats } = useQuery<any>({
     queryKey: ['/api/users/stats'],
     enabled: !!user,
   });
 
-  const handleBuyVoucher = () => setLocation('/m/explore');
+  const activeVouchers = vouchers
+    .filter(v => v.isActive && parseFloat(v.bonusPercentage) > 0)
+    .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage));
+
+  const restaurantsWithVouchers: RestaurantWithVouchers[] = restaurants
+    .slice(0, 4)
+    .map((restaurant: any) => ({
+      restaurant,
+      vouchers: activeVouchers
+    }))
+    .filter(item => item.vouchers.length > 0);
+
+  const handleVoucherClick = (restaurantId: number) => {
+    setLocation(`/m/restaurant/${restaurantId}?tab=vouchers`);
+  };
+
+  const handleBuyVoucher = () => setLocation('/m/explore?tab=vouchers');
   const handleUseVoucher = () => setLocation('/m/wallet');
   const handleAIMenu = () => setLocation('/m/ai-menu');
   const handleCashback = () => setLocation('/m/wallet');
@@ -111,6 +217,40 @@ export default function MobileHome() {
           selected={selectedCategory}
           onSelect={setSelectedCategory}
         />
+
+        {/* Vouchers Section */}
+        {restaurantsWithVouchers.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Vouchere disponibile</h2>
+              <button 
+                onClick={() => setLocation('/m/explore?tab=vouchers')}
+                className="text-primary text-sm font-medium flex items-center gap-1"
+              >
+                Vezi toate
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              {restaurantsWithVouchers.map((item) => (
+                <RestaurantVoucherRowHome
+                  key={item.restaurant.id}
+                  data={item}
+                  onVoucherClick={handleVoucherClick}
+                />
+              ))}
+            </div>
+            
+            <button
+              onClick={() => setLocation('/m/explore?tab=vouchers')}
+              className="w-full py-3 bg-primary/10 text-primary font-semibold rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/20 transition-colors"
+            >
+              Vezi toate voucherele
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </section>
+        )}
 
         {/* AI Recommendations */}
         <section>
