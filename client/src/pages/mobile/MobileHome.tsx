@@ -218,6 +218,94 @@ export default function MobileHome() {
           onSelect={setSelectedCategory}
         />
 
+        {/* Your Favorites - only shown when logged in and has favorites */}
+        {user && restaurants.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-gray-900">Your favorites</h2>
+              <button 
+                onClick={() => setLocation('/m/explore')}
+                className="text-primary text-sm font-medium"
+              >
+                See all
+              </button>
+            </div>
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex gap-3">
+                {restaurants.slice(0, 4).map((restaurant: any) => (
+                  <RestaurantCardSmall
+                    key={restaurant.id}
+                    name={restaurant.name}
+                    image={restaurant.imageUrl}
+                    rating={Number(restaurant.rating) || 4.5}
+                    cashbackPercent={restaurant.cashbackPercent || 3}
+                    onClick={() => setLocation(`/m/restaurant/${restaurant.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Recommended for you */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-gray-900">Recommended for you</h2>
+            <button 
+              onClick={() => setLocation('/m/ai-menu')}
+              className="text-primary text-sm font-medium"
+            >
+              See all
+            </button>
+          </div>
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex gap-3">
+              {restaurants.slice(0, 5).map((restaurant: any) => (
+                <RestaurantCardSmall
+                  key={restaurant.id}
+                  name={restaurant.name}
+                  image={restaurant.imageUrl}
+                  rating={restaurant.rating || 4.5}
+                  cashbackPercent={restaurant.cashbackPercent || 5}
+                  onClick={() => setLocation(`/m/restaurant/${restaurant.id}`)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Today's Deals */}
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold text-gray-900">Today's Deals</h2>
+          
+          <DealBanner
+            title="Get 20% off your first voucher"
+            subtitle="Use code WELCOME20"
+            discount="-20%"
+            backgroundColor="bg-gradient-to-r from-primary to-primary/80"
+          />
+
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex gap-3">
+              <SmallDealCard
+                title="Double cashback"
+                discount="2x"
+                icon="💰"
+              />
+              <SmallDealCard
+                title="Network vouchers"
+                discount="-15%"
+                icon="🏪"
+              />
+              <SmallDealCard
+                title="Weekend special"
+                discount="-10%"
+                icon="🎉"
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Vouchers Section */}
         {restaurantsWithVouchers.length > 0 && (
           <section className="space-y-3">
@@ -251,92 +339,6 @@ export default function MobileHome() {
             </button>
           </section>
         )}
-
-        {/* AI Recommendations */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900">Recommended for you</h2>
-            <button 
-              onClick={() => setLocation('/m/ai-menu')}
-              className="text-primary text-sm font-medium"
-            >
-              See all
-            </button>
-          </div>
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex gap-3">
-              {restaurants.slice(0, 5).map((restaurant: any) => (
-                <RestaurantCardSmall
-                  key={restaurant.id}
-                  name={restaurant.name}
-                  image={restaurant.imageUrl}
-                  rating={restaurant.rating || 4.5}
-                  cashbackPercent={restaurant.cashbackPercent || 5}
-                  onClick={() => setLocation(`/m/restaurant/${restaurant.id}`)}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Deals */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-bold text-gray-900">Today's Deals</h2>
-          
-          <DealBanner
-            title="Get 20% off your first voucher"
-            subtitle="Use code WELCOME20"
-            discount="-20%"
-            backgroundColor="bg-gradient-to-r from-primary to-primary/80"
-          />
-
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex gap-3">
-              <SmallDealCard
-                title="Double cashback"
-                discount="2x"
-                icon="💰"
-              />
-              <SmallDealCard
-                title="Network vouchers"
-                discount="-15%"
-                icon="🏪"
-              />
-              <SmallDealCard
-                title="Weekend special"
-                discount="-10%"
-                icon="🎉"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Favorites */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900">Your favorites</h2>
-            <button 
-              onClick={() => setLocation('/m/explore')}
-              className="text-primary text-sm font-medium"
-            >
-              See all
-            </button>
-          </div>
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex gap-3">
-              {restaurants.slice(0, 4).map((restaurant: any) => (
-                <RestaurantCardSmall
-                  key={restaurant.id}
-                  name={restaurant.name}
-                  image={restaurant.imageUrl}
-                  rating={Number(restaurant.rating) || 4.5}
-                  cashbackPercent={restaurant.cashbackPercent || 3}
-                  onClick={() => setLocation(`/m/restaurant/${restaurant.id}`)}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
       </div>
     </MobileLayout>
   );
