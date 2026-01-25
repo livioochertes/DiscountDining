@@ -97,8 +97,28 @@ npx cap open ios          # Open iOS project in Xcode
 - `stripe` - Payment processing
 - `wouter` - Client-side routing
 
+## Multi-Language System
+
+The app supports 6 languages with automatic detection:
+- **Languages**: English (en), Spanish (es), French (fr), German (de), Italian (it), Romanian (ro)
+- **Auto-detection**: Uses `navigator.language` on first visit
+- **Persistence**: Selected language saved in localStorage
+- **Context**: `client/src/contexts/LanguageContext.tsx` contains all translations
+- **Usage**: `const { t, language, setLanguage } = useLanguage()` hook
+
+**Mobile Language Selector**:
+- Located in mobile header (MobileHome.tsx) next to notification bell
+- Dropdown with language options
+
+**Translation Coverage**:
+- All mobile pages fully translated
+- Desktop pages partially translated (in progress)
+- City names remain as proper nouns (not translated)
+
 ## Recent Changes
 
+- **2025-01-25**: Complete multi-language implementation for all mobile pages - replaced all hardcoded Romanian text with translation keys across MobileHome, MobileExplore, MobileRestaurantDetail, MobileWallet, MobileProfile, MobileAIMenu, MobileSignIn
+- **2025-01-25**: Added language selector to mobile header with 6 language options and auto-detection from browser
 - **2025-01-25**: Fixed home page voucher list auto-refresh - now updates automatically when vouchers are created/updated/deleted from Admin or Restaurant Portal
 - **2025-01-25**: Migrated EatOff vouchers from in-memory storage to PostgreSQL database for data persistence
 - **2025-01-25**: Changed storage export from MemStorage to DatabaseStorage - all data now persists in PostgreSQL

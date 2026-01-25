@@ -9,6 +9,8 @@ import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCardSmall } from '@/components/mobile/RestaurantCard';
 import { DealBanner, SmallDealCard } from '@/components/mobile/DealBanner';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import LanguageSelector from '@/components/LanguageSelector';
 
 interface EatoffVoucher {
   id: number;
@@ -182,6 +184,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https:
 
 export default function MobileHome() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -369,15 +372,18 @@ export default function MobileHome() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-gray-500 text-sm">Good morning 👋</p>
+            <p className="text-gray-500 text-sm">{t.goodMorning} 👋</p>
             <h1 className="text-xl font-bold text-gray-900">
-              {user?.name || 'Guest'}
+              {user?.name || t.guest}
             </h1>
           </div>
-          <button className="relative p-2 bg-gray-100 rounded-full">
-            <Bell className="w-5 h-5 text-gray-600" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-          </button>
+          <div className="flex items-center gap-2">
+            <LanguageSelector />
+            <button className="relative p-2 bg-gray-100 rounded-full">
+              <Bell className="w-5 h-5 text-gray-600" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+            </button>
+          </div>
         </div>
 
         {/* Wallet Card Hero */}
@@ -404,7 +410,7 @@ export default function MobileHome() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search restaurants or dishes..."
+            placeholder={t.searchRestaurants}
             className="w-full pl-12 pr-4 py-3.5 bg-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             onFocus={() => setLocation('/m/explore')}
           />
@@ -474,7 +480,7 @@ export default function MobileHome() {
 
         {/* Today's Deals */}
         <section className="space-y-3">
-          <h2 className="text-lg font-bold text-gray-900">Today's Deals</h2>
+          <h2 className="text-lg font-bold text-gray-900">{t.todaysDeals}</h2>
           
           <DealBanner
             title="Get 20% off your first voucher"
@@ -486,17 +492,17 @@ export default function MobileHome() {
           <div className="overflow-x-auto scrollbar-hide">
             <div className="flex gap-3">
               <SmallDealCard
-                title="Double cashback"
+                title={t.doubleCashback}
                 discount="2x"
                 icon="💰"
               />
               <SmallDealCard
-                title="Network vouchers"
+                title={t.networkVouchers}
                 discount="-15%"
                 icon="🏪"
               />
               <SmallDealCard
-                title="Weekend special"
+                title={t.weekendSpecial}
                 discount="-10%"
                 icon="🎉"
               />
@@ -508,12 +514,12 @@ export default function MobileHome() {
         {restaurantsWithVouchers.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Vouchere disponibile</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t.availableVouchers}</h2>
               <button 
                 onClick={() => setLocation('/m/explore?tab=vouchers')}
                 className="text-primary text-sm font-medium flex items-center gap-1"
               >
-                Vezi toate
+                {t.seeAll}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

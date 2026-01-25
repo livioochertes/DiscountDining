@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 const DEFAULT_STATUS_BAR_HEIGHT = 40;
 
 export default function MobileSignIn() {
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [statusBarHeight, setStatusBarHeight] = useState(DEFAULT_STATUS_BAR_HEIGHT);
@@ -67,8 +69,8 @@ export default function MobileSignIn() {
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
         toast({
-          title: "Autentificare reușită",
-          description: "Bine ai revenit!",
+          title: t.authSuccess,
+          description: "Welcome back!",
         });
         
         setTimeout(() => {
@@ -76,15 +78,15 @@ export default function MobileSignIn() {
         }, 100);
       } else {
         toast({
-          title: "Autentificare eșuată",
-          description: data.message || "Email sau parolă incorectă",
+          title: t.authFailed,
+          description: data.message || t.wrongCredentials,
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Eroare",
-        description: "Ceva nu a mers. Încearcă din nou.",
+        title: t.error,
+        description: t.somethingWentWrong,
         variant: "destructive",
       });
     }
@@ -114,7 +116,7 @@ export default function MobileSignIn() {
           <ArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
         <h1 className="flex-1 text-center text-lg font-semibold text-gray-900 pr-8">
-          Autentificare
+          {t.signIn}
         </h1>
       </div>
 
@@ -123,8 +125,8 @@ export default function MobileSignIn() {
           <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-teal-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
             <span className="text-white text-3xl font-bold">E</span>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Bine ai venit!</h2>
-          <p className="text-gray-500">Conectează-te pentru a accesa contul tău</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome!</h2>
+          <p className="text-gray-500">{t.connectToAccessAccount}</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
@@ -145,13 +147,13 @@ export default function MobileSignIn() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Parolă</label>
+            <label className="text-sm font-medium text-gray-700">{t.password}</label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 name="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Introdu parola"
+                placeholder="Enter password"
                 value={formData.password}
                 onChange={handleInputChange}
                 className="pl-12 pr-12 h-14 text-base rounded-xl border-gray-200 focus:border-teal-500 focus:ring-teal-500"
@@ -176,18 +178,18 @@ export default function MobileSignIn() {
             className="w-full h-14 text-base font-semibold rounded-xl bg-teal-500 hover:bg-teal-600"
             disabled={isLoading}
           >
-            {isLoading ? "Se conectează..." : "Conectare"}
+            {isLoading ? t.connecting : t.signIn}
           </Button>
         </form>
 
         <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-          <p className="text-sm font-medium text-blue-900 mb-2">Cont Demo</p>
+          <p className="text-sm font-medium text-blue-900 mb-2">Demo Account</p>
           <p className="text-xs text-blue-700 mb-3">
-            Folosește aceste credențiale pentru a testa aplicația:
+            {t.useCredentials}:
           </p>
           <div className="text-xs space-y-1 font-mono text-blue-800 mb-3">
-            <div><strong>Email:</strong> demo@example.com</div>
-            <div><strong>Parolă:</strong> DemoPassword123!</div>
+            <div><strong>{t.email}:</strong> demo@example.com</div>
+            <div><strong>{t.password}:</strong> DemoPassword123!</div>
           </div>
           <Button
             type="button"
@@ -196,18 +198,18 @@ export default function MobileSignIn() {
             size="sm"
             className="w-full border-blue-200 text-blue-700 hover:bg-blue-100"
           >
-            Completează automat
+            {t.autoComplete}
           </Button>
         </div>
 
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            Nu ai cont?{" "}
+            {t.register}{" "}
             <button 
               onClick={() => setLocation('/m/register')}
               className="text-teal-600 font-medium"
             >
-              Înregistrează-te
+              {t.register}
             </button>
           </p>
         </div>

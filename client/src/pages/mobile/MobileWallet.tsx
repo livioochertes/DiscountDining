@@ -5,6 +5,7 @@ import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, Chev
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type WalletTab = 'vouchers' | 'cashback' | 'credit';
 
@@ -18,6 +19,7 @@ interface Transaction {
 }
 
 export default function MobileWallet() {
+  const { t } = useLanguage();
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<WalletTab>('vouchers');
@@ -59,13 +61,13 @@ export default function MobileWallet() {
             onClick={() => setLocation('/m/signin')}
             className="w-full max-w-xs bg-primary text-white font-semibold py-4 px-6 rounded-2xl mb-3 hover:bg-primary/90 transition-colors"
           >
-            Conectare
+            {t.signIn}
           </button>
           <button
             onClick={() => setLocation('/m/signin')}
             className="w-full max-w-xs bg-gray-100 text-gray-700 font-medium py-4 px-6 rounded-2xl hover:bg-gray-200 transition-colors"
           >
-            Ai deja cont? Autentifică-te
+            {t.alreadyHaveAccount}
           </button>
         </div>
       </MobileLayout>
@@ -239,14 +241,14 @@ export default function MobileWallet() {
                       
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
-                          {remainingMeals} mese rămase
+                          {remainingMeals} {t.mealsRemaining}
                         </span>
                       </div>
                     </div>
                     
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-gray-900">€{remainingValue}</p>
-                      <p className="text-[10px] text-gray-400">valoare</p>
+                      <p className="text-[10px] text-gray-400">{t.value}</p>
                     </div>
                   </div>
                 );

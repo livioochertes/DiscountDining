@@ -5,6 +5,7 @@ import { Brain, Filter, Flame, Leaf, AlertTriangle, Info, ChevronRight } from 'l
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DietFilter {
   id: string;
@@ -32,6 +33,7 @@ interface RecommendedItem {
 }
 
 export default function MobileAIMenu() {
+  const { t } = useLanguage();
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
@@ -82,13 +84,13 @@ export default function MobileAIMenu() {
             onClick={() => setLocation('/m/signin')}
             className="w-full max-w-xs bg-primary text-white font-semibold py-4 px-6 rounded-2xl mb-3 hover:bg-primary/90 transition-colors"
           >
-            Conectare
+            {t.signIn}
           </button>
           <button
             onClick={() => setLocation('/m/signin')}
             className="w-full max-w-xs bg-gray-100 text-gray-700 font-medium py-4 px-6 rounded-2xl hover:bg-gray-200 transition-colors"
           >
-            Ai deja cont? Autentifică-te
+            {t.alreadyHaveAccount}
           </button>
         </div>
       </MobileLayout>
