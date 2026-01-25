@@ -13,51 +13,76 @@ export function SectionNavigation({ currentSection, onTabChange, activeTab }: Se
   const [location] = useLocation();
   const { t } = useLanguage();
 
-  // Add null check for t.sectionNavigation to prevent crashes
-  if (!t || !t.sectionNavigation) {
-    return <div>Loading...</div>;
-  }
+  // Fallback translations for when context is loading
+  const fallback = {
+    sectionNavigation: {
+      users: 'Users',
+      usersDesc: 'Customer Dashboard',
+      restaurants: 'Restaurants', 
+      restaurantsDesc: 'Restaurant Management',
+      admin: 'Admin',
+      adminDesc: 'Platform Administration',
+      dashboard: 'Dashboard',
+      voucherPackages: 'Voucher Packages',
+      adminDashboard: 'Admin Dashboard',
+      restaurantMgmt: 'Restaurant Management',
+      userMgmt: 'User Management',
+      financialMgmt: 'Financial Management',
+      platformSettings: 'Platform Settings',
+      menuManagement: 'Menu Management',
+      orderHistory: 'Order History',
+      finances: 'Finances'
+    },
+    dashboard: 'Dashboard',
+    orders: 'Orders',
+    myVouchers: 'My Vouchers',
+    pointsRewards: 'Points & Rewards',
+    profile: 'Profile'
+  };
+
+  // Use translations or fallback
+  const trans = t?.sectionNavigation ? t : fallback;
 
   const sections = [
     {
       id: "users" as const,
-      title: t.sectionNavigation.users || "Users",
+      title: trans.sectionNavigation?.users || "Users",
       icon: Users,
-      description: t.sectionNavigation.usersDesc || "Customer dashboard",
+      description: trans.sectionNavigation?.usersDesc || "Customer dashboard",
       links: [
-        { href: "/dashboard", label: t.dashboard, icon: BarChart3 },
-        { href: "/my-orders", label: t.orders, icon: ShoppingCart },
-        { href: "/my-vouchers", label: t.myVouchers, icon: Award },
-        { href: "/points", label: t.pointsRewards, icon: CreditCard },
-        { href: "/profile", label: t.profile, icon: UserCheck },
+        { href: "/dashboard", label: trans.dashboard || "Dashboard", icon: BarChart3 },
+        { href: "/my-orders", label: trans.orders || "Orders", icon: ShoppingCart },
+        { href: "/my-vouchers", label: trans.myVouchers || "My Vouchers", icon: Award },
+        { href: "/points", label: trans.pointsRewards || "Points & Rewards", icon: CreditCard },
+        { href: "/profile", label: trans.profile || "Profile", icon: UserCheck },
       ]
     },
     {
       id: "restaurants" as const,
-      title: t.sectionNavigation.restaurants,
+      title: trans.sectionNavigation?.restaurants || "Restaurants",
       icon: Store,
-      description: t.sectionNavigation.restaurantsDesc,
+      description: trans.sectionNavigation?.restaurantsDesc || "Restaurant Management",
       links: [
-        { href: "/restaurant-portal", label: t.sectionNavigation.dashboard, icon: BarChart3 },
-        { href: "/restaurant-portal/packages", label: t.sectionNavigation.voucherPackages, icon: Award },
-        { href: "/restaurant-portal/menu", label: t.sectionNavigation.menuManagement, icon: Store },
-        { href: "/restaurant-portal/orders", label: t.sectionNavigation.orderHistory, icon: ShoppingCart },
-        { href: "/restaurant-portal/finances", label: t.sectionNavigation.finances, icon: CreditCard },
+        { href: "/restaurant-portal", label: trans.sectionNavigation?.dashboard || "Dashboard", icon: BarChart3 },
+        { href: "/restaurant-portal/packages", label: trans.sectionNavigation?.voucherPackages || "Voucher Packages", icon: Award },
+        { href: "/restaurant-portal/menu", label: trans.sectionNavigation?.menuManagement || "Menu Management", icon: Store },
+        { href: "/restaurant-portal/orders", label: trans.sectionNavigation?.orderHistory || "Order History", icon: ShoppingCart },
+        { href: "/restaurant-portal/finances", label: trans.sectionNavigation?.finances || "Finances", icon: CreditCard },
       ]
     },
     {
       id: "admin" as const,
-      title: t.sectionNavigation.admin,
+      title: trans.sectionNavigation?.admin || "Admin",
       icon: Settings,
-      description: t.sectionNavigation.adminDesc,
+      description: trans.sectionNavigation?.adminDesc || "Platform Administration",
       links: [
-        { href: "/admin", label: t.sectionNavigation.adminDashboard, icon: BarChart3, tab: "overview" },
+        { href: "/admin", label: trans.sectionNavigation?.adminDashboard || "Admin Dashboard", icon: BarChart3, tab: "overview" },
         { href: "/admin", label: "EatOff Vouchers", icon: Award, tab: "eatoff-vouchers" },
-        { href: "/admin", label: t.sectionNavigation.restaurantMgmt, icon: Store, tab: "restaurants" },
+        { href: "/admin", label: trans.sectionNavigation?.restaurantMgmt || "Restaurant Management", icon: Store, tab: "restaurants" },
         { href: "/admin", label: "Partners Admin", icon: Building2, tab: "partners" },
-        { href: "/admin", label: t.sectionNavigation.userMgmt, icon: Users, tab: "users" },
-        { href: "/admin", label: t.sectionNavigation.financialMgmt, icon: CreditCard, tab: "finances" },
-        { href: "/admin", label: t.sectionNavigation.platformSettings, icon: Settings, tab: "settings" },
+        { href: "/admin", label: trans.sectionNavigation?.userMgmt || "User Management", icon: Users, tab: "users" },
+        { href: "/admin", label: trans.sectionNavigation?.financialMgmt || "Financial Management", icon: CreditCard, tab: "finances" },
+        { href: "/admin", label: trans.sectionNavigation?.platformSettings || "Platform Settings", icon: Settings, tab: "settings" },
       ]
     }
   ];
