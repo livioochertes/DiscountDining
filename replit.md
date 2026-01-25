@@ -99,6 +99,10 @@ npx cap open ios          # Open iOS project in Xcode
 
 ## Recent Changes
 
+- **2025-01-25**: Migrated EatOff vouchers from in-memory storage to PostgreSQL database for data persistence
+- **2025-01-25**: Changed storage export from MemStorage to DatabaseStorage - all data now persists in PostgreSQL
+- **2025-01-25**: Added automatic seeding of EatOff vouchers to database if table is empty
+- **2025-01-25**: Fixed voucher value display on restaurant detail page - now correctly shows totalValue and bonusPercentage badges
 - **2025-01-22**: Implemented dynamic status bar height detection using `StatusBar.getInfo()` for proper spacing across all Android devices
 - **2025-01-22**: Implemented complete mobile UX with 5-tab navigation (Home, Explore, AI Menu, Wallet, Profile)
 - **2025-01-22**: Added mobile detection hooks, auto-redirect for Capacitor apps, and mobile-specific components
