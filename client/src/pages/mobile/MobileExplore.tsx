@@ -305,7 +305,8 @@ export default function MobileExplore() {
       discountPercentage: p.discountPercentage,
       validityDays: (p.validityMonths || 1) * 30,
       isActive: p.isActive,
-      isCredit: false
+      isCredit: false,
+      voucherType: 'discount' as const
     }));
     
     const mappedCreditVouchers = creditVouchers.filter(v => v.isActive).map(v => ({
@@ -316,13 +317,20 @@ export default function MobileExplore() {
       mealCount: 0,
       pricePerMeal: '0',
       totalValue: String(v.totalValue),
-      bonusPercentage: String(v.bonusPercentage || '0'),
-      discountPercentage: String(v.discountPercentage || '0'),
+      bonusPercentage: v.bonusPercentage ? String(v.bonusPercentage) : '0',
+      discountPercentage: v.discountPercentage ? String(v.discountPercentage) : '0',
       validityDays: v.validityDays || (v.validityMonths ? v.validityMonths * 30 : 30),
       isActive: v.isActive,
       isCredit: true,
       voucherType: v.voucherType || 'immediate'
     }));
+    
+    console.log('[MobileExplore] Credit vouchers mapped:', mappedCreditVouchers.map(v => ({
+      name: v.name, voucherType: v.voucherType, bonus: v.bonusPercentage, discount: v.discountPercentage
+    })));
+    console.log('[MobileExplore] Discount packages mapped:', mappedDiscountPackages.map(v => ({
+      name: v.name, voucherType: v.voucherType, discount: v.discountPercentage
+    })));
     
     return [...mappedDiscountPackages, ...mappedCreditVouchers];
   }, [discountPackages, creditVouchers]);
