@@ -66,7 +66,7 @@ function VoucherChipHome({ voucher, onClick }: { voucher: EatoffVoucher; onClick
 
 function RestaurantVoucherRowHome({ data, onVoucherClick }: { 
   data: RestaurantWithVouchers; 
-  onVoucherClick: (restaurantId: number, voucherId: number) => void;
+  onVoucherClick: (restaurantId: number, voucherId: number, isCredit: boolean) => void;
 }) {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
@@ -128,9 +128,9 @@ function RestaurantVoucherRowHome({ data, onVoucherClick }: {
           <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-hide">
             {sortedVouchers.map((voucher) => (
               <VoucherChipHome 
-                key={voucher.id} 
+                key={voucher.isCredit ? `credit-${voucher.id}` : `discount-${voucher.id}`} 
                 voucher={voucher}
-                onClick={() => onVoucherClick(restaurant.id, voucher.id)}
+                onClick={() => onVoucherClick(restaurant.id, voucher.id, voucher.isCredit || false)}
               />
             ))}
             {vouchers.length > 3 && (
@@ -217,7 +217,16 @@ export default function MobileHome() {
       isCredit: false
     })),
     ...creditVouchers.filter(v => v.isActive).map(v => ({
-      ...v,
+      id: v.id,
+      restaurantId: 0,
+      name: v.name,
+      description: v.description || '',
+      mealCount: 0,
+      totalValue: String(v.totalValue),
+      bonusPercentage: String(v.bonusPercentage || '0'),
+      discountPercentage: '0',
+      validityDays: v.validityDays || 30,
+      isActive: v.isActive,
       isCredit: true
     }))
   ];
@@ -261,8 +270,12 @@ export default function MobileHome() {
     }))
     .filter(item => item.vouchers.length > 0);
 
-  const handleVoucherClick = (restaurantId: number, voucherId: number) => {
-    setLocation(`/m/restaurant/${restaurantId}?tab=vouchers&voucherId=${voucherId}&from=vouchers`);
+  const handleVoucherClick = (restaurantId: number, voucherId: number, isCredit: boolean) => {
+    if (isCredit) {
+      setLocation(`/m/wallet?voucherId=${voucherId}&type=credit`);
+    } else {
+      setLocation(`/m/restaurant/${restaurantId}?tab=vouchers&voucherId=${voucherId}&from=vouchers`);
+    }
   };
 
   const handleBuyVoucher = () => setLocation('/m/explore?tab=vouchers');
