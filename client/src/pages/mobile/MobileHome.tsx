@@ -388,6 +388,7 @@ export default function MobileHome() {
           creditAvailable={userStats?.creditLimit || 0}
           onBuyVoucher={handleBuyVoucher}
           onUseVoucher={handleUseVoucher}
+          isGuest={!user}
         />
 
         {/* Action Row */}

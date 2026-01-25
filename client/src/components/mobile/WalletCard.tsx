@@ -9,6 +9,7 @@ interface WalletCardProps {
   onBuyVoucher?: () => void;
   onUseVoucher?: () => void;
   className?: string;
+  isGuest?: boolean;
 }
 
 export function WalletCard({
@@ -18,40 +19,46 @@ export function WalletCard({
   creditAvailable = 0,
   onBuyVoucher,
   onUseVoucher,
-  className
+  className,
+  isGuest = false
 }: WalletCardProps) {
   return (
     <div className={cn(
-      "bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-6 text-white shadow-lg",
+      "bg-gradient-to-br from-primary to-primary/80 rounded-3xl text-white shadow-lg",
+      isGuest ? "p-4" : "p-6",
       className
     )}>
-      {/* Balance Section */}
-      <div className="mb-6">
-        <p className="text-white/70 text-sm font-medium mb-1">Available Balance</p>
-        <p className="text-4xl font-bold tracking-tight">€{balance.toFixed(2)}</p>
-      </div>
+      {/* Balance Section - only show for logged in users */}
+      {!isGuest && (
+        <div className="mb-6">
+          <p className="text-white/70 text-sm font-medium mb-1">Available Balance</p>
+          <p className="text-4xl font-bold tracking-tight">€{balance.toFixed(2)}</p>
+        </div>
+      )}
 
-      {/* Stats Row */}
-      <div className="flex items-center gap-6 mb-6">
-        <div>
-          <p className="text-white/60 text-xs">Cashback</p>
-          <p className="text-lg font-semibold">€{cashback.toFixed(2)}</p>
+      {/* Stats Row - only show for logged in users */}
+      {!isGuest && (
+        <div className="flex items-center gap-6 mb-6">
+          <div>
+            <p className="text-white/60 text-xs">Cashback</p>
+            <p className="text-lg font-semibold">€{cashback.toFixed(2)}</p>
+          </div>
+          <div className="h-8 w-px bg-white/20" />
+          <div>
+            <p className="text-white/60 text-xs">Active Vouchers</p>
+            <p className="text-lg font-semibold">{activeVouchers}</p>
+          </div>
+          {creditAvailable > 0 && (
+            <>
+              <div className="h-8 w-px bg-white/20" />
+              <div>
+                <p className="text-white/60 text-xs">Credit</p>
+                <p className="text-lg font-semibold">€{creditAvailable.toFixed(2)}</p>
+              </div>
+            </>
+          )}
         </div>
-        <div className="h-8 w-px bg-white/20" />
-        <div>
-          <p className="text-white/60 text-xs">Active Vouchers</p>
-          <p className="text-lg font-semibold">{activeVouchers}</p>
-        </div>
-        {creditAvailable > 0 && (
-          <>
-            <div className="h-8 w-px bg-white/20" />
-            <div>
-              <p className="text-white/60 text-xs">Credit</p>
-              <p className="text-lg font-semibold">€{creditAvailable.toFixed(2)}</p>
-            </div>
-          </>
-        )}
-      </div>
+      )}
 
       {/* Action Buttons */}
       <div className="flex gap-3">
