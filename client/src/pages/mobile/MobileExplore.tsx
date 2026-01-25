@@ -315,7 +315,7 @@ export default function MobileExplore() {
     })
     .map((restaurant: any) => ({
       restaurant,
-      vouchers: activeVouchers.filter(v => v.restaurantId === restaurant.id)
+      vouchers: activeVouchers
     }))
     .filter(item => item.vouchers.length > 0);
 
