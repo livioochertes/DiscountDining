@@ -177,7 +177,7 @@ export default function MobileHome() {
   });
 
   const activeVouchers = vouchers
-    .filter(v => v.isActive && parseFloat(v.bonusPercentage) > 0 && !v.name.toLowerCase().includes('credit'))
+    .filter(v => v.isActive && parseFloat(v.bonusPercentage) > 0 && !(v.name || '').toLowerCase().includes('credit'))
     .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage));
 
   const restaurantsWithVouchers: RestaurantWithVouchers[] = restaurants
