@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X, Star } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
@@ -71,6 +71,15 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
     .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage))
     .slice(0, 3);
   
+  const googleRating = parseFloat(restaurant.googleRating) || 0;
+  const eatoffRating = parseFloat(restaurant.rating) || 0;
+  const googleCount = restaurant.googleReviewCount || 0;
+  const eatoffCount = restaurant.reviewCount || 0;
+  const totalReviews = googleCount + eatoffCount;
+  const combinedRating = totalReviews > 0 
+    ? (googleRating * googleCount + eatoffRating * eatoffCount) / totalReviews
+    : (googleRating || eatoffRating);
+  
   return (
     <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100">
       <div className="flex items-center gap-3 mb-3">
@@ -89,7 +98,26 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-gray-900 truncate">{restaurant.name}</h3>
-          <p className="text-xs text-gray-500">{restaurant.cuisine || 'Restaurant'}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            {combinedRating > 0 && (
+              <div className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                <span className="text-xs font-medium text-gray-700">{combinedRating.toFixed(1)}</span>
+                {totalReviews > 0 && (
+                  <span className="text-xs text-gray-400">({totalReviews})</span>
+                )}
+              </div>
+            )}
+            {restaurant.cuisine && (
+              <span className="text-xs text-gray-500">• {restaurant.cuisine}</span>
+            )}
+          </div>
+          {restaurant.address && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3 h-3 text-gray-400" />
+              <span className="text-xs text-gray-500 truncate">{restaurant.address}</span>
+            </div>
+          )}
         </div>
       </div>
       
