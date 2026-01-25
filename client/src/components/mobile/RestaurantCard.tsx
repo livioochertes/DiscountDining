@@ -146,10 +146,10 @@ export function RestaurantCard({
         
         {/* Heart Icon */}
         {effectiveCustomerId && (
-          <button
+          <div
             onClick={handleFavoriteClick}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
-            disabled={toggleFavorite.isPending}
+            role="button"
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform cursor-pointer"
           >
             <Heart 
               className={cn(
@@ -157,7 +157,7 @@ export function RestaurantCard({
                 isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"
               )} 
             />
-          </button>
+          </div>
         )}
         
         {isRecommended && !effectiveCustomerId && (
