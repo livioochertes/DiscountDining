@@ -331,13 +331,18 @@ function EatOffVoucherManagement() {
     eatoffVoucherForm.reset({
       name: voucher.name,
       description: voucher.description,
-      discount: parseFloat(voucher.discountPercentage),
-      validMonths: voucher.validityMonths,
+      discount: parseFloat(voucher.discountPercentage) || 0,
+      validMonths: voucher.validityMonths || 12,
       isActive: voucher.isActive,
       totalValue: parseFloat(voucher.totalValue) || 0,
       imageUrl: voucher.imageUrl || "",
       mealCount: voucher.mealCount || undefined,
-      pricePerMeal: voucher.pricePerMeal || undefined
+      pricePerMeal: voucher.pricePerMeal || undefined,
+      // Pay Later fields
+      voucherType: voucher.voucherType || "immediate",
+      bonusPercentage: parseFloat(voucher.bonusPercentage) || 0,
+      paymentTermDays: voucher.paymentTermDays || 30,
+      requiresPreauth: voucher.requiresPreauth !== false
     });
     setIsEatoffVoucherDialogOpen(true);
   };
