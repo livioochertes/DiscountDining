@@ -124,6 +124,7 @@ export interface IStorage {
   deletePackage(id: number): Promise<boolean>;
 
   // EatOff voucher operations
+  seedEatoffVouchersIfEmpty(): Promise<void>;
   getEatoffVouchers(): Promise<EatoffVoucher[]>;
   getEatoffVoucherById(id: number): Promise<EatoffVoucher | undefined>;
   createEatoffVoucher(voucherData: InsertEatoffVoucher): Promise<EatoffVoucher>;
@@ -1403,70 +1404,7 @@ export class MemStorage implements IStorage {
       this.menuItems.set(menuItem.id, menuItem);
     });
 
-    // Seed EatOff vouchers including Pay Later options
-    const sampleEatoffVouchers = [
-      {
-        name: "EatOff Premium 50€",
-        description: "Premium dining voucher with 15% discount",
-        discountPercentage: "15.00",
-        validityMonths: 12,
-        validityStartDate: new Date(),
-        validityEndDate: new Date(Date.now() + (12 * 30 * 24 * 60 * 60 * 1000)),
-        validityType: "months",
-        totalValue: "50.00",
-        isActive: true,
-        voucherType: "immediate",
-        bonusPercentage: "0.00",
-        paymentTermDays: 0,
-        requiresPreauth: false,
-        brandColor: "#FF6B35"
-      },
-      {
-        name: "Pay Later 30 Days - 100€",
-        description: "Pay in 30 days with 5% price increase",
-        discountPercentage: "10.00",
-        validityMonths: 12,
-        validityStartDate: new Date(),
-        validityEndDate: new Date(Date.now() + (12 * 30 * 24 * 60 * 60 * 1000)),
-        validityType: "months",
-        totalValue: "100.00",
-        isActive: true,
-        voucherType: "pay_later",
-        bonusPercentage: "5.00",
-        paymentTermDays: 30,
-        requiresPreauth: true,
-        brandColor: "#FF6B35"
-      },
-      {
-        name: "Pay Later 60 Days - 200€",
-        description: "Pay in 60 days with 8% price increase",
-        discountPercentage: "20.00",
-        validityMonths: 18,
-        validityStartDate: new Date(),
-        validityEndDate: new Date(Date.now() + (18 * 30 * 24 * 60 * 60 * 1000)),
-        validityType: "months",
-        totalValue: "200.00",
-        isActive: true,
-        voucherType: "pay_later",
-        bonusPercentage: "8.00",
-        paymentTermDays: 60,
-        requiresPreauth: true,
-        brandColor: "#FF6B35"
-      }
-    ];
-
-    sampleEatoffVouchers.forEach(voucherData => {
-      const voucher: EatoffVoucher = {
-        ...voucherData,
-        id: this.currentEatoffVoucherId++,
-        imageUrl: null,
-        mealCount: null,
-        pricePerMeal: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      this.eatoffVouchers.set(voucher.id, voucher);
-    });
+    // EatOff vouchers are now managed only through the database, not seeded in memory
   }
 
   // Restaurant Owner operations
@@ -1653,6 +1591,11 @@ export class MemStorage implements IStorage {
   }
 
   // EatOff voucher operations
+  async seedEatoffVouchersIfEmpty(): Promise<void> {
+    // MemStorage does not seed - vouchers are managed only through database
+    console.log('MemStorage: EatOff vouchers are managed through database only');
+  }
+
   async getEatoffVouchers(): Promise<EatoffVoucher[]> {
     return Array.from(this.eatoffVouchers.values()).sort((a, b) => b.id - a.id);
   }
@@ -2316,6 +2259,66 @@ export class DatabaseStorage implements IStorage {
   async deletePackage(id: number): Promise<boolean> {
     const result = await db.delete(voucherPackages).where(eq(voucherPackages.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Seed EatOff vouchers if table is empty
+  async seedEatoffVouchersIfEmpty(): Promise<void> {
+    const existingVouchers = await db.select().from(eatoffVouchers).limit(1);
+    if (existingVouchers.length > 0) {
+      console.log('EatOff vouchers already exist in database, skipping seed');
+      return;
+    }
+    
+    console.log('Seeding EatOff vouchers to database...');
+    const sampleVouchers = [
+      {
+        name: "EatOff Premium 50€",
+        description: "Premium dining voucher with 15% discount",
+        discountPercentage: "15.00",
+        validityMonths: 12,
+        validityType: "months",
+        totalValue: "50.00",
+        isActive: true,
+        voucherType: "immediate",
+        bonusPercentage: "0.00",
+        paymentTermDays: 0,
+        requiresPreauth: false,
+        brandColor: "#FF6B35"
+      },
+      {
+        name: "Pay Later 30 Days - 100€",
+        description: "Pay in 30 days with 5% price increase",
+        discountPercentage: "10.00",
+        validityMonths: 12,
+        validityType: "months",
+        totalValue: "100.00",
+        isActive: true,
+        voucherType: "pay_later",
+        bonusPercentage: "5.00",
+        paymentTermDays: 30,
+        requiresPreauth: true,
+        brandColor: "#FF6B35"
+      },
+      {
+        name: "Pay Later 60 Days - 200€",
+        description: "Pay in 60 days with 8% price increase",
+        discountPercentage: "20.00",
+        validityMonths: 18,
+        validityType: "months",
+        totalValue: "200.00",
+        isActive: true,
+        voucherType: "pay_later",
+        bonusPercentage: "8.00",
+        paymentTermDays: 60,
+        requiresPreauth: true,
+        brandColor: "#FF6B35"
+      }
+    ];
+    
+    for (const voucher of sampleVouchers) {
+      await db.insert(eatoffVouchers).values(voucher);
+    }
+    console.log('EatOff vouchers seeded successfully');
   }
 
   // EatOff voucher operations
@@ -3294,4 +3297,10 @@ export class DatabaseStorage implements IStorage {
 
 }
 
-export const storage = new MemStorage();
+// Use DatabaseStorage for production - all data persists in PostgreSQL
+export const storage = new DatabaseStorage();
+
+// Initialize storage - seed EatOff vouchers if empty
+storage.seedEatoffVouchersIfEmpty().catch(err => {
+  console.error('Failed to seed EatOff vouchers:', err);
+});
