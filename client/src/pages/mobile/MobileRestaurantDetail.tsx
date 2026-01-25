@@ -27,6 +27,7 @@ interface VoucherPackage {
   mealCount: number;
   pricePerMeal: string;
   discountPercentage: string;
+  bonusPercentage?: string;
   totalValue?: string;
   type?: string;
 }
@@ -60,6 +61,7 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 
 function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPackage; onClick: () => void; isHighlighted?: boolean }) {
   const discount = parseFloat(pkg.discountPercentage) || 0;
+  const bonus = parseFloat(pkg.bonusPercentage || '0') || 0;
   const pricePerMeal = parseFloat(pkg.pricePerMeal) || 0;
   const isEatOff = pkg.type === 'eatoff';
   
@@ -67,6 +69,11 @@ function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPacka
   const totalPrice = pkg.totalValue 
     ? parseFloat(pkg.totalValue) 
     : pricePerMeal * pkg.mealCount;
+  
+  // Determine badge: bonus (red) for Pay Later, discount (green) for restaurant vouchers
+  const isCredit = bonus > 0;
+  const displayPercent = isCredit ? bonus : discount;
+  const prefix = isCredit ? '+' : '-';
   
   return (
     <button
@@ -85,9 +92,14 @@ function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPacka
           <Ticket className={cn("w-5 h-5", isEatOff ? "text-primary" : "text-gray-400")} />
           <span className="font-semibold text-gray-900">{pkg.name}</span>
         </div>
-        {discount > 0 && (
-          <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">
-            -{discount}%
+        {displayPercent > 0 && (
+          <span className={cn(
+            "text-xs font-bold px-2 py-0.5 rounded-full",
+            isCredit 
+              ? "bg-red-100 text-red-700" 
+              : "bg-green-100 text-green-700"
+          )}>
+            {prefix}{displayPercent.toFixed(0)}%
           </span>
         )}
       </div>
@@ -96,7 +108,7 @@ function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPacka
       
       <div className="flex items-end justify-between">
         <div>
-          <span className="text-xs text-gray-400">{pkg.mealCount} mese</span>
+          {pkg.mealCount > 0 && <span className="text-xs text-gray-400">{pkg.mealCount} mese</span>}
           <p className="text-lg font-bold text-primary">{totalPrice.toFixed(0)} RON</p>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400" />
