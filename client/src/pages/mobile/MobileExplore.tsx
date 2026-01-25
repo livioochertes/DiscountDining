@@ -45,15 +45,21 @@ interface RestaurantWithVouchers {
 
 function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
   const discountPercent = parseFloat(voucher.discountPercentage) || 0;
+  const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
+  
+  const isCredit = bonusPercent > 0;
+  const displayPercent = isCredit ? bonusPercent : discountPercent;
+  const prefix = isCredit ? '+' : '-';
+  const bgColor = isCredit ? 'bg-red-500' : 'bg-green-500';
   
   return (
     <button
       onClick={onClick}
       className="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200 hover:border-primary/50 transition-all"
     >
-      <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap">
-        -{discountPercent.toFixed(0)}%
+      <span className={`${bgColor} text-white text-xs font-bold px-2 py-1 rounded-md whitespace-nowrap`}>
+        {prefix}{displayPercent.toFixed(0)}%
       </span>
       <span className="text-sm font-bold text-primary whitespace-nowrap">{totalValue.toFixed(0)} RON</span>
     </button>
@@ -66,7 +72,16 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
 }) {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
-    .sort((a, b) => parseFloat(b.discountPercentage) - parseFloat(a.discountPercentage));
+    .sort((a, b) => {
+      const aDiscount = parseFloat(a.discountPercentage) || 0;
+      const bDiscount = parseFloat(b.discountPercentage) || 0;
+      const aBonus = parseFloat(a.bonusPercentage) || 0;
+      const bBonus = parseFloat(b.bonusPercentage) || 0;
+      if (aBonus === 0 && bBonus > 0) return -1;
+      if (aBonus > 0 && bBonus === 0) return 1;
+      if (aBonus === 0 && bBonus === 0) return bDiscount - aDiscount;
+      return aBonus - bBonus;
+    });
   
   const googleRating = parseFloat(restaurant.googleRating) || 0;
   const eatoffRating = parseFloat(restaurant.rating) || 0;
@@ -277,8 +292,17 @@ export default function MobileExplore() {
   });
 
   const activeVouchers = vouchers
-    .filter(v => v.isActive && !(v.name || '').toLowerCase().includes('credit'))
-    .sort((a, b) => parseFloat(b.discountPercentage) - parseFloat(a.discountPercentage));
+    .filter(v => v.isActive)
+    .sort((a, b) => {
+      const aDiscount = parseFloat(a.discountPercentage) || 0;
+      const bDiscount = parseFloat(b.discountPercentage) || 0;
+      const aBonus = parseFloat(a.bonusPercentage) || 0;
+      const bBonus = parseFloat(b.bonusPercentage) || 0;
+      if (aBonus === 0 && bBonus > 0) return -1;
+      if (aBonus > 0 && bBonus === 0) return 1;
+      if (aBonus === 0 && bBonus === 0) return bDiscount - aDiscount;
+      return aBonus - bBonus;
+    });
 
   const restaurantsWithVouchers: RestaurantWithVouchers[] = restaurants
     .slice(0, 7)
