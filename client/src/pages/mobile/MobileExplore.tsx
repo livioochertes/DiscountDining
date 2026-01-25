@@ -37,6 +37,75 @@ interface EatoffVoucher {
   isActive: boolean;
 }
 
+interface RestaurantWithVouchers {
+  restaurant: any;
+  vouchers: EatoffVoucher[];
+}
+
+function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
+  const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
+  const totalValue = parseFloat(voucher.totalValue) || 0;
+  
+  return (
+    <button
+      onClick={onClick}
+      className="flex-shrink-0 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl p-3 text-left border border-primary/30 hover:border-primary/50 transition-all hover:scale-[1.02] min-w-[130px] max-w-[150px]"
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          +{bonusPercent}%
+        </span>
+      </div>
+      <p className="text-xs text-gray-600 font-medium line-clamp-1 mb-1">{voucher.name}</p>
+      <p className="text-lg font-bold text-primary">{totalValue.toFixed(0)} RON</p>
+    </button>
+  );
+}
+
+function RestaurantVoucherRow({ data, onVoucherClick }: { 
+  data: RestaurantWithVouchers; 
+  onVoucherClick: (restaurantId: number) => void;
+}) {
+  const { restaurant, vouchers } = data;
+  const sortedVouchers = [...vouchers]
+    .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage))
+    .slice(0, 3);
+  
+  return (
+    <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-14 h-14 rounded-2xl bg-gray-100 overflow-hidden flex-shrink-0">
+          {restaurant.imageUrl ? (
+            <img 
+              src={restaurant.imageUrl} 
+              alt={restaurant.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40">
+              <Store className="w-6 h-6 text-primary" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 truncate">{restaurant.name}</h3>
+          <p className="text-xs text-gray-500">{restaurant.cuisine || 'Restaurant'}</p>
+        </div>
+      </div>
+      
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        {sortedVouchers.map((voucher) => (
+          <VoucherChip 
+            key={voucher.id} 
+            voucher={voucher}
+            onClick={() => onVoucherClick(restaurant.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
@@ -167,6 +236,28 @@ export default function MobileExplore() {
     return true;
   });
 
+  const activeVouchers = vouchers
+    .filter(v => v.isActive && parseFloat(v.bonusPercentage) > 0)
+    .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage));
+
+  const restaurantsWithVouchers: RestaurantWithVouchers[] = restaurants
+    .slice(0, 7)
+    .filter((r: any) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return r.name?.toLowerCase().includes(query) || 
+             r.cuisine?.toLowerCase().includes(query);
+    })
+    .map((restaurant: any) => ({
+      restaurant,
+      vouchers: activeVouchers
+    }))
+    .filter(item => item.vouchers.length > 0);
+
+  const handleVoucherClick = (restaurantId: number) => {
+    setLocation(`/m/restaurant/${restaurantId}?tab=vouchers`);
+  };
+
   const detectLocation = () => {
     if (!navigator.geolocation) {
       alert('Localizarea GPS nu este disponibilă');
@@ -288,7 +379,7 @@ export default function MobileExplore() {
           <p className="text-sm text-gray-500">
             {activeTab === 'restaurants' 
               ? `${filteredRestaurants.length} restaurante găsite`
-              : `${filteredVouchers.length} vouchere disponibile`
+              : `${restaurantsWithVouchers.length} restaurante cu vouchere`
             }
           </p>
           <button className="text-sm text-primary font-medium">
@@ -339,15 +430,15 @@ export default function MobileExplore() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredVouchers.map((voucher) => (
-              <VoucherCard
-                key={voucher.id}
-                voucher={voucher}
-                onClick={() => setLocation(`/checkout?eatoffVoucherId=${voucher.id}`)}
+            {restaurantsWithVouchers.map((item) => (
+              <RestaurantVoucherRow
+                key={item.restaurant.id}
+                data={item}
+                onVoucherClick={handleVoucherClick}
               />
             ))}
             
-            {filteredVouchers.length === 0 && (
+            {restaurantsWithVouchers.length === 0 && (
               <div className="text-center py-12">
                 <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">Nu sunt vouchere disponibile momentan</p>
