@@ -152,13 +152,27 @@ function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
 }
 
 export default function MobileExplore() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers'>('restaurants');
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabFromUrl = urlParams.get('tab') === 'vouchers' ? 'vouchers' : 'restaurants';
+  
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers'>(tabFromUrl);
   const [selectedCity, setSelectedCity] = useState('Toate locațiile');
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'vouchers') {
+      setActiveTab('vouchers');
+    } else if (tab === 'restaurants') {
+      setActiveTab('restaurants');
+    }
+  }, [location]);
 
   const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
     queryKey: ['/api/restaurants', selectedCity],
