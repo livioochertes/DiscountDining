@@ -45,14 +45,15 @@ interface RestaurantWithVouchers {
 function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
+  const isDiscount = bonusPercent < 0;
   
   return (
     <button
       onClick={onClick}
       className="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200 hover:border-primary/50 transition-all"
     >
-      <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap">
-        +{bonusPercent}%
+      <span className={`${isDiscount ? 'bg-red-500' : 'bg-green-500'} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap`}>
+        {bonusPercent > 0 ? '+' : ''}{bonusPercent}%
       </span>
       <span className="text-sm font-bold text-primary whitespace-nowrap">{totalValue.toFixed(0)} RON</span>
     </button>
@@ -65,8 +66,7 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
 }) {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
-    .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage))
-    .slice(0, 4);
+    .sort((a, b) => parseFloat(a.bonusPercentage) - parseFloat(b.bonusPercentage));
   
   const googleRating = parseFloat(restaurant.googleRating) || 0;
   const eatoffRating = parseFloat(restaurant.rating) || 0;
@@ -112,7 +112,7 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
               </>
             )}
           </div>
-          <div className="flex gap-1.5 mt-2 flex-wrap">
+          <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-hide">
             {sortedVouchers.map((voucher) => (
               <VoucherChip 
                 key={voucher.id} 
@@ -120,6 +120,11 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
                 onClick={() => onVoucherClick(restaurant.id, voucher.id)}
               />
             ))}
+            {vouchers.length > 3 && (
+              <span className="flex-shrink-0 flex items-center text-xs text-gray-400 pl-1">
+                •••
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -272,8 +277,8 @@ export default function MobileExplore() {
   });
 
   const activeVouchers = vouchers
-    .filter(v => v.isActive && parseFloat(v.bonusPercentage) > 0)
-    .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage));
+    .filter(v => v.isActive && !(v.name || '').toLowerCase().includes('credit'))
+    .sort((a, b) => parseFloat(a.bonusPercentage) - parseFloat(b.bonusPercentage));
 
   const restaurantsWithVouchers: RestaurantWithVouchers[] = restaurants
     .slice(0, 7)
