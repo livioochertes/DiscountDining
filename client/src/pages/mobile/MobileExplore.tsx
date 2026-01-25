@@ -385,7 +385,21 @@ export default function MobileExplore() {
       return aBonus - bBonus;
     });
 
-  const restaurantsWithVouchers: RestaurantWithVouchers[] = restaurants
+  // Get restaurant IDs that have their own voucher packages
+  const restaurantIdsWithOwnVouchers = new Set(
+    activeVouchers.filter(v => !v.isCredit && v.restaurantId).map(v => v.restaurantId)
+  );
+  
+  // Prioritize restaurants that have their own vouchers
+  const sortedRestaurants = [...restaurants].sort((a: any, b: any) => {
+    const aHasOwn = restaurantIdsWithOwnVouchers.has(a.id);
+    const bHasOwn = restaurantIdsWithOwnVouchers.has(b.id);
+    if (aHasOwn && !bHasOwn) return -1;
+    if (!aHasOwn && bHasOwn) return 1;
+    return 0;
+  });
+
+  const restaurantsWithVouchers: RestaurantWithVouchers[] = sortedRestaurants
     .slice(0, 7)
     .filter((r: any) => {
       if (!searchQuery) return true;
