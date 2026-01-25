@@ -1188,9 +1188,10 @@ export default function AdminDashboard() {
         description: "Restaurant approved successfully",
       });
 
-      // Refresh the data without page reload
+      // Refresh the data without page reload - invalidate both admin and public endpoints
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
     } catch (error) {
       console.error('Failed to approve restaurant:', error);
       toast({
@@ -1224,9 +1225,10 @@ export default function AdminDashboard() {
         description: "Restaurant suspended successfully",
       });
 
-      // Refresh the data without page reload
+      // Refresh the data without page reload - invalidate both admin and public endpoints
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/admin/dashboard'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
     } catch (error) {
       console.error('Failed to suspend restaurant:', error);
       toast({
