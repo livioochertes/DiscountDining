@@ -251,6 +251,7 @@ export default function RestaurantPortal() {
       setIsEditPackageModalOpen(false);
       setSelectedPackage(null);
       queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/packages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/voucher-packages"] });
     },
     onError: (error: any) => {
       toast({
@@ -276,6 +277,7 @@ export default function RestaurantPortal() {
         description: "Voucher package is now available for purchase by customers",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/packages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/voucher-packages"] });
     },
     onError: (error: any) => {
       toast({
