@@ -144,6 +144,7 @@ export interface IStorage {
 
   // Voucher operations
   getPurchasedVouchersByCustomer(customerId: number): Promise<PurchasedVoucher[]>;
+  getPurchasedVouchersWithRestaurantDetails(customerId: number): Promise<(PurchasedVoucher & { restaurant: { name: string; imageUrl: string | null; cuisine: string; address: string; rating: string | null; googleRating: string | null; googleReviewCount: number | null; reviewCount: number | null; } })[]>;
   getPurchasedVoucherById(id: number): Promise<PurchasedVoucher | undefined>;
   createPurchasedVoucher(voucher: InsertPurchasedVoucher): Promise<PurchasedVoucher>;
   updateVoucherUsage(id: number, usedMeals: number): Promise<PurchasedVoucher | undefined>;
@@ -1776,6 +1777,28 @@ export class MemStorage implements IStorage {
       .filter(v => v.customerId === customerId);
   }
 
+  async getPurchasedVouchersWithRestaurantDetails(customerId: number): Promise<(PurchasedVoucher & { restaurant: { name: string; imageUrl: string | null; cuisine: string; address: string; rating: string | null; googleRating: string | null; googleReviewCount: number | null; reviewCount: number | null; } })[]> {
+    const vouchers = Array.from(this.purchasedVouchers.values())
+      .filter(v => v.customerId === customerId);
+    
+    return vouchers.map(voucher => {
+      const restaurant = this.restaurants.get(voucher.restaurantId);
+      return {
+        ...voucher,
+        restaurant: {
+          name: restaurant?.name || 'Unknown',
+          imageUrl: restaurant?.imageUrl || null,
+          cuisine: restaurant?.cuisine || '',
+          address: restaurant?.address || '',
+          rating: restaurant?.rating || null,
+          googleRating: restaurant?.googleRating || null,
+          googleReviewCount: restaurant?.googleReviewCount || null,
+          reviewCount: restaurant?.reviewCount || null,
+        }
+      };
+    });
+  }
+
   async getPurchasedVoucherById(id: number): Promise<PurchasedVoucher | undefined> {
     return this.purchasedVouchers.get(id);
   }
@@ -2336,6 +2359,37 @@ export class DatabaseStorage implements IStorage {
 
   async getPurchasedVouchersByCustomer(customerId: number): Promise<PurchasedVoucher[]> {
     return await db.select().from(purchasedVouchers).where(eq(purchasedVouchers.customerId, customerId));
+  }
+
+  async getPurchasedVouchersWithRestaurantDetails(customerId: number): Promise<(PurchasedVoucher & { restaurant: { name: string; imageUrl: string | null; cuisine: string; address: string; rating: string | null; googleRating: string | null; googleReviewCount: number | null; reviewCount: number | null; } })[]> {
+    const results = await db.select({
+      voucher: purchasedVouchers,
+      restaurantName: restaurants.name,
+      restaurantImageUrl: restaurants.imageUrl,
+      restaurantCuisine: restaurants.cuisine,
+      restaurantAddress: restaurants.address,
+      restaurantRating: restaurants.rating,
+      restaurantGoogleRating: restaurants.googleRating,
+      restaurantGoogleReviewCount: restaurants.googleReviewCount,
+      restaurantReviewCount: restaurants.reviewCount,
+    })
+    .from(purchasedVouchers)
+    .leftJoin(restaurants, eq(purchasedVouchers.restaurantId, restaurants.id))
+    .where(eq(purchasedVouchers.customerId, customerId));
+    
+    return results.map(row => ({
+      ...row.voucher,
+      restaurant: {
+        name: row.restaurantName || 'Unknown',
+        imageUrl: row.restaurantImageUrl || null,
+        cuisine: row.restaurantCuisine || '',
+        address: row.restaurantAddress || '',
+        rating: row.restaurantRating || null,
+        googleRating: row.restaurantGoogleRating || null,
+        googleReviewCount: row.restaurantGoogleReviewCount || null,
+        reviewCount: row.restaurantReviewCount || null,
+      }
+    }));
   }
 
   async getPurchasedVoucherById(id: number): Promise<PurchasedVoucher | undefined> {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight } from 'lucide-react';
+import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -175,26 +175,82 @@ export default function MobileWallet() {
                 <button className="text-primary font-medium">Buy your first voucher</button>
               </div>
             ) : (
-              vouchers.map((voucher: any) => (
-                <div
-                  key={voucher.id}
-                  className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                      <Gift className="w-6 h-6 text-primary" />
+              vouchers.map((voucher: any) => {
+                const restaurant = voucher.restaurant || {};
+                const googleRating = parseFloat(restaurant.googleRating) || 0;
+                const eatoffRating = parseFloat(restaurant.rating) || 0;
+                const googleCount = restaurant.googleReviewCount || 0;
+                const eatoffCount = restaurant.reviewCount || 0;
+                const totalReviews = googleCount + eatoffCount;
+                const combinedRating = totalReviews > 0 
+                  ? (googleRating * googleCount + eatoffRating * eatoffCount) / totalReviews
+                  : 0;
+                const remainingMeals = voucher.totalMeals - (voucher.usedMeals || 0);
+                const mealValue = parseFloat(voucher.purchasePrice) / voucher.totalMeals;
+                const remainingValue = (remainingMeals * mealValue).toFixed(2);
+                
+                return (
+                  <div
+                    key={voucher.id}
+                    className="bg-white border border-gray-100 rounded-2xl p-3 flex gap-3"
+                  >
+                    <div className="w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
+                      {restaurant.imageUrl ? (
+                        <img 
+                          src={restaurant.imageUrl} 
+                          alt={restaurant.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                          <span className="text-xl">🍽️</span>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{voucher.restaurantName || 'EatOff Network'}</p>
-                      <p className="text-sm text-gray-500">Expires {voucher.expiryDate || 'in 30 days'}</p>
+                    
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">
+                        {restaurant.name || 'EatOff Network'}
+                      </p>
+                      
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {combinedRating > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                            <span className="text-xs font-medium text-gray-700">
+                              {combinedRating.toFixed(1)}
+                            </span>
+                            {totalReviews > 0 && (
+                              <span className="text-xs text-gray-400">({totalReviews})</span>
+                            )}
+                          </div>
+                        )}
+                        {restaurant.cuisine && (
+                          <span className="text-xs text-gray-500">• {restaurant.cuisine}</span>
+                        )}
+                      </div>
+                      
+                      {restaurant.address && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-500 truncate">{restaurant.address}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">
+                          {remainingMeals} mese rămase
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-gray-900">€{remainingValue}</p>
+                      <p className="text-[10px] text-gray-400">valoare</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900">€{voucher.remaining || voucher.value}</p>
-                    <p className="text-xs text-gray-400">remaining</p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
