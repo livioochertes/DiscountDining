@@ -49,15 +49,12 @@ function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl p-3 text-left border border-primary/30 hover:border-primary/50 transition-all hover:scale-[1.02] min-w-[130px] max-w-[150px]"
+      className="flex-shrink-0 flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-200 hover:border-primary/50 transition-all"
     >
-      <div className="flex items-center justify-between mb-1">
-        <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-          +{bonusPercent}%
-        </span>
-      </div>
-      <p className="text-xs text-gray-600 font-medium line-clamp-1 mb-1">{voucher.name}</p>
-      <p className="text-lg font-bold text-primary">{totalValue.toFixed(0)} RON</p>
+      <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap">
+        +{bonusPercent}%
+      </span>
+      <span className="text-sm font-bold text-primary whitespace-nowrap">{totalValue.toFixed(0)} RON</span>
     </button>
   );
 }
@@ -69,7 +66,7 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
     .sort((a, b) => parseFloat(b.bonusPercentage) - parseFloat(a.bonusPercentage))
-    .slice(0, 3);
+    .slice(0, 4);
   
   const googleRating = parseFloat(restaurant.googleRating) || 0;
   const eatoffRating = parseFloat(restaurant.rating) || 0;
@@ -81,9 +78,9 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
     : (googleRating || eatoffRating);
   
   return (
-    <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-14 h-14 rounded-2xl bg-gray-100 overflow-hidden flex-shrink-0">
+    <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
+      <div className="flex gap-3">
+        <div className="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
           {restaurant.imageUrl ? (
             <img 
               src={restaurant.imageUrl} 
@@ -92,43 +89,39 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40">
-              <Store className="w-6 h-6 text-primary" />
+              <Store className="w-7 h-7 text-primary" />
             </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 truncate">{restaurant.name}</h3>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold text-gray-900 truncate text-[15px]">{restaurant.name}</h3>
             {combinedRating > 0 && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 flex-shrink-0">
                 <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
                 <span className="text-xs font-medium text-gray-700">{combinedRating.toFixed(1)}</span>
-                {totalReviews > 0 && (
-                  <span className="text-xs text-gray-400">({totalReviews})</span>
-                )}
               </div>
             )}
-            {restaurant.cuisine && (
-              <span className="text-xs text-gray-500">• {restaurant.cuisine}</span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-500">
+            {restaurant.cuisine && <span>{restaurant.cuisine}</span>}
+            {restaurant.address && (
+              <>
+                <span>•</span>
+                <span className="truncate">{restaurant.address}</span>
+              </>
             )}
           </div>
-          {restaurant.address && (
-            <div className="flex items-center gap-1 mt-0.5">
-              <MapPin className="w-3 h-3 text-gray-400" />
-              <span className="text-xs text-gray-500 truncate">{restaurant.address}</span>
-            </div>
-          )}
+          <div className="flex gap-1.5 mt-2 flex-wrap">
+            {sortedVouchers.map((voucher) => (
+              <VoucherChip 
+                key={voucher.id} 
+                voucher={voucher}
+                onClick={() => onVoucherClick(restaurant.id)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-      
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-        {sortedVouchers.map((voucher) => (
-          <VoucherChip 
-            key={voucher.id} 
-            voucher={voucher}
-            onClick={() => onVoucherClick(restaurant.id)}
-          />
-        ))}
       </div>
     </div>
   );
