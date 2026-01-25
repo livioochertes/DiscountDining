@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface EatoffVoucher {
   id: number;
+  restaurantId: number;
   name: string;
   description: string;
   mealCount: number;
