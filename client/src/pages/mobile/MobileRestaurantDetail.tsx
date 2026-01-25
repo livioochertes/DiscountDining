@@ -105,7 +105,10 @@ export default function MobileRestaurantDetail() {
   const restaurantId = params?.id;
   const { user } = useAuth();
   
-  const [activeTab, setActiveTab] = useState<'menu' | 'vouchers'>('menu');
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get('tab') === 'vouchers' ? 'vouchers' : 'menu';
+  
+  const [activeTab, setActiveTab] = useState<'menu' | 'vouchers'>(initialTab);
   const [isFavorite, setIsFavorite] = useState(false);
 
   const { data: restaurantData, isLoading } = useQuery({
