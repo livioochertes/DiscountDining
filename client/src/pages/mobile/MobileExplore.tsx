@@ -7,12 +7,13 @@ import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCard } from '@/components/mobile/RestaurantCard';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 
-const CITIES = [
-  'Toate locațiile',
+const CITIES_EN = [
+  'All locations',
   'Bucharest',
   'Cluj-Napoca',
   'Timișoara',
@@ -190,6 +191,7 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
 }
 
 function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
+  const { t } = useLanguage();
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
   const baseValue = totalValue / (1 + bonusPercent / 100);
@@ -206,7 +208,7 @@ function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">{voucher.name}</h3>
-            <p className="text-xs text-gray-500">{voucher.mealCount} mese incluse</p>
+            <p className="text-xs text-gray-500">{voucher.mealCount} {t.mealsIncluded}</p>
           </div>
         </div>
         {bonusPercent > 0 && (
@@ -220,22 +222,23 @@ function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
       
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-xs text-gray-500">Valoare totală</p>
+          <p className="text-xs text-gray-500">{t.totalValue}</p>
           <p className="text-xl font-bold text-primary">{totalValue.toFixed(0)} RON</p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-500">Plătești doar</p>
+          <p className="text-xs text-gray-500">{t.payOnly}</p>
           <p className="text-lg font-semibold text-gray-900">{baseValue.toFixed(0)} RON</p>
         </div>
       </div>
       
-      <p className="text-xs text-gray-400 mt-2">Valid {voucher.validityDays} zile</p>
+      <p className="text-xs text-gray-400 mt-2">{t.validDays} {voucher.validityDays} {t.days}</p>
     </button>
   );
 }
 
 export default function MobileExplore() {
   const [location, setLocation] = useLocation();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   
@@ -243,7 +246,7 @@ export default function MobileExplore() {
   const tabFromUrl = urlParams.get('tab') === 'vouchers' ? 'vouchers' : 'restaurants';
   
   const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers'>(tabFromUrl);
-  const [selectedCity, setSelectedCity] = useState('Toate locațiile');
+  const [selectedCity, setSelectedCity] = useState('All locations');
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
@@ -260,7 +263,7 @@ export default function MobileExplore() {
   const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
     queryKey: ['/api/restaurants', selectedCity],
     queryFn: async () => {
-      const url = selectedCity === 'Toate locațiile' 
+      const url = selectedCity === 'All locations' 
         ? `${API_BASE_URL}/api/restaurants`
         : `${API_BASE_URL}/api/restaurants?location=${encodeURIComponent(selectedCity)}`;
       console.log('[MobileExplore] Fetching restaurants from:', url);
@@ -428,7 +431,7 @@ export default function MobileExplore() {
 
   const detectLocation = () => {
     if (!navigator.geolocation) {
-      alert('Localizarea GPS nu este disponibilă');
+      alert(t.gpsNotAvailable);
       return;
     }
 
@@ -443,7 +446,7 @@ export default function MobileExplore() {
           const data = await response.json();
           const city = data.address?.city || data.address?.town || data.address?.municipality || 'Bucharest';
           
-          const matchedCity = CITIES.find(c => 
+          const matchedCity = CITIES_EN.find(c => 
             city.toLowerCase().includes(c.toLowerCase()) || 
             c.toLowerCase().includes(city.toLowerCase())
           );
@@ -458,7 +461,7 @@ export default function MobileExplore() {
       (error) => {
         console.error('Geolocation error:', error);
         setIsDetectingLocation(false);
-        alert('Nu am putut detecta locația. Verifică permisiunile GPS.');
+        alert(t.couldNotDetectLocation);
       }
     );
   };
@@ -485,7 +488,7 @@ export default function MobileExplore() {
             className="flex items-center gap-1.5 text-sm text-primary font-medium disabled:opacity-50"
           >
             <Navigation className={cn("w-4 h-4", isDetectingLocation && "animate-pulse")} />
-            {isDetectingLocation ? 'Detectare...' : 'Folosește GPS'}
+            {isDetectingLocation ? t.detecting : t.useGPS}
           </button>
         </div>
 
@@ -525,7 +528,7 @@ export default function MobileExplore() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeTab === 'restaurants' ? "Caută restaurante..." : "Caută vouchere..."}
+              placeholder={activeTab === 'restaurants' ? t.searchRestaurantsPlaceholder : t.searchVouchersPlaceholder}
               className="w-full pl-12 pr-4 py-3.5 bg-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
@@ -546,12 +549,12 @@ export default function MobileExplore() {
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">
             {activeTab === 'restaurants' 
-              ? `${filteredRestaurants.length} restaurante găsite`
-              : `${restaurantsWithVouchers.length} restaurante cu vouchere`
+              ? `${filteredRestaurants.length} ${t.restaurantsFound}`
+              : `${restaurantsWithVouchers.length} ${t.restaurantsWithVouchers}`
             }
           </p>
           <button className="text-sm text-primary font-medium">
-            Sortează: {activeTab === 'restaurants' ? 'Cele mai bune' : 'Valoare'}
+            {t.sortBy}: {activeTab === 'restaurants' ? t.bestRated : t.value}
           </button>
         </div>
 
@@ -583,7 +586,7 @@ export default function MobileExplore() {
             {filteredRestaurants.length === 0 && (
               <div className="text-center py-12">
                 <Store className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">Nu am găsit restaurante în {selectedCity}</p>
+                <p className="text-gray-500">{t.noRestaurantsFound} {selectedCity}</p>
                 <button 
                   onClick={() => {
                     setSearchQuery('');
@@ -591,7 +594,7 @@ export default function MobileExplore() {
                   }}
                   className="mt-2 text-primary font-medium"
                 >
-                  Șterge filtrele
+                  {t.clearFilters}
                 </button>
               </div>
             )}
@@ -609,7 +612,7 @@ export default function MobileExplore() {
             {restaurantsWithVouchers.length === 0 && (
               <div className="text-center py-12">
                 <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">Nu sunt vouchere disponibile momentan</p>
+                <p className="text-gray-500">{t.noVouchersAvailable}</p>
               </div>
             )}
           </div>
@@ -621,7 +624,7 @@ export default function MobileExplore() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
           <div className="bg-white w-full rounded-t-3xl p-4 pb-8 animate-slide-up">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Selectează orașul</h3>
+              <h3 className="text-lg font-bold">{t.selectCity}</h3>
               <button 
                 onClick={() => setShowCityPicker(false)}
                 className="p-2 hover:bg-gray-100 rounded-full"
@@ -631,7 +634,7 @@ export default function MobileExplore() {
             </div>
             
             <div className="space-y-2 max-h-80 overflow-y-auto">
-              {CITIES.map((city) => (
+              {CITIES_EN.map((city) => (
                 <button
                   key={city}
                   onClick={() => {

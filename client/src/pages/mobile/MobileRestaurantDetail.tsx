@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
@@ -33,6 +34,7 @@ interface VoucherPackage {
 }
 
 function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="flex gap-3 p-3 bg-white rounded-2xl border border-gray-100">
       {item.imageUrl && (
@@ -51,7 +53,7 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
             onClick={onAdd}
             className="bg-primary/10 text-primary text-xs font-medium px-3 py-1.5 rounded-full"
           >
-            Adaugă
+            {t.addToCart}
           </button>
         </div>
       </div>
@@ -60,6 +62,7 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 }
 
 function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPackage; onClick: () => void; isHighlighted?: boolean }) {
+  const { t } = useLanguage();
   const discount = parseFloat(pkg.discountPercentage) || 0;
   const bonus = parseFloat(pkg.bonusPercentage || '0') || 0;
   const pricePerMeal = parseFloat(pkg.pricePerMeal) || 0;
@@ -104,11 +107,11 @@ function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPacka
         )}
       </div>
       
-      <p className="text-sm text-gray-500 mb-3">{pkg.description || `${pkg.mealCount} mese incluse`}</p>
+      <p className="text-sm text-gray-500 mb-3">{pkg.description || `${pkg.mealCount} ${t.mealsIncluded}`}</p>
       
       <div className="flex items-end justify-between">
         <div>
-          {pkg.mealCount > 0 && <span className="text-xs text-gray-400">{pkg.mealCount} mese</span>}
+          {pkg.mealCount > 0 && <span className="text-xs text-gray-400">{pkg.mealCount} {t.meals}</span>}
           <p className="text-lg font-bold text-primary">{totalPrice.toFixed(0)} RON</p>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -119,6 +122,7 @@ function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPacka
 
 export default function MobileRestaurantDetail() {
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
   const [, params] = useRoute('/m/restaurant/:id');
   const restaurantId = params?.id;
   const { user } = useAuth();
@@ -156,7 +160,7 @@ export default function MobileRestaurantDetail() {
   const menuItems: MenuItem[] = restaurantData?.menuItems || [];
 
   const groupedMenu = menuItems.reduce((acc: Record<string, MenuItem[]>, item) => {
-    const category = item.category || 'Altele';
+    const category = item.category || t.otherCategory;
     if (!acc[category]) acc[category] = [];
     acc[category].push(item);
     return acc;
@@ -219,12 +223,12 @@ export default function MobileRestaurantDetail() {
     return (
       <MobileLayout>
         <div className="flex flex-col items-center justify-center h-full p-8">
-          <p className="text-gray-500">Restaurant negăsit</p>
+          <p className="text-gray-500">{t.restaurantNotFound}</p>
           <button 
             onClick={() => setLocation('/m/explore')}
             className="mt-4 text-primary font-medium"
           >
-            Înapoi la explorare
+            {t.backToExplore}
           </button>
         </div>
       </MobileLayout>
@@ -368,7 +372,7 @@ export default function MobileRestaurantDetail() {
               {packages.length === 0 && (
                 <div className="text-center py-12">
                   <Ticket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">Nu sunt vouchere disponibile</p>
+                  <p className="text-gray-500">{t.noVouchersAvailable}</p>
                 </div>
               )}
             </div>
