@@ -213,7 +213,7 @@ export default function MobileHome() {
     .slice(0, 4)
     .map((restaurant: any) => ({
       restaurant,
-      vouchers: activeVouchers
+      vouchers: activeVouchers.filter(v => v.restaurantId === restaurant.id)
     }))
     .filter(item => item.vouchers.length > 0);
 
