@@ -61,7 +61,7 @@ function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
 
 function RestaurantVoucherRow({ data, onVoucherClick }: { 
   data: RestaurantWithVouchers; 
-  onVoucherClick: (restaurantId: number) => void;
+  onVoucherClick: (restaurantId: number, voucherId: number) => void;
 }) {
   const { restaurant, vouchers } = data;
   const sortedVouchers = [...vouchers]
@@ -117,7 +117,7 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
               <VoucherChip 
                 key={voucher.id} 
                 voucher={voucher}
-                onClick={() => onVoucherClick(restaurant.id)}
+                onClick={() => onVoucherClick(restaurant.id, voucher.id)}
               />
             ))}
           </div>
@@ -289,8 +289,8 @@ export default function MobileExplore() {
     }))
     .filter(item => item.vouchers.length > 0);
 
-  const handleVoucherClick = (restaurantId: number) => {
-    setLocation(`/m/restaurant/${restaurantId}?tab=vouchers`);
+  const handleVoucherClick = (restaurantId: number, voucherId: number) => {
+    setLocation(`/m/restaurant/${restaurantId}?tab=vouchers&voucherId=${voucherId}&from=vouchers`);
   };
 
   const detectLocation = () => {

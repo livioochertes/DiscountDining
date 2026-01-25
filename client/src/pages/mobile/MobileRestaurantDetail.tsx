@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useRoute } from 'wouter';
 import { ArrowLeft, Star, MapPin, Clock, Ticket, ShoppingBag, Heart, Share2, ChevronRight } from 'lucide-react';
@@ -58,7 +58,7 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
   );
 }
 
-function VoucherPackageCard({ pkg, onClick }: { pkg: VoucherPackage; onClick: () => void }) {
+function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPackage; onClick: () => void; isHighlighted?: boolean }) {
   const discount = parseFloat(pkg.discountPercentage) || 0;
   const pricePerMeal = parseFloat(pkg.pricePerMeal) || 0;
   const totalPrice = pricePerMeal * pkg.mealCount;
@@ -68,10 +68,12 @@ function VoucherPackageCard({ pkg, onClick }: { pkg: VoucherPackage; onClick: ()
     <button
       onClick={onClick}
       className={cn(
-        "w-full p-4 rounded-2xl text-left border transition-colors",
-        isEatOff 
-          ? "bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20" 
-          : "bg-white border-gray-100 hover:border-gray-200"
+        "w-full p-4 rounded-2xl text-left border transition-all",
+        isHighlighted 
+          ? "bg-primary/10 border-primary ring-2 ring-primary/50 scale-[1.02]" 
+          : isEatOff 
+            ? "bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20" 
+            : "bg-white border-gray-100 hover:border-gray-200"
       )}
     >
       <div className="flex items-start justify-between mb-2">
@@ -107,9 +109,12 @@ export default function MobileRestaurantDetail() {
   
   const urlParams = new URLSearchParams(window.location.search);
   const initialTab = urlParams.get('tab') === 'vouchers' ? 'vouchers' : 'menu';
+  const highlightedVoucherId = urlParams.get('voucherId');
+  const fromPage = urlParams.get('from');
   
   const [activeTab, setActiveTab] = useState<'menu' | 'vouchers'>(initialTab);
   const [isFavorite, setIsFavorite] = useState(false);
+  const voucherRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const { data: restaurantData, isLoading } = useQuery({
     queryKey: ['/api/restaurants', restaurantId, 'full'],
@@ -161,6 +166,25 @@ export default function MobileRestaurantDetail() {
     }
   };
 
+  const handleBack = () => {
+    if (fromPage === 'vouchers') {
+      setLocation('/m/explore?tab=vouchers');
+    } else {
+      setLocation('/m/explore');
+    }
+  };
+
+  useEffect(() => {
+    if (highlightedVoucherId && activeTab === 'vouchers') {
+      setTimeout(() => {
+        const ref = voucherRefs.current[highlightedVoucherId];
+        if (ref) {
+          ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+    }
+  }, [highlightedVoucherId, activeTab, packages]);
+
   if (isLoading) {
     return (
       <MobileLayout>
@@ -205,7 +229,7 @@ export default function MobileRestaurantDetail() {
           
           {/* Back button */}
           <button
-            onClick={() => setLocation('/m/explore')}
+            onClick={handleBack}
             className="absolute top-4 left-4 p-2 bg-white/90 backdrop-blur-sm rounded-full"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -313,11 +337,16 @@ export default function MobileRestaurantDetail() {
           ) : (
             <div className="space-y-3">
               {packages.map((pkg) => (
-                <VoucherPackageCard
+                <div
                   key={pkg.id}
-                  pkg={pkg}
-                  onClick={() => handleBuyVoucher(pkg)}
-                />
+                  ref={(el) => { voucherRefs.current[String(pkg.id)] = el; }}
+                >
+                  <VoucherPackageCard
+                    pkg={pkg}
+                    onClick={() => handleBuyVoucher(pkg)}
+                    isHighlighted={String(pkg.id) === highlightedVoucherId}
+                  />
+                </div>
               ))}
               
               {packages.length === 0 && (
