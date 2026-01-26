@@ -54,9 +54,17 @@ export async function setupMultiAuth(app: Express) {
 
   // Google OAuth Strategy
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    const baseURL = process.env.REPLIT_DOMAINS 
-      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-      : "http://localhost:5000";
+    // Use custom production domain if available, otherwise Replit domain or localhost
+    const isProduction = process.env.NODE_ENV === 'production';
+    let baseURL: string;
+    
+    if (isProduction && process.env.PRODUCTION_DOMAIN) {
+      baseURL = `https://${process.env.PRODUCTION_DOMAIN}`;
+    } else if (process.env.REPLIT_DOMAINS) {
+      baseURL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+    } else {
+      baseURL = "http://localhost:5000";
+    }
     
     const callbackURL = `${baseURL}/api/auth/google/callback`;
     
