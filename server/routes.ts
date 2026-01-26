@@ -1,7 +1,5 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import session from "express-session";
-import MemoryStore from "memorystore";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import restaurantRoutes from "./restaurantRoutes";
@@ -18,6 +16,7 @@ import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAdd
 import { nanoid } from "nanoid";
 import { setupMultiAuth, isAuthenticated } from "./multiAuth";
 import { getAIAssistantResponse, getRestaurantRecommendations, explainVoucherPackage } from "./aiAssistant";
+import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const qr = require("qr-image");
@@ -106,27 +105,11 @@ export async function updateEatOffDailySummary(date: Date, amount: number, payme
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // Setup session middleware first
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const MemStore = MemoryStore(session);
+  // Setup Replit Auth (includes session, passport, and OAuth routes)
+  await setupAuth(app);
+  registerAuthRoutes(app);
   
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key-here',
-    store: new MemStore({
-      checkPeriod: sessionTtl
-    }),
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: false, // Allow frontend access
-      secure: false, // Set to false for development
-      maxAge: sessionTtl,
-      sameSite: 'lax',
-    },
-    name: 'eatoff.sid',
-  }));
-  
-  // Register user authentication routes AFTER session setup
+  // Register user authentication routes
   registerUserAuthRoutes(app);
   
   // Setup OAuth routes (without conflicting session)
