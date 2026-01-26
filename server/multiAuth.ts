@@ -10,6 +10,7 @@ import ConnectPgSimple from "connect-pg-simple";
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const isProduction = process.env.NODE_ENV === 'production';
   
   // Fallback to memory store for immediate testing
   const MemStore = MemoryStore(session);
@@ -22,10 +23,10 @@ export function getSession() {
     resave: true,
     saveUninitialized: true,
     cookie: {
-      httpOnly: false, // Allow frontend access
-      secure: false, // Set to false for development
+      httpOnly: true, // Security: prevent XSS access to cookie
+      secure: isProduction, // HTTPS only in production
       maxAge: sessionTtl,
-      sameSite: 'lax', // Better for same-origin
+      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site mobile OAuth in production
     },
     name: 'eatoff.sid',
   });
@@ -127,16 +128,24 @@ export async function setupMultiAuth(app: Express) {
   app.get("/api/auth/google", (req, res, next) => {
     console.log('Starting Google OAuth flow...');
     console.log('Session ID:', req.sessionID);
-    console.log('Request headers:', req.headers);
+    console.log('Mobile flag:', req.query.mobile);
+    
+    // Store mobile flag in session for callback
+    if (req.query.mobile === 'true') {
+      (req.session as any).isMobileOAuth = true;
+    }
+    
     passport.authenticate("google", { 
       scope: ["profile", "email"],
       accessType: 'offline',
       prompt: 'consent'
     })(req, res, next);
   });
+  
   app.get("/api/auth/google/callback", (req, res, next) => {
     console.log('=== GOOGLE CALLBACK ROUTE HIT ===');
     console.log('Query params:', req.query);
+    console.log('Mobile OAuth flag:', (req.session as any)?.isMobileOAuth);
     console.log('================================');
     
     passport.authenticate("google", { 
@@ -148,19 +157,35 @@ export async function setupMultiAuth(app: Express) {
       console.log('Info:', info);
       console.log('====================================');
       
+      const isMobileOAuth = (req.session as any)?.isMobileOAuth;
+      
+      // Clear the mobile flag
+      if ((req.session as any)?.isMobileOAuth) {
+        delete (req.session as any).isMobileOAuth;
+      }
+      
       if (err) {
         console.error('Authentication error:', err);
+        if (isMobileOAuth) {
+          return res.redirect("eatoff://oauth-callback?error=auth_error");
+        }
         return res.redirect("/login?error=auth_error");
       }
       
       if (!user) {
         console.log('No user returned from authentication');
+        if (isMobileOAuth) {
+          return res.redirect("eatoff://oauth-callback?error=no_user");
+        }
         return res.redirect("/login?error=no_user");
       }
       
       req.logIn(user, (err) => {
         if (err) {
           console.error('Login error:', err);
+          if (isMobileOAuth) {
+            return res.redirect("eatoff://oauth-callback?error=login_failed");
+          }
           return res.redirect("/login?error=login_failed");
         }
         
@@ -168,7 +193,65 @@ export async function setupMultiAuth(app: Express) {
         console.log('User logged in:', JSON.stringify(req.user, null, 2));
         console.log('Session ID:', req.sessionID);
         console.log('Is authenticated:', req.isAuthenticated());
+        console.log('Is mobile OAuth:', isMobileOAuth);
         console.log('========================');
+        
+        if (isMobileOAuth) {
+          // Mobile OAuth flow - redirect to deep link with success
+          const deepLink = `eatoff://oauth-callback?success=true&userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.email || '')}`;
+          
+          // Return HTML page that redirects to deep link
+          return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Authentication Successful</title>
+              <style>
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  min-height: 100vh;
+                  margin: 0;
+                  background: linear-gradient(135deg, #F5A623 0%, #1A1A1A 100%);
+                  color: white;
+                  text-align: center;
+                  padding: 20px;
+                }
+                .container { max-width: 400px; }
+                .checkmark {
+                  width: 80px;
+                  height: 80px;
+                  margin: 0 auto 24px;
+                  border-radius: 50%;
+                  background: rgba(255, 255, 255, 0.2);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 40px;
+                }
+                h1 { font-size: 24px; margin: 0 0 12px 0; font-weight: 600; }
+                p { font-size: 16px; opacity: 0.9; margin: 0; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="checkmark">✓</div>
+                <h1>Authentication Successful</h1>
+                <p>Redirecting back to EatOff app...</p>
+              </div>
+              <script>
+                window.location.href = '${deepLink}';
+                setTimeout(() => { window.close(); }, 1500);
+              </script>
+            </body>
+            </html>
+          `);
+        }
+        
         return res.redirect("/");
       });
     })(req, res, next);
