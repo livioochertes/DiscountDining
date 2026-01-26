@@ -194,7 +194,20 @@ export async function setupMultiAuth(app: Express) {
     console.log('=== GOOGLE CALLBACK ROUTE HIT ===');
     console.log('Query params:', req.query);
     console.log('Mobile OAuth flag:', (req.session as any)?.isMobileOAuth);
+    console.log('Full URL:', req.protocol + '://' + req.get('host') + req.originalUrl);
     console.log('================================');
+    
+    // Check if Google returned an error directly
+    if (req.query.error) {
+      console.error('[Google OAuth] Error from Google:', req.query.error);
+      console.error('[Google OAuth] Error description:', req.query.error_description);
+      const isMobileOAuth = (req.session as any)?.isMobileOAuth;
+      if (isMobileOAuth) {
+        const details = encodeURIComponent(String(req.query.error_description || req.query.error));
+        return res.redirect(`eatoff://oauth-callback?error=google_error&details=${details}`);
+      }
+      return res.redirect("/login?error=google_error");
+    }
     
     passport.authenticate("google", { 
       failureRedirect: "/login?error=oauth_failed" 
@@ -213,9 +226,16 @@ export async function setupMultiAuth(app: Express) {
       }
       
       if (err) {
-        console.error('Authentication error:', err);
+        console.error('=== AUTHENTICATION ERROR ===');
+        console.error('Error:', err);
+        console.error('Error message:', err?.message);
+        console.error('Error stack:', err?.stack);
+        console.error('Is mobile:', isMobileOAuth);
+        console.error('============================');
         if (isMobileOAuth) {
-          return res.redirect("eatoff://oauth-callback?error=auth_error");
+          // Include error details in the redirect for debugging
+          const errorMsg = encodeURIComponent(err?.message || 'unknown_error');
+          return res.redirect(`eatoff://oauth-callback?error=auth_error&details=${errorMsg}`);
         }
         return res.redirect("/login?error=auth_error");
       }
