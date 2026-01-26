@@ -121,13 +121,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mobile OAuth token exchange endpoint
   // This allows the mobile app to exchange a one-time token for a session
   app.post("/api/auth/mobile-exchange", async (req, res) => {
+    console.log('[Mobile Exchange] Request received');
+    console.log('[Mobile Exchange] Body:', JSON.stringify(req.body));
+    console.log('[Mobile Exchange] Origin:', req.headers.origin);
+    
     try {
       const { token } = req.body;
       
       if (!token) {
+        console.log('[Mobile Exchange] No token provided');
         return res.status(400).json({ error: "Token is required" });
       }
       
+      console.log('[Mobile Exchange] Attempting to consume token:', token.substring(0, 10) + '...');
       const user = consumeMobileAuthToken(token);
       
       if (!user) {
