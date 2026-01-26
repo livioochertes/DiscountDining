@@ -4,9 +4,46 @@ import { Strategy as FacebookStrategy } from "passport-facebook";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import MemoryStore from "memorystore";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { pool } from "./db";
 import ConnectPgSimple from "connect-pg-simple";
+
+// Temporary token store for mobile OAuth exchange
+// Maps token -> { user, expiresAt }
+const mobileAuthTokens = new Map<string, { user: any; expiresAt: number }>();
+
+// Clean expired tokens every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of mobileAuthTokens.entries()) {
+    if (data.expiresAt < now) {
+      mobileAuthTokens.delete(token);
+    }
+  }
+}, 5 * 60 * 1000);
+
+function generateMobileAuthToken(user: any): string {
+  const token = crypto.randomBytes(32).toString('hex');
+  // Token expires in 5 minutes
+  mobileAuthTokens.set(token, {
+    user,
+    expiresAt: Date.now() + 5 * 60 * 1000
+  });
+  return token;
+}
+
+export function consumeMobileAuthToken(token: string): any | null {
+  const data = mobileAuthTokens.get(token);
+  if (!data) return null;
+  if (data.expiresAt < Date.now()) {
+    mobileAuthTokens.delete(token);
+    return null;
+  }
+  // One-time use - delete after consuming
+  mobileAuthTokens.delete(token);
+  return data.user;
+}
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -205,8 +242,9 @@ export async function setupMultiAuth(app: Express) {
         console.log('========================');
         
         if (isMobileOAuth) {
-          // Mobile OAuth flow - redirect to deep link with success
-          const deepLink = `eatoff://oauth-callback?success=true&userId=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.email || '')}`;
+          // Mobile OAuth flow - generate a one-time token for the app to exchange
+          const mobileToken = generateMobileAuthToken(user);
+          const deepLink = `eatoff://oauth-callback?token=${encodeURIComponent(mobileToken)}`;
           
           // Return HTML page that redirects to deep link
           return res.send(`

@@ -133,19 +133,48 @@ export default function MobileSignIn() {
         const params = new URLSearchParams(url.search);
         
         if (url.host === 'oauth-callback' || url.pathname.includes('oauth-callback')) {
-          const success = params.get('success');
+          const token = params.get('token');
           const error = params.get('error');
           
-          if (success === 'true') {
-            console.log('[MobileSignIn] OAuth successful!');
-            await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-            toast({
-              title: t.authSuccess,
-              description: "Welcome!",
-            });
-            setTimeout(() => {
-              setLocation('/m');
-            }, 100);
+          if (token) {
+            console.log('[MobileSignIn] Received auth token, exchanging for session...');
+            try {
+              // Exchange the token for a session in the WebView context
+              const response = await fetch(`${API_BASE_URL}/api/auth/mobile-exchange`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token }),
+                credentials: 'include'
+              });
+              
+              if (response.ok) {
+                const data = await response.json();
+                console.log('[MobileSignIn] Session created successfully:', data.user?.id);
+                await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                toast({
+                  title: t.authSuccess,
+                  description: "Welcome!",
+                });
+                setTimeout(() => {
+                  setLocation('/m');
+                }, 100);
+              } else {
+                const errorData = await response.json();
+                console.error('[MobileSignIn] Token exchange failed:', errorData);
+                toast({
+                  title: t.authFailed,
+                  description: errorData.error || t.somethingWentWrong,
+                  variant: "destructive",
+                });
+              }
+            } catch (fetchError) {
+              console.error('[MobileSignIn] Network error during token exchange:', fetchError);
+              toast({
+                title: t.authFailed,
+                description: t.somethingWentWrong,
+                variant: "destructive",
+              });
+            }
           } else if (error) {
             console.error('[MobileSignIn] OAuth error:', error);
             toast({
