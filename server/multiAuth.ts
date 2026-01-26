@@ -246,6 +246,9 @@ export async function setupMultiAuth(app: Express) {
           const mobileToken = generateMobileAuthToken(user);
           const deepLink = `eatoff://oauth-callback?token=${encodeURIComponent(mobileToken)}`;
           
+          console.log('[Mobile OAuth] Generated token for user:', user.id);
+          console.log('[Mobile OAuth] Deep link:', deepLink);
+          
           // Return HTML page that redirects to deep link
           return res.send(`
             <!DOCTYPE html>
@@ -287,11 +290,17 @@ export async function setupMultiAuth(app: Express) {
               <div class="container">
                 <div class="checkmark">✓</div>
                 <h1>Authentication Successful</h1>
-                <p>Redirecting back to EatOff app...</p>
+                <p id="status">Redirecting back to EatOff app...</p>
+                <a id="openApp" href="${deepLink}" style="display:none; margin-top:20px; padding:12px 24px; background:white; color:#1A1A1A; border-radius:8px; text-decoration:none; font-weight:600;">Open EatOff App</a>
               </div>
               <script>
+                console.log('[OAuth Page] Attempting deep link redirect:', '${deepLink}');
                 window.location.href = '${deepLink}';
-                setTimeout(() => { window.close(); }, 1500);
+                setTimeout(() => {
+                  // If still here after 2 seconds, show manual button
+                  document.getElementById('status').textContent = 'Tap below to return to the app';
+                  document.getElementById('openApp').style.display = 'inline-block';
+                }, 2000);
               </script>
             </body>
             </html>
