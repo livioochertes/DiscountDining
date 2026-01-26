@@ -14,7 +14,7 @@ import orderCreationRoutes from "./orderCreationRoutes";
 import { loyaltyRoutes } from "./loyaltyRoutes";
 import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments } from "@shared/schema";
 import { nanoid } from "nanoid";
-import { setupMultiAuth, isAuthenticated } from "./multiAuth";
+import { setupMultiAuth, isAuthenticated, consumeMobileAuthToken } from "./multiAuth";
 import { getAIAssistantResponse, getRestaurantRecommendations, explainVoucherPackage } from "./aiAssistant";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { createRequire } from "module";
@@ -117,6 +117,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup OAuth routes (without conflicting session)
   await setupMultiAuth(app);
+
+  // Mobile OAuth token exchange endpoint
+  // This allows the mobile app to exchange a one-time token for a session
+  app.post("/api/auth/mobile-exchange", async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Token is required" });
+      }
+      
+      const user = consumeMobileAuthToken(token);
+      
+      if (!user) {
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+      
+      // Log the user in - this creates a session in the current context (WebView)
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error('[Mobile Exchange] Login error:', err);
+          return res.status(500).json({ error: "Failed to create session" });
+        }
+        
+        console.log('[Mobile Exchange] User logged in successfully:', user.id);
+        return res.json({ 
+          success: true, 
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            profileImageUrl: user.profileImageUrl
+          }
+        });
+      });
+    } catch (error) {
+      console.error('[Mobile Exchange] Error:', error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   // Auth routes handled by userAuth.ts
 
