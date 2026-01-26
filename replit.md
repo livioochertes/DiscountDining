@@ -121,6 +121,9 @@ The app supports 6 languages with automatic detection:
 
 ## Recent Changes
 
+- **2025-01-26**: Implemented browser-based OAuth for Google Sign-In on mobile - opens external browser instead of WebView SDK, uses deep link (eatoff://oauth-callback) for callback, with proper session security (httpOnly, secure in production)
+- **2025-01-26**: Added deep link handling in MobileSignIn and MobileSignUp with URL parsing error handling and scheme validation
+- **2025-01-26**: Configured Android manifest intent-filter for eatoff://oauth-callback deep link scheme
 - **2025-01-25**: Added priority (1-5) and position inline controls in Admin Dashboard for both restaurants and EatOff vouchers with PATCH API endpoints
 - **2025-01-25**: Updated voucher sorting across all mobile views (MobileHome, MobileExplore, per-restaurant rows) to use priority → position → voucher type → discount/bonus
 - **2025-01-25**: Fixed cache invalidation for EatOff voucher priority updates to include /api/eatoff-vouchers and /api/restaurants queries
