@@ -13,7 +13,11 @@ import eatoffLogo from '@assets/EatOff_Logo_1769386471015.png';
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 const DEFAULT_STATUS_BAR_HEIGHT = 44;
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '13625494461-c975ns696j2j9ml2afiv56ddec59t52u.apps.googleusercontent.com';
+
+// Use Android Client ID for native Android, web Client ID for web/iOS
+const GOOGLE_WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '13625494461-c975ns696j2j9ml2afiv56ddec59t52u.apps.googleusercontent.com';
+const GOOGLE_ANDROID_CLIENT_ID = import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID || '13625494461-1bmnbemselgu58j8d6ff1c2g442hltpv.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = (isNativePlatform && Capacitor.getPlatform() === 'android') ? GOOGLE_ANDROID_CLIENT_ID : GOOGLE_WEB_CLIENT_ID;
 
 declare global {
   interface Window {

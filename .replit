@@ -50,3 +50,5 @@ integrations = ["javascript_object_storage:1.0.0", "javascript_stripe:1.0.0", "j
 [userenv.shared]
 VITE_GOOGLE_CLIENT_ID = "13625494461-c975ns696j2j9ml2afiv56ddec59t52u.apps.googleusercontent.com"
 APPLE_CLIENT_ID = "com.eatoff.app"
+VITE_GOOGLE_ANDROID_CLIENT_ID = "13625494461-1bmnbemselgu58j8d6ff1c2g442hltpv.apps.googleusercontent.com"
+GOOGLE_ANDROID_CLIENT_ID = "13625494461-1bmnbemselgu58j8d6ff1c2g442hltpv.apps.googleusercontent.com"
