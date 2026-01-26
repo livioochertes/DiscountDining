@@ -49,5 +49,16 @@
         <string>EatOff needs your location to show restaurants near you and filter by city.</string>
         <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
         <string>EatOff needs your location to show restaurants near you and filter by city.</string>
+        <key>CFBundleURLTypes</key>
+        <array>
+                <dict>
+                        <key>CFBundleURLName</key>
+                        <string>com.eatoff.app</string>
+                        <key>CFBundleURLSchemes</key>
+                        <array>
+                                <string>eatoff</string>
+                        </array>
+                </dict>
+        </array>
 </dict>
 </plist>
