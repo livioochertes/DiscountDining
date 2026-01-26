@@ -148,12 +148,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerReservationRoutes(app);
 
   // Native Google Sign-In endpoint (for mobile app - no browser redirect)
-  const googleClientId = process.env.GOOGLE_CLIENT_ID;
-  const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
+  const googleWebClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleAndroidClientId = process.env.GOOGLE_ANDROID_CLIENT_ID;
+  
+  // Build list of valid client IDs for token verification
+  const validGoogleClientIds = [googleWebClientId, googleAndroidClientId].filter(Boolean) as string[];
+  const googleClient = validGoogleClientIds.length > 0 ? new OAuth2Client() : null;
   
   app.post("/api/auth/google/native", async (req, res) => {
     try {
-      if (!googleClient || !googleClientId) {
+      if (!googleClient || validGoogleClientIds.length === 0) {
         return res.status(503).json({ message: "Google authentication not configured" });
       }
       
@@ -163,10 +167,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "ID token is required" });
       }
       
-      // Verify the Google ID token
+      // Verify the Google ID token - accept tokens from both web and Android client IDs
       const ticket = await googleClient.verifyIdToken({
         idToken,
-        audience: googleClientId,
+        audience: validGoogleClientIds,
       });
       
       const payload = ticket.getPayload();
