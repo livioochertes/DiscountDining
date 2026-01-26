@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { queryClient } from '@/lib/queryClient';
 import { useLanguage } from '@/contexts/LanguageContext';
 import eatoffLogo from '@assets/EatOff_Logo_1769386471015.png';
 
@@ -14,7 +13,7 @@ const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 const DEFAULT_STATUS_BAR_HEIGHT = 44;
 
-export default function MobileSignIn() {
+export default function MobileSignUp() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -22,6 +21,7 @@ export default function MobileSignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: ''
   });
@@ -50,12 +50,12 @@ export default function MobileSignIn() {
     });
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,20 +67,16 @@ export default function MobileSignIn() {
       const data = await response.json();
 
       if (response.ok) {
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-        
         toast({
-          title: t.authSuccess,
-          description: "Welcome back!",
+          title: t.registrationSuccess || 'Înregistrare reușită!',
+          description: t.verifyEmailSent || 'Verifică-ți emailul pentru a confirma contul.',
         });
         
-        setTimeout(() => {
-          setLocation('/m');
-        }, 100);
+        setLocation('/m/signin');
       } else {
         toast({
-          title: t.authFailed,
-          description: data.message || t.wrongCredentials,
+          title: t.registrationFailed || 'Înregistrare eșuată',
+          description: data.message || t.somethingWentWrong,
           variant: "destructive",
         });
       }
@@ -121,11 +117,27 @@ export default function MobileSignIn() {
             alt="EatOff" 
             className="h-16 mx-auto mb-6"
           />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.welcomeBack || 'Bine ai revenit!'}</h2>
-          <p className="text-gray-500">{t.connectToAccessAccount}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.createAccount || 'Creează cont'}</h2>
+          <p className="text-gray-500">{t.joinEatOff || 'Alătură-te EatOff pentru oferte exclusive'}</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5 mt-4">
+        <form onSubmit={handleSignUp} className="space-y-5 mt-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">{t.name || 'Nume'}</label>
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                name="name"
+                type="text"
+                placeholder={t.yourName || 'Numele tău'}
+                value={formData.name}
+                onChange={handleInputChange}
+                className="pl-12 h-14 text-base rounded-xl bg-white border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Email</label>
             <div className="relative">
@@ -154,6 +166,7 @@ export default function MobileSignIn() {
                 onChange={handleInputChange}
                 className="pl-12 pr-12 h-14 text-base rounded-xl bg-white border-gray-200 focus:border-amber-500 focus:ring-amber-500"
                 required
+                minLength={6}
               />
               <button
                 type="button"
@@ -171,19 +184,19 @@ export default function MobileSignIn() {
             className="w-full h-14 text-base font-semibold rounded-xl text-white shadow-lg"
             style={{ backgroundColor: '#1A1A1A' }}
           >
-            {isLoading ? (t.loading || 'Se încarcă...') : (t.signIn || 'Conectare')}
+            {isLoading ? (t.loading || 'Se încarcă...') : (t.signUp || 'Înregistrează-te')}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-500">
-            {t.noAccount || 'Nu ai cont?'}{' '}
+            {t.alreadyHaveAccount || 'Ai deja cont?'}{' '}
             <button
-              onClick={() => setLocation('/m/signup')}
+              onClick={() => setLocation('/m/signin')}
               className="font-semibold hover:underline"
               style={{ color: '#F5A623' }}
             >
-              {t.signUp || 'Înregistrează-te'}
+              {t.signIn || 'Conectare'}
             </button>
           </p>
         </div>
