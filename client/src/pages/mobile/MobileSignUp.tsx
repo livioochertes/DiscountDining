@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,6 +106,71 @@ export default function MobileSignUp() {
     getStatusBarHeight();
   }, [isNative]);
 
+  // Handle deep link callbacks from OAuth
+  useEffect(() => {
+    if (!isNative) return;
+
+    const handleAppUrlOpen = async (event: { url: string }) => {
+      console.log('[MobileSignUp] Deep link received:', event.url);
+      
+      // Close the browser
+      try {
+        await Browser.close();
+      } catch (e) {
+        console.log('[MobileSignUp] Browser already closed or error:', e);
+      }
+      
+      setIsGoogleLoading(false);
+      
+      // Safely parse the URL with error handling
+      try {
+        // Check if URL starts with our scheme
+        if (!event.url.startsWith('eatoff://')) {
+          console.log('[MobileSignUp] Ignoring non-eatoff deep link:', event.url);
+          return;
+        }
+        
+        const url = new URL(event.url);
+        const params = new URLSearchParams(url.search);
+        
+        if (url.host === 'oauth-callback' || url.pathname.includes('oauth-callback')) {
+          const success = params.get('success');
+          const error = params.get('error');
+          
+          if (success === 'true') {
+            console.log('[MobileSignUp] OAuth successful!');
+            await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+            toast({
+              title: t.authSuccess,
+              description: "Welcome!",
+            });
+            setTimeout(() => {
+              setLocation('/m');
+            }, 100);
+          } else if (error) {
+            console.error('[MobileSignUp] OAuth error:', error);
+            toast({
+              title: t.authFailed,
+              description: error === 'auth_error' ? 'Authentication failed' : 
+                           error === 'no_user' ? 'User not found' : 
+                           error === 'login_failed' ? 'Login failed' : 
+                           t.somethingWentWrong,
+              variant: "destructive",
+            });
+          }
+        }
+      } catch (e) {
+        console.error('[MobileSignUp] Error parsing deep link URL:', e);
+      }
+    };
+
+    const listener = App.addListener('appUrlOpen', handleAppUrlOpen);
+    
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, [isNative, t, setLocation, toast]);
+
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -177,15 +244,37 @@ export default function MobileSignUp() {
     setIsLoading(false);
   };
 
-  const handleGoogleSignIn = () => {
-    if (window.google) {
-      window.google.accounts.id.prompt();
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    
+    if (isNative) {
+      // Native platform - use browser OAuth flow
+      try {
+        const oauthUrl = `${API_BASE_URL}/api/auth/google?mobile=true`;
+        console.log('[MobileSignUp] Opening browser for Google OAuth:', oauthUrl);
+        await Browser.open({ url: oauthUrl });
+      } catch (error) {
+        console.error('[MobileSignUp] Failed to open browser:', error);
+        toast({
+          title: t.error,
+          description: "Failed to open authentication",
+          variant: "destructive",
+        });
+        setIsGoogleLoading(false);
+      }
     } else {
-      toast({
-        title: t.error,
-        description: "Google Sign-In not available",
-        variant: "destructive",
-      });
+      // Web platform - use Google Identity Services
+      if (window.google) {
+        window.google.accounts.id.prompt();
+        setIsGoogleLoading(false);
+      } else {
+        toast({
+          title: t.error,
+          description: "Google Sign-In not available",
+          variant: "destructive",
+        });
+        setIsGoogleLoading(false);
+      }
     }
   };
 
