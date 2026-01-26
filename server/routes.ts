@@ -155,19 +155,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const validGoogleClientIds = [googleWebClientId, googleAndroidClientId].filter(Boolean) as string[];
   const googleClient = validGoogleClientIds.length > 0 ? new OAuth2Client() : null;
   
+  console.log('[Google Auth Config] Client IDs configured:', {
+    webClientId: googleWebClientId ? googleWebClientId.substring(0, 20) + '...' : 'NOT SET',
+    androidClientId: googleAndroidClientId ? googleAndroidClientId.substring(0, 20) + '...' : 'NOT SET',
+    totalValidIds: validGoogleClientIds.length
+  });
+  
   app.post("/api/auth/google/native", async (req, res) => {
+    console.log('[Google Native Auth] ========== NEW AUTHENTICATION REQUEST ==========');
+    console.log('[Google Native Auth] Request headers:', {
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent'],
+      'origin': req.headers['origin']
+    });
+    
     try {
       if (!googleClient || validGoogleClientIds.length === 0) {
+        console.error('[Google Native Auth] FATAL: No Google client IDs configured');
         return res.status(503).json({ message: "Google authentication not configured" });
       }
       
       const { idToken } = req.body;
       
       if (!idToken) {
+        console.error('[Google Native Auth] ERROR: No ID token provided');
         return res.status(400).json({ message: "ID token is required" });
       }
       
+      console.log('[Google Native Auth] ID token received (length:', idToken?.length, 'chars)');
+      console.log('[Google Native Auth] Valid audiences for verification:', validGoogleClientIds.length, 'client IDs');
+      
       // Verify the Google ID token - accept tokens from both web and Android client IDs
+      console.log('[Google Native Auth] Starting token verification...');
       const ticket = await googleClient.verifyIdToken({
         idToken,
         audience: validGoogleClientIds,
@@ -175,8 +194,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const payload = ticket.getPayload();
       if (!payload) {
+        console.error('[Google Native Auth] ERROR: Token verification returned no payload');
         return res.status(401).json({ message: "Invalid token" });
       }
+      
+      console.log('[Google Native Auth] Token payload received:', {
+        sub: payload.sub,
+        email: payload.email,
+        aud: payload.aud,
+        iss: payload.iss,
+        exp: payload.exp
+      });
+      
+      // Additional security: Verify the audience is one of our configured client IDs
+      const tokenAudience = payload.aud;
+      if (!validGoogleClientIds.includes(tokenAudience)) {
+        console.error('[Google Native Auth] ERROR: Token audience mismatch!');
+        console.error('[Google Native Auth] Token audience:', tokenAudience);
+        console.error('[Google Native Auth] Valid audiences:', validGoogleClientIds);
+        return res.status(401).json({ message: "Token used with unauthorized client ID" });
+      }
+      
+      console.log('[Google Native Auth] ✓ Token verified successfully');
+      console.log('[Google Native Auth] Token audience matched:', tokenAudience);
       
       // Create or update user
       const userData = {
@@ -187,15 +227,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileImageUrl: payload.picture || null,
       };
       
+      console.log('[Google Native Auth] Creating/updating user:', userData.email);
       await storage.upsertUser(userData);
       
       // Set session
       (req as any).login({ ...userData, provider: 'google' }, (err: any) => {
         if (err) {
-          console.error('Session login error:', err);
+          console.error('[Google Native Auth] Session login error:', err);
           return res.status(500).json({ message: "Failed to create session" });
         }
         
+        console.log('[Google Native Auth] ========== AUTHENTICATION SUCCESSFUL ==========');
         return res.json({ 
           success: true, 
           user: userData,
@@ -203,8 +245,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
     } catch (error: any) {
-      console.error('Google native auth error:', error);
-      return res.status(401).json({ message: "Authentication failed", error: error.message });
+      console.error('[Google Native Auth] ========== AUTHENTICATION FAILED ==========');
+      console.error('[Google Native Auth] Error name:', error.name);
+      console.error('[Google Native Auth] Error message:', error.message);
+      console.error('[Google Native Auth] Error stack:', error.stack);
+      
+      // Provide more specific error messages for common issues
+      let errorMessage = error.message;
+      let errorType = 'unknown';
+      
+      if (error.message?.includes('Token used too late') || error.message?.includes('exp')) {
+        errorMessage = 'Token has expired. Please try signing in again.';
+        errorType = 'token_expired';
+      } else if (error.message?.includes('Invalid token signature')) {
+        errorMessage = 'Invalid token signature. Please ensure the Google SDK is properly configured.';
+        errorType = 'invalid_signature';
+      } else if (error.message?.includes('No pem found for envelope')) {
+        errorMessage = 'Unable to verify token. Please check your network connection and try again.';
+        errorType = 'verification_failed';
+      } else if (error.message?.includes('audience') || error.message?.includes('aud')) {
+        errorMessage = 'Token was issued for a different app. Please check your Google SDK configuration.';
+        errorType = 'audience_mismatch';
+      } else if (error.message?.includes('Wrong number of segments')) {
+        errorMessage = 'Invalid token format. The ID token is malformed.';
+        errorType = 'invalid_format';
+      }
+      
+      console.error('[Google Native Auth] User-friendly error:', errorMessage, '(type:', errorType, ')');
+      
+      return res.status(401).json({ 
+        message: "Authentication failed", 
+        error: errorMessage,
+        errorType: errorType
+      });
     }
   });
 
