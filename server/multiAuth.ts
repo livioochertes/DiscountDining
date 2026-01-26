@@ -105,11 +105,14 @@ export async function setupMultiAuth(app: Express) {
     
     const callbackURL = `${baseURL}/api/auth/google/callback`;
     
-    const clientID = "13625494461-c975ns696j2j9ml2afiv56ddec59t52u.apps.googleusercontent.com";
-    const clientSecret = "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";
+    // Use the web client ID - same as VITE_GOOGLE_CLIENT_ID
+    const clientID = process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID!;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
     
-    // Reduced OAuth logging for faster startup
+    // Log OAuth config for debugging
     console.log('Google OAuth configured successfully');
+    console.log('[Google OAuth] Callback URL:', callbackURL);
+    console.log('[Google OAuth] Client ID:', clientID?.substring(0, 20) + '...');
     
     passport.use('google', new GoogleStrategy({
       clientID: clientID,
