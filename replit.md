@@ -121,6 +121,7 @@ The app supports 6 languages with automatic detection:
 
 ## Recent Changes
 
+- **2025-01-26**: Added token-based OAuth exchange for mobile - server generates one-time token after OAuth, passes via deep link, app exchanges token for session in WebView context via /api/auth/mobile-exchange endpoint
 - **2025-01-26**: Implemented browser-based OAuth for Google Sign-In on mobile - opens external browser instead of WebView SDK, uses deep link (eatoff://oauth-callback) for callback, with proper session security (httpOnly, secure in production)
 - **2025-01-26**: Added deep link handling in MobileSignIn and MobileSignUp with URL parsing error handling and scheme validation
 - **2025-01-26**: Configured Android manifest intent-filter for eatoff://oauth-callback deep link scheme
