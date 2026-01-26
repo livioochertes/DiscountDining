@@ -23,6 +23,9 @@ const qr = require("qr-image");
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { OAuth2Client } from "google-auth-library";
+import jwt from "jsonwebtoken";
+import jwksClient from "jwks-rsa";
 
 // Initialize Stripe only if the secret key is available
 let stripe: Stripe | null = null;
@@ -143,6 +146,202 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register reservation routes
   registerReservationRoutes(app);
+
+  // Native Google Sign-In endpoint (for mobile app - no browser redirect)
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
+  
+  app.post("/api/auth/google/native", async (req, res) => {
+    try {
+      if (!googleClient || !googleClientId) {
+        return res.status(503).json({ message: "Google authentication not configured" });
+      }
+      
+      const { idToken } = req.body;
+      
+      if (!idToken) {
+        return res.status(400).json({ message: "ID token is required" });
+      }
+      
+      // Verify the Google ID token
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: googleClientId,
+      });
+      
+      const payload = ticket.getPayload();
+      if (!payload) {
+        return res.status(401).json({ message: "Invalid token" });
+      }
+      
+      // Create or update user
+      const userData = {
+        id: `google_${payload.sub}`,
+        email: payload.email || null,
+        firstName: payload.given_name || null,
+        lastName: payload.family_name || null,
+        profileImageUrl: payload.picture || null,
+      };
+      
+      await storage.upsertUser(userData);
+      
+      // Set session
+      (req as any).login({ ...userData, provider: 'google' }, (err: any) => {
+        if (err) {
+          console.error('Session login error:', err);
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        
+        return res.json({ 
+          success: true, 
+          user: userData,
+          message: "Successfully signed in with Google"
+        });
+      });
+    } catch (error: any) {
+      console.error('Google native auth error:', error);
+      return res.status(401).json({ message: "Authentication failed", error: error.message });
+    }
+  });
+
+  // Apple Sign-In endpoint (for mobile app) with proper JWT verification
+  const appleJwksClient = jwksClient({
+    jwksUri: 'https://appleid.apple.com/auth/keys',
+    cache: true,
+    cacheMaxAge: 86400000,
+  });
+  
+  const getAppleSigningKey = (kid: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      appleJwksClient.getSigningKey(kid, (err, key) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(key?.getPublicKey() || '');
+        }
+      });
+    });
+  };
+  
+  app.post("/api/auth/apple/native", async (req, res) => {
+    try {
+      const { identityToken, user } = req.body;
+      
+      if (!identityToken) {
+        return res.status(400).json({ message: "Identity token is required" });
+      }
+      
+      // Decode header to get kid for key lookup
+      const tokenParts = identityToken.split('.');
+      if (tokenParts.length !== 3) {
+        return res.status(400).json({ message: "Invalid token format" });
+      }
+      
+      const header = JSON.parse(Buffer.from(tokenParts[0], 'base64').toString());
+      if (!header.kid) {
+        return res.status(400).json({ message: "Token missing key ID" });
+      }
+      
+      // Get Apple's public key and verify the token
+      const publicKey = await getAppleSigningKey(header.kid);
+      
+      const decoded = jwt.verify(identityToken, publicKey, {
+        algorithms: ['RS256'],
+        issuer: 'https://appleid.apple.com',
+      }) as any;
+      
+      // Require APPLE_CLIENT_ID to be configured
+      const expectedAudience = process.env.APPLE_CLIENT_ID;
+      if (!expectedAudience) {
+        console.error('APPLE_CLIENT_ID environment variable is not configured');
+        return res.status(503).json({ message: "Apple authentication not configured" });
+      }
+      
+      // Verify audience matches our app (use array check since aud can be string or array)
+      const tokenAudience = Array.isArray(decoded.aud) ? decoded.aud : [decoded.aud];
+      if (!tokenAudience.includes(expectedAudience)) {
+        console.error('Apple token audience mismatch:', { expected: expectedAudience, received: decoded.aud });
+        return res.status(401).json({ message: "Invalid token audience" });
+      }
+      
+      // Verify token hasn't expired (jwt.verify already checks this, but double-check)
+      if (decoded.exp && decoded.exp < Date.now() / 1000) {
+        return res.status(401).json({ message: "Token has expired" });
+      }
+      
+      // Verify issuer (jwt.verify already checks this, but explicit is safer)
+      if (decoded.iss !== 'https://appleid.apple.com') {
+        return res.status(401).json({ message: "Invalid token issuer" });
+      }
+      
+      // Verify subject exists
+      if (!decoded.sub) {
+        return res.status(401).json({ message: "Token missing subject" });
+      }
+      
+      // Nonce validation for replay protection - REQUIRED for native flow
+      const { nonce } = req.body;
+      
+      // Require nonce for all Apple Sign-In requests to prevent replay attacks
+      if (!nonce) {
+        console.error('Apple Sign-In request rejected: nonce is required for native flow');
+        return res.status(400).json({ 
+          message: "Nonce is required for Apple Sign-In", 
+          hint: "Generate a random nonce and include it when initiating Apple Sign-In" 
+        });
+      }
+      
+      // Apple uses SHA256 hash of nonce in the token
+      const crypto = require('crypto');
+      const hashedNonce = crypto.createHash('sha256').update(nonce).digest('hex');
+      
+      // Token MUST contain a matching nonce claim
+      if (!decoded.nonce) {
+        console.error('Apple token missing nonce claim');
+        return res.status(401).json({ message: "Token missing nonce - possible replay attack" });
+      }
+      
+      // Validate nonce matches (Apple hashes the nonce with SHA256)
+      if (decoded.nonce !== hashedNonce && decoded.nonce !== nonce) {
+        console.error('Apple token nonce mismatch');
+        return res.status(401).json({ message: "Invalid nonce - possible replay attack" });
+      }
+      
+      // Create or update user
+      const userData = {
+        id: `apple_${decoded.sub}`,
+        email: decoded.email || user?.email || null,
+        firstName: user?.name?.firstName || null,
+        lastName: user?.name?.lastName || null,
+        profileImageUrl: null,
+      };
+      
+      await storage.upsertUser(userData);
+      
+      // Set session
+      (req as any).login({ ...userData, provider: 'apple' }, (err: any) => {
+        if (err) {
+          console.error('Session login error:', err);
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        
+        return res.json({ 
+          success: true, 
+          user: userData,
+          message: "Successfully signed in with Apple"
+        });
+      });
+    } catch (error: any) {
+      console.error('Apple native auth error:', error);
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({ message: "Invalid token signature" });
+      }
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: "Token has expired" });
+      }
+      return res.status(401).json({ message: "Authentication failed", error: error.message });
+    }
+  });
 
   // Basic wallet endpoints
   app.get("/api/customers/:id/wallet", async (req, res) => {
