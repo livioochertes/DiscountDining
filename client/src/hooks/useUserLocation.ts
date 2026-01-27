@@ -1,4 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
+
+// Check if running in native app
+const isNativePlatform = Capacitor.isNativePlatform();
 
 // Map of coordinates to cities in Romania
 const CITY_COORDINATES: { name: string; lat: number; lng: number; radius: number }[] = [
@@ -125,63 +130,70 @@ export function useUserLocation(): UseUserLocationResult {
     setError(null);
   }, [saveLocation]);
 
-  // Request GPS location
-  const requestGpsLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setError('GPS not available');
-      return;
-    }
-
+  // Request GPS location - uses native Capacitor plugin on mobile, browser API on web
+  const requestGpsLocation = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
-    // Manual timeout fallback - ensures isLoading resets even if geolocation hangs
-    const manualTimeout = setTimeout(() => {
-      setIsLoading(false);
-      setError('Location detection timed out');
-    }, 6000);
+    try {
+      let latitude: number;
+      let longitude: number;
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        clearTimeout(manualTimeout);
-        const { latitude, longitude } = position.coords;
-        const detectedCity = findClosestCity(latitude, longitude);
-        
-        if (detectedCity) {
-          setCity(detectedCity);
-          setManualCityState(null);
-          saveLocation(detectedCity, false);
-          localStorage.setItem(GPS_CITY_STORAGE_KEY, detectedCity);
-        } else {
-          setError('Could not detect your city');
+      if (isNativePlatform) {
+        // Use native Capacitor Geolocation plugin - only shows one native permission dialog
+        console.log('[Location] Using native Capacitor Geolocation');
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 5000,
+          maximumAge: 600000
+        });
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } else {
+        // Use browser geolocation API for web
+        console.log('[Location] Using browser geolocation');
+        if (!navigator.geolocation) {
+          setError('GPS not available');
+          setIsLoading(false);
+          return;
         }
-        
-        setIsLoading(false);
-      },
-      (err) => {
-        clearTimeout(manualTimeout);
-        console.error('GPS error:', err);
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            setError('Location permission denied');
-            break;
-          case err.POSITION_UNAVAILABLE:
-            setError('Location unavailable');
-            break;
-          case err.TIMEOUT:
-            setError('Location request timed out');
-            break;
-          default:
-            setError('Could not get location');
-        }
-        setIsLoading(false);
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 5000,
-        maximumAge: 600000 // 10 minutes cache
+
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: 600000
+          });
+        });
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
       }
-    );
+
+      const detectedCity = findClosestCity(latitude, longitude);
+      
+      if (detectedCity) {
+        setCity(detectedCity);
+        setManualCityState(null);
+        saveLocation(detectedCity, false);
+        localStorage.setItem(GPS_CITY_STORAGE_KEY, detectedCity);
+      } else {
+        setError('Could not detect your city');
+      }
+      
+      setIsLoading(false);
+    } catch (err: any) {
+      console.error('[Location] GPS error:', err);
+      if (err?.code === 1 || err?.message?.includes('denied')) {
+        setError('Location permission denied');
+      } else if (err?.code === 2) {
+        setError('Location unavailable');
+      } else if (err?.code === 3 || err?.message?.includes('timeout')) {
+        setError('Location request timed out');
+      } else {
+        setError('Could not get location');
+      }
+      setIsLoading(false);
+    }
   }, [saveLocation]);
 
   // Clear location
