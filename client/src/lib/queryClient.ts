@@ -53,6 +53,9 @@ function getAuthHeaders(): Record<string, string> {
   // Use token for native platform OR mobile web routes (when token exists)
   if (token && (isNativePlatform || isMobileRoute())) {
     headers['Authorization'] = `Bearer ${token}`;
+    console.log('[QueryClient] Using auth token:', token.substring(0, 10) + '...');
+  } else if (token) {
+    console.log('[QueryClient] Token exists but not using:', { isNativePlatform, isMobileRoute: isMobileRoute() });
   }
   return headers;
 }
