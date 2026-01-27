@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
@@ -142,17 +142,20 @@ export default function MobileSignIn() {
           
           if (token) {
             console.log('[MobileSignIn] Received auth token, exchanging for session...');
+            console.log('[MobileSignIn] Using CapacitorHttp for native request to:', `${API_BASE_URL}/api/auth/mobile-exchange`);
             try {
-              // Exchange the token for a session in the WebView context
-              const response = await fetch(`${API_BASE_URL}/api/auth/mobile-exchange`, {
-                method: 'POST',
+              // Use CapacitorHttp for native platform to bypass CORS restrictions
+              const response = await CapacitorHttp.post({
+                url: `${API_BASE_URL}/api/auth/mobile-exchange`,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token }),
-                credentials: 'include'
+                data: { token }
               });
               
-              if (response.ok) {
-                const data = await response.json();
+              console.log('[MobileSignIn] CapacitorHttp response status:', response.status);
+              console.log('[MobileSignIn] CapacitorHttp response data:', JSON.stringify(response.data));
+              
+              if (response.status === 200) {
+                const data = response.data;
                 console.log('[MobileSignIn] Session created successfully:', data.user?.id);
                 
                 // Store session token for future requests
@@ -170,7 +173,7 @@ export default function MobileSignIn() {
                 queryClient.clear();
                 setLocation('/m');
               } else {
-                const errorData = await response.json();
+                const errorData = response.data;
                 console.error('[MobileSignIn] Token exchange failed:', errorData);
                 toast({
                   title: t.authFailed,
