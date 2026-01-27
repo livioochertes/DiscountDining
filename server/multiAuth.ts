@@ -13,11 +13,7 @@ import ConnectPgSimple from "connect-pg-simple";
 // Maps token -> { user, expiresAt }
 const mobileAuthTokens = new Map<string, { user: any; expiresAt: number }>();
 
-// Persistent mobile session tokens (long-lived, reusable)
-// Maps token -> { user, expiresAt }
-const mobileSessionTokens = new Map<string, { user: any; expiresAt: number }>();
-
-// Clean expired tokens every 5 minutes
+// Clean expired temporary tokens every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [token, data] of mobileAuthTokens.entries()) {
@@ -25,11 +21,10 @@ setInterval(() => {
       mobileAuthTokens.delete(token);
     }
   }
-  for (const [token, data] of mobileSessionTokens.entries()) {
-    if (data.expiresAt < now) {
-      mobileSessionTokens.delete(token);
-    }
-  }
+  // Also clean expired DB sessions
+  pool.query('DELETE FROM mobile_sessions WHERE expires_at < NOW()').catch(err => {
+    console.error('[Mobile Sessions] Cleanup error:', err);
+  });
 }, 5 * 60 * 1000);
 
 function generateMobileAuthToken(user: any): string {
@@ -54,30 +49,57 @@ export function consumeMobileAuthToken(token: string): any | null {
   return data.user;
 }
 
-// Generate a long-lived session token for mobile (30 days)
-export function generateMobileSessionToken(user: any): string {
+// Generate a long-lived session token for mobile (30 days) - stored in DB
+export async function generateMobileSessionToken(user: any): Promise<string> {
   const token = crypto.randomBytes(32).toString('hex');
-  mobileSessionTokens.set(token, {
-    user,
-    expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
-  });
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  
+  try {
+    await pool.query(
+      'INSERT INTO mobile_sessions (token, user_id, user_data, expires_at) VALUES ($1, $2, $3, $4)',
+      [token, user.id, JSON.stringify(user), expiresAt]
+    );
+    console.log('[Mobile Sessions] Token created for user:', user.id);
+  } catch (err) {
+    console.error('[Mobile Sessions] Failed to store token:', err);
+  }
+  
   return token;
 }
 
-// Validate and return user from mobile session token (reusable)
-export function validateMobileSessionToken(token: string): any | null {
-  const data = mobileSessionTokens.get(token);
-  if (!data) return null;
-  if (data.expiresAt < Date.now()) {
-    mobileSessionTokens.delete(token);
+// Validate and return user from mobile session token (DB-backed)
+export async function validateMobileSessionToken(token: string): Promise<any | null> {
+  try {
+    const result = await pool.query(
+      'SELECT user_data, expires_at FROM mobile_sessions WHERE token = $1',
+      [token]
+    );
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    const session = result.rows[0];
+    if (new Date(session.expires_at) < new Date()) {
+      // Expired, delete it
+      await pool.query('DELETE FROM mobile_sessions WHERE token = $1', [token]);
+      return null;
+    }
+    
+    return session.user_data;
+  } catch (err) {
+    console.error('[Mobile Sessions] Validation error:', err);
     return null;
   }
-  return data.user;
 }
 
 // Invalidate a mobile session token (logout)
-export function invalidateMobileSessionToken(token: string): void {
-  mobileSessionTokens.delete(token);
+export async function invalidateMobileSessionToken(token: string): Promise<void> {
+  try {
+    await pool.query('DELETE FROM mobile_sessions WHERE token = $1', [token]);
+  } catch (err) {
+    console.error('[Mobile Sessions] Invalidation error:', err);
+  }
 }
 
 export function getSession() {
