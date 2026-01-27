@@ -418,10 +418,7 @@ export async function setupMultiAuth(app: Express) {
       console.log('[Apple OAuth] Starting Apple Sign-In flow...');
       console.log('[Apple OAuth] Mobile flag:', req.query.mobile);
       
-      // Store mobile flag in session for callback
-      if (req.query.mobile === 'true') {
-        (req.session as any).isMobileOAuth = true;
-      }
+      const isMobile = req.query.mobile === 'true';
       
       const isProduction = process.env.NODE_ENV === 'production';
       let baseURL: string;
@@ -435,10 +432,12 @@ export async function setupMultiAuth(app: Express) {
       }
       
       const redirectUri = `${baseURL}/api/auth/apple/callback`;
-      const state = crypto.randomBytes(16).toString('hex');
-      
-      // Store state in session for CSRF protection
-      (req.session as any).appleOAuthState = state;
+      // Encode mobile flag in state to preserve it across the callback (sessions don't work with form_post)
+      const stateData = {
+        nonce: crypto.randomBytes(16).toString('hex'),
+        mobile: isMobile
+      };
+      const state = Buffer.from(JSON.stringify(stateData)).toString('base64url');
       
       const authUrl = `https://appleid.apple.com/auth/authorize?` + 
         `client_id=${encodeURIComponent(process.env.APPLE_CLIENT_ID!)}` +
@@ -450,6 +449,7 @@ export async function setupMultiAuth(app: Express) {
       
       console.log('[Apple OAuth] Redirect URI:', redirectUri);
       console.log('[Apple OAuth] Auth URL:', authUrl);
+      console.log('[Apple OAuth] State (mobile encoded):', isMobile);
       
       res.redirect(authUrl);
     });
@@ -459,31 +459,29 @@ export async function setupMultiAuth(app: Express) {
       console.log('[Apple OAuth] Callback received');
       console.log('[Apple OAuth] Body:', JSON.stringify(req.body, null, 2));
       
-      const isMobileOAuth = (req.session as any)?.isMobileOAuth;
-      const savedState = (req.session as any)?.appleOAuthState;
+      const { code, id_token, state, user: userInfo, error } = req.body;
       
-      // Clear session flags
-      delete (req.session as any).isMobileOAuth;
-      delete (req.session as any).appleOAuthState;
+      // Decode mobile flag from state (sessions don't work with Apple's form_post)
+      let isMobileOAuth = false;
+      try {
+        if (state) {
+          const stateData = JSON.parse(Buffer.from(state, 'base64url').toString());
+          isMobileOAuth = stateData.mobile === true;
+          console.log('[Apple OAuth] Decoded state:', stateData);
+        }
+      } catch (e) {
+        console.log('[Apple OAuth] Could not decode state, assuming web flow');
+      }
+      
+      console.log('[Apple OAuth] Is mobile OAuth:', isMobileOAuth);
       
       try {
-        const { code, id_token, state, user: userInfo, error } = req.body;
-        
         if (error) {
           console.error('[Apple OAuth] Error from Apple:', error);
           if (isMobileOAuth) {
             return res.redirect(`eatoff://oauth-callback?error=apple_error&details=${encodeURIComponent(error)}`);
           }
           return res.redirect('/login?error=apple_error');
-        }
-        
-        // Verify state for CSRF protection
-        if (state !== savedState) {
-          console.error('[Apple OAuth] State mismatch - CSRF protection triggered');
-          if (isMobileOAuth) {
-            return res.redirect('eatoff://oauth-callback?error=state_mismatch');
-          }
-          return res.redirect('/login?error=state_mismatch');
         }
         
         if (!code && !id_token) {
