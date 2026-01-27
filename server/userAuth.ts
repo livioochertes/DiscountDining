@@ -235,7 +235,7 @@ export function registerUserAuthRoutes(app: Express) {
   // Login endpoint
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, mobile } = req.body;
 
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
@@ -258,7 +258,7 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(401).json({ message: 'Account requires password setup. Please register again.' });
       }
 
-      // Create session
+      // Create session for web
       if (req.session) {
         req.session.ownerId = customer.id;
         req.session.save((err) => {
@@ -268,8 +268,24 @@ export function registerUserAuthRoutes(app: Express) {
         });
       }
 
+      // For mobile apps, also generate a mobile session token
+      let sessionToken: string | undefined;
+      if (mobile) {
+        const { generateMobileSessionToken } = await import('./multiAuth');
+        const user = {
+          id: `customer_${customer.id}`,
+          email: customer.email,
+          firstName: customer.name?.split(' ')[0] || '',
+          lastName: customer.name?.split(' ').slice(1).join(' ') || '',
+          customerId: customer.id,
+        };
+        sessionToken = await generateMobileSessionToken(user);
+        console.log('[Login] Mobile session token generated for customer:', customer.id);
+      }
+
       res.json({
         message: 'Login successful',
+        sessionToken, // Only present for mobile requests
         customer: {
           id: customer.id,
           name: customer.name,
@@ -351,22 +367,45 @@ export function registerUserAuthRoutes(app: Express) {
   // Get current user endpoint
   app.get('/api/auth/user', async (req: Request, res: Response) => {
     try {
-      // Check for mobile OAuth user (set by Authorization header middleware)
+      // Check for mobile user (set by Authorization header middleware)
       const mobileUser = (req as any).mobileUser || (req as any).user;
-      if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string' && mobileUser.id.startsWith('google_')) {
-        console.log('[Auth User] Mobile OAuth user:', mobileUser.id);
-        return res.json({
-          id: mobileUser.id,
-          customerId: mobileUser.id,
-          name: `${mobileUser.firstName || ''} ${mobileUser.lastName || ''}`.trim() || 'User',
-          email: mobileUser.email,
-          phone: null,
-          membershipTier: 'bronze',
-          loyaltyPoints: 0,
-          balance: '0',
-          customerCode: null,
-          isOAuthUser: true
-        });
+      if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
+        // Handle OAuth users (google_xxx)
+        if (mobileUser.id.startsWith('google_')) {
+          console.log('[Auth User] Mobile OAuth user:', mobileUser.id);
+          return res.json({
+            id: mobileUser.id,
+            customerId: mobileUser.id,
+            name: `${mobileUser.firstName || ''} ${mobileUser.lastName || ''}`.trim() || 'User',
+            email: mobileUser.email,
+            phone: null,
+            membershipTier: 'bronze',
+            loyaltyPoints: 0,
+            balance: '0',
+            customerCode: null,
+            isOAuthUser: true
+          });
+        }
+        
+        // Handle email/password customers (customer_xxx)
+        if (mobileUser.id.startsWith('customer_')) {
+          const customerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+          console.log('[Auth User] Mobile customer user:', customerId);
+          const customer = await storage.getCustomer(customerId);
+          if (customer) {
+            return res.json({
+              id: customer.id,
+              customerId: customer.id,
+              name: customer.name,
+              email: customer.email,
+              phone: customer.phone,
+              membershipTier: customer.membershipTier,
+              loyaltyPoints: customer.loyaltyPoints,
+              balance: customer.balance,
+              customerCode: customer.customerCode
+            });
+          }
+        }
       }
       
       if (!req.session?.ownerId) {

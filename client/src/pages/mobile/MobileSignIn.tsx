@@ -249,12 +249,18 @@ export default function MobileSignIn() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, mobile: isNative }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+        // Store mobile session token if provided (for native apps)
+        if (data.sessionToken && isNative) {
+          setMobileSessionToken(data.sessionToken);
+          console.log('[MobileSignIn] Session token stored');
+        }
+        
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
         toast({
