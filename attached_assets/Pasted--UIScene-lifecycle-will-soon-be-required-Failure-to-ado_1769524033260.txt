@@ -1,0 +1,166 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+Could not create a sandbox extension for '/var/containers/Bundle/Application/678994FE-B28B-4617-8AEE-947D3CFCFB0B/App.app'
+⚡️  Loading app at capacitor://localhost...
+Networking process (0x11105c100) took 1.087095 seconds to launch
+WebContent[27371] Unable to hide query parameters from script (missing data)
+⚡️  [log] - [QueryClient] Platform detection: {"isNativePlatform":true,"API_BASE_URL":"https://eatoff.app","IS_CROSS_ORIGIN":true}
+⚡️  [log] - [QueryClient] Using auth token: 0a781486ec...
+⚡️  [log] - [QueryClient] Using auth token: 0a781486ec...
+⚡️  WebView loaded
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [QueryClient] Using auth token: 0a781486ec...
+⚡️  [log] - [MobileHome] Fetching restaurants from: https://eatoff.app/api/restaurants?location=Cluj-Napoca
+⚡️  [log] - [MobileHome] API_BASE_URL value: https://eatoff.app
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"EatOff Permanent -10%","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] Response status: 200
+⚡️  [log] - [MobileHome] Restaurants loaded: 0
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"EatOff Permanent -10%","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [QueryClient] Using auth token: 0a781486ec...
+⚡️  To Native ->  StatusBar getInfo 30038317
+⚡️  To Native ->  App addListener 30038318
+⚡️  TO JS {"style":"DEFAULT","overlays":true,"color":"#000000","height":54,"visible":true}
+⚡️  [log] - [MobileSignIn] Opening browser for Google OAuth: https://eatoff.app/api/auth/google?mobile=true
+⚡️  To Native ->  Browser open 30038319
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+⚡️  TO JS undefined
+⚡️  TO JS {"iosOpenInPlace":"","iosSourceApplication":"com.apple.SafariViewService","url":"eatoff:\/\/oauth-callback?token=354e40778c70f8aff16652afbdbaa28a650cccf8f2e136cdafd8bde3e9b902da"}
+⚡️  [log] - [MobileSignIn] Deep link received: eatoff://oauth-callback?token=354e40778c70f8aff16652afbdbaa28a650cccf8f2e136cdafd8bde3e9b902da
+⚡️  To Native ->  Browser close 30038320
+⚡️  TO JS undefined
+⚡️  [log] - [MobileSignIn] Received auth token, exchanging for session...
+⚡️  [log] - [MobileSignIn] Session created successfully: google_115727455773196517825
+⚡️  [log] - [MobileSignIn] Session token stored
+⚡️  [log] - [QueryClient] Using auth token: 65af4a4b02...
+⚡️  [log] - [QueryClient] Using auth token: 65af4a4b02...
+⚡️  To Native ->  App removeListener 30038321
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [QueryClient] Using auth token: 65af4a4b02...
+⚡️  [log] - [MobileHome] Fetching restaurants from: https://eatoff.app/api/restaurants?location=Cluj-Napoca
+⚡️  [log] - [MobileHome] API_BASE_URL value: https://eatoff.app
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: [{"name":"Ixy mica","voucherType":"discount","discount":"14.00"},{"name":"Test Vizibilitate","voucherType":"discount","discount":"11.00"},{"name":"Iky / Liviu","voucherType":"discount","discount":"50.00"},{"name":"Iky 33%","voucherType":"discount","discount":"33.00"},{"name":"Family test 2","voucherType":"discount","discount":"22.00"},{"name":"Family","voucherType":"discount","discount":"10.00"},{"name":"Test","voucherType":"discount","discount":"15.00"},{"name":"EatOff test 25","voucherType":"discount","discount":"25.00"},{"name":"liviu C33","voucherType":"discount","discount":"33.00"},{"name":"liviu 25","voucherType":"discount","discount":"25.00"},{"name":"eatoff2","voucherType":"discount","discount":"10.00"},{"name":"eatoff10","voucherType":"discount","discount":"10.00"},{"name":"Wellness Package","voucherType":"discount","discount":"30.00"},{"name":"Mediterranean Journey","voucherType":"discount","discount":"20.00"},{"name":"Fresh Start","voucherType":"discount","discount":"14.00"},{"name":"Gourmand Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"EatOff Permanent -10%","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: [{"name":"Ixy mica","voucherType":"discount","discount":"14.00"},{"name":"Test Vizibilitate","voucherType":"discount","discount":"11.00"},{"name":"Iky / Liviu","voucherType":"discount","discount":"50.00"},{"name":"Iky 33%","voucherType":"discount","discount":"33.00"},{"name":"Family test 2","voucherType":"discount","discount":"22.00"},{"name":"Family","voucherType":"discount","discount":"10.00"},{"name":"Test","voucherType":"discount","discount":"15.00"},{"name":"EatOff test 25","voucherType":"discount","discount":"25.00"},{"name":"liviu C33","voucherType":"discount","discount":"33.00"},{"name":"liviu 25","voucherType":"discount","discount":"25.00"},{"name":"eatoff2","voucherType":"discount","discount":"10.00"},{"name":"eatoff10","voucherType":"discount","discount":"10.00"},{"name":"Wellness Package","voucherType":"discount","discount":"30.00"},{"name":"Mediterranean Journey","voucherType":"discount","discount":"20.00"},{"name":"Fresh Start","voucherType":"discount","discount":"14.00"},{"name":"Gourmand Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] Response status: 200
+⚡️  [log] - [MobileHome] Restaurants loaded: 0
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [QueryClient] Using auth token: 65af4a4b02...
+⚡️  [log] - [QueryClient] Using auth token: 65af4a4b02...
+⚡️  [log] - [QueryClient] Using auth token: 65af4a4b02...
+⚡️  To Native ->  StatusBar getInfo 30038322
+⚡️  To Native ->  App addListener 30038323
+⚡️  TO JS {"color":"#000000","overlays":true,"visible":true,"style":"DEFAULT","height":54}
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x1240203c0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12337e800.width == _UIButtonBarButton:0x12328e580.width   (active)>",
+    "<NSLayoutConstraint:0x124020500 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x123381880]   (active, names: '|':_UIButtonBarButton:0x12328e580 )>",
+    "<NSLayoutConstraint:0x124020550 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x123381880]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12328e580 )>",
+    "<NSLayoutConstraint:0x124020aa0 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12337e800.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x124020550 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x123381880]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12328e580 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x124020eb0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12337ec00.width == _UIButtonBarButton:0x12328ea80.width   (active)>",
+    "<NSLayoutConstraint:0x124020ff0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x123381c00]   (active, names: '|':_UIButtonBarButton:0x12328ea80 )>",
+    "<NSLayoutConstraint:0x124021040 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x123381c00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12328ea80 )>",
+    "<NSLayoutConstraint:0x1240214f0 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12337ec00.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x124021040 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x123381c00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12328ea80 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x124021900 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12337f000.width == _UIButtonBarButton:0x12328ef80.width   (active)>",
+    "<NSLayoutConstraint:0x1240219f0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x123381f80]   (active, names: '|':_UIButtonBarButton:0x12328ef80 )>",
+    "<NSLayoutConstraint:0x124021a40 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x123381f80]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12328ef80 )>",
+    "<NSLayoutConstraint:0x124021ef0 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12337f000.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x124021a40 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x123381f80]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12328ef80 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = B4CF3F1B-3681-4D8A-BCD7-7F80E1244763
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = B4CF3F1B-3681-4D8A-BCD7-7F80E1244763
+⚡️  To Native ->  App removeListener 30038324
+⚡️  [log] - [MobileSignIn] Session token stored
+⚡️  [log] - [QueryClient] Using auth token: 781cd86bd8...
+⚡️  [log] - [QueryClient] Using auth token: 781cd86bd8...
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [QueryClient] Using auth token: 781cd86bd8...
+⚡️  [log] - [MobileHome] Fetching restaurants from: https://eatoff.app/api/restaurants?location=Cluj-Napoca
+⚡️  [log] - [MobileHome] API_BASE_URL value: https://eatoff.app
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"EatOff Permanent -10%","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] Response status: 200
+⚡️  [log] - [MobileHome] Restaurants loaded: 0
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"EatOff Permanent -10%","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: [{"name":"Ixy mica","voucherType":"discount","discount":"14.00"},{"name":"Test Vizibilitate","voucherType":"discount","discount":"11.00"},{"name":"Iky / Liviu","voucherType":"discount","discount":"50.00"},{"name":"Iky 33%","voucherType":"discount","discount":"33.00"},{"name":"Family test 2","voucherType":"discount","discount":"22.00"},{"name":"Family","voucherType":"discount","discount":"10.00"},{"name":"Test","voucherType":"discount","discount":"15.00"},{"name":"EatOff test 25","voucherType":"discount","discount":"25.00"},{"name":"liviu C33","voucherType":"discount","discount":"33.00"},{"name":"liviu 25","voucherType":"discount","discount":"25.00"},{"name":"eatoff2","voucherType":"discount","discount":"10.00"},{"name":"eatoff10","voucherType":"discount","discount":"10.00"},{"name":"Wellness Package","voucherType":"discount","discount":"30.00"},{"name":"Mediterranean Journey","voucherType":"discount","discount":"20.00"},{"name":"Fresh Start","voucherType":"discount","discount":"14.00"},{"name":"Gourmand Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [QueryClient] Using auth token: 781cd86bd8...
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = dismissAutoFillPanel, customInfoType = UIUserInteractionRemoteInputOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = dismissAutoFillPanel, customInfoType = UIUserInteractionRemoteInputOperations
+Snapshotting a view (0x116cdd800, UIKeyboardImpl) that is not in a visible window requires afterScreenUpdates:YES.
