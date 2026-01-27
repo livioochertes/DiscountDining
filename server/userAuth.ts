@@ -441,4 +441,57 @@ export function registerUserAuthRoutes(app: Express) {
       res.status(500).json({ message: 'Failed to get user data' });
     }
   });
+
+  // Update profile endpoint
+  app.patch('/api/auth/profile', async (req: Request, res: Response) => {
+    try {
+      // Check for mobile user (set by Authorization header middleware)
+      const mobileUser = (req as any).mobileUser || (req as any).user;
+      let customerId: number | null = null;
+
+      if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
+        if (mobileUser.id.startsWith('customer_')) {
+          customerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+        }
+      } else if (req.session?.ownerId) {
+        customerId = req.session.ownerId;
+      }
+
+      if (!customerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { name, phone } = req.body;
+      
+      // Update customer in database
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Update fields if provided
+      const updates: Partial<{ name: string; phone: string }> = {};
+      if (name !== undefined) updates.name = name;
+      if (phone !== undefined) updates.phone = phone;
+
+      if (Object.keys(updates).length > 0) {
+        await storage.updateCustomer(customerId, updates);
+      }
+
+      const updatedCustomer = await storage.getCustomer(customerId);
+      res.json({
+        id: updatedCustomer!.id,
+        name: updatedCustomer!.name,
+        email: updatedCustomer!.email,
+        phone: updatedCustomer!.phone,
+        membershipTier: updatedCustomer!.membershipTier,
+        loyaltyPoints: updatedCustomer!.loyaltyPoints,
+        balance: updatedCustomer!.balance,
+        customerCode: updatedCustomer!.customerCode
+      });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.status(500).json({ message: 'Failed to update profile' });
+    }
+  });
 }

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { 
-  User, ChevronRight, Settings, Bell, CreditCard, Heart, 
-  HelpCircle, LogOut, Star, Shield, Globe, QrCode
+  User, ChevronRight, ChevronDown, Settings, Bell, CreditCard, Heart, 
+  HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiRequest, queryClient, clearMobileSessionToken } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface MenuItem {
   id: string;
@@ -19,29 +20,31 @@ interface MenuItem {
   onClick?: () => void;
   rightElement?: React.ReactNode;
   danger?: boolean;
+  expandable?: boolean;
 }
 
 export default function MobileProfile() {
-  const { t } = useLanguage();
-  const { user, isLoading } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
+  const { user, isLoading, refetch } = useAuth();
   const [, setLocation] = useLocation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
   const handleLogout = async () => {
-    // Set logging out state immediately to prevent loading UI flash
     setIsLoggingOut(true);
     
     try {
-      // Clear mobile session token first
       clearMobileSessionToken();
-      
-      // Call logout API
       await apiRequest('POST', '/api/auth/logout');
-      
-      // Reset query cache completely and redirect
       queryClient.clear();
-      
-      // Redirect immediately
       setLocation('/m/signin');
     } catch (error) {
       console.error('Logout error:', error);
@@ -49,7 +52,36 @@ export default function MobileProfile() {
     }
   };
 
-  // Don't show loading during logout - redirect will happen
+  const toggleSection = (sectionId: string) => {
+    if (expandedSection === sectionId) {
+      setExpandedSection(null);
+      setEditingField(null);
+    } else {
+      setExpandedSection(sectionId);
+      if (sectionId === 'personal' && user) {
+        setFormData({
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+        });
+      }
+    }
+  };
+
+  const handleSavePersonalInfo = async () => {
+    setIsSaving(true);
+    try {
+      await apiRequest('PATCH', '/api/auth/profile', formData);
+      await refetch();
+      toast({ title: t.changesSaved || 'Changes saved' });
+      setEditingField(null);
+    } catch (error) {
+      toast({ title: t.errorSaving || 'Error saving', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading && !isLoggingOut) {
     return (
       <MobileLayout>
@@ -90,39 +122,251 @@ export default function MobileProfile() {
     );
   }
 
+  const renderPersonalInfoContent = () => (
+    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+      <div>
+        <label className="text-sm text-gray-500 block mb-1">{t.name || 'Name'}</label>
+        <input
+          type="text"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary"
+        />
+      </div>
+      <div>
+        <label className="text-sm text-gray-500 block mb-1">{t.email || 'Email'}</label>
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          disabled
+        />
+        <p className="text-xs text-gray-400 mt-1">{t.emailCannotChange || 'Email cannot be changed'}</p>
+      </div>
+      <div>
+        <label className="text-sm text-gray-500 block mb-1">{t.phone || 'Phone'}</label>
+        <input
+          type="tel"
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          placeholder="+40 xxx xxx xxx"
+        />
+      </div>
+      <button
+        onClick={handleSavePersonalInfo}
+        disabled={isSaving}
+        className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+      >
+        {isSaving ? (t.saving || 'Saving...') : (t.saveChanges || 'Save Changes')}
+      </button>
+    </div>
+  );
+
+  const renderDietaryContent = () => (
+    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+      <p className="text-sm text-gray-600">{t.selectDietaryPreferences || 'Select your dietary preferences to get personalized recommendations.'}</p>
+      
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700">{t.dietType || 'Diet Type'}</label>
+        <div className="grid grid-cols-2 gap-2">
+          {['Standard', 'Vegetarian', 'Vegan', 'Pescatarian'].map((diet) => (
+            <button
+              key={diet}
+              className="p-3 border border-gray-200 rounded-xl text-sm hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              {diet}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700">{t.allergies || 'Allergies'}</label>
+        <div className="flex flex-wrap gap-2">
+          {['Gluten', 'Dairy', 'Nuts', 'Shellfish', 'Eggs', 'Soy'].map((allergy) => (
+            <button
+              key={allergy}
+              className="px-4 py-2 border border-gray-200 rounded-full text-sm hover:border-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+            >
+              {allergy}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 transition-colors">
+        {t.savePreferences || 'Save Preferences'}
+      </button>
+    </div>
+  );
+
+  const renderPaymentContent = () => (
+    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+      <div className="bg-white rounded-xl p-4 border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-6 bg-gradient-to-r from-blue-600 to-blue-400 rounded" />
+            <div>
+              <p className="font-medium">•••• •••• •••• 4242</p>
+              <p className="text-xs text-gray-500">Expires 12/25</p>
+            </div>
+          </div>
+          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">{t.default || 'Default'}</span>
+        </div>
+      </div>
+
+      <button className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-primary hover:text-primary transition-colors">
+        <CreditCard className="w-5 h-5" />
+        <span>{t.addNewCard || 'Add New Card'}</span>
+      </button>
+    </div>
+  );
+
+  const renderNotificationsContent = () => (
+    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+      {[
+        { id: 'push', label: t.pushNotifications || 'Push Notifications', desc: t.pushDesc || 'Receive alerts on your device' },
+        { id: 'email', label: t.emailNotifications || 'Email Notifications', desc: t.emailDesc || 'Get updates via email' },
+        { id: 'promo', label: t.promotions || 'Promotions & Offers', desc: t.promoDesc || 'Special deals and discounts' },
+      ].map((item) => (
+        <div key={item.id} className="flex items-center justify-between bg-white p-4 rounded-xl border border-gray-200">
+          <div>
+            <p className="font-medium text-gray-900">{item.label}</p>
+            <p className="text-sm text-gray-500">{item.desc}</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" defaultChecked className="sr-only peer" />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderLanguageContent = () => (
+    <div className="p-4 space-y-2 bg-gray-50 border-t border-gray-100">
+      {[
+        { code: 'en', name: 'English', flag: '🇬🇧' },
+        { code: 'ro', name: 'Română', flag: '🇷🇴' },
+        { code: 'es', name: 'Español', flag: '🇪🇸' },
+        { code: 'fr', name: 'Français', flag: '🇫🇷' },
+        { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+        { code: 'it', name: 'Italiano', flag: '🇮🇹' },
+      ].map((lang) => (
+        <button
+          key={lang.code}
+          onClick={() => setLanguage(lang.code as any)}
+          className={cn(
+            "w-full flex items-center justify-between p-4 rounded-xl transition-colors",
+            language === lang.code 
+              ? "bg-primary/10 border-2 border-primary" 
+              : "bg-white border border-gray-200 hover:border-primary/50"
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{lang.flag}</span>
+            <span className="font-medium">{lang.name}</span>
+          </div>
+          {language === lang.code && (
+            <Check className="w-5 h-5 text-primary" />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderPrivacyContent = () => (
+    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+      <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-3">
+        <h4 className="font-medium text-gray-900">{t.dataPrivacy || 'Data & Privacy'}</h4>
+        <button className="w-full text-left text-sm text-primary hover:underline">
+          {t.downloadData || 'Download my data'}
+        </button>
+        <button className="w-full text-left text-sm text-red-500 hover:underline">
+          {t.deleteAccount || 'Delete my account'}
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-3">
+        <h4 className="font-medium text-gray-900">{t.security || 'Security'}</h4>
+        <button className="w-full text-left text-sm text-primary hover:underline">
+          {t.changePassword || 'Change password'}
+        </button>
+        <button className="w-full text-left text-sm text-primary hover:underline">
+          {t.twoFactorAuth || 'Enable two-factor authentication'}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderHelpContent = () => (
+    <div className="p-4 space-y-3 bg-gray-50 border-t border-gray-100">
+      {[
+        { label: t.faq || 'FAQ', icon: HelpCircle },
+        { label: t.contactSupport || 'Contact Support', icon: User },
+        { label: t.termsOfService || 'Terms of Service', icon: Shield },
+        { label: t.privacyPolicy || 'Privacy Policy', icon: Shield },
+      ].map((item) => (
+        <button
+          key={item.label}
+          className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 hover:border-primary/50 transition-colors"
+        >
+          <item.icon className="w-5 h-5 text-gray-400" />
+          <span className="font-medium text-gray-900">{item.label}</span>
+          <ChevronRight className="w-5 h-5 text-gray-400 ml-auto" />
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderExpandedContent = (id: string) => {
+    switch (id) {
+      case 'personal': return renderPersonalInfoContent();
+      case 'dietary': return renderDietaryContent();
+      case 'payment': return renderPaymentContent();
+      case 'notifications': return renderNotificationsContent();
+      case 'language': return renderLanguageContent();
+      case 'privacy': return renderPrivacyContent();
+      case 'help': return renderHelpContent();
+      default: return null;
+    }
+  };
+
   const menuSections: { title: string; items: MenuItem[] }[] = [
     {
-      title: 'Account',
+      title: t.account || 'Account',
       items: [
-        { id: 'personal', icon: User, label: 'Personal Information', subtitle: 'Name, email, phone' },
-        { id: 'dietary', icon: Heart, label: 'Dietary Preferences', subtitle: 'Allergies, diet type' },
-        { id: 'payment', icon: CreditCard, label: 'Payment Methods', subtitle: 'Cards, wallet' },
+        { id: 'personal', icon: User, label: t.personalInfo || 'Personal Information', subtitle: t.personalInfoSub || 'Name, email, phone', expandable: true },
+        { id: 'dietary', icon: Heart, label: t.dietaryPreferences || 'Dietary Preferences', subtitle: t.dietarySub || 'Allergies, diet type', expandable: true },
+        { id: 'payment', icon: CreditCard, label: t.paymentMethods || 'Payment Methods', subtitle: t.paymentSub || 'Cards, wallet', expandable: true },
       ],
     },
     {
-      title: 'Loyalty',
+      title: t.loyalty || 'Loyalty',
       items: [
-        { id: 'tier', icon: Star, label: 'Membership Tier', rightElement: (
+        { id: 'tier', icon: Star, label: t.membershipTier || 'Membership Tier', rightElement: (
           <span className="bg-amber-100 text-amber-700 text-sm font-medium px-3 py-1 rounded-full">
             {user?.membershipTier?.toUpperCase() || 'GOLD'}
           </span>
         )},
-        { id: 'points', icon: Star, label: 'Loyalty Points', subtitle: `${user?.loyaltyPoints || 500} points` },
+        { id: 'points', icon: Star, label: t.loyaltyPoints || 'Loyalty Points', subtitle: `${user?.loyaltyPoints || 0} ${t.points || 'points'}` },
       ],
     },
     {
-      title: 'Settings',
+      title: t.settings || 'Settings',
       items: [
-        { id: 'notifications', icon: Bell, label: 'Notifications' },
-        { id: 'language', icon: Globe, label: 'Language', subtitle: 'English' },
-        { id: 'privacy', icon: Shield, label: 'Privacy & Security' },
+        { id: 'notifications', icon: Bell, label: t.notifications || 'Notifications', expandable: true },
+        { id: 'language', icon: Globe, label: t.language || 'Language', subtitle: language.toUpperCase(), expandable: true },
+        { id: 'privacy', icon: Shield, label: t.privacySecurity || 'Privacy & Security', expandable: true },
       ],
     },
     {
-      title: 'Support',
+      title: t.support || 'Support',
       items: [
-        { id: 'help', icon: HelpCircle, label: 'Help Center' },
-        { id: 'logout', icon: LogOut, label: 'Log Out', danger: true, onClick: handleLogout },
+        { id: 'help', icon: HelpCircle, label: t.helpCenter || 'Help Center', expandable: true },
+        { id: 'logout', icon: LogOut, label: t.logOut || 'Log Out', danger: true, onClick: handleLogout },
       ],
     },
   ];
@@ -159,13 +403,13 @@ export default function MobileProfile() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <QrCode className="w-4 h-4 text-primary" />
-                <span className="text-sm text-gray-600">Loyalty Code</span>
+                <span className="text-sm text-gray-600">{t.loyaltyCode || 'Loyalty Code'}</span>
               </div>
               <p className="text-2xl font-bold text-primary tracking-wider">
                 {user?.customerCode || 'CLI-DEMO01'}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Show this code at restaurants for payments & discounts
+                {t.showCodeAtRestaurants || 'Show this code at restaurants for payments & discounts'}
               </p>
             </div>
           </div>
@@ -180,41 +424,54 @@ export default function MobileProfile() {
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               {section.items.map((item, index) => {
                 const Icon = item.icon;
+                const isExpanded = expandedSection === item.id;
+                const handleClick = item.onClick || (item.expandable ? () => toggleSection(item.id) : undefined);
+                
                 return (
-                  <button
-                    key={item.id}
-                    onClick={item.onClick}
-                    className={cn(
-                      "w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors",
-                      index !== section.items.length - 1 && "border-b border-gray-100"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center",
-                        item.danger ? "bg-red-50" : "bg-gray-100"
-                      )}>
-                        <Icon className={cn(
-                          "w-5 h-5",
-                          item.danger ? "text-red-500" : "text-gray-600"
-                        )} />
-                      </div>
-                      <div className="text-left">
-                        <p className={cn(
-                          "font-medium",
-                          item.danger ? "text-red-500" : "text-gray-900"
+                  <div key={item.id}>
+                    <button
+                      onClick={handleClick}
+                      className={cn(
+                        "w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors",
+                        index !== section.items.length - 1 && !isExpanded && "border-b border-gray-100"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center",
+                          item.danger ? "bg-red-50" : "bg-gray-100"
                         )}>
-                          {item.label}
-                        </p>
-                        {item.subtitle && (
-                          <p className="text-sm text-gray-500">{item.subtitle}</p>
-                        )}
+                          <Icon className={cn(
+                            "w-5 h-5",
+                            item.danger ? "text-red-500" : "text-gray-600"
+                          )} />
+                        </div>
+                        <div className="text-left">
+                          <p className={cn(
+                            "font-medium",
+                            item.danger ? "text-red-500" : "text-gray-900"
+                          )}>
+                            {item.label}
+                          </p>
+                          {item.subtitle && (
+                            <p className="text-sm text-gray-500">{item.subtitle}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {item.rightElement || (
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    )}
-                  </button>
+                      {item.rightElement || (
+                        item.expandable ? (
+                          isExpanded ? (
+                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-gray-400" />
+                          )
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        )
+                      )}
+                    </button>
+                    {isExpanded && item.expandable && renderExpandedContent(item.id)}
+                  </div>
                 );
               })}
             </div>
