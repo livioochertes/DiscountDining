@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'dist/public',
   server: {
     androidScheme: 'https',
-    iosScheme: 'https'
+    iosScheme: 'https',
+    allowNavigation: ['eatoff.app', '*.eatoff.app']
   },
   plugins: {
     SplashScreen: {
@@ -17,6 +18,9 @@ const config: CapacitorConfig = {
       iosSpinnerStyle: 'small',
       splashFullScreen: false,
       splashImmersive: false
+    },
+    CapacitorHttp: {
+      enabled: true
     }
   }
 };
