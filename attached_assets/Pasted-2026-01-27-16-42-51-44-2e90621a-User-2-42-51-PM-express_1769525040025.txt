@@ -1,0 +1,120 @@
+2026-01-27 16:42:51.44
+2e90621a
+User
+2:42:51 PM [express] GET /api/auth/user 401 in 2ms :: {"message":"Unauthorized"}
+2026-01-27 16:42:51.46
+2e90621a
+User
+[Mobile Sessions] Validating token: 781cd86bd8...
+2026-01-27 16:42:51.80
+2e90621a
+User
+[Mobile Sessions] Total sessions in DB: 11
+2026-01-27 16:42:51.86
+2e90621a
+User
+[Mobile Sessions] Query result rows: 1
+2026-01-27 16:42:51.86
+2e90621a
+User
+[Mobile Sessions] Session found, expires_at: 2026-02-26T14:26:47.623Z
+2026-01-27 16:42:51.86
+2e90621a
+User
+[Mobile Auth] Token validated for user: customer_14
+2026-01-27 16:42:51.86
+2e90621a
+User
+[Mobile Sessions] User data type: object
+2026-01-27 16:42:51.86
+2e90621a
+User
+[Mobile Sessions] Token validated, user: customer_14
+2026-01-27 16:42:51.86
+2e90621a
+User
+2:42:51 PM [express] GET /api/restaurant-portal/auth/user 401 in 400ms :: {"message":"Not authentica…
+2026-01-27 16:42:52.13
+2e90621a
+User
+2:42:52 PM [express] GET /api/auth/user 401 in 3ms :: {"message":"Unauthorized"}
+2026-01-27 16:42:52.20
+2e90621a
+User
+2:42:52 PM [express] GET /api/restaurants 304 in 72ms :: []
+2026-01-27 16:42:52.52
+2e90621a
+User
+2:42:52 PM [express] GET /api/eatoff-vouchers 304 in 349ms :: [{"id":5,"name":"Credit for 60 days","…
+2026-01-27 16:42:52.53
+2e90621a
+User
+2:42:52 PM [express] GET /api/voucher-packages 304 in 374ms :: [{"id":142,"restaurantId":84,"name":"…
+2026-01-27 16:42:54.03
+2e90621a
+User
+2:42:54 PM [express] GET /api/auth/user 401 in 2ms :: {"message":"Unauthorized"}
+2026-01-27 16:43:02.80
+2e90621a
+User
+Mobile flag: true
+2026-01-27 16:43:02.80
+2e90621a
+User
+Starting Google OAuth flow...
+2026-01-27 16:43:02.80
+2e90621a
+User
+Session ID: ygdoCkP-JcL6K7L-Ym4cFwywo3FUWjHD
+2026-01-27 16:43:02.85
+2e90621a
+User
+2:43:02 PM [express] GET /api/auth/google 302 in 393ms
+2026-01-27 16:43:08.93
+2e90621a
+User
+Mobile OAuth flag: true
+2026-01-27 16:43:08.93
+2e90621a
+User
+}
+2026-01-27 16:43:08.93
+2e90621a
+User
+================================
+2026-01-27 16:43:08.93
+2e90621a
+User
+code: '4/0ASc3gC24li3_PRHRHAr45E9dxTKDS8aQucIlronFifNpqxmt1Qq6Jp1rjhAhrkHBVL7xRw',
+2026-01-27 16:43:08.93
+2e90621a
+User
+Full URL: https://eatoff.app/api/auth/google/callback?code=4%2F0ASc3gC24li3_PRHRHAr45E9dxTKDS8aQucIlronFifNpqxmt1Qq6Jp1rjhAhrkHBVL7xRw&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=consent
+2026-01-27 16:43:08.93
+2e90621a
+User
+scope: 'email profile https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid',
+2026-01-27 16:43:08.93
+2e90621a
+User
+authuser: '0',
+2026-01-27 16:43:08.93
+2e90621a
+User
+prompt: 'consent'
+2026-01-27 16:43:08.93
+2e90621a
+User
+Query params: {
+2026-01-27 16:43:08.93
+2e90621a
+User
+=== GOOGLE CALLBACK ROUTE HIT ===
+2026-01-27 16:43:09.05
+2e90621a
+User
+"picture": "https://lh3.googleusercontent.com/a/ACg8ocKxCFTb3RH7UIE1ttPxEEB2LYDJO07kLiX4XeEn6EOPIo66GMo=s96-c",
+2026-01-27 16:43:09.05
+2e90621a
+User
+},
