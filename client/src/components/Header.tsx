@@ -170,12 +170,7 @@ export function Header() {
                 <p>{t.tooltipWallet}</p>
               </TooltipContent>
             </Tooltip>
-            {isLoading ? (
-              <div className="bg-gray-200 animate-pulse px-4 py-2 rounded-lg text-sm font-medium">
-                <User className="h-4 w-4 inline mr-2" />
-                Loading...
-              </div>
-            ) : isAuthenticated ? (
+            {isAuthenticated ? (
               <div className="flex items-center space-x-2 sm:space-x-3">
                 <Tooltip>
                   <TooltipTrigger asChild>
