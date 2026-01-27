@@ -119,11 +119,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupMultiAuth(app);
 
   // Middleware to authenticate mobile requests via Authorization header
-  app.use((req, res, next) => {
+  app.use(async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      const user = validateMobileSessionToken(token);
+      const user = await validateMobileSessionToken(token);
       if (user) {
         // Attach user to request for mobile token auth
         (req as any).mobileUser = user;
@@ -159,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate a persistent session token for mobile
       const { generateMobileSessionToken } = await import('./multiAuth');
-      const sessionToken = generateMobileSessionToken(user);
+      const sessionToken = await generateMobileSessionToken(user);
       
       console.log('[Mobile Exchange] Session token generated for user:', user.id);
       return res.json({ 
