@@ -76,6 +76,7 @@ export async function validateMobileSessionToken(token: string): Promise<any | n
     );
     
     if (result.rows.length === 0) {
+      console.log('[Mobile Sessions] No session found for token');
       return null;
     }
     
@@ -83,10 +84,18 @@ export async function validateMobileSessionToken(token: string): Promise<any | n
     if (new Date(session.expires_at) < new Date()) {
       // Expired, delete it
       await pool.query('DELETE FROM mobile_sessions WHERE token = $1', [token]);
+      console.log('[Mobile Sessions] Token expired, deleted');
       return null;
     }
     
-    return session.user_data;
+    // Parse user_data if it's a string (JSON stored in DB)
+    let userData = session.user_data;
+    if (typeof userData === 'string') {
+      userData = JSON.parse(userData);
+    }
+    
+    console.log('[Mobile Sessions] Token validated, user:', userData?.id);
+    return userData;
   } catch (err) {
     console.error('[Mobile Sessions] Validation error:', err);
     return null;
