@@ -206,28 +206,17 @@ export function Header() {
                   <TooltipTrigger asChild>
                     <button 
                       onClick={async () => {
-                        try {
-                          // Make logout API call first
-                          await fetch("/api/auth/logout", { 
-                            method: "POST",
-                            credentials: "include"
-                          });
-                          
-                          // Clear all auth-related cache and force refetch
-                          queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
-                          queryClient.setQueryData(["/api/auth/user"], null);
-                          
-                          // Navigate to home
-                          setLocation("/");
-                          
-                          // Force page reload to reset all state
-                          window.location.reload();
-                        } catch (error) {
-                          console.error("Logout error:", error);
-                          queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
-                          setLocation("/");
-                          window.location.reload();
-                        }
+                        // Clear cache silently (no state updates)
+                        queryClient.clear();
+                        
+                        // Fire logout API and immediately redirect (don't wait)
+                        fetch("/api/auth/logout", { 
+                          method: "POST",
+                          credentials: "include"
+                        }).catch(() => {});
+                        
+                        // Redirect to home immediately
+                        window.location.href = "/";
                       }}
                       className="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
                     >
