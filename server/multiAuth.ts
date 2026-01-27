@@ -517,27 +517,32 @@ export async function setupMultiAuth(app: Express) {
         // Process private key - ensure proper PEM format with newlines
         let privateKey = process.env.APPLE_PRIVATE_KEY!;
         
+        console.log('[Apple OAuth] Raw key length:', privateKey.length);
+        console.log('[Apple OAuth] Raw key has newlines:', privateKey.includes('\n'));
+        
         // If the key doesn't have proper newlines, fix it
         if (!privateKey.includes('\n')) {
-          // Replace escaped newlines
+          // Replace escaped newlines first
           privateKey = privateKey.replace(/\\n/g, '\n');
-        }
-        
-        // If still no newlines, format as PEM
-        if (!privateKey.includes('\n') && privateKey.length > 100) {
-          // Remove any existing header/footer if present as single line
-          let keyBody = privateKey
-            .replace('-----BEGIN PRIVATE KEY-----', '')
-            .replace('-----END PRIVATE KEY-----', '')
-            .trim();
           
-          // Format as proper PEM with 64-char lines
-          const lines = keyBody.match(/.{1,64}/g) || [];
-          privateKey = `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`;
+          // If still no newlines, the key might be on one line with spaces
+          if (!privateKey.includes('\n')) {
+            // Extract the key body (remove headers/footers and extra spaces)
+            let keyBody = privateKey
+              .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+              .replace(/-----END PRIVATE KEY-----/g, '')
+              .replace(/\s+/g, '') // Remove all whitespace
+              .trim();
+            
+            // Format as proper PEM with 64-char lines
+            const lines = keyBody.match(/.{1,64}/g) || [];
+            privateKey = `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`;
+          }
         }
         
-        console.log('[Apple OAuth] Private key format - starts with BEGIN:', privateKey.startsWith('-----BEGIN'));
-        console.log('[Apple OAuth] Private key has newlines:', privateKey.includes('\n'));
+        console.log('[Apple OAuth] Processed key - starts with BEGIN:', privateKey.startsWith('-----BEGIN'));
+        console.log('[Apple OAuth] Processed key has newlines:', privateKey.includes('\n'));
+        console.log('[Apple OAuth] Processed key line count:', privateKey.split('\n').length);
         
         // Generate client secret JWT for Apple
         const clientSecret = AppleSignIn.getClientSecret({
@@ -548,19 +553,37 @@ export async function setupMultiAuth(app: Express) {
           expAfter: 15777000 // 6 months
         });
         
-        console.log('[Apple OAuth] Generated client secret');
+        console.log('[Apple OAuth] Generated client secret successfully');
         
         // Exchange code for tokens
+        console.log('[Apple OAuth] Exchanging authorization code for tokens...');
+        console.log('[Apple OAuth] Redirect URI:', redirectUri);
+        
         const tokenResponse = await AppleSignIn.getAuthorizationToken(code, {
           clientID: process.env.APPLE_CLIENT_ID!,
           clientSecret: clientSecret,
           redirectUri: redirectUri
         });
         
-        console.log('[Apple OAuth] Token response received');
+        console.log('[Apple OAuth] Token response received:', JSON.stringify({
+          hasIdToken: !!tokenResponse?.id_token,
+          hasAccessToken: !!tokenResponse?.access_token,
+          hasRefreshToken: !!tokenResponse?.refresh_token,
+          error: tokenResponse?.error || 'none'
+        }));
+        
+        if (!tokenResponse || !tokenResponse.id_token) {
+          console.error('[Apple OAuth] No id_token in response:', tokenResponse);
+          if (isMobileOAuth) {
+            return res.redirect(`eatoff://oauth-callback?error=no_token&details=${encodeURIComponent('Apple did not return id_token')}`);
+          }
+          return res.redirect('/login?error=no_token');
+        }
         
         // Verify the ID token
         const idToken = tokenResponse.id_token;
+        console.log('[Apple OAuth] Verifying id_token...');
+        
         const appleUser = await AppleSignIn.verifyIdToken(idToken, {
           audience: process.env.APPLE_CLIENT_ID!,
           ignoreExpiration: false
