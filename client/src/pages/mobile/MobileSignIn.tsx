@@ -243,20 +243,21 @@ export default function MobileSignIn() {
     setIsLoading(true);
     
     try {
+      // Always request mobile token for mobile pages (works for both native and web mobile)
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ ...formData, mobile: isNative }),
+        body: JSON.stringify({ ...formData, mobile: true }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Store mobile session token if provided (for native apps)
-        if (data.sessionToken && isNative) {
+        // Store mobile session token (works for both native and web mobile)
+        if (data.sessionToken) {
           setMobileSessionToken(data.sessionToken);
           console.log('[MobileSignIn] Session token stored');
         }

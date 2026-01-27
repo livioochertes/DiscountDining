@@ -39,10 +39,19 @@ function getFullUrl(url: string): string {
   return `${API_BASE_URL}${url}`;
 }
 
+// Check if we're on a mobile route
+function isMobileRoute(): boolean {
+  if (typeof window !== 'undefined') {
+    return window.location.pathname.startsWith('/m');
+  }
+  return false;
+}
+
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   const token = getMobileSessionToken();
-  if (token && isNativePlatform) {
+  // Use token for native platform OR mobile web routes (when token exists)
+  if (token && (isNativePlatform || isMobileRoute())) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
