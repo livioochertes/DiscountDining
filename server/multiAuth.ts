@@ -356,10 +356,18 @@ export async function setupMultiAuth(app: Express) {
         if (isMobileOAuth) {
           // Mobile OAuth flow - generate a one-time token for the app to exchange
           const mobileToken = generateMobileAuthToken(user);
-          const deepLink = `eatoff://oauth-callback?token=${encodeURIComponent(mobileToken)}`;
+          const tokenParam = encodeURIComponent(mobileToken);
+          
+          // Standard deep link for iOS and fallback
+          const deepLink = `eatoff://oauth-callback?token=${tokenParam}`;
+          
+          // Android Intent URI - forces app to open without chooser dialog
+          // Format: intent://host/path#Intent;scheme=eatoff;package=com.eatoff.app;end
+          const androidIntentUri = `intent://oauth-callback?token=${tokenParam}#Intent;scheme=eatoff;package=com.eatoff.app;end`;
           
           console.log('[Mobile OAuth] Generated token for user:', user.id);
           console.log('[Mobile OAuth] Deep link:', deepLink);
+          console.log('[Mobile OAuth] Android Intent URI:', androidIntentUri);
           
           // Return HTML page that redirects to deep link
           return res.send(`
@@ -406,9 +414,23 @@ export async function setupMultiAuth(app: Express) {
                 <a id="openApp" href="${deepLink}" style="display:none; margin-top:20px; padding:12px 24px; background:white; color:#1A1A1A; border-radius:8px; text-decoration:none; font-weight:600;">Open EatOff App</a>
               </div>
               <script>
-                console.log('[OAuth Page] Attempting deep link redirect:', '${deepLink}');
-                window.location.href = '${deepLink}';
-                setTimeout(() => {
+                console.log('[OAuth Page] Attempting redirect...');
+                
+                // Detect if Android
+                var isAndroid = /android/i.test(navigator.userAgent);
+                console.log('[OAuth Page] Is Android:', isAndroid);
+                
+                if (isAndroid) {
+                  // Use Android Intent URI - this bypasses the app chooser dialog
+                  console.log('[OAuth Page] Using Android Intent URI');
+                  window.location.href = '${androidIntentUri}';
+                } else {
+                  // iOS and others - use standard deep link
+                  console.log('[OAuth Page] Using standard deep link');
+                  window.location.href = '${deepLink}';
+                }
+                
+                setTimeout(function() {
                   // If still here after 2 seconds, show manual button
                   document.getElementById('status').textContent = 'Tap below to return to the app';
                   document.getElementById('openApp').style.display = 'inline-block';
