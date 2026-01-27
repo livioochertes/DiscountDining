@@ -252,6 +252,15 @@ export async function setupMultiAuth(app: Express) {
   // Apple Sign-In configuration - using apple-signin-auth library
   if (process.env.APPLE_CLIENT_ID && process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID && process.env.APPLE_PRIVATE_KEY) {
     console.log('Apple Sign-In configured with Client ID:', process.env.APPLE_CLIENT_ID);
+    // Debug: Check private key format (don't log the actual key!)
+    const pk = process.env.APPLE_PRIVATE_KEY;
+    console.log('[Apple Key Debug] Length:', pk.length);
+    console.log('[Apple Key Debug] Starts with BEGIN:', pk.startsWith('-----BEGIN'));
+    console.log('[Apple Key Debug] Ends with END:', pk.endsWith('-----'));
+    console.log('[Apple Key Debug] Has real newlines:', pk.includes('\n'));
+    console.log('[Apple Key Debug] Has escaped newlines:', pk.includes('\\n'));
+    console.log('[Apple Key Debug] First 30 chars:', pk.substring(0, 30));
+    console.log('[Apple Key Debug] Last 30 chars:', pk.substring(pk.length - 30));
   } else {
     console.warn('Apple Sign-In credentials not fully configured');
     console.log('APPLE_CLIENT_ID:', !!process.env.APPLE_CLIENT_ID);
