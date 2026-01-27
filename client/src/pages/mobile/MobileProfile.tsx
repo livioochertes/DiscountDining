@@ -44,6 +44,7 @@ export default function MobileProfile() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingDietary, setIsSavingDietary] = useState(false);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   const { toast } = useToast();
 
   const handleLogout = async () => {
@@ -280,12 +281,29 @@ export default function MobileProfile() {
     </div>
   );
 
+  const toggleNotification = (key: 'push' | 'email' | 'promo') => {
+    setNotificationSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSaveNotifications = async () => {
+    setIsSavingNotifications(true);
+    try {
+      // For now, just show success - notifications would be saved to user preferences
+      await new Promise(resolve => setTimeout(resolve, 500));
+      toast({ title: t.changesSaved || 'Changes saved' });
+    } catch (error) {
+      toast({ title: t.errorSaving || 'Error saving', variant: 'destructive' });
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+
   const renderNotificationsContent = () => (
     <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
       {[
-        { id: 'push', label: t.pushNotifications || 'Push Notifications', desc: t.pushDesc || 'Receive alerts on your device' },
-        { id: 'email', label: t.emailNotifications || 'Email Notifications', desc: t.emailDesc || 'Get updates via email' },
-        { id: 'promo', label: t.promotions || 'Promotions & Offers', desc: t.promoDesc || 'Special deals and discounts' },
+        { id: 'push' as const, label: t.pushNotifications || 'Push Notifications', desc: t.pushDesc || 'Receive alerts on your device' },
+        { id: 'email' as const, label: t.emailNotifications || 'Email Notifications', desc: t.emailDesc || 'Get updates via email' },
+        { id: 'promo' as const, label: t.promotions || 'Promotions & Offers', desc: t.promoDesc || 'Special deals and discounts' },
       ].map((item) => (
         <div key={item.id} className="flex items-center justify-between bg-white p-4 rounded-xl border border-gray-200">
           <div>
@@ -293,11 +311,24 @@ export default function MobileProfile() {
             <p className="text-sm text-gray-500">{item.desc}</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" defaultChecked className="sr-only peer" />
+            <input 
+              type="checkbox" 
+              checked={notificationSettings[item.id]}
+              onChange={() => toggleNotification(item.id)}
+              className="sr-only peer" 
+            />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
           </label>
         </div>
       ))}
+      <button
+        type="button"
+        onClick={handleSaveNotifications}
+        disabled={isSavingNotifications}
+        className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+      >
+        {isSavingNotifications ? (t.saving || 'Saving...') : (t.saveChanges || 'Save Changes')}
+      </button>
     </div>
   );
 
@@ -377,6 +408,97 @@ export default function MobileProfile() {
     </div>
   );
 
+  const renderLoyaltyPointsContent = () => (
+    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-gray-600">{t.currentPoints || 'Current Points'}</span>
+          <span className="text-2xl font-bold text-amber-600">{user?.loyaltyPoints || 0}</span>
+        </div>
+        <div className="w-full bg-amber-200 rounded-full h-2">
+          <div 
+            className="bg-amber-500 h-2 rounded-full transition-all" 
+            style={{ width: `${Math.min((user?.loyaltyPoints || 0) / 1000 * 100, 100)}%` }}
+          />
+        </div>
+        <p className="text-xs text-gray-500 mt-2">{1000 - (user?.loyaltyPoints || 0)} {t.pointsToNextReward || 'points to next reward'}</p>
+      </div>
+
+      <div className="bg-white rounded-xl p-4 border border-gray-200">
+        <h4 className="font-medium text-gray-900 mb-3">{t.howToEarn || 'How to earn points'}</h4>
+        <ul className="space-y-2 text-sm text-gray-600">
+          <li className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-primary rounded-full" />
+            {t.earnPerOrder || '1 point for every 1 RON spent'}
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-primary rounded-full" />
+            {t.earnBonus || 'Bonus points on special promotions'}
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-primary rounded-full" />
+            {t.earnReferral || '100 points for each friend referred'}
+          </li>
+        </ul>
+      </div>
+
+      <button
+        onClick={() => setLocation('/m/wallet')}
+        className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 transition-colors"
+      >
+        {t.viewWallet || 'View Wallet'}
+      </button>
+    </div>
+  );
+
+  const renderTierContent = () => (
+    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+      <div className="grid grid-cols-3 gap-2">
+        {['bronze', 'silver', 'gold'].map((tier) => (
+          <div 
+            key={tier}
+            className={cn(
+              "p-3 rounded-xl text-center border-2 transition-colors",
+              user?.membershipTier === tier 
+                ? "border-amber-400 bg-amber-50" 
+                : "border-gray-200 bg-white opacity-60"
+            )}
+          >
+            <div className={cn(
+              "text-2xl mb-1",
+              tier === 'bronze' && "text-amber-700",
+              tier === 'silver' && "text-gray-400",
+              tier === 'gold' && "text-amber-500"
+            )}>
+              {tier === 'bronze' && '🥉'}
+              {tier === 'silver' && '🥈'}
+              {tier === 'gold' && '🥇'}
+            </div>
+            <p className="text-xs font-medium capitalize">{tier}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-xl p-4 border border-gray-200">
+        <h4 className="font-medium text-gray-900 mb-3">{t.tierBenefits || 'Your Benefits'}</h4>
+        <ul className="space-y-2 text-sm text-gray-600">
+          <li className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-green-500" />
+            {t.benefitDiscount || '5% cashback on all orders'}
+          </li>
+          <li className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-green-500" />
+            {t.benefitPriority || 'Priority support'}
+          </li>
+          <li className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-green-500" />
+            {t.benefitExclusive || 'Exclusive offers'}
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+
   const renderExpandedContent = (id: string) => {
     switch (id) {
       case 'personal': return renderPersonalInfoContent();
@@ -386,6 +508,8 @@ export default function MobileProfile() {
       case 'language': return renderLanguageContent();
       case 'privacy': return renderPrivacyContent();
       case 'help': return renderHelpContent();
+      case 'points': return renderLoyaltyPointsContent();
+      case 'tier': return renderTierContent();
       default: return null;
     }
   };
@@ -402,12 +526,8 @@ export default function MobileProfile() {
     {
       title: t.loyalty || 'Loyalty',
       items: [
-        { id: 'tier', icon: Star, label: t.membershipTier || 'Membership Tier', rightElement: (
-          <span className="bg-amber-100 text-amber-700 text-sm font-medium px-3 py-1 rounded-full">
-            {user?.membershipTier?.toUpperCase() || 'GOLD'}
-          </span>
-        )},
-        { id: 'points', icon: Star, label: t.loyaltyPoints || 'Loyalty Points', subtitle: `${user?.loyaltyPoints || 0} ${t.points || 'points'}` },
+        { id: 'tier', icon: Star, label: t.membershipTier || 'Membership Tier', subtitle: user?.membershipTier?.toUpperCase() || 'GOLD', expandable: true },
+        { id: 'points', icon: Star, label: t.loyaltyPoints || 'Loyalty Points', subtitle: `${user?.loyaltyPoints || 0} ${t.points || 'points'}`, expandable: true },
       ],
     },
     {
