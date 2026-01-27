@@ -112,12 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
   
-  // Register user authentication routes
-  registerUserAuthRoutes(app);
-  
-  // Setup OAuth routes (without conflicting session)
-  await setupMultiAuth(app);
-
+  // IMPORTANT: Mobile auth middleware MUST be registered BEFORE routes that need it
   // Middleware to authenticate mobile requests via Authorization header
   app.use(async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -134,6 +129,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     next();
   });
+  
+  // Register user authentication routes (AFTER mobile middleware so /api/auth/user works with tokens)
+  registerUserAuthRoutes(app);
+  
+  // Setup OAuth routes (without conflicting session)
+  await setupMultiAuth(app);
 
   // Mobile OAuth token exchange endpoint
   // This allows the mobile app to exchange a one-time token for a session
