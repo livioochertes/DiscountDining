@@ -157,14 +157,14 @@ export default function MobileSignIn() {
                   console.log('[MobileSignIn] Session token stored');
                 }
                 
-                await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
                 toast({
                   title: t.authSuccess,
                   description: "Welcome!",
                 });
-                setTimeout(() => {
-                  setLocation('/m');
-                }, 100);
+                
+                // Clear cache and redirect - the new page will fetch with the token
+                queryClient.clear();
+                setLocation('/m');
               } else {
                 const errorData = await response.json();
                 console.error('[MobileSignIn] Token exchange failed:', errorData);
@@ -262,16 +262,14 @@ export default function MobileSignIn() {
           console.log('[MobileSignIn] Session token stored');
         }
         
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-        
         toast({
           title: t.authSuccess,
           description: "Welcome back!",
         });
         
-        setTimeout(() => {
-          setLocation('/m');
-        }, 100);
+        // Clear cache and redirect - the new page will fetch with the token
+        queryClient.clear();
+        setLocation('/m');
       } else {
         toast({
           title: t.authFailed,
