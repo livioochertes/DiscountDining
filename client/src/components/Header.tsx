@@ -207,21 +207,26 @@ export function Header() {
                     <button 
                       onClick={async () => {
                         try {
-                          // Set authentication data to null immediately
-                          queryClient.setQueryData(["/api/auth/user"], null);
-                          
-                          // Make logout API call in background
-                          fetch("/api/auth/logout", { 
+                          // Make logout API call first
+                          await fetch("/api/auth/logout", { 
                             method: "POST",
                             credentials: "include"
-                          }).catch(console.error);
+                          });
                           
-                          // Navigate immediately
+                          // Clear all auth-related cache and force refetch
+                          queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+                          queryClient.setQueryData(["/api/auth/user"], null);
+                          
+                          // Navigate to home
                           setLocation("/");
+                          
+                          // Force page reload to reset all state
+                          window.location.reload();
                         } catch (error) {
                           console.error("Logout error:", error);
-                          queryClient.setQueryData(["/api/auth/user"], null);
+                          queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
                           setLocation("/");
+                          window.location.reload();
                         }
                       }}
                       className="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
