@@ -554,6 +554,13 @@ export async function setupMultiAuth(app: Express) {
         });
         
         console.log('[Apple OAuth] Generated client secret successfully');
+        console.log('[Apple OAuth] Config used:', {
+          clientID: process.env.APPLE_CLIENT_ID,
+          teamID: process.env.APPLE_TEAM_ID,
+          keyID: process.env.APPLE_KEY_ID,
+          privateKeyLength: privateKey.length,
+          privateKeyLineCount: privateKey.split('\n').length
+        });
         
         // Exchange code for tokens
         console.log('[Apple OAuth] Exchanging authorization code for tokens...');
