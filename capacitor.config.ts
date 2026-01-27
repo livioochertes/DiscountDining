@@ -21,7 +21,15 @@ const config: CapacitorConfig = {
     },
     CapacitorHttp: {
       enabled: true
+    },
+    Browser: {
+      // Use Android Custom Tabs which handles deep links better
+      androidOpenInAppBrowser: true
     }
+  },
+  android: {
+    // Allow deep links to be handled automatically
+    allowMixedContent: true
   }
 };
 
