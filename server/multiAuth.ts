@@ -54,14 +54,23 @@ export async function generateMobileSessionToken(user: any): Promise<string> {
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
   
+  console.log('[Mobile Sessions] Generating token for user:', user.id);
+  console.log('[Mobile Sessions] User data:', JSON.stringify(user));
+  
   try {
-    await pool.query(
-      'INSERT INTO mobile_sessions (token, user_id, user_data, expires_at) VALUES ($1, $2, $3, $4)',
+    const result = await pool.query(
+      'INSERT INTO mobile_sessions (token, user_id, user_data, expires_at) VALUES ($1, $2, $3, $4) RETURNING id',
       [token, user.id, JSON.stringify(user), expiresAt]
     );
-    console.log('[Mobile Sessions] Token created for user:', user.id);
-  } catch (err) {
-    console.error('[Mobile Sessions] Failed to store token:', err);
+    console.log('[Mobile Sessions] Token created successfully, id:', result.rows[0]?.id);
+    
+    // Verify the token was actually stored
+    const verify = await pool.query('SELECT COUNT(*) as count FROM mobile_sessions WHERE token = $1', [token]);
+    console.log('[Mobile Sessions] Verification count:', verify.rows[0]?.count);
+  } catch (err: any) {
+    console.error('[Mobile Sessions] Failed to store token:', err.message);
+    console.error('[Mobile Sessions] Error stack:', err.stack);
+    // Don't throw - return the token anyway but log the error
   }
   
   return token;
@@ -69,18 +78,30 @@ export async function generateMobileSessionToken(user: any): Promise<string> {
 
 // Validate and return user from mobile session token (DB-backed)
 export async function validateMobileSessionToken(token: string): Promise<any | null> {
+  const tokenPrefix = token ? token.substring(0, 10) : 'null';
+  console.log('[Mobile Sessions] Validating token:', tokenPrefix + '...');
+  
   try {
+    // First check how many sessions exist
+    const countResult = await pool.query('SELECT COUNT(*) as total FROM mobile_sessions');
+    console.log('[Mobile Sessions] Total sessions in DB:', countResult.rows[0]?.total);
+    
     const result = await pool.query(
       'SELECT user_data, expires_at FROM mobile_sessions WHERE token = $1',
       [token]
     );
     
+    console.log('[Mobile Sessions] Query result rows:', result.rows.length);
+    
     if (result.rows.length === 0) {
-      console.log('[Mobile Sessions] No session found for token');
+      console.log('[Mobile Sessions] No session found for token:', tokenPrefix);
       return null;
     }
     
     const session = result.rows[0];
+    console.log('[Mobile Sessions] Session found, expires_at:', session.expires_at);
+    console.log('[Mobile Sessions] User data type:', typeof session.user_data);
+    
     if (new Date(session.expires_at) < new Date()) {
       // Expired, delete it
       await pool.query('DELETE FROM mobile_sessions WHERE token = $1', [token]);
@@ -91,13 +112,15 @@ export async function validateMobileSessionToken(token: string): Promise<any | n
     // Parse user_data if it's a string (JSON stored in DB)
     let userData = session.user_data;
     if (typeof userData === 'string') {
+      console.log('[Mobile Sessions] Parsing string user_data');
       userData = JSON.parse(userData);
     }
     
     console.log('[Mobile Sessions] Token validated, user:', userData?.id);
     return userData;
-  } catch (err) {
-    console.error('[Mobile Sessions] Validation error:', err);
+  } catch (err: any) {
+    console.error('[Mobile Sessions] Validation error:', err.message);
+    console.error('[Mobile Sessions] Error stack:', err.stack);
     return null;
   }
 }
