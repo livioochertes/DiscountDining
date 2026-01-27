@@ -3,16 +3,8 @@ import { authStorage } from "./storage";
 import { isAuthenticated } from "./replitAuth";
 
 // Register auth-specific routes
+// NOTE: /api/auth/user is now handled in userAuth.ts which supports both OAuth and email/password auth
 export function registerAuthRoutes(app: Express): void {
-  // Get current authenticated user
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await authStorage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // Additional Replit-specific routes can be added here
+  // The main /api/auth/user route is in userAuth.ts
 }
