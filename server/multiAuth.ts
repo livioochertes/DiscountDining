@@ -505,11 +505,36 @@ export async function setupMultiAuth(app: Express) {
         
         const redirectUri = `${baseURL}/api/auth/apple/callback`;
         
+        // Process private key - ensure proper PEM format with newlines
+        let privateKey = process.env.APPLE_PRIVATE_KEY!;
+        
+        // If the key doesn't have proper newlines, fix it
+        if (!privateKey.includes('\n')) {
+          // Replace escaped newlines
+          privateKey = privateKey.replace(/\\n/g, '\n');
+        }
+        
+        // If still no newlines, format as PEM
+        if (!privateKey.includes('\n') && privateKey.length > 100) {
+          // Remove any existing header/footer if present as single line
+          let keyBody = privateKey
+            .replace('-----BEGIN PRIVATE KEY-----', '')
+            .replace('-----END PRIVATE KEY-----', '')
+            .trim();
+          
+          // Format as proper PEM with 64-char lines
+          const lines = keyBody.match(/.{1,64}/g) || [];
+          privateKey = `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`;
+        }
+        
+        console.log('[Apple OAuth] Private key format - starts with BEGIN:', privateKey.startsWith('-----BEGIN'));
+        console.log('[Apple OAuth] Private key has newlines:', privateKey.includes('\n'));
+        
         // Generate client secret JWT for Apple
         const clientSecret = AppleSignIn.getClientSecret({
           clientID: process.env.APPLE_CLIENT_ID!,
           teamID: process.env.APPLE_TEAM_ID!,
-          privateKey: process.env.APPLE_PRIVATE_KEY!,
+          privateKey: privateKey,
           keyIdentifier: process.env.APPLE_KEY_ID!,
           expAfter: 15777000 // 6 months
         });
