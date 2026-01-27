@@ -1,0 +1,21 @@
+Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [QueryClient] Using auth token: 3c462cc722...
+⚡️  To Native ->  CapacitorHttp request 116350397
+⚡️  TO JS {"data":{"message":"Logout successful"},"status":200,"headers":{"set-cookie":"eatoff.sid=; Path=\/; Expires=Thu, 01 Jan 1970 00:00:00 GMT","access-control-allow-origin":"*","access-control-allow-headers":"Origin, X-Requested-With, Content-Type, Accept, Aut
+⚡️  To Native ->  StatusBar getInfo 116350398
+⚡️  [log] - [MobileSignIn] Setting up deep link handler, isNative: true
+⚡️  TO JS {"style":"DEFAULT","overlays":true,"visible":true,"height":54,"color":"#000000"}
+⚡️  To Native ->  App addListener 116350399
+⚡️  [log] - [Apple Sign-In] Opening external browser: https://eatoff.app/api/auth/apple?mobile=true
+⚡️  To Native ->  Browser open 116350400
+Setting modalPresentationStyle once <SFSafariViewController: 0x130e3ca00> has been presented will have no effect until it is dismissed and presented again.
+⚡️  TO JS undefined
+⚡️  TO JS {"iosSourceApplication":"com.apple.SafariViewService","url":"eatoff:\/\/oauth-callback?error=no_token&details=invalid_client","iosOpenInPlace":""}
+⚡️  [log] - [MobileSignIn] ========================================
+⚡️  To Native ->  Browser ⚡️  [log] - [MobileSignIn] Deep link received: eatoff://oauth-callback?error=no_token&details=invalid_client
+close 116350401
+⚡️  [log] - [MobileSignIn] ========================================
+⚡️  TO JS undefined
+⚡️  [log] - [MobileSignIn] Browser closed
+⚡️  [error] - [MobileSignIn] OAuth error: no_token
