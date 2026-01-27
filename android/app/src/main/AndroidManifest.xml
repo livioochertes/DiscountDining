@@ -23,11 +23,11 @@
             </intent-filter>
 
             <!-- Deep link for OAuth callback -->
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="eatoff" android:host="oauth-callback" />
+                <data android:scheme="eatoff" />
             </intent-filter>
 
         </activity>
