@@ -351,8 +351,26 @@ export function registerUserAuthRoutes(app: Express) {
   // Get current user endpoint
   app.get('/api/auth/user', async (req: Request, res: Response) => {
     try {
+      // Check for mobile OAuth user (set by Authorization header middleware)
+      const mobileUser = (req as any).mobileUser || (req as any).user;
+      if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string' && mobileUser.id.startsWith('google_')) {
+        console.log('[Auth User] Mobile OAuth user:', mobileUser.id);
+        return res.json({
+          id: mobileUser.id,
+          customerId: mobileUser.id,
+          name: `${mobileUser.firstName || ''} ${mobileUser.lastName || ''}`.trim() || 'User',
+          email: mobileUser.email,
+          phone: null,
+          membershipTier: 'bronze',
+          loyaltyPoints: 0,
+          balance: '0',
+          customerCode: null,
+          isOAuthUser: true
+        });
+      }
+      
       if (!req.session?.ownerId) {
-        return res.status(401).json({ message: 'Not authenticated' });
+        return res.status(401).json({ message: 'Unauthorized' });
       }
 
       const customer = await storage.getCustomer(req.session.ownerId);
