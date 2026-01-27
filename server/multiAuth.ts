@@ -358,87 +358,31 @@ export async function setupMultiAuth(app: Express) {
           const mobileToken = generateMobileAuthToken(user);
           const tokenParam = encodeURIComponent(mobileToken);
           
-          // Standard deep link for iOS and fallback
+          // Standard deep link for iOS
           const deepLink = `eatoff://oauth-callback?token=${tokenParam}`;
           
           // Android Intent URI - forces app to open without chooser dialog
-          // Format: intent://host/path#Intent;scheme=eatoff;package=com.eatoff.app;end
           const androidIntentUri = `intent://oauth-callback?token=${tokenParam}#Intent;scheme=eatoff;package=com.eatoff.app;end`;
           
           console.log('[Mobile OAuth] Generated token for user:', user.id);
           console.log('[Mobile OAuth] Deep link:', deepLink);
           console.log('[Mobile OAuth] Android Intent URI:', androidIntentUri);
           
-          // Return HTML page that redirects to deep link
-          return res.send(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Authentication Successful</title>
-              <style>
-                body {
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  min-height: 100vh;
-                  margin: 0;
-                  background: linear-gradient(135deg, #F5A623 0%, #1A1A1A 100%);
-                  color: white;
-                  text-align: center;
-                  padding: 20px;
-                }
-                .container { max-width: 400px; }
-                .checkmark {
-                  width: 80px;
-                  height: 80px;
-                  margin: 0 auto 24px;
-                  border-radius: 50%;
-                  background: rgba(255, 255, 255, 0.2);
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  font-size: 40px;
-                }
-                h1 { font-size: 24px; margin: 0 0 12px 0; font-weight: 600; }
-                p { font-size: 16px; opacity: 0.9; margin: 0; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="checkmark">✓</div>
-                <h1>Authentication Successful</h1>
-                <p id="status">Redirecting back to EatOff app...</p>
-                <a id="openApp" href="${deepLink}" style="display:none; margin-top:20px; padding:12px 24px; background:white; color:#1A1A1A; border-radius:8px; text-decoration:none; font-weight:600;">Open EatOff App</a>
-              </div>
-              <script>
-                console.log('[OAuth Page] Attempting redirect...');
-                
-                // Detect if Android
-                var isAndroid = /android/i.test(navigator.userAgent);
-                console.log('[OAuth Page] Is Android:', isAndroid);
-                
-                if (isAndroid) {
-                  // Use Android Intent URI - this bypasses the app chooser dialog
-                  console.log('[OAuth Page] Using Android Intent URI');
-                  window.location.href = '${androidIntentUri}';
-                } else {
-                  // iOS and others - use standard deep link
-                  console.log('[OAuth Page] Using standard deep link');
-                  window.location.href = '${deepLink}';
-                }
-                
-                setTimeout(function() {
-                  // If still here after 2 seconds, show manual button
-                  document.getElementById('status').textContent = 'Tap below to return to the app';
-                  document.getElementById('openApp').style.display = 'inline-block';
-                }, 2000);
-              </script>
-            </body>
-            </html>
-          `);
+          // Detect platform from User-Agent for direct redirect
+          const userAgent = req.headers['user-agent'] || '';
+          const isAndroid = /android/i.test(userAgent);
+          
+          console.log('[Mobile OAuth] User-Agent:', userAgent);
+          console.log('[Mobile OAuth] Is Android:', isAndroid);
+          
+          // Direct HTTP 302 redirect - no intermediate page
+          if (isAndroid) {
+            console.log('[Mobile OAuth] Redirecting to Android Intent URI');
+            return res.redirect(androidIntentUri);
+          } else {
+            console.log('[Mobile OAuth] Redirecting to iOS deep link');
+            return res.redirect(deepLink);
+          }
         }
         
         return res.redirect("/");
