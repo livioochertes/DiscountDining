@@ -308,10 +308,34 @@ export default function MobileSignUp() {
   };
 
   const handleAppleSignIn = async () => {
-    toast({
-      title: "Apple Sign-In",
-      description: "Apple Sign-In is only available on iOS devices",
-    });
+    setIsGoogleLoading(true); // Reuse loading state
+    try {
+      // Open Apple OAuth in external browser (same pattern as Google)
+      const baseUrl = window.location.origin;
+      const appleAuthUrl = `${baseUrl}/api/auth/apple?mobile=true`;
+      
+      console.log('[Apple Sign-In] Opening external browser:', appleAuthUrl);
+      
+      if (isNative) {
+        // Use Capacitor Browser for native apps
+        const { Browser } = await import('@capacitor/browser');
+        await Browser.open({ 
+          url: appleAuthUrl,
+          presentationStyle: 'popover'
+        });
+      } else {
+        // Fallback for web
+        window.location.href = appleAuthUrl;
+      }
+    } catch (error) {
+      console.error('[Apple Sign-In] Error:', error);
+      toast({
+        title: t.registerFailed || "Înregistrare eșuată",
+        description: "Apple Sign-In nu a funcționat. Încearcă din nou.",
+        variant: "destructive",
+      });
+      setIsGoogleLoading(false);
+    }
   };
 
   const topPadding = isNative ? statusBarHeight : 0;

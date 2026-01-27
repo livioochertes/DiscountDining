@@ -1,6 +1,7 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as FacebookStrategy } from "passport-facebook";
+import AppleSignIn from "apple-signin-auth";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import MemoryStore from "memorystore";
@@ -248,7 +249,16 @@ export async function setupMultiAuth(app: Express) {
     }));
   }
 
-  // Note: Apple and Instagram strategies temporarily disabled for simplified setup
+  // Apple Sign-In configuration - using apple-signin-auth library
+  if (process.env.APPLE_CLIENT_ID && process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID && process.env.APPLE_PRIVATE_KEY) {
+    console.log('Apple Sign-In configured with Client ID:', process.env.APPLE_CLIENT_ID);
+  } else {
+    console.warn('Apple Sign-In credentials not fully configured');
+    console.log('APPLE_CLIENT_ID:', !!process.env.APPLE_CLIENT_ID);
+    console.log('APPLE_TEAM_ID:', !!process.env.APPLE_TEAM_ID);
+    console.log('APPLE_KEY_ID:', !!process.env.APPLE_KEY_ID);
+    console.log('APPLE_PRIVATE_KEY:', !!process.env.APPLE_PRIVATE_KEY);
+  }
 
   passport.serializeUser((user: any, cb) => {
     console.log('Serializing user:', user);
@@ -399,6 +409,208 @@ export async function setupMultiAuth(app: Express) {
       passport.authenticate("facebook", { failureRedirect: "/login" }),
       (req, res) => res.redirect("/")
     );
+  }
+
+  // Apple Sign-In routes (using apple-signin-auth library for token verification)
+  if (process.env.APPLE_CLIENT_ID && process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID && process.env.APPLE_PRIVATE_KEY) {
+    // Apple OAuth initiate - redirect to Apple's authorization page
+    app.get("/api/auth/apple", (req, res) => {
+      console.log('[Apple OAuth] Starting Apple Sign-In flow...');
+      console.log('[Apple OAuth] Mobile flag:', req.query.mobile);
+      
+      // Store mobile flag in session for callback
+      if (req.query.mobile === 'true') {
+        (req.session as any).isMobileOAuth = true;
+      }
+      
+      const isProduction = process.env.NODE_ENV === 'production';
+      let baseURL: string;
+      
+      if (isProduction && process.env.PRODUCTION_DOMAIN) {
+        baseURL = `https://${process.env.PRODUCTION_DOMAIN}`;
+      } else if (process.env.REPLIT_DOMAINS) {
+        baseURL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+      } else {
+        baseURL = "http://localhost:5000";
+      }
+      
+      const redirectUri = `${baseURL}/api/auth/apple/callback`;
+      const state = crypto.randomBytes(16).toString('hex');
+      
+      // Store state in session for CSRF protection
+      (req.session as any).appleOAuthState = state;
+      
+      const authUrl = `https://appleid.apple.com/auth/authorize?` + 
+        `client_id=${encodeURIComponent(process.env.APPLE_CLIENT_ID!)}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&response_type=code` +
+        `&scope=name%20email` +
+        `&response_mode=form_post` +
+        `&state=${state}`;
+      
+      console.log('[Apple OAuth] Redirect URI:', redirectUri);
+      console.log('[Apple OAuth] Auth URL:', authUrl);
+      
+      res.redirect(authUrl);
+    });
+    
+    // Apple OAuth callback - handles form_post response from Apple
+    app.post("/api/auth/apple/callback", async (req, res) => {
+      console.log('[Apple OAuth] Callback received');
+      console.log('[Apple OAuth] Body:', JSON.stringify(req.body, null, 2));
+      
+      const isMobileOAuth = (req.session as any)?.isMobileOAuth;
+      const savedState = (req.session as any)?.appleOAuthState;
+      
+      // Clear session flags
+      delete (req.session as any).isMobileOAuth;
+      delete (req.session as any).appleOAuthState;
+      
+      try {
+        const { code, id_token, state, user: userInfo, error } = req.body;
+        
+        if (error) {
+          console.error('[Apple OAuth] Error from Apple:', error);
+          if (isMobileOAuth) {
+            return res.redirect(`eatoff://oauth-callback?error=apple_error&details=${encodeURIComponent(error)}`);
+          }
+          return res.redirect('/login?error=apple_error');
+        }
+        
+        // Verify state for CSRF protection
+        if (state !== savedState) {
+          console.error('[Apple OAuth] State mismatch - CSRF protection triggered');
+          if (isMobileOAuth) {
+            return res.redirect('eatoff://oauth-callback?error=state_mismatch');
+          }
+          return res.redirect('/login?error=state_mismatch');
+        }
+        
+        if (!code && !id_token) {
+          console.error('[Apple OAuth] No code or id_token received');
+          if (isMobileOAuth) {
+            return res.redirect('eatoff://oauth-callback?error=no_code');
+          }
+          return res.redirect('/login?error=no_code');
+        }
+        
+        const isProduction = process.env.NODE_ENV === 'production';
+        let baseURL: string;
+        
+        if (isProduction && process.env.PRODUCTION_DOMAIN) {
+          baseURL = `https://${process.env.PRODUCTION_DOMAIN}`;
+        } else if (process.env.REPLIT_DOMAINS) {
+          baseURL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+        } else {
+          baseURL = "http://localhost:5000";
+        }
+        
+        const redirectUri = `${baseURL}/api/auth/apple/callback`;
+        
+        // Generate client secret JWT for Apple
+        const clientSecret = AppleSignIn.getClientSecret({
+          clientID: process.env.APPLE_CLIENT_ID!,
+          teamID: process.env.APPLE_TEAM_ID!,
+          privateKey: process.env.APPLE_PRIVATE_KEY!,
+          keyIdentifier: process.env.APPLE_KEY_ID!,
+          expAfter: 15777000 // 6 months
+        });
+        
+        console.log('[Apple OAuth] Generated client secret');
+        
+        // Exchange code for tokens
+        const tokenResponse = await AppleSignIn.getAuthorizationToken(code, {
+          clientID: process.env.APPLE_CLIENT_ID!,
+          clientSecret: clientSecret,
+          redirectUri: redirectUri
+        });
+        
+        console.log('[Apple OAuth] Token response received');
+        
+        // Verify the ID token
+        const idToken = tokenResponse.id_token;
+        const appleUser = await AppleSignIn.verifyIdToken(idToken, {
+          audience: process.env.APPLE_CLIENT_ID!,
+          ignoreExpiration: false
+        });
+        
+        console.log('[Apple OAuth] User verified:', JSON.stringify(appleUser, null, 2));
+        
+        // Parse user info if provided (only on first sign-in)
+        let firstName = null;
+        let lastName = null;
+        let email = appleUser.email;
+        
+        if (userInfo) {
+          try {
+            const parsedUserInfo = typeof userInfo === 'string' ? JSON.parse(userInfo) : userInfo;
+            firstName = parsedUserInfo.name?.firstName || null;
+            lastName = parsedUserInfo.name?.lastName || null;
+            if (parsedUserInfo.email) {
+              email = parsedUserInfo.email;
+            }
+            console.log('[Apple OAuth] User info parsed:', { firstName, lastName, email });
+          } catch (e) {
+            console.log('[Apple OAuth] Could not parse user info:', e);
+          }
+        }
+        
+        // Create/update user in database
+        const userData = {
+          id: `apple_${appleUser.sub}`,
+          email: email || null,
+          firstName: firstName,
+          lastName: lastName,
+          profileImageUrl: null // Apple doesn't provide profile photos
+        };
+        
+        await storage.upsertUser(userData);
+        console.log('[Apple OAuth] User upserted:', userData.id);
+        
+        const user = { ...userData, provider: 'apple' };
+        
+        // Log in the user
+        req.logIn(user, async (err) => {
+          if (err) {
+            console.error('[Apple OAuth] Login error:', err);
+            if (isMobileOAuth) {
+              return res.redirect('eatoff://oauth-callback?error=login_failed');
+            }
+            return res.redirect('/login?error=login_failed');
+          }
+          
+          console.log('[Apple OAuth] Login successful, user:', user.id);
+          
+          if (isMobileOAuth) {
+            const mobileToken = generateMobileAuthToken(user);
+            const tokenParam = encodeURIComponent(mobileToken);
+            
+            const userAgent = req.headers['user-agent'] || '';
+            const isAndroid = /android/i.test(userAgent);
+            
+            if (isAndroid) {
+              const androidIntentUri = `intent://oauth-callback?token=${tokenParam}#Intent;scheme=eatoff;package=com.eatoff.app;end`;
+              console.log('[Apple OAuth] Redirecting to Android Intent');
+              return res.redirect(androidIntentUri);
+            } else {
+              const deepLink = `eatoff://oauth-callback?token=${tokenParam}`;
+              console.log('[Apple OAuth] Redirecting to iOS deep link');
+              return res.redirect(deepLink);
+            }
+          }
+          
+          return res.redirect('/');
+        });
+        
+      } catch (error: any) {
+        console.error('[Apple OAuth] Error:', error.message);
+        console.error('[Apple OAuth] Stack:', error.stack);
+        if (isMobileOAuth) {
+          return res.redirect(`eatoff://oauth-callback?error=apple_auth_failed&details=${encodeURIComponent(error.message)}`);
+        }
+        return res.redirect('/login?error=apple_auth_failed');
+      }
+    });
   }
 
   // Logout route
