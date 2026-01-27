@@ -107,14 +107,18 @@ export default function MobileSignIn() {
 
   // Handle deep link callbacks from OAuth
   useEffect(() => {
+    console.log('[MobileSignIn] Setting up deep link handler, isNative:', isNative);
     if (!isNative) return;
 
     const handleAppUrlOpen = async (event: { url: string }) => {
+      console.log('[MobileSignIn] ========================================');
       console.log('[MobileSignIn] Deep link received:', event.url);
+      console.log('[MobileSignIn] ========================================');
       
       // Close the browser
       try {
         await Browser.close();
+        console.log('[MobileSignIn] Browser closed');
       } catch (e) {
         console.log('[MobileSignIn] Browser already closed or error:', e);
       }
@@ -243,6 +247,10 @@ export default function MobileSignIn() {
     setIsLoading(true);
     
     try {
+      console.log('[MobileSignIn] Attempting login with:', formData.email);
+      console.log('[MobileSignIn] API_BASE_URL:', API_BASE_URL);
+      console.log('[MobileSignIn] isNative:', isNative);
+      
       // Always request mobile token for mobile pages (works for both native and web mobile)
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
@@ -253,13 +261,21 @@ export default function MobileSignIn() {
         body: JSON.stringify({ ...formData, mobile: true }),
       });
 
+      console.log('[MobileSignIn] Login response status:', response.status);
       const data = await response.json();
+      console.log('[MobileSignIn] Login response data:', JSON.stringify(data));
 
       if (response.ok) {
         // Store mobile session token (works for both native and web mobile)
         if (data.sessionToken) {
           setMobileSessionToken(data.sessionToken);
-          console.log('[MobileSignIn] Session token stored');
+          console.log('[MobileSignIn] Session token stored:', data.sessionToken.substring(0, 10) + '...');
+          
+          // Verify token was stored
+          const storedToken = localStorage.getItem('eatoff_mobile_session_token');
+          console.log('[MobileSignIn] Token verification:', storedToken ? 'stored successfully' : 'FAILED TO STORE');
+        } else {
+          console.warn('[MobileSignIn] No session token in response!');
         }
         
         toast({
@@ -268,9 +284,16 @@ export default function MobileSignIn() {
         });
         
         // Clear cache and redirect - the new page will fetch with the token
+        console.log('[MobileSignIn] Clearing cache and redirecting to /m');
         queryClient.clear();
-        setLocation('/m');
+        
+        // Small delay to ensure token is persisted before navigation
+        setTimeout(() => {
+          console.log('[MobileSignIn] Navigating to /m');
+          setLocation('/m');
+        }, 100);
       } else {
+        console.error('[MobileSignIn] Login failed:', data.message);
         toast({
           title: t.authFailed,
           description: data.message || t.wrongCredentials,
@@ -278,6 +301,7 @@ export default function MobileSignIn() {
         });
       }
     } catch (error) {
+      console.error('[MobileSignIn] Login error:', error);
       toast({
         title: t.error,
         description: t.somethingWentWrong,
@@ -290,6 +314,7 @@ export default function MobileSignIn() {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
+    console.log('[MobileSignIn] handleGoogleSignIn called, isNative:', isNative);
     
     if (isNative) {
       // Native platform - use browser OAuth flow
@@ -297,6 +322,7 @@ export default function MobileSignIn() {
         const oauthUrl = `${API_BASE_URL}/api/auth/google?mobile=true`;
         console.log('[MobileSignIn] Opening browser for Google OAuth:', oauthUrl);
         await Browser.open({ url: oauthUrl });
+        console.log('[MobileSignIn] Browser opened successfully, waiting for deep link callback...');
       } catch (error) {
         console.error('[MobileSignIn] Failed to open browser:', error);
         toast({
@@ -308,10 +334,12 @@ export default function MobileSignIn() {
       }
     } else {
       // Web platform - use Google Identity Services
+      console.log('[MobileSignIn] Using web Google Sign-In');
       if (window.google) {
         window.google.accounts.id.prompt();
         setIsGoogleLoading(false);
       } else {
+        console.error('[MobileSignIn] window.google not available');
         toast({
           title: t.error,
           description: "Google Sign-In not available",
