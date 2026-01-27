@@ -370,8 +370,8 @@ export function registerUserAuthRoutes(app: Express) {
       // Check for mobile user (set by Authorization header middleware)
       const mobileUser = (req as any).mobileUser || (req as any).user;
       if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
-        // Handle OAuth users (google_xxx) - find or create a customer record
-        if (mobileUser.id.startsWith('google_')) {
+        // Handle OAuth users (google_xxx or apple_xxx) - find or create a customer record
+        if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
           console.log('[Auth User] Mobile OAuth user:', mobileUser.id);
           
           // Try to find existing customer by email
