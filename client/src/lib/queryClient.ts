@@ -5,6 +5,31 @@ const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 const IS_CROSS_ORIGIN = !!API_BASE_URL;
 
+// Mobile session token storage key
+const MOBILE_SESSION_TOKEN_KEY = 'eatoff_mobile_session_token';
+
+// Get stored mobile session token
+export function getMobileSessionToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(MOBILE_SESSION_TOKEN_KEY);
+  }
+  return null;
+}
+
+// Store mobile session token
+export function setMobileSessionToken(token: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(MOBILE_SESSION_TOKEN_KEY, token);
+  }
+}
+
+// Clear mobile session token
+export function clearMobileSessionToken(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(MOBILE_SESSION_TOKEN_KEY);
+  }
+}
+
 console.log('[QueryClient] Platform detection:', { isNativePlatform, API_BASE_URL, IS_CROSS_ORIGIN });
 
 function getFullUrl(url: string): string {
@@ -12,6 +37,15 @@ function getFullUrl(url: string): string {
     return url;
   }
   return `${API_BASE_URL}${url}`;
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const token = getMobileSessionToken();
+  if (token && isNativePlatform) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -26,9 +60,13 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const authHeaders = getAuthHeaders();
   const fetchOptions: RequestInit = {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders,
+    },
     body: data ? JSON.stringify(data) : undefined,
   };
   
@@ -48,7 +86,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const fetchOptions: RequestInit = {};
+    const authHeaders = getAuthHeaders();
+    const fetchOptions: RequestInit = {
+      headers: authHeaders,
+    };
     
     if (!IS_CROSS_ORIGIN) {
       fetchOptions.credentials = "include";

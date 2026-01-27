@@ -9,9 +9,13 @@ import { storage } from "./storage";
 import { pool } from "./db";
 import ConnectPgSimple from "connect-pg-simple";
 
-// Temporary token store for mobile OAuth exchange
+// Temporary token store for mobile OAuth exchange (one-time use, 5 min expiry)
 // Maps token -> { user, expiresAt }
 const mobileAuthTokens = new Map<string, { user: any; expiresAt: number }>();
+
+// Persistent mobile session tokens (long-lived, reusable)
+// Maps token -> { user, expiresAt }
+const mobileSessionTokens = new Map<string, { user: any; expiresAt: number }>();
 
 // Clean expired tokens every 5 minutes
 setInterval(() => {
@@ -19,6 +23,11 @@ setInterval(() => {
   for (const [token, data] of mobileAuthTokens.entries()) {
     if (data.expiresAt < now) {
       mobileAuthTokens.delete(token);
+    }
+  }
+  for (const [token, data] of mobileSessionTokens.entries()) {
+    if (data.expiresAt < now) {
+      mobileSessionTokens.delete(token);
     }
   }
 }, 5 * 60 * 1000);
@@ -43,6 +52,32 @@ export function consumeMobileAuthToken(token: string): any | null {
   // One-time use - delete after consuming
   mobileAuthTokens.delete(token);
   return data.user;
+}
+
+// Generate a long-lived session token for mobile (30 days)
+export function generateMobileSessionToken(user: any): string {
+  const token = crypto.randomBytes(32).toString('hex');
+  mobileSessionTokens.set(token, {
+    user,
+    expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+  });
+  return token;
+}
+
+// Validate and return user from mobile session token (reusable)
+export function validateMobileSessionToken(token: string): any | null {
+  const data = mobileSessionTokens.get(token);
+  if (!data) return null;
+  if (data.expiresAt < Date.now()) {
+    mobileSessionTokens.delete(token);
+    return null;
+  }
+  return data.user;
+}
+
+// Invalidate a mobile session token (logout)
+export function invalidateMobileSessionToken(token: string): void {
+  mobileSessionTokens.delete(token);
 }
 
 export function getSession() {

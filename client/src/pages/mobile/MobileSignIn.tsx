@@ -8,7 +8,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { queryClient } from '@/lib/queryClient';
+import { queryClient, setMobileSessionToken } from '@/lib/queryClient';
 import { useLanguage } from '@/contexts/LanguageContext';
 import eatoffLogo from '@assets/EatOff_Logo_1769386471015.png';
 
@@ -150,6 +150,13 @@ export default function MobileSignIn() {
               if (response.ok) {
                 const data = await response.json();
                 console.log('[MobileSignIn] Session created successfully:', data.user?.id);
+                
+                // Store session token for future requests
+                if (data.sessionToken) {
+                  setMobileSessionToken(data.sessionToken);
+                  console.log('[MobileSignIn] Session token stored');
+                }
+                
                 await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
                 toast({
                   title: t.authSuccess,

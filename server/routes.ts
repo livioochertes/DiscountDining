@@ -14,7 +14,7 @@ import orderCreationRoutes from "./orderCreationRoutes";
 import { loyaltyRoutes } from "./loyaltyRoutes";
 import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments } from "@shared/schema";
 import { nanoid } from "nanoid";
-import { setupMultiAuth, isAuthenticated, consumeMobileAuthToken } from "./multiAuth";
+import { setupMultiAuth, isAuthenticated, consumeMobileAuthToken, validateMobileSessionToken, invalidateMobileSessionToken } from "./multiAuth";
 import { getAIAssistantResponse, getRestaurantRecommendations, explainVoucherPackage } from "./aiAssistant";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { createRequire } from "module";
@@ -118,6 +118,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup OAuth routes (without conflicting session)
   await setupMultiAuth(app);
 
+  // Middleware to authenticate mobile requests via Authorization header
+  app.use((req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const user = validateMobileSessionToken(token);
+      if (user) {
+        // Attach user to request for mobile token auth
+        (req as any).mobileUser = user;
+        // Also set req.user for compatibility with existing auth checks
+        (req as any).user = user;
+        console.log('[Mobile Auth] Token validated for user:', user.id);
+      }
+    }
+    next();
+  });
+
   // Mobile OAuth token exchange endpoint
   // This allows the mobile app to exchange a one-time token for a session
   app.post("/api/auth/mobile-exchange", async (req, res) => {
@@ -140,24 +157,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid or expired token" });
       }
       
-      // Log the user in - this creates a session in the current context (WebView)
-      req.logIn(user, (err) => {
-        if (err) {
-          console.error('[Mobile Exchange] Login error:', err);
-          return res.status(500).json({ error: "Failed to create session" });
+      // Generate a persistent session token for mobile
+      const { generateMobileSessionToken } = await import('./multiAuth');
+      const sessionToken = generateMobileSessionToken(user);
+      
+      console.log('[Mobile Exchange] Session token generated for user:', user.id);
+      return res.json({ 
+        success: true, 
+        sessionToken, // Mobile app stores this for future requests
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl
         }
-        
-        console.log('[Mobile Exchange] User logged in successfully:', user.id);
-        return res.json({ 
-          success: true, 
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            profileImageUrl: user.profileImageUrl
-          }
-        });
       });
     } catch (error) {
       console.error('[Mobile Exchange] Error:', error);
