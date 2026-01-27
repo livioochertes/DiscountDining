@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { 
   User, ChevronRight, Settings, Bell, CreditCard, Heart, 
@@ -6,7 +7,7 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useAuth } from '@/hooks/useAuth';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient, clearMobileSessionToken } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -24,18 +25,32 @@ export default function MobileProfile() {
   const { t } = useLanguage();
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    // Set logging out state immediately to prevent loading UI flash
+    setIsLoggingOut(true);
+    
     try {
+      // Clear mobile session token first
+      clearMobileSessionToken();
+      
+      // Call logout API
       await apiRequest('POST', '/api/auth/logout');
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      
+      // Reset query cache completely and redirect
+      queryClient.clear();
+      
+      // Redirect immediately
       setLocation('/m/signin');
     } catch (error) {
       console.error('Logout error:', error);
+      setIsLoggingOut(false);
     }
   };
 
-  if (isLoading) {
+  // Don't show loading during logout - redirect will happen
+  if (isLoading && !isLoggingOut) {
     return (
       <MobileLayout>
         <div className="flex items-center justify-center h-64">

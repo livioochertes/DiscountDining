@@ -1,0 +1,15 @@
+⚡️  TO JS undefined
+⚡️  TO JS {"iosSourceApplication":"com.apple.SafariViewService","iosOpenInPlace":"","url":"eatoff:\/\/oauth-callback?token=b9eafdc2a52dc80824fc30531c767c220c6b37a6ccca945d155eb7cfaa26f68d"}
+⚡️  To Native ->  Browser close 77489346
+⚡️  [log] - [MobileSignIn] Deep link received: eatoff://oauth-callback?token=b9eafdc2a52dc80824fc30531c767c220c6b37a6ccca945d155eb7cfaa26f68d
+⚡️  TO JS undefined
+⚡️  [log] - [MobileSignIn] Received auth token, exchanging for session...
+⚡️  [log] - [MobileSignIn] Session created successfully: google_115727455773196517825
+⚡️  [log] - [MobileSignIn] Session token stored
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"EatOff Permanent -10%","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: [{"name":"Ixy mica","voucherType":"discount","discount":"14.00"},{"name":"Test Vizibilitate","voucherType":"discount","discount":"11.00"},{"name":"Iky / Liviu","voucherType":"discount","discount":"50.00"},{"name":"Iky 33%","voucherType":"discount","discount":"33.00"},{"name":"Family test 2","voucherType":"discount","discount":"22.00"},{"name":"Family","voucherType":"discount","discount":"10.00"},{"name":"Test","voucherType":"discount","discount":"15.00"},{"name":"EatOff test 25","voucherType":"discount","discount":"25.00"},{"name":"liviu C33","voucherType":"discount","discount":"33.00"},{"name":"liviu 25","voucherType":"discount","discount":"25.00"},{"name":"eatoff2","voucherType":"discount","discount":"10.00"},{"name":"eatoff10","voucherType":"discount","discount":"10.00"},{"name":"Wellness Package","voucherType":"discount","discount":"30.00"},{"name":"Mediterranean Journey","voucherType":"discount","discount":"20.00"},{"name":"Fresh Start","voucherType":"discount","discount":"14.00"},{"name":"Gourmand Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  To Native ->  App removeListener 77489347
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
