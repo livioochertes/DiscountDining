@@ -43,7 +43,6 @@ export default function MobileSignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -116,11 +115,8 @@ export default function MobileSignIn() {
       console.log('[MobileSignIn] Deep link received:', event.url);
       console.log('[MobileSignIn] ========================================');
       
-      // Immediately close browser and show processing state
-      setIsProcessingOAuth(true);
-      setIsGoogleLoading(false);
-      
       // Close the browser immediately
+      setIsGoogleLoading(false);
       try {
         await Browser.close();
         console.log('[MobileSignIn] Browser closed');
@@ -133,7 +129,6 @@ export default function MobileSignIn() {
         // Check if URL starts with our scheme
         if (!event.url.startsWith('eatoff://')) {
           console.log('[MobileSignIn] Ignoring non-eatoff deep link:', event.url);
-          setIsProcessingOAuth(false);
           return;
         }
         
@@ -180,7 +175,6 @@ export default function MobileSignIn() {
               } else {
                 const errorData = response.data;
                 console.error('[MobileSignIn] Token exchange failed:', errorData);
-                setIsProcessingOAuth(false);
                 toast({
                   title: t.authFailed,
                   description: errorData.error || t.somethingWentWrong,
@@ -189,7 +183,6 @@ export default function MobileSignIn() {
               }
             } catch (fetchError) {
               console.error('[MobileSignIn] Network error during token exchange:', fetchError);
-              setIsProcessingOAuth(false);
               toast({
                 title: t.authFailed,
                 description: t.somethingWentWrong,
@@ -198,7 +191,6 @@ export default function MobileSignIn() {
             }
           } else if (error) {
             console.error('[MobileSignIn] OAuth error:', error);
-            setIsProcessingOAuth(false);
             toast({
               title: t.authFailed,
               description: error === 'auth_error' ? 'Authentication failed' : 
@@ -208,12 +200,9 @@ export default function MobileSignIn() {
               variant: "destructive",
             });
           }
-        } else {
-          setIsProcessingOAuth(false);
         }
       } catch (e) {
         console.error('[MobileSignIn] Error parsing deep link URL:', e);
-        setIsProcessingOAuth(false);
       }
     };
 
@@ -372,26 +361,6 @@ export default function MobileSignIn() {
   };
 
   const topPadding = isNative ? statusBarHeight : 0;
-
-  // Show full-screen loading overlay during OAuth processing
-  if (isProcessingOAuth) {
-    return (
-      <div 
-        className="min-h-screen flex flex-col items-center justify-center"
-        style={{ backgroundColor: '#F8F7F4' }}
-      >
-        <img 
-          src={eatoffLogo} 
-          alt="EatOff" 
-          className="h-20 mb-6 animate-pulse"
-        />
-        <div className="flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-gray-600 font-medium">Connecting...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div 
