@@ -402,7 +402,9 @@ export function registerUserAuthRoutes(app: Express) {
               membershipTier: customer.membershipTier,
               loyaltyPoints: customer.loyaltyPoints,
               balance: customer.balance,
-              customerCode: customer.customerCode
+              customerCode: customer.customerCode,
+              dietaryPreferences: customer.dietaryPreferences,
+              allergies: customer.allergies
             });
           }
         }
@@ -434,7 +436,9 @@ export function registerUserAuthRoutes(app: Express) {
         membershipTier: customer.membershipTier,
         loyaltyPoints: customer.loyaltyPoints,
         balance: customer.balance,
-        customerCode: customer.customerCode
+        customerCode: customer.customerCode,
+        dietaryPreferences: customer.dietaryPreferences,
+        allergies: customer.allergies
       });
     } catch (error) {
       console.error('Get user error:', error);
@@ -461,7 +465,7 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      const { name, phone } = req.body;
+      const { name, phone, dietaryPreferences, allergies } = req.body;
       
       // Update customer in database
       const customer = await storage.getCustomer(customerId);
@@ -470,9 +474,11 @@ export function registerUserAuthRoutes(app: Express) {
       }
 
       // Update fields if provided
-      const updates: Partial<{ name: string; phone: string }> = {};
+      const updates: Partial<{ name: string; phone: string; dietaryPreferences: string[]; allergies: string[] }> = {};
       if (name !== undefined) updates.name = name;
       if (phone !== undefined) updates.phone = phone;
+      if (dietaryPreferences !== undefined) updates.dietaryPreferences = dietaryPreferences;
+      if (allergies !== undefined) updates.allergies = allergies;
 
       if (Object.keys(updates).length > 0) {
         await storage.updateCustomer(customerId, updates);
@@ -487,7 +493,9 @@ export function registerUserAuthRoutes(app: Express) {
         membershipTier: updatedCustomer!.membershipTier,
         loyaltyPoints: updatedCustomer!.loyaltyPoints,
         balance: updatedCustomer!.balance,
-        customerCode: updatedCustomer!.customerCode
+        customerCode: updatedCustomer!.customerCode,
+        dietaryPreferences: updatedCustomer!.dietaryPreferences,
+        allergies: updatedCustomer!.allergies
       });
     } catch (error) {
       console.error('Update profile error:', error);

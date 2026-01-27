@@ -35,7 +35,15 @@ export default function MobileProfile() {
     email: '',
     phone: '',
   });
+  const [selectedDiet, setSelectedDiet] = useState<string>('');
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [notificationSettings, setNotificationSettings] = useState({
+    push: true,
+    email: true,
+    promo: true,
+  });
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDietary, setIsSavingDietary] = useState(false);
   const { toast } = useToast();
 
   const handleLogout = async () => {
@@ -65,6 +73,35 @@ export default function MobileProfile() {
           phone: user.phone || '',
         });
       }
+      if (sectionId === 'dietary' && user) {
+        const prefs = user.dietaryPreferences || [];
+        setSelectedDiet(prefs[0] || '');
+        setSelectedAllergies(user.allergies || []);
+      }
+    }
+  };
+
+  const toggleAllergy = (allergy: string) => {
+    setSelectedAllergies(prev => 
+      prev.includes(allergy) 
+        ? prev.filter(a => a !== allergy)
+        : [...prev, allergy]
+    );
+  };
+
+  const handleSaveDietary = async () => {
+    setIsSavingDietary(true);
+    try {
+      await apiRequest('PATCH', '/api/auth/profile', {
+        dietaryPreferences: selectedDiet ? [selectedDiet] : [],
+        allergies: selectedAllergies,
+      });
+      await refetch();
+      toast({ title: t.changesSaved || 'Changes saved' });
+    } catch (error) {
+      toast({ title: t.errorSaving || 'Error saving', variant: 'destructive' });
+    } finally {
+      setIsSavingDietary(false);
     }
   };
 
@@ -174,7 +211,14 @@ export default function MobileProfile() {
           {['Standard', 'Vegetarian', 'Vegan', 'Pescatarian'].map((diet) => (
             <button
               key={diet}
-              className="p-3 border border-gray-200 rounded-xl text-sm hover:border-primary hover:bg-primary/5 transition-colors"
+              type="button"
+              onClick={() => setSelectedDiet(diet.toLowerCase())}
+              className={cn(
+                "p-3 border rounded-xl text-sm transition-colors",
+                selectedDiet === diet.toLowerCase()
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-gray-200 hover:border-primary hover:bg-primary/5"
+              )}
             >
               {diet}
             </button>
@@ -188,7 +232,14 @@ export default function MobileProfile() {
           {['Gluten', 'Dairy', 'Nuts', 'Shellfish', 'Eggs', 'Soy'].map((allergy) => (
             <button
               key={allergy}
-              className="px-4 py-2 border border-gray-200 rounded-full text-sm hover:border-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+              type="button"
+              onClick={() => toggleAllergy(allergy.toLowerCase())}
+              className={cn(
+                "px-4 py-2 border rounded-full text-sm transition-colors",
+                selectedAllergies.includes(allergy.toLowerCase())
+                  ? "border-red-400 bg-red-50 text-red-600 font-medium"
+                  : "border-gray-200 hover:border-red-400 hover:bg-red-50 hover:text-red-600"
+              )}
             >
               {allergy}
             </button>
@@ -196,8 +247,13 @@ export default function MobileProfile() {
         </div>
       </div>
 
-      <button className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 transition-colors">
-        {t.savePreferences || 'Save Preferences'}
+      <button 
+        type="button"
+        onClick={handleSaveDietary}
+        disabled={isSavingDietary}
+        className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+      >
+        {isSavingDietary ? (t.saving || 'Saving...') : (t.savePreferences || 'Save Preferences')}
       </button>
     </div>
   );
