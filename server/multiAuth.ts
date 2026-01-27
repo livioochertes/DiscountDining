@@ -559,23 +559,35 @@ export async function setupMultiAuth(app: Express) {
         console.log('[Apple OAuth] Exchanging authorization code for tokens...');
         console.log('[Apple OAuth] Redirect URI:', redirectUri);
         
-        const tokenResponse = await AppleSignIn.getAuthorizationToken(code, {
-          clientID: process.env.APPLE_CLIENT_ID!,
-          clientSecret: clientSecret,
-          redirectUri: redirectUri
-        });
-        
-        console.log('[Apple OAuth] Token response received:', JSON.stringify({
-          hasIdToken: !!tokenResponse?.id_token,
-          hasAccessToken: !!tokenResponse?.access_token,
-          hasRefreshToken: !!tokenResponse?.refresh_token,
-          error: tokenResponse?.error || 'none'
-        }));
+        let tokenResponse: any;
+        try {
+          tokenResponse = await AppleSignIn.getAuthorizationToken(code, {
+            clientID: process.env.APPLE_CLIENT_ID!,
+            clientSecret: clientSecret,
+            redirectUri: redirectUri
+          });
+          
+          console.log('[Apple OAuth] Token response received:', JSON.stringify({
+            hasIdToken: !!tokenResponse?.id_token,
+            hasAccessToken: !!tokenResponse?.access_token,
+            hasRefreshToken: !!tokenResponse?.refresh_token,
+            error: tokenResponse?.error || 'none',
+            errorDescription: tokenResponse?.error_description || 'none'
+          }));
+        } catch (tokenError: any) {
+          console.error('[Apple OAuth] Token exchange error:', tokenError.message);
+          console.error('[Apple OAuth] Token exchange full error:', JSON.stringify(tokenError, null, 2));
+          if (isMobileOAuth) {
+            return res.redirect(`eatoff://oauth-callback?error=token_exchange_failed&details=${encodeURIComponent(tokenError.message || 'Token exchange failed')}`);
+          }
+          return res.redirect('/login?error=token_exchange_failed');
+        }
         
         if (!tokenResponse || !tokenResponse.id_token) {
-          console.error('[Apple OAuth] No id_token in response:', tokenResponse);
+          console.error('[Apple OAuth] No id_token in response:', JSON.stringify(tokenResponse, null, 2));
+          const errorDetail = tokenResponse?.error_description || tokenResponse?.error || 'Apple did not return id_token';
           if (isMobileOAuth) {
-            return res.redirect(`eatoff://oauth-callback?error=no_token&details=${encodeURIComponent('Apple did not return id_token')}`);
+            return res.redirect(`eatoff://oauth-callback?error=no_token&details=${encodeURIComponent(errorDetail)}`);
           }
           return res.redirect('/login?error=no_token');
         }
