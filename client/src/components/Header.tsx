@@ -205,17 +205,14 @@ export function Header() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button 
-                      onClick={async () => {
-                        // Clear cache silently (no state updates)
-                        queryClient.clear();
-                        
-                        // Fire logout API and immediately redirect (don't wait)
+                      onClick={() => {
+                        // Fire logout API (don't wait for response)
                         fetch("/api/auth/logout", { 
                           method: "POST",
                           credentials: "include"
                         }).catch(() => {});
                         
-                        // Redirect to home immediately
+                        // Redirect immediately - page reload will clear all state
                         window.location.href = "/";
                       }}
                       className="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
