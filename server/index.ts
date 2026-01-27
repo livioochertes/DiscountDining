@@ -6,11 +6,27 @@ import { storage } from "./storage";
 const app = express();
 
 // CORS configuration for mobile app support
+const allowedOrigins = [
+  'https://eatoff.app',
+  'capacitor://localhost',  // iOS Capacitor
+  'http://localhost',       // Android Capacitor
+  'ionic://localhost',      // Ionic
+];
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  const origin = req.headers.origin;
+  
+  // Allow requests with matching origin or no origin (same-origin/server-to-server)
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  } else {
+    // For other origins, allow without credentials
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
   
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
