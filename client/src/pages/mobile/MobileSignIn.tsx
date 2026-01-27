@@ -357,7 +357,8 @@ export default function MobileSignIn() {
     setIsGoogleLoading(true); // Reuse loading state
     try {
       // Open Apple OAuth in external browser (same pattern as Google)
-      const baseUrl = window.location.origin;
+      // Use API_BASE_URL for native apps (https://eatoff.app), or origin for web
+      const baseUrl = isNative ? API_BASE_URL : window.location.origin;
       const appleAuthUrl = `${baseUrl}/api/auth/apple?mobile=true`;
       
       console.log('[Apple Sign-In] Opening external browser:', appleAuthUrl);
