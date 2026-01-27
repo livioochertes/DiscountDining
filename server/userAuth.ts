@@ -370,19 +370,41 @@ export function registerUserAuthRoutes(app: Express) {
       // Check for mobile user (set by Authorization header middleware)
       const mobileUser = (req as any).mobileUser || (req as any).user;
       if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
-        // Handle OAuth users (google_xxx)
+        // Handle OAuth users (google_xxx) - find or create a customer record
         if (mobileUser.id.startsWith('google_')) {
           console.log('[Auth User] Mobile OAuth user:', mobileUser.id);
+          
+          // Try to find existing customer by email
+          let customer = await storage.getCustomerByEmail(mobileUser.email);
+          
+          if (!customer) {
+            // Create a new customer for this OAuth user
+            console.log('[Auth User] Creating customer for OAuth user:', mobileUser.email);
+            customer = await storage.createCustomer({
+              name: `${mobileUser.firstName || ''} ${mobileUser.lastName || ''}`.trim() || 'User',
+              email: mobileUser.email,
+              phone: null,
+              membershipTier: 'bronze',
+              loyaltyPoints: 0,
+              balance: '0',
+            });
+          }
+          
           return res.json({
             id: mobileUser.id,
-            customerId: mobileUser.id,
-            name: `${mobileUser.firstName || ''} ${mobileUser.lastName || ''}`.trim() || 'User',
-            email: mobileUser.email,
-            phone: null,
-            membershipTier: 'bronze',
-            loyaltyPoints: 0,
-            balance: '0',
-            customerCode: null,
+            customerId: customer.id,
+            name: customer.name,
+            email: customer.email,
+            phone: customer.phone,
+            membershipTier: customer.membershipTier,
+            loyaltyPoints: customer.loyaltyPoints,
+            balance: customer.balance,
+            customerCode: customer.customerCode,
+            dietaryPreferences: customer.dietaryPreferences,
+            allergies: customer.allergies,
+            notifyPush: customer.notifyPush,
+            notifyEmail: customer.notifyEmail,
+            notifyPromo: customer.notifyPromo,
             isOAuthUser: true
           });
         }
@@ -404,7 +426,10 @@ export function registerUserAuthRoutes(app: Express) {
               balance: customer.balance,
               customerCode: customer.customerCode,
               dietaryPreferences: customer.dietaryPreferences,
-              allergies: customer.allergies
+              allergies: customer.allergies,
+              notifyPush: customer.notifyPush,
+              notifyEmail: customer.notifyEmail,
+              notifyPromo: customer.notifyPromo
             });
           }
         }
@@ -438,7 +463,10 @@ export function registerUserAuthRoutes(app: Express) {
         balance: customer.balance,
         customerCode: customer.customerCode,
         dietaryPreferences: customer.dietaryPreferences,
-        allergies: customer.allergies
+        allergies: customer.allergies,
+        notifyPush: customer.notifyPush,
+        notifyEmail: customer.notifyEmail,
+        notifyPromo: customer.notifyPromo
       });
     } catch (error) {
       console.error('Get user error:', error);
@@ -456,6 +484,23 @@ export function registerUserAuthRoutes(app: Express) {
       if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
         if (mobileUser.id.startsWith('customer_')) {
           customerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+        } else if (mobileUser.id.startsWith('google_')) {
+          // For OAuth users, find customer by email
+          const customer = await storage.getCustomerByEmail(mobileUser.email);
+          if (customer) {
+            customerId = customer.id;
+          } else {
+            // Create customer if it doesn't exist
+            const newCustomer = await storage.createCustomer({
+              name: `${mobileUser.firstName || ''} ${mobileUser.lastName || ''}`.trim() || 'User',
+              email: mobileUser.email,
+              phone: null,
+              membershipTier: 'bronze',
+              loyaltyPoints: 0,
+              balance: '0',
+            });
+            customerId = newCustomer.id;
+          }
         }
       } else if (req.session?.ownerId) {
         customerId = req.session.ownerId;
@@ -465,7 +510,7 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      const { name, phone, dietaryPreferences, allergies } = req.body;
+      const { name, phone, dietaryPreferences, allergies, notifyPush, notifyEmail, notifyPromo } = req.body;
       
       // Update customer in database
       const customer = await storage.getCustomer(customerId);
@@ -474,11 +519,14 @@ export function registerUserAuthRoutes(app: Express) {
       }
 
       // Update fields if provided
-      const updates: Partial<{ name: string; phone: string; dietaryPreferences: string[]; allergies: string[] }> = {};
+      const updates: Partial<{ name: string; phone: string; dietaryPreferences: string[]; allergies: string[]; notifyPush: boolean; notifyEmail: boolean; notifyPromo: boolean }> = {};
       if (name !== undefined) updates.name = name;
       if (phone !== undefined) updates.phone = phone;
       if (dietaryPreferences !== undefined) updates.dietaryPreferences = dietaryPreferences;
       if (allergies !== undefined) updates.allergies = allergies;
+      if (notifyPush !== undefined) updates.notifyPush = notifyPush;
+      if (notifyEmail !== undefined) updates.notifyEmail = notifyEmail;
+      if (notifyPromo !== undefined) updates.notifyPromo = notifyPromo;
 
       if (Object.keys(updates).length > 0) {
         await storage.updateCustomer(customerId, updates);
@@ -495,7 +543,10 @@ export function registerUserAuthRoutes(app: Express) {
         balance: updatedCustomer!.balance,
         customerCode: updatedCustomer!.customerCode,
         dietaryPreferences: updatedCustomer!.dietaryPreferences,
-        allergies: updatedCustomer!.allergies
+        allergies: updatedCustomer!.allergies,
+        notifyPush: updatedCustomer!.notifyPush,
+        notifyEmail: updatedCustomer!.notifyEmail,
+        notifyPromo: updatedCustomer!.notifyPromo
       });
     } catch (error) {
       console.error('Update profile error:', error);

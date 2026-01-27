@@ -79,6 +79,13 @@ export default function MobileProfile() {
         setSelectedDiet(prefs[0] || '');
         setSelectedAllergies(user.allergies || []);
       }
+      if (sectionId === 'notifications' && user) {
+        setNotificationSettings({
+          push: user.notifyPush !== false,
+          email: user.notifyEmail !== false,
+          promo: user.notifyPromo !== false,
+        });
+      }
     }
   };
 
@@ -288,8 +295,12 @@ export default function MobileProfile() {
   const handleSaveNotifications = async () => {
     setIsSavingNotifications(true);
     try {
-      // For now, just show success - notifications would be saved to user preferences
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await apiRequest('PATCH', '/api/auth/profile', {
+        notifyPush: notificationSettings.push,
+        notifyEmail: notificationSettings.email,
+        notifyPromo: notificationSettings.promo,
+      });
+      await refetch();
       toast({ title: t.changesSaved || 'Changes saved' });
     } catch (error) {
       toast({ title: t.errorSaving || 'Error saving', variant: 'destructive' });

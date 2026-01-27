@@ -207,6 +207,11 @@ export const customers = pgTable("customers", {
   // Health conditions
   healthConditions: text("health_conditions").array(), // diabetes, hypertension, heart_disease, etc.
   
+  // Notification preferences
+  notifyPush: boolean("notify_push").default(true),
+  notifyEmail: boolean("notify_email").default(true),
+  notifyPromo: boolean("notify_promo").default(true),
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
