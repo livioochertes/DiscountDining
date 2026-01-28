@@ -74,12 +74,7 @@ export default function MobileWallet() {
     );
   }
 
-  const mockTransactions: Transaction[] = [
-    { id: 1, type: 'voucher_purchase', merchant: 'Bella Vista', amount: -50, date: '2025-01-22', status: 'completed' },
-    { id: 2, type: 'cashback', merchant: 'Trattoria Roma', amount: 5.50, date: '2025-01-21', status: 'completed' },
-    { id: 3, type: 'voucher_use', merchant: 'Pizza Napoli', amount: -25, date: '2025-01-20', status: 'completed' },
-    { id: 4, type: 'cashback', merchant: 'Sushi Master', amount: 3.20, date: '2025-01-19', status: 'pending' },
-  ];
+  const transactions: Transaction[] = [];
 
   const tabs = [
     { id: 'vouchers' as const, label: 'Vouchers', icon: Gift, count: vouchers.length },
@@ -312,44 +307,53 @@ export default function MobileWallet() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
-            <button className="text-primary text-sm font-medium">See all</button>
+            {transactions.length > 0 && (
+              <button className="text-primary text-sm font-medium">See all</button>
+            )}
           </div>
 
-          {mockTransactions.map((tx) => {
-            const Icon = getTransactionIcon(tx.type);
-            const isPositive = tx.amount > 0;
-            
-            return (
-              <div
-                key={tx.id}
-                className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center",
-                    isPositive ? "bg-green-50" : "bg-gray-100"
-                  )}>
-                    <Icon className={cn("w-5 h-5", isPositive ? "text-green-600" : "text-gray-600")} />
+          {transactions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Wallet className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>No transactions yet</p>
+            </div>
+          ) : (
+            transactions.map((tx) => {
+              const Icon = getTransactionIcon(tx.type);
+              const isPositive = tx.amount > 0;
+              
+              return (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center",
+                      isPositive ? "bg-green-50" : "bg-gray-100"
+                    )}>
+                      <Icon className={cn("w-5 h-5", isPositive ? "text-green-600" : "text-gray-600")} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{tx.merchant}</p>
+                      <p className="text-xs text-gray-500">{tx.date}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{tx.merchant}</p>
-                    <p className="text-xs text-gray-500">{tx.date}</p>
+                  <div className="text-right">
+                    <p className={cn(
+                      "font-semibold",
+                      isPositive ? "text-green-600" : "text-gray-900"
+                    )}>
+                      {isPositive ? '+' : ''}€{Math.abs(tx.amount).toFixed(2)}
+                    </p>
+                    {tx.status === 'pending' && (
+                      <p className="text-xs text-amber-500">Pending</p>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={cn(
-                    "font-semibold",
-                    isPositive ? "text-green-600" : "text-gray-900"
-                  )}>
-                    {isPositive ? '+' : ''}€{Math.abs(tx.amount).toFixed(2)}
-                  </p>
-                  {tx.status === 'pending' && (
-                    <p className="text-xs text-amber-500">Pending</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </section>
       </div>
     </MobileLayout>
