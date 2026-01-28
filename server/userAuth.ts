@@ -373,21 +373,30 @@ export function registerUserAuthRoutes(app: Express) {
         // Handle OAuth users (google_xxx or apple_xxx) - find or create a customer record
         if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
           console.log('[Auth User] Mobile OAuth user:', mobileUser.id);
+          console.log('[Auth User] Mobile user data:', JSON.stringify({ firstName: mobileUser.firstName, lastName: mobileUser.lastName, email: mobileUser.email }));
           
           // Try to find existing customer by email
           let customer = await storage.getCustomerByEmail(mobileUser.email);
+          
+          // Build name from OAuth data
+          const oauthName = `${mobileUser.firstName || ''} ${mobileUser.lastName || ''}`.trim();
           
           if (!customer) {
             // Create a new customer for this OAuth user
             console.log('[Auth User] Creating customer for OAuth user:', mobileUser.email);
             customer = await storage.createCustomer({
-              name: `${mobileUser.firstName || ''} ${mobileUser.lastName || ''}`.trim() || 'User',
+              name: oauthName || 'User',
               email: mobileUser.email,
               phone: null,
               membershipTier: 'bronze',
               loyaltyPoints: 0,
               balance: '0',
             });
+          } else if (oauthName && customer.name === 'User') {
+            // Update customer name if we now have it and it was previously 'User'
+            console.log('[Auth User] Updating customer name from OAuth:', oauthName);
+            const updated = await storage.updateCustomer(customer.id, { name: oauthName });
+            if (updated) customer = updated;
           }
           
           return res.json({
