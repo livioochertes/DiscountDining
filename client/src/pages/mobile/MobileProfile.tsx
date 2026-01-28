@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   User, ChevronRight, ChevronDown, Settings, Bell, CreditCard, Heart, 
-  HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X
+  HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X, Trash2, Loader2
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
@@ -11,6 +12,15 @@ import { apiRequest, queryClient, clearMobileSessionToken } from '@/lib/queryCli
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+
+interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+}
 
 interface MenuItem {
   id: string;
@@ -45,7 +55,43 @@ export default function MobileProfile() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingDietary, setIsSavingDietary] = useState(false);
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  const [swipedCardId, setSwipedCardId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Fetch payment methods from Stripe - user.id is the customer's numeric ID
+  const { data: paymentMethodsData, isLoading: isLoadingPaymentMethods, refetch: refetchPaymentMethods } = useQuery<{ paymentMethods: PaymentMethod[] }>({
+    queryKey: ['/api/customers', user?.id, 'payment-methods'],
+    enabled: !!user?.id && expandedSection === 'payment',
+  });
+
+  const paymentMethods = paymentMethodsData?.paymentMethods || [];
+
+  // Delete payment method mutation
+  const deletePaymentMethodMutation = useMutation({
+    mutationFn: async (paymentMethodId: string) => {
+      return await apiRequest('DELETE', `/api/payment-methods/${paymentMethodId}`);
+    },
+    onSuccess: () => {
+      toast({ title: t.cardDeleted || 'Card deleted successfully' });
+      refetchPaymentMethods();
+      setDeleteConfirmId(null);
+      setSwipedCardId(null);
+    },
+    onError: () => {
+      toast({ title: t.errorDeletingCard || 'Error deleting card', variant: 'destructive' });
+    },
+  });
+
+  const handleDeleteCard = (paymentMethodId: string) => {
+    setDeleteConfirmId(paymentMethodId);
+  };
+
+  const confirmDeleteCard = () => {
+    if (deleteConfirmId) {
+      deletePaymentMethodMutation.mutate(deleteConfirmId);
+    }
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -266,20 +312,129 @@ export default function MobileProfile() {
     </div>
   );
 
+  const getCardBrandColor = (brand: string) => {
+    switch (brand.toLowerCase()) {
+      case 'visa': return 'from-blue-600 to-blue-400';
+      case 'mastercard': return 'from-red-500 to-orange-400';
+      case 'amex': return 'from-blue-800 to-blue-600';
+      default: return 'from-gray-600 to-gray-400';
+    }
+  };
+
   const renderPaymentContent = () => (
     <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
-      <div className="bg-white rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-6 bg-gradient-to-r from-blue-600 to-blue-400 rounded" />
-            <div>
-              <p className="font-medium">•••• •••• •••• 4242</p>
-              <p className="text-xs text-gray-500">Expires 12/25</p>
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">{t.deleteCard || 'Delete Card?'}</h3>
+              <p className="text-sm text-gray-500 mt-1">{t.deleteCardConfirm || 'Are you sure you want to delete this payment method?'}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 py-3 rounded-xl border border-gray-300 font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                {t.cancel || 'Cancel'}
+              </button>
+              <button
+                onClick={confirmDeleteCard}
+                disabled={deletePaymentMethodMutation.isPending}
+                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {deletePaymentMethodMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                {t.delete || 'Delete'}
+              </button>
             </div>
           </div>
-          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">{t.default || 'Default'}</span>
         </div>
-      </div>
+      )}
+
+      {isLoadingPaymentMethods ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      ) : paymentMethods.length === 0 ? (
+        <div className="text-center py-6">
+          <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <p className="text-gray-500">{t.noPaymentMethods || 'No payment methods saved'}</p>
+          <p className="text-sm text-gray-400 mt-1">{t.addCardHint || 'Add a card to make payments easier'}</p>
+        </div>
+      ) : (
+        paymentMethods.map((card) => (
+          <div
+            key={card.id}
+            className="relative overflow-hidden rounded-xl"
+          >
+            {/* Swipe delete background */}
+            <div 
+              className={cn(
+                "absolute inset-y-0 right-0 bg-red-500 flex items-center justify-end pr-4 transition-all duration-200",
+                swipedCardId === card.id ? "w-20" : "w-0"
+              )}
+            >
+              <Trash2 className="w-5 h-5 text-white" />
+            </div>
+            
+            {/* Card content */}
+            <div
+              className={cn(
+                "bg-white p-4 border border-gray-200 flex items-center justify-between transition-transform duration-200 cursor-pointer",
+                swipedCardId === card.id ? "-translate-x-20" : "translate-x-0"
+              )}
+              onClick={() => {
+                if (swipedCardId === card.id) {
+                  handleDeleteCard(card.id);
+                }
+              }}
+              onTouchStart={(e) => {
+                const touch = e.touches[0];
+                (e.currentTarget as any).startX = touch.clientX;
+              }}
+              onTouchMove={(e) => {
+                const touch = e.touches[0];
+                const startX = (e.currentTarget as any).startX;
+                const diff = startX - touch.clientX;
+                if (diff > 50) {
+                  setSwipedCardId(card.id);
+                } else if (diff < -30) {
+                  setSwipedCardId(null);
+                }
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className={cn("w-10 h-6 bg-gradient-to-r rounded", getCardBrandColor(card.brand))} />
+                <div>
+                  <p className="font-medium">•••• •••• •••• {card.last4}</p>
+                  <p className="text-xs text-gray-500">{t.expires || 'Expires'} {card.expMonth}/{card.expYear}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {card.isDefault && (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">{t.default || 'Default'}</span>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCard(card.id);
+                  }}
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
 
       <button className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-primary hover:text-primary transition-colors">
         <CreditCard className="w-5 h-5" />
