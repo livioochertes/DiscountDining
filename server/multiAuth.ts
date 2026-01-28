@@ -14,14 +14,56 @@ import ConnectPgSimple from "connect-pg-simple";
 // Maps token -> { user, expiresAt }
 const mobileAuthTokens = new Map<string, { user: any; expiresAt: number }>();
 
+// Temporary token store for 2FA pending verification (5 min expiry)
+// Maps token -> { user, customerId, expiresAt, isMobile }
+const pending2FATokens = new Map<string, { user: any; customerId: number; expiresAt: number; isMobile: boolean }>();
+
+export function generate2FAPendingToken(user: any, customerId: number, isMobile: boolean): string {
+  const token = crypto.randomBytes(32).toString('hex');
+  pending2FATokens.set(token, {
+    user,
+    customerId,
+    expiresAt: Date.now() + 5 * 60 * 1000,
+    isMobile
+  });
+  return token;
+}
+
+export function validate2FAPendingToken(token: string): { user: any; customerId: number; isMobile: boolean } | null {
+  const data = pending2FATokens.get(token);
+  if (!data) return null;
+  if (data.expiresAt < Date.now()) {
+    pending2FATokens.delete(token);
+    return null;
+  }
+  return { user: data.user, customerId: data.customerId, isMobile: data.isMobile };
+}
+
+export function consume2FAPendingToken(token: string): { user: any; customerId: number; isMobile: boolean } | null {
+  const data = pending2FATokens.get(token);
+  if (!data) return null;
+  if (data.expiresAt < Date.now()) {
+    pending2FATokens.delete(token);
+    return null;
+  }
+  pending2FATokens.delete(token);
+  return { user: data.user, customerId: data.customerId, isMobile: data.isMobile };
+}
+
 // Clean expired temporary tokens every 5 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [token, data] of mobileAuthTokens.entries()) {
+  mobileAuthTokens.forEach((data, token) => {
     if (data.expiresAt < now) {
       mobileAuthTokens.delete(token);
     }
-  }
+  });
+  // Clean expired 2FA pending tokens
+  pending2FATokens.forEach((data, token) => {
+    if (data.expiresAt < now) {
+      pending2FATokens.delete(token);
+    }
+  });
   // Also clean expired DB sessions
   pool.query('DELETE FROM mobile_sessions WHERE expires_at < NOW()').catch(err => {
     console.error('[Mobile Sessions] Cleanup error:', err);
@@ -356,7 +398,7 @@ export async function setupMultiAuth(app: Express) {
         return res.redirect("/login?error=no_user");
       }
       
-      req.logIn(user, (err) => {
+      req.logIn(user, async (err) => {
         if (err) {
           console.error('Login error:', err);
           if (isMobileOAuth) {
@@ -371,6 +413,33 @@ export async function setupMultiAuth(app: Express) {
         console.log('Is authenticated:', req.isAuthenticated());
         console.log('Is mobile OAuth:', isMobileOAuth);
         console.log('========================');
+        
+        // Check if user has 2FA enabled
+        try {
+          const customer = await storage.getCustomerByEmail(user.email);
+          if (customer && customer.twoFactorEnabled) {
+            console.log('[Google OAuth] User has 2FA enabled, redirecting to verification');
+            // Generate a pending 2FA token
+            const pending2faToken = generate2FAPendingToken(user, customer.id, isMobileOAuth);
+            
+            if (isMobileOAuth) {
+              const userAgent = req.headers['user-agent'] || '';
+              const isAndroid = /android/i.test(userAgent);
+              const tokenParam = encodeURIComponent(pending2faToken);
+              
+              if (isAndroid) {
+                return res.redirect(`intent://oauth-callback?requires2fa=true&pending2fa=${tokenParam}#Intent;scheme=eatoff;package=com.eatoff.app;end`);
+              } else {
+                return res.redirect(`eatoff://oauth-callback?requires2fa=true&pending2fa=${tokenParam}`);
+              }
+            }
+            
+            // Web flow - redirect to 2FA verification page
+            return res.redirect(`/verify-2fa?pending2fa=${pending2faToken}`);
+          }
+        } catch (e) {
+          console.error('[Google OAuth] Error checking 2FA:', e);
+        }
         
         if (isMobileOAuth) {
           // Mobile OAuth flow - generate a one-time token for the app to exchange
@@ -654,6 +723,33 @@ export async function setupMultiAuth(app: Express) {
           }
           
           console.log('[Apple OAuth] Login successful, user:', user.id);
+          
+          // Check if user has 2FA enabled
+          try {
+            const customer = user.email ? await storage.getCustomerByEmail(user.email) : null;
+            if (customer && customer.twoFactorEnabled) {
+              console.log('[Apple OAuth] User has 2FA enabled, redirecting to verification');
+              // Generate a pending 2FA token
+              const pending2faToken = generate2FAPendingToken(user, customer.id, isMobileOAuth);
+              
+              if (isMobileOAuth) {
+                const userAgent = req.headers['user-agent'] || '';
+                const isAndroid = /android/i.test(userAgent);
+                const tokenParam = encodeURIComponent(pending2faToken);
+                
+                if (isAndroid) {
+                  return res.redirect(`intent://oauth-callback?requires2fa=true&pending2fa=${tokenParam}#Intent;scheme=eatoff;package=com.eatoff.app;end`);
+                } else {
+                  return res.redirect(`eatoff://oauth-callback?requires2fa=true&pending2fa=${tokenParam}`);
+                }
+              }
+              
+              // Web flow - redirect to 2FA verification page
+              return res.redirect(`/verify-2fa?pending2fa=${pending2faToken}`);
+            }
+          } catch (e) {
+            console.error('[Apple OAuth] Error checking 2FA:', e);
+          }
           
           if (isMobileOAuth) {
             const mobileToken = generateMobileAuthToken(user);

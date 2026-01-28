@@ -138,6 +138,15 @@ export default function MobileSignIn() {
         if (url.host === 'oauth-callback' || url.pathname.includes('oauth-callback')) {
           const token = params.get('token');
           const error = params.get('error');
+          const requires2fa = params.get('requires2fa');
+          const pending2fa = params.get('pending2fa');
+          
+          // Handle 2FA required
+          if (requires2fa === 'true' && pending2fa) {
+            console.log('[MobileSignIn] 2FA required, redirecting to verification...');
+            setLocation(`/m/verify-2fa?pending2fa=${encodeURIComponent(pending2fa)}`);
+            return;
+          }
           
           if (token) {
             console.log('[MobileSignIn] Received auth token, exchanging for session...');
