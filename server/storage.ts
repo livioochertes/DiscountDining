@@ -24,6 +24,7 @@ import {
   loyaltyCategories,
   loyalCustomers,
   paymentRequests,
+  walletTransactions,
   type Restaurant, 
   type InsertRestaurant,
   type VoucherPackage,
@@ -2697,8 +2698,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWalletTransactions(customerId: number, limit?: number): Promise<any[]> {
-    // Return empty array for now - would need to implement proper wallet_transactions table
-    return [];
+    const query = db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.customerId, customerId))
+      .orderBy(desc(walletTransactions.createdAt));
+    
+    if (limit) {
+      return await query.limit(limit);
+    }
+    return await query;
   }
 
   async getCustomerGeneralVouchers(customerId: number): Promise<any[]> {

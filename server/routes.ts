@@ -499,19 +499,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mock general vouchers for now
       const generalVouchers: any[] = [];
 
-      // Mock transactions
-      const transactions = [
-        {
-          id: 1,
-          customerId,
-          transactionType: "deposit",
-          amount: "50.00",
-          description: "Wallet top-up",
-          balanceBefore: "0.00",
-          balanceAfter: "50.00",
-          createdAt: new Date().toISOString()
-        }
-      ];
+      // Get real transactions from database
+      const transactions = await storage.getWalletTransactions(customerId, 10);
 
       const totalVoucherValue = activeVouchers.reduce((sum, voucher) => {
         const remainingMeals = voucher.totalMeals - (voucher.usedMeals || 0);
