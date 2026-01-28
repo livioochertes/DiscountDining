@@ -3,7 +3,8 @@ import { useLocation } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   User, ChevronRight, ChevronDown, Settings, Bell, CreditCard, Heart, 
-  HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X, Trash2, Loader2
+  HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X, Trash2, Loader2,
+  Eye, EyeOff
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
@@ -69,6 +70,10 @@ export default function MobileProfile() {
   const [isSettingUp2fa, setIsSettingUp2fa] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [twoFaSecret, setTwoFaSecret] = useState<string | null>(null);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   // Fetch payment methods from Stripe - user.id is the customer's numeric ID
   const { data: paymentMethodsData, isLoading: isLoadingPaymentMethods, refetch: refetchPaymentMethods } = useQuery<{ paymentMethods: PaymentMethod[] }>({
@@ -677,34 +682,61 @@ export default function MobileProfile() {
             {user?.passwordHash && (
               <div>
                 <label className="text-sm text-gray-500 block mb-1">{t.currentPassword || 'Current Password'}</label>
-                <input
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-white"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full p-3 pr-12 border border-gray-200 rounded-xl bg-white"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
             )}
             <div>
               <label className="text-sm text-gray-500 block mb-1">{t.newPassword || 'New Password'}</label>
-              <input
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                className="w-full p-3 border border-gray-200 rounded-xl bg-white"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  className="w-full p-3 pr-12 border border-gray-200 rounded-xl bg-white"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <div>
               <label className="text-sm text-gray-500 block mb-1">{t.confirmPassword || 'Confirm Password'}</label>
-              <input
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                className="w-full p-3 border border-gray-200 rounded-xl bg-white"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="w-full p-3 pr-12 border border-gray-200 rounded-xl bg-white"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <button
               onClick={handleChangePassword}
@@ -752,9 +784,18 @@ export default function MobileProfile() {
               </>
             ) : twoFaSecret ? (
               <>
-                <p className="text-sm text-gray-600">{t.twoFaVerifyInfo || 'Your secret key has been generated. Copy it to your authenticator app, then enter a 6-digit code to verify.'}</p>
+                <p className="text-sm text-gray-600">{t.twoFaVerifyInfo || 'Scan the QR code with Google Authenticator or copy the secret key manually.'}</p>
+                <div className="flex flex-col items-center bg-white p-4 rounded-xl border border-gray-200">
+                  <QRCodeSVG 
+                    value={`otpauth://totp/EatOff:${encodeURIComponent(user?.email || 'user')}?secret=${twoFaSecret}&issuer=EatOff`}
+                    size={180}
+                    level="M"
+                    includeMargin={true}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">{t.scanWithAuthenticator || 'Scan with Google Authenticator'}</p>
+                </div>
                 <div className="bg-gray-100 p-3 rounded-xl">
-                  <p className="text-xs text-gray-500 mb-1">{t.secretKey || 'Secret Key'}</p>
+                  <p className="text-xs text-gray-500 mb-1">{t.orCopySecretKey || 'Or copy secret key manually'}</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-sm font-mono break-all text-gray-800">{twoFaSecret}</code>
                     <button
@@ -819,13 +860,22 @@ export default function MobileProfile() {
             {user?.passwordHash && (
               <div>
                 <label className="text-sm text-gray-500 block mb-1">{t.password || 'Password'}</label>
-                <input
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-white"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showDeletePassword ? "text" : "password"}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full p-3 pr-12 border border-gray-200 rounded-xl bg-white"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDeletePassword(!showDeletePassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showDeletePassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
             )}
             <div>
