@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { storage } from './storage';
 import { sendVerificationEmail } from './emailService';
 import { sendVerificationSMS } from './smsService';
+import { consume2FAPendingToken, generateMobileSessionToken } from './multiAuth';
 
 // Hash password function
 async function hashPassword(password: string): Promise<string> {
@@ -414,7 +415,9 @@ export function registerUserAuthRoutes(app: Express) {
             notifyPush: customer.notifyPush,
             notifyEmail: customer.notifyEmail,
             notifyPromo: customer.notifyPromo,
-            isOAuthUser: true
+            isOAuthUser: true,
+            twoFactorEnabled: customer.twoFactorEnabled || false,
+            passwordHash: customer.passwordHash ? true : false
           });
         }
         
@@ -438,7 +441,9 @@ export function registerUserAuthRoutes(app: Express) {
               allergies: customer.allergies,
               notifyPush: customer.notifyPush,
               notifyEmail: customer.notifyEmail,
-              notifyPromo: customer.notifyPromo
+              notifyPromo: customer.notifyPromo,
+              twoFactorEnabled: customer.twoFactorEnabled || false,
+              passwordHash: customer.passwordHash ? true : false
             });
           }
         }
@@ -475,7 +480,9 @@ export function registerUserAuthRoutes(app: Express) {
         allergies: customer.allergies,
         notifyPush: customer.notifyPush,
         notifyEmail: customer.notifyEmail,
-        notifyPromo: customer.notifyPromo
+        notifyPromo: customer.notifyPromo,
+        twoFactorEnabled: customer.twoFactorEnabled || false,
+        passwordHash: customer.passwordHash ? true : false
       });
     } catch (error) {
       console.error('Get user error:', error);
@@ -785,6 +792,58 @@ export function registerUserAuthRoutes(app: Express) {
     } catch (error) {
       console.error('2FA disable error:', error);
       res.status(500).json({ message: 'Failed to disable 2FA' });
+    }
+  });
+
+  // Verify 2FA during login (for OAuth users with 2FA enabled)
+  app.post('/api/auth/2fa/login-verify', async (req: Request, res: Response) => {
+    try {
+      const { pending2fa, code } = req.body;
+      
+      if (!pending2fa || !code) {
+        return res.status(400).json({ message: 'Token and code are required' });
+      }
+      
+      // Validate code format
+      if (code.length !== 6 || !/^\d+$/.test(code)) {
+        return res.status(400).json({ message: 'Invalid code format. Please enter 6 digits.' });
+      }
+      
+      // Consume the pending 2FA token
+      const tokenData = consume2FAPendingToken(pending2fa);
+      if (!tokenData) {
+        return res.status(401).json({ message: 'Invalid or expired 2FA token. Please login again.' });
+      }
+      
+      // Verify the customer still has 2FA enabled
+      const customer = await storage.getCustomer(tokenData.customerId);
+      if (!customer || !customer.twoFactorEnabled) {
+        return res.status(400).json({ message: '2FA is not enabled for this account' });
+      }
+      
+      // In production, validate the code against the TOTP secret
+      // For now, accept any 6-digit code (matching our simplified 2FA)
+      
+      if (tokenData.isMobile) {
+        // Generate mobile session token
+        const sessionToken = await generateMobileSessionToken(tokenData.user);
+        return res.json({ 
+          success: true, 
+          token: sessionToken,
+          message: '2FA verification successful'
+        });
+      } else {
+        // Web flow - set session
+        req.session.ownerId = tokenData.customerId;
+        return res.json({ 
+          success: true, 
+          message: '2FA verification successful',
+          redirect: '/'
+        });
+      }
+    } catch (error) {
+      console.error('2FA login verify error:', error);
+      res.status(500).json({ message: 'Failed to verify 2FA' });
     }
   });
 

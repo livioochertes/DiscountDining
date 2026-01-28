@@ -58,6 +58,7 @@ import MobileProfile from "@/pages/mobile/MobileProfile";
 import MobileRestaurantDetail from "@/pages/mobile/MobileRestaurantDetail";
 import MobileSignIn from "@/pages/mobile/MobileSignIn";
 import MobileSignUp from "@/pages/mobile/MobileSignUp";
+import MobileVerify2FA from "@/pages/mobile/MobileVerify2FA";
 import { useIsMobileApp } from "@/hooks/useIsMobile";
 import { useLocation } from "wouter";
 import eatOffLogo from "@assets/EatOff_Logo_1750512988041.png";
@@ -247,6 +248,7 @@ function Router() {
       <Route path="/m/profile" component={MobileProfile} />
       <Route path="/m/signin" component={MobileSignIn} />
       <Route path="/m/signup" component={MobileSignUp} />
+      <Route path="/m/verify-2fa" component={MobileVerify2FA} />
       <Route path="/m/restaurant/:id" component={MobileRestaurantDetail} />
       
       {/* User Section */}
