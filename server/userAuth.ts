@@ -690,8 +690,12 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(400).json({ message: '2FA is already enabled' });
       }
 
-      // Generate a simple 6-digit backup code for now (in production, use speakeasy/otplib)
-      const secret = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      // Generate a Base32 secret (A-Z and 2-7 only, as required by Google Authenticator)
+      const base32Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+      let secret = '';
+      for (let i = 0; i < 16; i++) {
+        secret += base32Chars.charAt(Math.floor(Math.random() * base32Chars.length));
+      }
       
       // Store the secret temporarily (not enabled yet)
       await storage.updateCustomer(customerId, { twoFactorSecret: secret });

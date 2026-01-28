@@ -799,9 +799,16 @@ export default function MobileProfile() {
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-sm font-mono break-all text-gray-800">{twoFaSecret}</code>
                     <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(twoFaSecret);
-                        toast({ title: t.copied || 'Copied to clipboard' });
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(twoFaSecret);
+                          toast({ 
+                            title: '✓ ' + (t.copied || 'Copied!'),
+                            description: t.secretKeyCopied || 'Secret key copied to clipboard'
+                          });
+                        } catch (err) {
+                          toast({ title: t.copyFailed || 'Failed to copy', variant: 'destructive' });
+                        }
                       }}
                       className="px-3 py-1 text-xs bg-primary text-white rounded-lg hover:bg-primary/90"
                     >
