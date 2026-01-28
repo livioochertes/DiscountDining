@@ -493,8 +493,8 @@ export function registerUserAuthRoutes(app: Express) {
       if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
         if (mobileUser.id.startsWith('customer_')) {
           customerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
-        } else if (mobileUser.id.startsWith('google_')) {
-          // For OAuth users, find customer by email
+        } else if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
+          // For OAuth users (Google or Apple), find customer by email
           const customer = await storage.getCustomerByEmail(mobileUser.email);
           if (customer) {
             customerId = customer.id;
