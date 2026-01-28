@@ -1282,6 +1282,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get customer's saved payment methods from Stripe
+  app.get("/api/customers/:customerId/payment-methods", async (req, res) => {
+    try {
+      const requestedCustomerId = parseInt(req.params.customerId);
+      
+      // Get authenticated user's customer ID
+      const mobileUser = (req as any).mobileUser || (req as any).user;
+      let authenticatedCustomerId: number | null = null;
+      
+      if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
+        if (mobileUser.id.startsWith('customer_')) {
+          authenticatedCustomerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+        } else if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
+          const customerByEmail = await storage.getCustomerByEmail(mobileUser.email);
+          if (customerByEmail) {
+            authenticatedCustomerId = customerByEmail.id;
+          }
+        }
+      } else if (req.session?.ownerId) {
+        authenticatedCustomerId = req.session.ownerId;
+      }
+      
+      // Verify the authenticated user matches the requested customer
+      if (!authenticatedCustomerId || authenticatedCustomerId !== requestedCustomerId) {
+        return res.status(403).json({ message: "Unauthorized access to payment methods" });
+      }
+      
+      const customer = await storage.getCustomer(requestedCustomerId);
+      
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // If customer doesn't have a Stripe customer ID, return empty array
+      if (!customer.stripeCustomerId || !stripe) {
+        return res.json({ paymentMethods: [] });
+      }
+
+      // Fetch payment methods from Stripe
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: customer.stripeCustomerId,
+        type: 'card',
+      });
+
+      const formattedMethods = paymentMethods.data.map(pm => ({
+        id: pm.id,
+        brand: pm.card?.brand || 'unknown',
+        last4: pm.card?.last4 || '****',
+        expMonth: pm.card?.exp_month,
+        expYear: pm.card?.exp_year,
+        isDefault: false, // Can be enhanced to check default payment method
+      }));
+
+      res.json({ paymentMethods: formattedMethods });
+    } catch (error: any) {
+      console.error("Error fetching payment methods:", error);
+      res.status(500).json({ message: "Error fetching payment methods: " + error.message });
+    }
+  });
+
+  // Delete a payment method from Stripe
+  app.delete("/api/payment-methods/:paymentMethodId", async (req, res) => {
+    try {
+      const { paymentMethodId } = req.params;
+      
+      if (!stripe) {
+        return res.status(400).json({ message: "Stripe not configured" });
+      }
+      
+      // Get authenticated user's customer ID
+      const mobileUser = (req as any).mobileUser || (req as any).user;
+      let authenticatedCustomerId: number | null = null;
+      
+      if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
+        if (mobileUser.id.startsWith('customer_')) {
+          authenticatedCustomerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+        } else if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
+          const customerByEmail = await storage.getCustomerByEmail(mobileUser.email);
+          if (customerByEmail) {
+            authenticatedCustomerId = customerByEmail.id;
+          }
+        }
+      } else if (req.session?.ownerId) {
+        authenticatedCustomerId = req.session.ownerId;
+      }
+      
+      if (!authenticatedCustomerId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Get the customer and their Stripe customer ID
+      const customer = await storage.getCustomer(authenticatedCustomerId);
+      if (!customer || !customer.stripeCustomerId) {
+        return res.status(404).json({ message: "Customer not found or no Stripe account" });
+      }
+      
+      // Verify the payment method belongs to this customer
+      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+      if (paymentMethod.customer !== customer.stripeCustomerId) {
+        return res.status(403).json({ message: "Payment method does not belong to this customer" });
+      }
+
+      // Detach the payment method from the customer
+      await stripe.paymentMethods.detach(paymentMethodId);
+
+      res.json({ success: true, message: "Payment method deleted" });
+    } catch (error: any) {
+      console.error("Error deleting payment method:", error);
+      res.status(500).json({ message: "Error deleting payment method: " + error.message });
+    }
+  });
+
   // Complete menu order
   app.post("/api/complete-menu-order", async (req, res) => {
     try {
