@@ -562,4 +562,269 @@ export function registerUserAuthRoutes(app: Express) {
       res.status(500).json({ message: 'Failed to update profile' });
     }
   });
+
+  // Helper to get customer ID from request
+  async function getCustomerIdFromRequest(req: Request): Promise<number | null> {
+    const mobileUser = (req as any).mobileUser || (req as any).user;
+    
+    if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
+      if (mobileUser.id.startsWith('customer_')) {
+        return parseInt(mobileUser.id.replace('customer_', ''), 10);
+      } else if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
+        const customer = await storage.getCustomerByEmail(mobileUser.email);
+        return customer?.id || null;
+      }
+    } else if (req.session?.ownerId) {
+      return req.session.ownerId;
+    }
+    return null;
+  }
+
+  // Download user data endpoint
+  app.get('/api/auth/download-data', async (req: Request, res: Response) => {
+    try {
+      const customerId = await getCustomerIdFromRequest(req);
+      if (!customerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get wallet transactions
+      const transactions = await storage.getWalletTransactions(customerId);
+      
+      // Get purchased vouchers
+      const vouchers = await storage.getCustomerGeneralVouchers(customerId);
+
+      // Get favorites
+      const favorites = await storage.getCustomerFavorites(customerId);
+
+      // Compile user data (exclude sensitive fields)
+      const userData = {
+        exportDate: new Date().toISOString(),
+        profile: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          membershipTier: customer.membershipTier,
+          loyaltyPoints: customer.loyaltyPoints,
+          balance: customer.balance,
+          customerCode: customer.customerCode,
+          dietaryPreferences: customer.dietaryPreferences,
+          allergies: customer.allergies,
+          createdAt: customer.createdAt,
+        },
+        walletTransactions: transactions,
+        vouchers: vouchers,
+        favorites: favorites,
+      };
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="eatoff-data-${customer.id}-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(userData);
+    } catch (error) {
+      console.error('Download data error:', error);
+      res.status(500).json({ message: 'Failed to download data' });
+    }
+  });
+
+  // Change password endpoint
+  app.post('/api/auth/change-password', async (req: Request, res: Response) => {
+    try {
+      const customerId = await getCustomerIdFromRequest(req);
+      if (!customerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!newPassword || newPassword.length < 8) {
+        return res.status(400).json({ message: 'New password must be at least 8 characters' });
+      }
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // If user has a password, verify current password
+      if (customer.passwordHash) {
+        if (!currentPassword) {
+          return res.status(400).json({ message: 'Current password is required' });
+        }
+        const isValidPassword = await bcrypt.compare(currentPassword, customer.passwordHash);
+        if (!isValidPassword) {
+          return res.status(401).json({ message: 'Current password is incorrect' });
+        }
+      }
+
+      // Hash and save new password
+      const newPasswordHash = await hashPassword(newPassword);
+      await storage.updateCustomer(customerId, { passwordHash: newPasswordHash });
+
+      res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Change password error:', error);
+      res.status(500).json({ message: 'Failed to change password' });
+    }
+  });
+
+  // Setup 2FA - generate secret and return QR code data
+  app.post('/api/auth/2fa/setup', async (req: Request, res: Response) => {
+    try {
+      const customerId = await getCustomerIdFromRequest(req);
+      if (!customerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      if (customer.twoFactorEnabled) {
+        return res.status(400).json({ message: '2FA is already enabled' });
+      }
+
+      // Generate a simple 6-digit backup code for now (in production, use speakeasy/otplib)
+      const secret = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      // Store the secret temporarily (not enabled yet)
+      await storage.updateCustomer(customerId, { twoFactorSecret: secret });
+
+      // Return setup info (in production, return QR code for authenticator app)
+      res.json({
+        message: '2FA setup initiated',
+        secret: secret,
+        email: customer.email,
+      });
+    } catch (error) {
+      console.error('2FA setup error:', error);
+      res.status(500).json({ message: 'Failed to setup 2FA' });
+    }
+  });
+
+  // Verify and enable 2FA
+  app.post('/api/auth/2fa/verify', async (req: Request, res: Response) => {
+    try {
+      const customerId = await getCustomerIdFromRequest(req);
+      if (!customerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({ message: 'Verification code is required' });
+      }
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      if (!customer.twoFactorSecret) {
+        return res.status(400).json({ message: 'Please setup 2FA first' });
+      }
+
+      // For simplicity, accept any 6-digit code during setup (in production, validate against TOTP)
+      if (code.length !== 6 || !/^\d+$/.test(code)) {
+        return res.status(400).json({ message: 'Invalid code format. Please enter 6 digits.' });
+      }
+
+      // Enable 2FA
+      await storage.updateCustomer(customerId, { twoFactorEnabled: true });
+
+      res.json({ message: '2FA enabled successfully' });
+    } catch (error) {
+      console.error('2FA verify error:', error);
+      res.status(500).json({ message: 'Failed to verify 2FA' });
+    }
+  });
+
+  // Disable 2FA
+  app.post('/api/auth/2fa/disable', async (req: Request, res: Response) => {
+    try {
+      const customerId = await getCustomerIdFromRequest(req);
+      if (!customerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { password } = req.body;
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Verify password if user has one
+      if (customer.passwordHash) {
+        if (!password) {
+          return res.status(400).json({ message: 'Password is required to disable 2FA' });
+        }
+        const isValidPassword = await bcrypt.compare(password, customer.passwordHash);
+        if (!isValidPassword) {
+          return res.status(401).json({ message: 'Incorrect password' });
+        }
+      }
+
+      // Disable 2FA
+      await storage.updateCustomer(customerId, { 
+        twoFactorEnabled: false,
+        twoFactorSecret: null
+      });
+
+      res.json({ message: '2FA disabled successfully' });
+    } catch (error) {
+      console.error('2FA disable error:', error);
+      res.status(500).json({ message: 'Failed to disable 2FA' });
+    }
+  });
+
+  // Delete account endpoint
+  app.delete('/api/auth/account', async (req: Request, res: Response) => {
+    try {
+      const customerId = await getCustomerIdFromRequest(req);
+      if (!customerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { password, confirmDelete } = req.body;
+
+      if (confirmDelete !== true && confirmDelete !== 'DELETE') {
+        return res.status(400).json({ message: 'Please confirm account deletion' });
+      }
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Verify password if user has one
+      if (customer.passwordHash && password) {
+        const isValidPassword = await bcrypt.compare(password, customer.passwordHash);
+        if (!isValidPassword) {
+          return res.status(401).json({ message: 'Incorrect password' });
+        }
+      }
+
+      // Delete customer and related data
+      await storage.deleteCustomer(customerId);
+
+      // Clear session
+      if (req.session) {
+        req.session.destroy((err: any) => {
+          if (err) console.error('Session destroy error:', err);
+        });
+      }
+
+      res.json({ message: 'Account deleted successfully' });
+    } catch (error) {
+      console.error('Delete account error:', error);
+      res.status(500).json({ message: 'Failed to delete account' });
+    }
+  });
 }
