@@ -58,6 +58,17 @@ export default function MobileProfile() {
   const [swipedCardId, setSwipedCardId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Privacy & Security states
+  const [privacyView, setPrivacyView] = useState<'main' | 'changePassword' | 'setup2fa' | 'deleteAccount'>('main');
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isSettingUp2fa, setIsSettingUp2fa] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [twoFaSecret, setTwoFaSecret] = useState<string | null>(null);
 
   // Fetch payment methods from Stripe - user.id is the customer's numeric ID
   const { data: paymentMethodsData, isLoading: isLoadingPaymentMethods, refetch: refetchPaymentMethods } = useQuery<{ paymentMethods: PaymentMethod[] }>({
@@ -170,6 +181,129 @@ export default function MobileProfile() {
       toast({ title: t.errorSaving || 'Error saving', variant: 'destructive' });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDownloadData = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await fetch('/api/auth/download-data', {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('mobileSessionToken') || ''}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to download');
+      const data = await response.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eatoff-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: t.dataDownloaded || 'Data downloaded successfully' });
+    } catch (error) {
+      toast({ title: t.errorDownloading || 'Error downloading data', variant: 'destructive' });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({ title: t.passwordMismatch || 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      toast({ title: t.passwordTooShort || 'Password must be at least 8 characters', variant: 'destructive' });
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await apiRequest('POST', '/api/auth/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      toast({ title: t.passwordChanged || 'Password changed successfully' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPrivacyView('main');
+    } catch (error: any) {
+      toast({ title: error.message || t.errorChangingPassword || 'Error changing password', variant: 'destructive' });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleSetup2fa = async () => {
+    setIsSettingUp2fa(true);
+    try {
+      const response = await apiRequest('POST', '/api/auth/2fa/setup');
+      const data = await response.json();
+      setTwoFaSecret(data.secret);
+      toast({ title: t.twoFaSetupStarted || '2FA setup started. Enter a 6-digit code to verify.' });
+    } catch (error: any) {
+      toast({ title: error.message || t.errorSettingUp2fa || 'Error setting up 2FA', variant: 'destructive' });
+    } finally {
+      setIsSettingUp2fa(false);
+    }
+  };
+
+  const handleVerify2fa = async () => {
+    if (twoFaCode.length !== 6) {
+      toast({ title: t.enterValidCode || 'Please enter a 6-digit code', variant: 'destructive' });
+      return;
+    }
+    setIsSettingUp2fa(true);
+    try {
+      await apiRequest('POST', '/api/auth/2fa/verify', { code: twoFaCode });
+      toast({ title: t.twoFaEnabled || '2FA enabled successfully' });
+      setTwoFaCode('');
+      setTwoFaSecret(null);
+      setPrivacyView('main');
+      refetch();
+    } catch (error: any) {
+      toast({ title: error.message || t.errorVerifying2fa || 'Error verifying 2FA', variant: 'destructive' });
+    } finally {
+      setIsSettingUp2fa(false);
+    }
+  };
+
+  const handleDisable2fa = async () => {
+    setIsSettingUp2fa(true);
+    try {
+      await apiRequest('POST', '/api/auth/2fa/disable', { password: passwordForm.currentPassword });
+      toast({ title: t.twoFaDisabled || '2FA disabled successfully' });
+      setPrivacyView('main');
+      refetch();
+    } catch (error: any) {
+      toast({ title: error.message || t.errorDisabling2fa || 'Error disabling 2FA', variant: 'destructive' });
+    } finally {
+      setIsSettingUp2fa(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      toast({ title: t.typeDeleteToConfirm || 'Type DELETE to confirm', variant: 'destructive' });
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      await apiRequest('DELETE', '/api/auth/account', {
+        password: passwordForm.currentPassword,
+        confirmDelete: 'DELETE',
+      });
+      toast({ title: t.accountDeleted || 'Account deleted successfully' });
+      clearMobileSessionToken();
+      queryClient.clear();
+      setLocation('/m/signin');
+    } catch (error: any) {
+      toast({ title: error.message || t.errorDeletingAccount || 'Error deleting account', variant: 'destructive' });
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -530,29 +664,233 @@ export default function MobileProfile() {
     </div>
   );
 
-  const renderPrivacyContent = () => (
-    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
-      <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-3">
-        <h4 className="font-medium text-gray-900">{t.dataPrivacy || 'Data & Privacy'}</h4>
-        <button className="w-full text-left text-sm text-primary hover:underline">
-          {t.downloadData || 'Download my data'}
-        </button>
-        <button className="w-full text-left text-sm text-red-500 hover:underline">
-          {t.deleteAccount || 'Delete my account'}
-        </button>
-      </div>
+  const renderPrivacyContent = () => {
+    if (privacyView === 'changePassword') {
+      return (
+        <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+          <button onClick={() => setPrivacyView('main')} className="flex items-center gap-2 text-primary text-sm mb-2">
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            {t.back || 'Back'}
+          </button>
+          <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-4">
+            <h4 className="font-medium text-gray-900">{t.changePassword || 'Change Password'}</h4>
+            {user?.passwordHash && (
+              <div>
+                <label className="text-sm text-gray-500 block mb-1">{t.currentPassword || 'Current Password'}</label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
+            <div>
+              <label className="text-sm text-gray-500 block mb-1">{t.newPassword || 'New Password'}</label>
+              <input
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                className="w-full p-3 border border-gray-200 rounded-xl bg-white"
+                placeholder="••••••••"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-500 block mb-1">{t.confirmPassword || 'Confirm Password'}</label>
+              <input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                className="w-full p-3 border border-gray-200 rounded-xl bg-white"
+                placeholder="••••••••"
+              />
+            </div>
+            <button
+              onClick={handleChangePassword}
+              disabled={isChangingPassword}
+              className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {isChangingPassword ? (t.saving || 'Saving...') : (t.changePassword || 'Change Password')}
+            </button>
+          </div>
+        </div>
+      );
+    }
 
-      <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-3">
-        <h4 className="font-medium text-gray-900">{t.security || 'Security'}</h4>
-        <button className="w-full text-left text-sm text-primary hover:underline">
-          {t.changePassword || 'Change password'}
-        </button>
-        <button className="w-full text-left text-sm text-primary hover:underline">
-          {t.twoFactorAuth || 'Enable two-factor authentication'}
-        </button>
+    if (privacyView === 'setup2fa') {
+      return (
+        <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+          <button onClick={() => { setPrivacyView('main'); setTwoFaSecret(null); setTwoFaCode(''); }} className="flex items-center gap-2 text-primary text-sm mb-2">
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            {t.back || 'Back'}
+          </button>
+          <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-4">
+            <h4 className="font-medium text-gray-900">{t.twoFactorAuth || 'Two-Factor Authentication'}</h4>
+            
+            {user?.twoFactorEnabled ? (
+              <>
+                <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-xl">
+                  <Check className="w-5 h-5" />
+                  <span className="font-medium">{t.twoFaEnabled || '2FA is enabled'}</span>
+                </div>
+                <p className="text-sm text-gray-500">{t.twoFaDisableInfo || 'Enter your password to disable 2FA.'}</p>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white"
+                  placeholder={t.password || 'Password'}
+                />
+                <button
+                  onClick={handleDisable2fa}
+                  disabled={isSettingUp2fa}
+                  className="w-full bg-red-500 text-white font-medium py-3 rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors"
+                >
+                  {isSettingUp2fa ? (t.saving || 'Saving...') : (t.disable2fa || 'Disable 2FA')}
+                </button>
+              </>
+            ) : twoFaSecret ? (
+              <>
+                <p className="text-sm text-gray-600">{t.twoFaVerifyInfo || 'Your secret key has been generated. Copy it to your authenticator app, then enter a 6-digit code to verify.'}</p>
+                <div className="bg-gray-100 p-3 rounded-xl">
+                  <p className="text-xs text-gray-500 mb-1">{t.secretKey || 'Secret Key'}</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm font-mono break-all text-gray-800">{twoFaSecret}</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(twoFaSecret);
+                        toast({ title: t.copied || 'Copied to clipboard' });
+                      }}
+                      className="px-3 py-1 text-xs bg-primary text-white rounded-lg hover:bg-primary/90"
+                    >
+                      {t.copy || 'Copy'}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.verificationCode || 'Verification Code'}</label>
+                  <input
+                    type="text"
+                    value={twoFaCode}
+                    onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-center text-2xl tracking-widest"
+                    placeholder="000000"
+                    maxLength={6}
+                  />
+                </div>
+                <button
+                  onClick={handleVerify2fa}
+                  disabled={isSettingUp2fa || twoFaCode.length !== 6}
+                  className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {isSettingUp2fa ? (t.verifying || 'Verifying...') : (t.verify || 'Verify & Enable')}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600">{t.twoFaInfo || 'Add an extra layer of security to your account.'}</p>
+                <button
+                  onClick={handleSetup2fa}
+                  disabled={isSettingUp2fa}
+                  className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {isSettingUp2fa ? (t.settingUp || 'Setting up...') : (t.setup2fa || 'Setup 2FA')}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (privacyView === 'deleteAccount') {
+      return (
+        <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+          <button onClick={() => setPrivacyView('main')} className="flex items-center gap-2 text-primary text-sm mb-2">
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            {t.back || 'Back'}
+          </button>
+          <div className="bg-white rounded-xl p-4 border border-red-200 space-y-4">
+            <h4 className="font-medium text-red-600">{t.deleteAccount || 'Delete Account'}</h4>
+            <div className="bg-red-50 p-3 rounded-xl">
+              <p className="text-sm text-red-700">{t.deleteAccountWarning || 'This action is permanent and cannot be undone. All your data will be deleted.'}</p>
+            </div>
+            {user?.passwordHash && (
+              <div>
+                <label className="text-sm text-gray-500 block mb-1">{t.password || 'Password'}</label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
+            <div>
+              <label className="text-sm text-gray-500 block mb-1">{t.typeDeleteToConfirm || 'Type DELETE to confirm'}</label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                className="w-full p-3 border border-gray-200 rounded-xl bg-white"
+                placeholder="DELETE"
+              />
+            </div>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={isDeletingAccount || deleteConfirmText !== 'DELETE'}
+              className="w-full bg-red-600 text-white font-medium py-3 rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              {isDeletingAccount ? (t.deleting || 'Deleting...') : (t.permanentlyDelete || 'Permanently Delete Account')}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
+        <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-3">
+          <h4 className="font-medium text-gray-900">{t.dataPrivacy || 'Data & Privacy'}</h4>
+          <button 
+            onClick={handleDownloadData}
+            disabled={isDownloading}
+            className="w-full text-left text-sm text-primary hover:underline flex items-center gap-2"
+          >
+            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {isDownloading ? (t.downloading || 'Downloading...') : (t.downloadData || 'Download my data')}
+          </button>
+          <button 
+            onClick={() => setPrivacyView('deleteAccount')}
+            className="w-full text-left text-sm text-red-500 hover:underline"
+          >
+            {t.deleteAccount || 'Delete my account'}
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-3">
+          <h4 className="font-medium text-gray-900">{t.security || 'Security'}</h4>
+          <button 
+            onClick={() => setPrivacyView('changePassword')}
+            className="w-full text-left text-sm text-primary hover:underline"
+          >
+            {t.changePassword || 'Change password'}
+          </button>
+          <button 
+            onClick={() => setPrivacyView('setup2fa')}
+            className="w-full text-left text-sm text-primary hover:underline flex items-center gap-2"
+          >
+            {t.twoFactorAuth || 'Two-factor authentication'}
+            {user?.twoFactorEnabled && (
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{t.enabled || 'Enabled'}</span>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderHelpContent = () => (
     <div className="p-4 space-y-3 bg-gray-50 border-t border-gray-100">

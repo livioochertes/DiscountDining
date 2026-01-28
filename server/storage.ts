@@ -144,6 +144,7 @@ export interface IStorage {
   getCustomerByEmail(email: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  deleteCustomer(id: number): Promise<boolean>;
 
   // Voucher operations
   getPurchasedVouchersByCustomer(customerId: number): Promise<PurchasedVoucher[]>;
@@ -1723,6 +1724,10 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
+  async deleteCustomer(id: number): Promise<boolean> {
+    return this.customers.delete(id);
+  }
+
   async getPurchasedVouchersByCustomer(customerId: number): Promise<PurchasedVoucher[]> {
     return Array.from(this.purchasedVouchers.values())
       .filter(v => v.customerId === customerId);
@@ -2370,6 +2375,11 @@ export class DatabaseStorage implements IStorage {
   async updateCustomer(id: number, updates: Partial<InsertCustomer>): Promise<Customer | undefined> {
     const [updated] = await db.update(customers).set(updates).where(eq(customers.id, id)).returning();
     return updated || undefined;
+  }
+
+  async deleteCustomer(id: number): Promise<boolean> {
+    const result = await db.delete(customers).where(eq(customers.id, id)).returning();
+    return result.length > 0;
   }
 
   async getPurchasedVouchersByCustomer(customerId: number): Promise<PurchasedVoucher[]> {

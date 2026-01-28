@@ -212,6 +212,10 @@ export const customers = pgTable("customers", {
   notifyEmail: boolean("notify_email").default(true),
   notifyPromo: boolean("notify_promo").default(true),
   
+  // Two-factor authentication
+  twoFactorSecret: text("two_factor_secret"),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
