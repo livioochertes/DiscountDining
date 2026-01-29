@@ -12,10 +12,11 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { 
   DollarSign, TrendingUp, Building2, Users, CreditCard, BarChart3, 
   Search, Filter, Mail, MessageCircle, Star, MapPin, Clock,
-  CheckCircle, XCircle, AlertTriangle, Download, Plus, Edit, Ban
+  CheckCircle, XCircle, AlertTriangle, Download, Plus, Edit, Ban, Loader2
 } from "lucide-react";
 import eatOffLogo from "@assets/EatOff_Logo_1750512988041.png";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 
 interface RestaurantData {
   id: number;
@@ -214,6 +215,61 @@ export default function EatOffAdminDashboard() {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const [ticketStatusFilter, setTicketStatusFilter] = useState('all');
+  const [ticketPriorityFilter, setTicketPriorityFilter] = useState('all');
+
+  const adminToken = typeof window !== 'undefined' ? localStorage.getItem('eatoff_admin_token') : null;
+
+  const { data: supportStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['admin-support-stats'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/support/stats', {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch stats');
+      return response.json();
+    },
+    enabled: activeTab === 'helpdesk' && !!adminToken
+  });
+
+  const { data: supportTickets = [], isLoading: ticketsLoading } = useQuery({
+    queryKey: ['admin-support-tickets', ticketStatusFilter, ticketPriorityFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (ticketStatusFilter !== 'all') params.append('status', ticketStatusFilter);
+      if (ticketPriorityFilter !== 'all') params.append('priority', ticketPriorityFilter);
+      const response = await fetch(`/api/admin/support/tickets?${params}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch tickets');
+      return response.json();
+    },
+    enabled: activeTab === 'helpdesk' && !!adminToken
+  });
+
+  const { data: knowledgeArticles = [], isLoading: articlesLoading } = useQuery({
+    queryKey: ['admin-knowledge-base'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/knowledge-base', {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch articles');
+      return response.json();
+    },
+    enabled: activeTab === 'helpdesk' && !!adminToken
+  });
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -245,12 +301,13 @@ export default function EatOffAdminDashboard() {
       {/* Main Content */}
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="commissions">Commissions</TabsTrigger>
             <TabsTrigger value="restaurants">Restaurants</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="marketing">Marketing</TabsTrigger>
+            <TabsTrigger value="helpdesk">Helpdesk</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -833,6 +890,229 @@ export default function EatOffAdminDashboard() {
                     <Button size="sm" className="w-full">Launch Campaign</Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Helpdesk Tab */}
+          <TabsContent value="helpdesk" className="space-y-6">
+            {/* Support Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                </CardHeader>
+                <CardContent>
+                  {statsLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{supportStats?.openTickets || 0}</div>
+                      <p className="text-xs text-muted-foreground">Awaiting response</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+                  <Clock className="h-4 w-4 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  {statsLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{supportStats?.inProgressTickets || 0}</div>
+                      <p className="text-xs text-muted-foreground">Being handled</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Resolved Today</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  {statsLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{supportStats?.resolvedToday || 0}</div>
+                      <p className="text-xs text-muted-foreground">Completed issues</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">AI Deflection Rate</CardTitle>
+                  <MessageCircle className="h-4 w-4 text-purple-500" />
+                </CardHeader>
+                <CardContent>
+                  {statsLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{supportStats?.deflectionRate || 0}%</div>
+                      <p className="text-xs text-muted-foreground">Resolved by AI assistant</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tickets Table */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Support Tickets</CardTitle>
+                  <div className="flex gap-2">
+                    <Select value={ticketStatusFilter} onValueChange={setTicketStatusFilter}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={ticketPriorityFilter} onValueChange={setTicketPriorityFilter}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priority</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {ticketsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  </div>
+                ) : supportTickets.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>No tickets found</p>
+                    <p className="text-sm">Customer tickets will appear here when created</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Ticket #</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {supportTickets.map((ticket: any) => (
+                        <TableRow key={ticket.id}>
+                          <TableCell className="font-mono text-sm">TKT-{ticket.id.toString().padStart(4, '0')}</TableCell>
+                          <TableCell className="max-w-xs truncate">{ticket.subject}</TableCell>
+                          <TableCell>{ticket.customer?.name || 'Unknown'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">{ticket.category || 'general'}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={ticket.priority === 'urgent' ? 'destructive' : ticket.priority === 'high' ? 'default' : 'secondary'}
+                              className="capitalize"
+                            >
+                              {ticket.priority || 'medium'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={ticket.status === 'resolved' ? 'default' : 'outline'}
+                              className={
+                                ticket.status === 'open' ? 'border-orange-500 text-orange-500' :
+                                ticket.status === 'in_progress' ? 'border-blue-500 text-blue-500' :
+                                'bg-green-100 text-green-700'
+                              }
+                            >
+                              {(ticket.status || 'open').replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-gray-500">{formatTimeAgo(ticket.createdAt)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm">
+                                <MessageCircle className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Knowledge Base Management */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Knowledge Base</CardTitle>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Article
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {articlesLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  </div>
+                ) : knowledgeArticles.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No articles in knowledge base</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {knowledgeArticles.map((article: any) => {
+                      const helpfulRate = article.viewCount > 0 
+                        ? Math.round((article.helpfulCount || 0) / article.viewCount * 100) 
+                        : 0;
+                      return (
+                        <div key={article.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                          <div>
+                            <h4 className="font-medium">{article.title}</h4>
+                            <p className="text-sm text-gray-500">
+                              {article.category} • {article.viewCount || 0} views • {helpfulRate}% helpful
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
