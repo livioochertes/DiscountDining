@@ -90,13 +90,6 @@ export default function MobileWallet() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Debug: Log wallet overview data when it changes
-  useEffect(() => {
-    console.log('[MobileWallet] walletOverview:', walletOverview);
-    console.log('[MobileWallet] credit status:', walletOverview?.credit?.status);
-    console.log('[MobileWallet] credit data:', walletOverview?.credit);
-  }, [walletOverview]);
-
   const { data: userStats } = useQuery<any>({
     queryKey: ['/api/users/stats'],
     enabled: !!user,
@@ -129,6 +122,13 @@ export default function MobileWallet() {
     },
     enabled: !!user,
   });
+
+  // Debug: Log wallet overview data when it changes
+  useEffect(() => {
+    console.log('[MobileWallet] walletOverview:', walletOverview);
+    console.log('[MobileWallet] credit status:', walletOverview?.credit?.status);
+    console.log('[MobileWallet] credit data:', walletOverview?.credit);
+  }, [walletOverview]);
 
   // Fetch credit types for the request form
   const { data: creditTypes = [] } = useQuery<CreditType[]>({
