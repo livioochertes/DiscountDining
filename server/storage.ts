@@ -25,6 +25,7 @@ import {
   loyalCustomers,
   paymentRequests,
   walletTransactions,
+  eatoffAdmins,
   type Restaurant, 
   type InsertRestaurant,
   type VoucherPackage,
@@ -3312,6 +3313,12 @@ export class DatabaseStorage implements IStorage {
     
     const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
     return { avgRating: sum / reviews.length, count: reviews.length };
+  }
+
+  // Admin user operations
+  async getAdminUserByEmail(email: string): Promise<any> {
+    const [admin] = await db.select().from(eatoffAdmins).where(eq(eatoffAdmins.email, email));
+    return admin;
   }
 
 }
