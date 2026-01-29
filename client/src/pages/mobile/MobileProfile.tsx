@@ -10,7 +10,7 @@ import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useAuth } from '@/hooks/useAuth';
-import { apiRequest, queryClient, clearMobileSessionToken } from '@/lib/queryClient';
+import { apiRequest, queryClient, clearMobileSessionToken, getMobileSessionToken } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
@@ -200,7 +200,15 @@ export default function MobileProfile() {
   const loadDietaryProfile = async () => {
     setIsLoadingDietaryProfile(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/dietary/profile`, { credentials: 'include' });
+      const token = getMobileSessionToken();
+      const headers: Record<string, string> = {};
+      if (token && isNativePlatform) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/api/dietary/profile`, { 
+        credentials: 'include',
+        headers 
+      });
       if (response.ok) {
         const profile = await response.json();
         if (profile) {
@@ -237,9 +245,14 @@ export default function MobileProfile() {
     setIsSavingDietary(true);
     setDietarySaveSuccess(false);
     try {
+      const token = getMobileSessionToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token && isNativePlatform) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`${API_BASE_URL}/api/dietary/profile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           age: dietaryProfile.age ? parseInt(dietaryProfile.age) : undefined,
