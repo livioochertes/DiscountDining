@@ -1292,6 +1292,368 @@ function WalletCreditTab() {
   );
 }
 
+// Commissions Tab
+function CommissionsTab() {
+  const { data: restaurants = [] } = useQuery<any[]>({
+    queryKey: ['/api/restaurants'],
+  });
+
+  const commissionMetrics = {
+    totalEarnings: restaurants.reduce((sum: number, r: any) => sum + (Number(r.totalEarnings) || 0), 0),
+    monthlyEarnings: restaurants.reduce((sum: number, r: any) => sum + (Number(r.monthlyEarnings) || 0), 0),
+    totalTransactions: restaurants.reduce((sum: number, r: any) => sum + (r.totalTransactions || 0), 0),
+    activeRestaurants: restaurants.filter((r: any) => r.isActive).length,
+    averageCommissionRate: 5,
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Commission Earned</CardTitle>
+            <CreditCard className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">€{commissionMetrics.totalEarnings.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">All-time platform earnings</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Monthly Earnings</CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">€{commissionMetrics.monthlyEarnings.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">This month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <BarChart3 className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{commissionMetrics.totalTransactions.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Processed orders</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Commission Rate</CardTitle>
+            <DollarSign className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{commissionMetrics.averageCommissionRate}%</div>
+            <p className="text-xs text-muted-foreground">Platform commission</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Commission by Restaurant</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {restaurants.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No restaurants yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {restaurants.slice(0, 10).map((restaurant: any) => (
+                <div key={restaurant.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <div className="font-medium">{restaurant.name}</div>
+                    <div className="text-sm text-gray-500">{restaurant.cuisine}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">€{(Number(restaurant.totalEarnings) * 0.05 || 0).toFixed(2)}</div>
+                    <div className="text-xs text-gray-500">Commission (5%)</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Marketing Tab
+function MarketingTab() {
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const { toast } = useToast();
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Push Notifications</CardTitle>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              New Campaign
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">
+            <p>No active campaigns</p>
+            <p className="text-sm">Create a push notification campaign to reach your users</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Email Campaigns</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium">Welcome Email</h4>
+              <p className="text-sm text-gray-500">Sent to new users</p>
+              <Badge className="mt-2">Active</Badge>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium">Voucher Reminder</h4>
+              <p className="text-sm text-gray-500">7 days before expiry</p>
+              <Badge className="mt-2">Active</Badge>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium">Weekly Deals</h4>
+              <p className="text-sm text-gray-500">Every Sunday</p>
+              <Badge variant="secondary" className="mt-2">Paused</Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Promotional Banners</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-500 text-center py-4">Configure home page promotional banners here</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Helpdesk Tab
+function HelpdeskTab() {
+  const [ticketStatusFilter, setTicketStatusFilter] = useState('all');
+  const [ticketPriorityFilter, setTicketPriorityFilter] = useState('all');
+
+  const { data: supportStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['admin-support-stats'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/support/stats', {
+        credentials: 'include'
+      });
+      if (!response.ok) return { openTickets: 0, inProgressTickets: 0, resolvedToday: 0, deflectionRate: 0 };
+      return response.json();
+    },
+  });
+
+  const { data: supportTickets = [], isLoading: ticketsLoading } = useQuery({
+    queryKey: ['admin-support-tickets', ticketStatusFilter, ticketPriorityFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (ticketStatusFilter !== 'all') params.append('status', ticketStatusFilter);
+      if (ticketPriorityFilter !== 'all') params.append('priority', ticketPriorityFilter);
+      const response = await fetch(`/api/admin/support/tickets?${params}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  const { data: knowledgeArticles = [], isLoading: articlesLoading } = useQuery({
+    queryKey: ['admin-knowledge-base'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/knowledge-base', {
+        credentials: 'include'
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{supportStats?.openTickets || 0}</div>
+            <p className="text-xs text-muted-foreground">Awaiting response</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <Shield className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{supportStats?.inProgressTickets || 0}</div>
+            <p className="text-xs text-muted-foreground">Being handled</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Resolved Today</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{supportStats?.resolvedToday || 0}</div>
+            <p className="text-xs text-muted-foreground">Completed issues</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">AI Deflection Rate</CardTitle>
+            <Lock className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{supportStats?.deflectionRate || 0}%</div>
+            <p className="text-xs text-muted-foreground">Resolved by AI assistant</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Support Tickets</CardTitle>
+            <div className="flex gap-2">
+              <select
+                value={ticketStatusFilter}
+                onChange={(e) => setTicketStatusFilter(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <select
+                value={ticketPriorityFilter}
+                onChange={(e) => setTicketPriorityFilter(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm"
+              >
+                <option value="all">All Priority</option>
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {ticketsLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : supportTickets.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No tickets found</p>
+              <p className="text-sm">Customer tickets will appear here when created</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {supportTickets.map((ticket: any) => (
+                <div key={ticket.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <span className="font-mono text-sm">TKT-{ticket.id.toString().padStart(4, '0')}</span>
+                    <span className="ml-2 font-medium">{ticket.subject}</span>
+                    <div className="text-sm text-gray-500">{ticket.customer?.name || 'Unknown'}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={ticket.priority === 'urgent' ? 'destructive' : ticket.priority === 'high' ? 'default' : 'secondary'}>
+                      {ticket.priority || 'medium'}
+                    </Badge>
+                    <Badge variant="outline" className={
+                      ticket.status === 'open' ? 'border-orange-500 text-orange-500' :
+                      ticket.status === 'in_progress' ? 'border-blue-500 text-blue-500' :
+                      'bg-green-100 text-green-700'
+                    }>
+                      {(ticket.status || 'open').replace('_', ' ')}
+                    </Badge>
+                    <span className="text-xs text-gray-400">{formatTimeAgo(ticket.createdAt)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Knowledge Base</CardTitle>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Article
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {articlesLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : knowledgeArticles.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No articles in knowledge base</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {knowledgeArticles.map((article: any) => {
+                const helpfulRate = article.viewCount > 0 
+                  ? Math.round((article.helpfulCount || 0) / article.viewCount * 100) 
+                  : 0;
+                return (
+                  <div key={article.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                    <div>
+                      <h4 className="font-medium">{article.title}</h4>
+                      <p className="text-sm text-gray-500">
+                        {article.category} • {article.viewCount || 0} views • {helpfulRate}% helpful
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [selectedTab, setSelectedTab] = useState("overview");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -2723,6 +3085,18 @@ export default function AdminDashboard() {
 
           {selectedTab === "wallet" && (
             <WalletCreditTab />
+          )}
+
+          {selectedTab === "commissions" && (
+            <CommissionsTab />
+          )}
+
+          {selectedTab === "marketing" && (
+            <MarketingTab />
+          )}
+
+          {selectedTab === "helpdesk" && (
+            <HelpdeskTab />
           )}
 
           {selectedTab === "finances" && (

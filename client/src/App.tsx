@@ -34,8 +34,6 @@ import DietaryRecommendationsPage from "@/pages/dietary-recommendations";
 import WalletPage from "@/pages/wallet";
 import RestaurantScanner from "@/pages/restaurant-scanner";
 import CommissionDashboard from "@/pages/commission-dashboard";
-import EatOffAdminLogin from "@/pages/eatoff-admin-login";
-import EatOffAdminDashboard from "@/pages/eatoff-admin-dashboard";
 import HowItWorks from "@/pages/how-it-works";
 import Support from "@/pages/support";
 import RestaurantSuccessStories from "@/pages/restaurant-success-stories";
@@ -289,10 +287,6 @@ function Router() {
       
       {/* Admin routes handled separately in App component */}
       <Route path="/commission-dashboard" component={CommissionDashboard} />
-      
-      {/* EatOff Admin Portal */}
-      <Route path="/eatoff-admin-login" component={EatOffAdminLogin} />
-      <Route path="/eatoff-admin-dashboard" component={EatOffAdminDashboard} />
       
       {/* Heat Map */}
       <Route path="/heat-map" component={HeatMapPage} />

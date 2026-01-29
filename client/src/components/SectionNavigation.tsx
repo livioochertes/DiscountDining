@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Users, Store, Settings, ShoppingCart, Award, CreditCard, BarChart3, UserCheck, Building2, Wallet } from "lucide-react";
+import { Users, Store, Settings, ShoppingCart, Award, CreditCard, BarChart3, UserCheck, Building2, Wallet, MessageCircle, Megaphone, Percent } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -82,7 +82,10 @@ export function SectionNavigation({ currentSection, onTabChange, activeTab }: Se
         { href: "/admin", label: "Partners Admin", icon: Building2, tab: "partners" },
         { href: "/admin", label: trans.sectionNavigation?.userMgmt || "User Management", icon: Users, tab: "users" },
         { href: "/admin", label: "Wallet & Credit", icon: Wallet, tab: "wallet" },
+        { href: "/admin", label: "Commissions", icon: Percent, tab: "commissions" },
         { href: "/admin", label: trans.sectionNavigation?.financialMgmt || "Financial Management", icon: CreditCard, tab: "finances" },
+        { href: "/admin", label: "Marketing", icon: Megaphone, tab: "marketing" },
+        { href: "/admin", label: "Helpdesk", icon: MessageCircle, tab: "helpdesk" },
         { href: "/admin", label: trans.sectionNavigation?.platformSettings || "Platform Settings", icon: Settings, tab: "settings" },
       ]
     }
