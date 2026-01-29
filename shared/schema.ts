@@ -1596,3 +1596,113 @@ export type KnowledgeBaseArticle = typeof knowledgeBase.$inferSelect;
 export type InsertKnowledgeBaseArticle = z.infer<typeof insertKnowledgeBaseSchema>;
 
 export type SupportAnalytics = typeof supportAnalytics.$inferSelect;
+
+// Recipe Sharing System
+export const recipes = pgTable("recipes", {
+  id: serial("id").primaryKey(),
+  
+  // Author info
+  authorId: integer("author_id").references(() => customers.id).notNull(),
+  
+  // Restaurant association (optional - user can tag which restaurant inspired this)
+  restaurantId: integer("restaurant_id").references(() => restaurants.id),
+  
+  // Recipe details
+  title: text("title").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  
+  // Cooking info
+  prepTimeMinutes: integer("prep_time_minutes"),
+  cookTimeMinutes: integer("cook_time_minutes"),
+  servings: integer("servings"),
+  difficulty: varchar("difficulty"), // easy, medium, hard
+  
+  // Ingredients and instructions stored as JSON arrays
+  ingredients: jsonb("ingredients").notNull(), // [{name, amount, unit}]
+  instructions: jsonb("instructions").notNull(), // [{step, description}]
+  
+  // Categorization
+  cuisine: varchar("cuisine"), // italian, mexican, etc.
+  category: varchar("category"), // appetizer, main, dessert, etc.
+  dietaryTags: text("dietary_tags").array(), // vegetarian, vegan, gluten-free, etc.
+  
+  // Engagement metrics
+  likesCount: integer("likes_count").default(0),
+  commentsCount: integer("comments_count").default(0),
+  savesCount: integer("saves_count").default(0),
+  viewsCount: integer("views_count").default(0),
+  
+  // Status
+  isPublished: boolean("is_published").default(true),
+  isFeatured: boolean("is_featured").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const recipeLikes = pgTable("recipe_likes", {
+  id: serial("id").primaryKey(),
+  recipeId: integer("recipe_id").references(() => recipes.id).notNull(),
+  userId: integer("user_id").references(() => customers.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const recipeSaves = pgTable("recipe_saves", {
+  id: serial("id").primaryKey(),
+  recipeId: integer("recipe_id").references(() => recipes.id).notNull(),
+  userId: integer("user_id").references(() => customers.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const recipeComments = pgTable("recipe_comments", {
+  id: serial("id").primaryKey(),
+  recipeId: integer("recipe_id").references(() => recipes.id).notNull(),
+  userId: integer("user_id").references(() => customers.id).notNull(),
+  content: text("content").notNull(),
+  parentCommentId: integer("parent_comment_id"), // For replies
+  likesCount: integer("likes_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for recipe tables
+export const insertRecipeSchema = createInsertSchema(recipes).omit({
+  id: true,
+  likesCount: true,
+  commentsCount: true,
+  savesCount: true,
+  viewsCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRecipeLikeSchema = createInsertSchema(recipeLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRecipeSaveSchema = createInsertSchema(recipeSaves).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRecipeCommentSchema = createInsertSchema(recipeComments).omit({
+  id: true,
+  likesCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type exports for recipe system
+export type Recipe = typeof recipes.$inferSelect;
+export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
+
+export type RecipeLike = typeof recipeLikes.$inferSelect;
+export type InsertRecipeLike = z.infer<typeof insertRecipeLikeSchema>;
+
+export type RecipeSave = typeof recipeSaves.$inferSelect;
+export type InsertRecipeSave = z.infer<typeof insertRecipeSaveSchema>;
+
+export type RecipeComment = typeof recipeComments.$inferSelect;
+export type InsertRecipeComment = z.infer<typeof insertRecipeCommentSchema>;
