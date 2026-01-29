@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -189,11 +190,11 @@ export function SupportChatWidget({ isOpen, onClose, translations }: SupportChat
 
   if (!isOpen) return null;
 
-  return (
+  const chatContent = (
     <div 
-      className="fixed z-50 right-3 sm:right-4"
+      className="fixed z-[9999] right-3 sm:right-4"
       style={{ 
-        bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
+        bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
         width: 'min(calc(100vw - 1.5rem), 384px)'
       }}
     >
@@ -345,6 +346,8 @@ export function SupportChatWidget({ isOpen, onClose, translations }: SupportChat
       </div>
     </div>
   );
+
+  return createPortal(chatContent, document.body);
 }
 
 export function SupportChatButton({ onClick, className }: { onClick: () => void; className?: string }) {
