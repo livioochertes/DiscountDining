@@ -71,6 +71,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint - responds immediately for deployment health checks
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: Date.now() });
+});
+
+// Root health check for deployment - immediate response
+app.get('/_health', (_req, res) => {
+  res.status(200).send('OK');
+});
+
 (async () => {
   const server = await registerRoutes(app);
 
