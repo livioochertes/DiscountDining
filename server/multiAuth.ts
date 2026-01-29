@@ -724,9 +724,35 @@ export async function setupMultiAuth(app: Express) {
           
           console.log('[Apple OAuth] Login successful, user:', user.id);
           
-          // Check if user has 2FA enabled
+          // Check if user has 2FA enabled or create customer if needed
           try {
-            const customer = user.email ? await storage.getCustomerByEmail(user.email) : null;
+            let customer = user.email ? await storage.getCustomerByEmail(user.email) : null;
+            
+            // If no customer exists with this email, create one
+            if (!customer && user.email) {
+              console.log('[Apple OAuth] No customer found, creating one for:', user.email);
+              const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(' ') || 'Apple User';
+              customer = await storage.createCustomer({
+                name: fullName,
+                email: user.email,
+                phone: null,
+                passwordHash: null,
+                balance: "0.00",
+                loyaltyPoints: 0,
+                totalPointsEarned: 0,
+                membershipTier: "Bronze",
+                age: null,
+                weight: null,
+                height: null,
+                activityLevel: null,
+                healthGoal: null,
+                dietaryPreferences: [],
+                allergies: [],
+                dislikes: [],
+                healthConditions: []
+              });
+              console.log('[Apple OAuth] Customer created with ID:', customer.id);
+            }
             if (customer && customer.twoFactorEnabled) {
               console.log('[Apple OAuth] User has 2FA enabled, redirecting to verification');
               // Generate a pending 2FA token
