@@ -711,59 +711,97 @@ const getAuthCustomerId = async (req: Request): Promise<number | null> => {
 
 // Get complete wallet overview with cashback and credit info
 router.get("/wallet/overview", async (req: Request, res: Response) => {
+  console.log('[WalletOverview] Request received');
   try {
+    console.log('[WalletOverview] Getting customerId...');
     const customerId = await getAuthCustomerId(req);
+    console.log('[WalletOverview] CustomerId:', customerId);
+    
     if (!customerId) {
+      console.log('[WalletOverview] No customerId, returning 401');
       return res.status(401).json({ message: "Authentication required" });
     }
     
-    // Get cashback balance
-    const [cashbackBalance] = await db
-      .select()
-      .from(customerCashbackBalance)
-      .where(eq(customerCashbackBalance.customerId, customerId))
-      .limit(1);
+    console.log('[WalletOverview] Fetching cashback balance...');
+    let cashbackBalance: any = null;
+    try {
+      const result = await db
+        .select()
+        .from(customerCashbackBalance)
+        .where(eq(customerCashbackBalance.customerId, customerId))
+        .limit(1);
+      cashbackBalance = result[0];
+      console.log('[WalletOverview] Cashback balance fetched:', !!cashbackBalance);
+    } catch (dbErr) {
+      console.error('[WalletOverview] Error fetching cashback balance:', dbErr);
+    }
     
-    // Get credit account status
-    const [creditAccount] = await db
-      .select()
-      .from(customerCreditAccount)
-      .where(eq(customerCreditAccount.customerId, customerId))
-      .limit(1);
+    console.log('[WalletOverview] Fetching credit account...');
+    let creditAccount: any = null;
+    try {
+      const result = await db
+        .select()
+        .from(customerCreditAccount)
+        .where(eq(customerCreditAccount.customerId, customerId))
+        .limit(1);
+      creditAccount = result[0];
+      console.log('[WalletOverview] Credit account fetched:', !!creditAccount);
+    } catch (dbErr) {
+      console.error('[WalletOverview] Error fetching credit account:', dbErr);
+    }
     
-    // Get cashback enrollments with group info
-    const cashbackEnrollments = await db
-      .select({
-        enrollment: customerCashbackEnrollments,
-        group: cashbackGroups
-      })
-      .from(customerCashbackEnrollments)
-      .leftJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
-      .where(and(
-        eq(customerCashbackEnrollments.customerId, customerId),
-        eq(customerCashbackEnrollments.isActive, true)
-      ));
+    console.log('[WalletOverview] Fetching cashback enrollments...');
+    let cashbackEnrollments: any[] = [];
+    try {
+      cashbackEnrollments = await db
+        .select({
+          enrollment: customerCashbackEnrollments,
+          group: cashbackGroups
+        })
+        .from(customerCashbackEnrollments)
+        .leftJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+        .where(and(
+          eq(customerCashbackEnrollments.customerId, customerId),
+          eq(customerCashbackEnrollments.isActive, true)
+        ));
+      console.log('[WalletOverview] Cashback enrollments fetched:', cashbackEnrollments.length);
+    } catch (dbErr) {
+      console.error('[WalletOverview] Error fetching cashback enrollments:', dbErr);
+    }
     
-    // Get loyalty enrollments with group info
-    const loyaltyEnrollments = await db
-      .select({
-        enrollment: customerLoyaltyEnrollments,
-        group: loyaltyGroups
-      })
-      .from(customerLoyaltyEnrollments)
-      .leftJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
-      .where(and(
-        eq(customerLoyaltyEnrollments.customerId, customerId),
-        eq(customerLoyaltyEnrollments.isActive, true)
-      ));
+    console.log('[WalletOverview] Fetching loyalty enrollments...');
+    let loyaltyEnrollments: any[] = [];
+    try {
+      loyaltyEnrollments = await db
+        .select({
+          enrollment: customerLoyaltyEnrollments,
+          group: loyaltyGroups
+        })
+        .from(customerLoyaltyEnrollments)
+        .leftJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
+        .where(and(
+          eq(customerLoyaltyEnrollments.customerId, customerId),
+          eq(customerLoyaltyEnrollments.isActive, true)
+        ));
+      console.log('[WalletOverview] Loyalty enrollments fetched:', loyaltyEnrollments.length);
+    } catch (dbErr) {
+      console.error('[WalletOverview] Error fetching loyalty enrollments:', dbErr);
+    }
     
-    // Get restaurant-specific cashback balances
-    const restaurantCashbacks = await db
-      .select()
-      .from(customerRestaurantCashback)
-      .where(eq(customerRestaurantCashback.customerId, customerId));
+    console.log('[WalletOverview] Fetching restaurant cashbacks...');
+    let restaurantCashbacks: any[] = [];
+    try {
+      restaurantCashbacks = await db
+        .select()
+        .from(customerRestaurantCashback)
+        .where(eq(customerRestaurantCashback.customerId, customerId));
+      console.log('[WalletOverview] Restaurant cashbacks fetched:', restaurantCashbacks.length);
+    } catch (dbErr) {
+      console.error('[WalletOverview] Error fetching restaurant cashbacks:', dbErr);
+    }
     
-    res.json({
+    console.log('[WalletOverview] Building response...');
+    const response = {
       cashback: cashbackBalance || {
         eatoffCashbackBalance: "0.00",
         totalCashbackBalance: "0.00",
@@ -780,10 +818,13 @@ router.get("/wallet/overview", async (req: Request, res: Response) => {
       cashbackEnrollments,
       loyaltyEnrollments,
       restaurantCashbacks
-    });
-  } catch (error) {
-    console.error("Error fetching wallet overview:", error);
-    res.status(500).json({ message: "Failed to fetch wallet overview" });
+    };
+    
+    console.log('[WalletOverview] Sending response');
+    res.json(response);
+  } catch (error: any) {
+    console.error('[WalletOverview] Fatal error:', error.message, error.stack);
+    res.status(500).json({ message: "Failed to fetch wallet overview: " + error.message });
   }
 });
 
