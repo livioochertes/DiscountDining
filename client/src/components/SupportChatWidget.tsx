@@ -190,20 +190,23 @@ export function SupportChatWidget({ isOpen, onClose, translations }: SupportChat
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-md h-[85vh] sm:h-[600px] bg-white rounded-t-2xl sm:rounded-2xl flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-primary to-primary/80 text-white rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <MessageCircle className="w-5 h-5" />
+    <div className="fixed bottom-20 right-4 z-50 w-[calc(100%-2rem)] max-w-sm sm:w-96 sm:right-6 sm:bottom-6">
+      <div className="w-full h-[400px] sm:h-[500px] bg-white rounded-2xl flex flex-col shadow-2xl border border-gray-200">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-gradient-to-r from-primary to-primary/80 text-white rounded-t-2xl">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="font-semibold">{t.chatTitle}</h3>
+              <h3 className="font-semibold text-sm sm:text-base">{t.chatTitle}</h3>
               <p className="text-xs text-white/80">{t.aiAssistant}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-            <X className="w-5 h-5" />
+          <button 
+            onClick={onClose} 
+            className="p-2 bg-black/20 hover:bg-black/30 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5 text-white" />
           </button>
         </div>
 
