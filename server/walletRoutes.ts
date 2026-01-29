@@ -23,7 +23,9 @@ import {
   customerLoyaltyEnrollments,
   customers,
   insertCashbackGroupSchema,
-  insertLoyaltyGroupSchema
+  insertLoyaltyGroupSchema,
+  creditTypes,
+  insertCreditTypeSchema
 } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -1487,6 +1489,232 @@ router.post("/admin/credit-requests/:id/reject", async (req, res) => {
   } catch (error) {
     console.error("Error rejecting credit request:", error);
     res.status(500).json({ message: "Failed to reject credit request" });
+  }
+});
+
+// ============================================
+// CREDIT TYPES CRUD (Admin)
+// ============================================
+
+// Get all credit types (public - for customer credit request form)
+router.get("/credit-types", async (req, res) => {
+  try {
+    const types = await db
+      .select()
+      .from(creditTypes)
+      .where(eq(creditTypes.isActive, true))
+      .orderBy(creditTypes.displayOrder);
+    
+    res.json(types);
+  } catch (error) {
+    console.error("Error fetching credit types:", error);
+    res.status(500).json({ message: "Failed to fetch credit types" });
+  }
+});
+
+// Get all credit types (admin - includes inactive)
+router.get("/admin/credit-types", async (req, res) => {
+  try {
+    const types = await db
+      .select()
+      .from(creditTypes)
+      .orderBy(creditTypes.displayOrder);
+    
+    res.json(types);
+  } catch (error) {
+    console.error("Error fetching credit types:", error);
+    res.status(500).json({ message: "Failed to fetch credit types" });
+  }
+});
+
+// Create credit type (admin)
+router.post("/admin/credit-types", async (req, res) => {
+  try {
+    const validatedData = insertCreditTypeSchema.parse(req.body);
+    
+    const [newType] = await db.insert(creditTypes).values(validatedData).returning();
+    
+    res.status(201).json(newType);
+  } catch (error) {
+    console.error("Error creating credit type:", error);
+    res.status(500).json({ message: "Failed to create credit type" });
+  }
+});
+
+// Update credit type (admin)
+router.patch("/admin/credit-types/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const updates = req.body;
+    
+    const [updated] = await db
+      .update(creditTypes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(creditTypes.id, id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ message: "Credit type not found" });
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating credit type:", error);
+    res.status(500).json({ message: "Failed to update credit type" });
+  }
+});
+
+// Delete credit type (admin)
+router.delete("/admin/credit-types/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    // Soft delete - just mark as inactive
+    const [updated] = await db
+      .update(creditTypes)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(creditTypes.id, id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ message: "Credit type not found" });
+    }
+    
+    res.json({ message: "Credit type deleted" });
+  } catch (error) {
+    console.error("Error deleting credit type:", error);
+    res.status(500).json({ message: "Failed to delete credit type" });
+  }
+});
+
+// ============================================
+// CUSTOMER CREDIT REQUEST WITH PERSONAL DATA
+// ============================================
+
+// Submit credit request with personal data
+router.post("/credit-request", async (req, res) => {
+  try {
+    const {
+      customerId,
+      creditTypeId,
+      requestedAmount, // For custom amount
+      fullName,
+      cnp,
+      phone,
+      email,
+      address,
+      city,
+      county,
+      postalCode,
+      employmentStatus,
+      monthlyIncome,
+      employer
+    } = req.body;
+    
+    // Validate CNP format (13 digits for Romania)
+    if (!cnp || !/^\d{13}$/.test(cnp)) {
+      return res.status(400).json({ message: "CNP invalid. Trebuie să conțină exact 13 cifre." });
+    }
+    
+    // Validate required fields
+    if (!fullName || !phone || !address || !city || !county) {
+      return res.status(400).json({ message: "Toate câmpurile obligatorii trebuie completate." });
+    }
+    
+    // Get credit type details
+    let finalAmount = requestedAmount;
+    if (creditTypeId) {
+      const [creditType] = await db
+        .select()
+        .from(creditTypes)
+        .where(eq(creditTypes.id, creditTypeId))
+        .limit(1);
+      
+      if (!creditType) {
+        return res.status(400).json({ message: "Tip credit invalid" });
+      }
+      
+      if (creditType.isCustomAmount) {
+        // Validate custom amount is within limits
+        const min = parseFloat(creditType.minCustomAmount || '100');
+        const max = parseFloat(creditType.maxCustomAmount || '10000');
+        if (!requestedAmount || requestedAmount < min || requestedAmount > max) {
+          return res.status(400).json({ 
+            message: `Suma trebuie să fie între ${min} și ${max} RON` 
+          });
+        }
+      } else {
+        finalAmount = parseFloat(creditType.amount);
+      }
+    }
+    
+    // Check if customer already has a credit account
+    const [existingAccount] = await db
+      .select()
+      .from(customerCreditAccount)
+      .where(eq(customerCreditAccount.customerId, customerId))
+      .limit(1);
+    
+    if (existingAccount) {
+      if (existingAccount.status === 'pending') {
+        return res.status(400).json({ message: "Aveți deja o cerere de credit în așteptare." });
+      }
+      if (existingAccount.status === 'approved') {
+        return res.status(400).json({ message: "Aveți deja un credit aprobat." });
+      }
+      
+      // Update existing account (for rejected -> resubmit)
+      const [updated] = await db.update(customerCreditAccount)
+        .set({
+          status: 'pending',
+          creditTypeId,
+          requestedAmount: finalAmount.toString(),
+          fullName,
+          cnp,
+          phone,
+          email,
+          address,
+          city,
+          county,
+          postalCode,
+          employmentStatus,
+          monthlyIncome: monthlyIncome?.toString(),
+          employer,
+          requestedAt: new Date(),
+          rejectedAt: null,
+          rejectionReason: null,
+          updatedAt: new Date()
+        })
+        .where(eq(customerCreditAccount.id, existingAccount.id))
+        .returning();
+      
+      return res.json({ message: "Cerere de credit reînnoită", creditAccount: updated });
+    }
+    
+    // Create new credit account with request
+    const [newAccount] = await db.insert(customerCreditAccount).values({
+      customerId,
+      creditTypeId,
+      status: 'pending',
+      requestedAmount: finalAmount.toString(),
+      fullName,
+      cnp,
+      phone,
+      email,
+      address,
+      city,
+      county,
+      postalCode,
+      employmentStatus,
+      monthlyIncome: monthlyIncome?.toString(),
+      employer,
+      requestedAt: new Date()
+    }).returning();
+    
+    res.status(201).json({ message: "Cerere de credit înregistrată", creditAccount: newAccount });
+  } catch (error) {
+    console.error("Error submitting credit request:", error);
+    res.status(500).json({ message: "Failed to submit credit request" });
   }
 });
 
