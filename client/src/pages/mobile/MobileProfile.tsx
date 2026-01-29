@@ -14,6 +14,10 @@ import { apiRequest, queryClient, clearMobileSessionToken } from '@/lib/queryCli
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+import { Capacitor } from '@capacitor/core';
+
+const isNativePlatform = Capacitor.isNativePlatform();
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
 
 interface PaymentMethod {
   id: string;
@@ -56,6 +60,7 @@ export default function MobileProfile() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingDietary, setIsSavingDietary] = useState(false);
+  const [dietarySaveSuccess, setDietarySaveSuccess] = useState(false);
   
   // Extended dietary profile states
   const [dietaryTab, setDietaryTab] = useState<'basic' | 'goals' | 'preferences' | 'nutrition'>('basic');
@@ -195,7 +200,7 @@ export default function MobileProfile() {
   const loadDietaryProfile = async () => {
     setIsLoadingDietaryProfile(true);
     try {
-      const response = await fetch('/api/dietary/profile', { credentials: 'include' });
+      const response = await fetch(`${API_BASE_URL}/api/dietary/profile`, { credentials: 'include' });
       if (response.ok) {
         const profile = await response.json();
         if (profile) {
@@ -230,8 +235,9 @@ export default function MobileProfile() {
 
   const handleSaveDietary = async () => {
     setIsSavingDietary(true);
+    setDietarySaveSuccess(false);
     try {
-      const response = await fetch('/api/dietary/profile', {
+      const response = await fetch(`${API_BASE_URL}/api/dietary/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -260,10 +266,8 @@ export default function MobileProfile() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to save dietary profile');
       }
-      toast({ 
-        title: "✓ " + (t.changesSaved || 'Preferences saved successfully!'),
-        description: t.dietarySavedDesc || 'Your dietary preferences have been updated.',
-      });
+      setDietarySaveSuccess(true);
+      setTimeout(() => setDietarySaveSuccess(false), 3000);
     } catch (error: any) {
       const errorMessage = error.message === 'Unauthorized' 
         ? (t.pleaseLogin || 'Please log in to save preferences')
@@ -594,7 +598,7 @@ export default function MobileProfile() {
                     value={dietaryProfile.age}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, age: e.target.value })}
                     className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
-                    placeholder="25"
+                    placeholder="ex. 25"
                   />
                 </div>
                 <div>
@@ -620,7 +624,7 @@ export default function MobileProfile() {
                     value={dietaryProfile.height}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, height: e.target.value })}
                     className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
-                    placeholder="170"
+                    placeholder="ex. 170"
                   />
                 </div>
                 <div>
@@ -630,7 +634,7 @@ export default function MobileProfile() {
                     value={dietaryProfile.weight}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, weight: e.target.value })}
                     className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
-                    placeholder="70"
+                    placeholder="ex. 70"
                   />
                 </div>
               </div>
@@ -676,7 +680,7 @@ export default function MobileProfile() {
                   value={dietaryProfile.targetWeight}
                   onChange={(e) => setDietaryProfile({ ...dietaryProfile, targetWeight: e.target.value })}
                   className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
-                  placeholder="65"
+                  placeholder="ex. 65"
                 />
               </div>
               <div>
@@ -785,7 +789,7 @@ export default function MobileProfile() {
                     value={dietaryProfile.calorieTarget}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, calorieTarget: e.target.value })}
                     className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
-                    placeholder="2000"
+                    placeholder="ex. 2000"
                   />
                 </div>
                 <div>
@@ -795,7 +799,7 @@ export default function MobileProfile() {
                     value={dietaryProfile.proteinTarget}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, proteinTarget: e.target.value })}
                     className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
-                    placeholder="150"
+                    placeholder="ex. 150"
                   />
                 </div>
               </div>
@@ -807,7 +811,7 @@ export default function MobileProfile() {
                     value={dietaryProfile.carbTarget}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, carbTarget: e.target.value })}
                     className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
-                    placeholder="250"
+                    placeholder="ex. 250"
                   />
                 </div>
                 <div>
@@ -817,13 +821,20 @@ export default function MobileProfile() {
                     value={dietaryProfile.fatTarget}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, fatTarget: e.target.value })}
                     className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
-                    placeholder="65"
+                    placeholder="ex. 65"
                   />
                 </div>
               </div>
             </>
           )}
 
+          {dietarySaveSuccess && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
+              <Check className="w-4 h-4" />
+              {t.changesSaved || 'Preferences saved successfully!'}
+            </div>
+          )}
+          
           <button 
             type="button"
             onClick={handleSaveDietary}
