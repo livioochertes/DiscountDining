@@ -101,24 +101,44 @@ export default function MobileWallet() {
   });
 
   // Fetch wallet overview with cashback and credit info
-  const { data: walletOverview } = useQuery<WalletOverview>({
+  const { data: walletOverview, error: walletError, isLoading: walletLoading } = useQuery<WalletOverview>({
     queryKey: ['/api/wallet/overview'],
     queryFn: async () => {
+      console.log('[MobileWallet] Starting wallet fetch...');
+      console.log('[MobileWallet] API_BASE_URL:', API_BASE_URL);
+      console.log('[MobileWallet] isNativePlatform:', Capacitor.isNativePlatform());
+      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       if (Capacitor.isNativePlatform()) {
         const token = await getMobileSessionToken();
+        console.log('[MobileWallet] Token exists:', !!token);
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
         }
       }
-      const response = await fetch(`${API_BASE_URL}/api/wallet/overview`, {
+      
+      const url = `${API_BASE_URL}/api/wallet/overview`;
+      console.log('[MobileWallet] Fetching from:', url);
+      
+      const response = await fetch(url, {
         credentials: 'include',
         headers,
       });
-      if (!response.ok) throw new Error('Failed to fetch wallet overview');
-      return response.json();
+      
+      console.log('[MobileWallet] Response status:', response.status);
+      console.log('[MobileWallet] Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[MobileWallet] Wallet fetch error:', errorText);
+        throw new Error(`Failed to fetch wallet overview: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('[MobileWallet] Wallet data received:', JSON.stringify(data).substring(0, 200));
+      return data;
     },
     enabled: !!user,
   });
@@ -598,6 +618,9 @@ export default function MobileWallet() {
             {/* Debug info - remove after debugging */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs">
               <p className="font-medium text-blue-700">Debug Info:</p>
+              <p>user exists: {user ? 'YES' : 'NO'}</p>
+              <p>walletLoading: {walletLoading ? 'YES' : 'NO'}</p>
+              <p>walletError: {walletError ? String(walletError) : 'NONE'}</p>
               <p>walletOverview exists: {walletOverview ? 'YES' : 'NO'}</p>
               <p>credit exists: {walletOverview?.credit ? 'YES' : 'NO'}</p>
               <p>credit status: {walletOverview?.credit?.status || 'N/A'}</p>
