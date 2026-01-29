@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X } from 'lucide-react';
@@ -89,6 +89,13 @@ export default function MobileWallet() {
     employer: ''
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Debug: Log wallet overview data when it changes
+  useEffect(() => {
+    console.log('[MobileWallet] walletOverview:', walletOverview);
+    console.log('[MobileWallet] credit status:', walletOverview?.credit?.status);
+    console.log('[MobileWallet] credit data:', walletOverview?.credit);
+  }, [walletOverview]);
 
   const { data: userStats } = useQuery<any>({
     queryKey: ['/api/users/stats'],
@@ -588,6 +595,23 @@ export default function MobileWallet() {
 
         {activeTab === 'credit' && (
           <div className="space-y-4">
+            {/* Debug info - remove after debugging */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs">
+              <p className="font-medium text-blue-700">Debug Info:</p>
+              <p>walletOverview exists: {walletOverview ? 'YES' : 'NO'}</p>
+              <p>credit exists: {walletOverview?.credit ? 'YES' : 'NO'}</p>
+              <p>credit status: {walletOverview?.credit?.status || 'N/A'}</p>
+            </div>
+            
+            {/* Fallback when no wallet data */}
+            {!walletOverview?.credit && (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
+                <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-600 font-medium">Se încarcă datele...</p>
+                <p className="text-sm text-gray-400 mt-1">Dacă problema persistă, reîncărcați pagina</p>
+              </div>
+            )}
+            
             {/* Credit Request Form */}
             {showCreditForm && (walletOverview?.credit?.status === 'not_requested' || walletOverview?.credit?.status === 'rejected') && (
               <div className="bg-white rounded-2xl overflow-hidden">
