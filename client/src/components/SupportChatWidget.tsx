@@ -191,13 +191,13 @@ export function SupportChatWidget({ isOpen, onClose, translations }: SupportChat
 
   return (
     <div 
-      className="fixed z-50 w-[calc(100vw-2rem)] max-w-sm sm:w-96"
+      className="fixed z-50 right-3 sm:right-4"
       style={{ 
-        bottom: 'max(5rem, env(safe-area-inset-bottom) + 5rem)', 
-        right: '1rem' 
+        bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
+        width: 'min(calc(100vw - 1.5rem), 384px)'
       }}
     >
-      <div className="w-full h-[60vh] max-h-[400px] sm:max-h-[500px] bg-white rounded-2xl flex flex-col shadow-2xl border border-gray-200">
+      <div className="w-full h-[50vh] min-h-[300px] max-h-[400px] bg-white rounded-2xl flex flex-col shadow-2xl border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-gradient-to-r from-primary to-primary/80 text-white rounded-t-2xl">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center">
