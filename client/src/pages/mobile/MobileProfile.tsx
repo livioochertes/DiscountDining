@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   User, ChevronRight, ChevronDown, Settings, Bell, CreditCard, Heart, 
   HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X, Trash2, Loader2,
-  Eye, EyeOff, MessageCircle
+  Eye, EyeOff, MessageCircle, ChefHat
 } from 'lucide-react';
 import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { QRCodeSVG } from 'qrcode.react';
@@ -1504,6 +1504,7 @@ export default function MobileProfile() {
         { id: 'personal', icon: User, label: t.personalInfo || 'Personal Information', subtitle: t.personalInfoSub || 'Name, email, phone', expandable: true },
         { id: 'dietary', icon: Heart, label: t.dietaryPreferences || 'Dietary Preferences', subtitle: t.dietarySub || 'Allergies, diet type', expandable: true },
         { id: 'payment', icon: CreditCard, label: t.paymentMethods || 'Payment Methods', subtitle: t.paymentSub || 'Cards, wallet', expandable: true },
+        { id: 'recipes', icon: ChefHat, label: t.myRecipes || 'My Recipes', subtitle: t.recipesSub || 'Share & discover recipes', onClick: () => setLocation('/m/recipes') },
       ],
     },
     {
