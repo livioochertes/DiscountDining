@@ -1816,6 +1816,30 @@ export const cashbackTransactions = pgTable("cashback_transactions", {
 // CREDIT ON ACCOUNT SYSTEM
 // ============================================
 
+// Predefined credit types (amounts) that customers can request
+export const creditTypes = pgTable("credit_types", {
+  id: serial("id").primaryKey(),
+  
+  // Credit type details
+  name: varchar("name").notNull(), // e.g., "Credit Starter", "Credit Plus"
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // e.g., 1000.00, 2000.00
+  description: text("description"), // optional description
+  
+  // Interest and terms
+  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).default("0.00"), // annual interest rate %
+  paymentTermDays: integer("payment_term_days").default(30), // days to repay
+  
+  // Display settings
+  displayOrder: integer("display_order").default(0), // for ordering in UI
+  isCustomAmount: boolean("is_custom_amount").default(false), // true for "custom amount" option
+  minCustomAmount: decimal("min_custom_amount", { precision: 10, scale: 2 }), // min for custom
+  maxCustomAmount: decimal("max_custom_amount", { precision: 10, scale: 2 }), // max for custom
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Credit on account - only EatOff can issue
 export const customerCreditAccount = pgTable("customer_credit_account", {
   id: serial("id").primaryKey(),
@@ -1832,6 +1856,24 @@ export const customerCreditAccount = pgTable("customer_credit_account", {
   // Status
   status: varchar("status").notNull().default("not_requested"), // not_requested, pending, approved, rejected, suspended
   
+  // Selected credit type
+  creditTypeId: integer("credit_type_id").references(() => creditTypes.id),
+  
+  // Personal data for credit application (required for Romania - CNP)
+  fullName: varchar("full_name"),
+  cnp: varchar("cnp", { length: 13 }), // Romanian CNP - 13 digits
+  phone: varchar("phone"),
+  email: varchar("email"),
+  address: text("address"), // full address including city, county, postal code
+  city: varchar("city"),
+  county: varchar("county"),
+  postalCode: varchar("postal_code"),
+  
+  // Employment info (optional for credit scoring)
+  employmentStatus: varchar("employment_status"), // employed, self-employed, student, retired, other
+  monthlyIncome: decimal("monthly_income", { precision: 10, scale: 2 }),
+  employer: varchar("employer"),
+  
   // Approval details
   requestedAt: timestamp("requested_at"),
   requestedAmount: decimal("requested_amount", { precision: 10, scale: 2 }),
@@ -1840,7 +1882,7 @@ export const customerCreditAccount = pgTable("customer_credit_account", {
   rejectedAt: timestamp("rejected_at"),
   rejectionReason: text("rejection_reason"),
   
-  // Terms
+  // Terms (copied from credit type at approval time)
   interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).default("0.00"), // annual interest rate %
   paymentTermDays: integer("payment_term_days").default(30), // days to repay
   
@@ -1967,6 +2009,12 @@ export const insertCashbackTransactionSchema = createInsertSchema(cashbackTransa
   createdAt: true,
 });
 
+export const insertCreditTypeSchema = createInsertSchema(creditTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCustomerCreditAccountSchema = createInsertSchema(customerCreditAccount).omit({
   id: true,
   createdAt: true,
@@ -2007,6 +2055,9 @@ export type InsertCustomerRestaurantCashback = z.infer<typeof insertCustomerRest
 
 export type CashbackTransaction = typeof cashbackTransactions.$inferSelect;
 export type InsertCashbackTransaction = z.infer<typeof insertCashbackTransactionSchema>;
+
+export type CreditType = typeof creditTypes.$inferSelect;
+export type InsertCreditType = z.infer<typeof insertCreditTypeSchema>;
 
 export type CustomerCreditAccount = typeof customerCreditAccount.$inferSelect;
 export type InsertCustomerCreditAccount = z.infer<typeof insertCustomerCreditAccountSchema>;
