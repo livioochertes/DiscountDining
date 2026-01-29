@@ -276,7 +276,7 @@ export default function MobileRecipeDetail() {
         
         {recipe.ingredients?.length > 0 && (
           <div className="mt-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('ingredients') || 'Ingredients'}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t.ingredients || 'Ingredients'}</h2>
             <ul className="space-y-2">
               {recipe.ingredients.map((ing, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -292,7 +292,7 @@ export default function MobileRecipeDetail() {
         
         {recipe.instructions?.length > 0 && (
           <div className="mt-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('instructions') || 'Instructions'}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t.instructions || 'Instructions'}</h2>
             <ol className="space-y-4">
               {recipe.instructions.map((inst, i) => (
                 <li key={i} className="flex gap-3">
@@ -308,7 +308,7 @@ export default function MobileRecipeDetail() {
         
         {recipe.tips && (
           <div className="mt-6 p-4 bg-amber-50 rounded-xl">
-            <h3 className="font-medium text-amber-800 mb-2">{t('tips') || 'Tips'}</h3>
+            <h3 className="font-medium text-amber-800 mb-2">{t.tips || 'Tips'}</h3>
             <p className="text-sm text-amber-700">{recipe.tips}</p>
           </div>
         )}
@@ -316,7 +316,7 @@ export default function MobileRecipeDetail() {
         <div className="mt-6">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <MessageCircle className="w-5 h-5" />
-            {t('comments') || 'Comments'} ({recipe.commentsCount})
+            {t.comments || 'Comments'} ({recipe.commentsCount})
           </h2>
           
           <div className="mt-3 flex gap-2">
@@ -324,7 +324,7 @@ export default function MobileRecipeDetail() {
               type="text"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder={t('addComment') || 'Add a comment...'}
+              placeholder={t.addComment || 'Add a comment...'}
               className="flex-1 px-4 py-2 bg-gray-100 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             <button
@@ -364,7 +364,7 @@ export default function MobileRecipeDetail() {
             
             {(!recipe.comments || recipe.comments.length === 0) && (
               <p className="text-center text-gray-400 text-sm py-4">
-                {t('noComments') || 'No comments yet. Be the first!'}
+                {t.noComments || 'No comments yet. Be the first!'}
               </p>
             )}
           </div>

@@ -179,13 +179,13 @@ export default function MobileRecipes() {
       <div className="min-h-screen bg-gray-50 pb-24">
         <div className="sticky top-0 z-10 bg-white px-4 pt-4 pb-3 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-bold text-gray-900">{t('recipes') || 'Recipes'}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{t.recipes || 'Recipes'}</h1>
             <button
               onClick={() => setLocation('/m/recipes/create')}
               className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-full text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
-              {t('share') || 'Share'}
+              {t.share || 'Share'}
             </button>
           </div>
           
@@ -194,7 +194,7 @@ export default function MobileRecipes() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder={t('searchRecipes') || 'Search recipes...'}
+                placeholder={t.searchRecipes || 'Search recipes...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 bg-gray-100 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -214,7 +214,7 @@ export default function MobileRecipes() {
           {showFilters && (
             <div className="mt-3 p-3 bg-gray-50 rounded-xl space-y-3">
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">{t('cuisine') || 'Cuisine'}</label>
+                <label className="text-xs text-gray-500 mb-1 block">{t.cuisine || 'Cuisine'}</label>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {CUISINES.map(c => (
                     <button
@@ -232,7 +232,7 @@ export default function MobileRecipes() {
               </div>
               
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">{t('category') || 'Category'}</label>
+                <label className="text-xs text-gray-500 mb-1 block">{t.category || 'Category'}</label>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {CATEGORIES.map(c => (
                     <button
@@ -250,7 +250,7 @@ export default function MobileRecipes() {
               </div>
               
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">{t('difficulty') || 'Difficulty'}</label>
+                <label className="text-xs text-gray-500 mb-1 block">{t.difficulty || 'Difficulty'}</label>
                 <div className="flex gap-2">
                   {DIFFICULTIES.map(d => (
                     <button
@@ -277,7 +277,7 @@ export default function MobileRecipes() {
                   className="flex items-center gap-1 text-xs text-red-500"
                 >
                   <X className="w-3 h-3" />
-                  {t('clearFilters') || 'Clear filters'}
+                  {t.clearFilters || 'Clear filters'}
                 </button>
               )}
             </div>
@@ -292,12 +292,12 @@ export default function MobileRecipes() {
           ) : filteredRecipes.length === 0 ? (
             <div className="text-center py-12">
               <ChefHat className="w-16 h-16 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">{t('noRecipesFound') || 'No recipes found'}</p>
+              <p className="text-gray-500">{t.noRecipesFound || 'No recipes found'}</p>
               <button
                 onClick={() => setLocation('/m/recipes/create')}
                 className="mt-4 bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium"
               >
-                {t('beFirstToShare') || 'Be the first to share a recipe!'}
+                {t.beFirstToShare || 'Be the first to share a recipe!'}
               </button>
             </div>
           ) : (

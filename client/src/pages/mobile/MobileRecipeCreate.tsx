@@ -150,22 +150,22 @@ export default function MobileRecipeCreate() {
         <button onClick={() => setLocation('/m/recipes')} className="p-2 -ml-2">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-semibold flex-1">{t('shareRecipe') || 'Share Recipe'}</h1>
+        <h1 className="text-lg font-semibold flex-1">{t.shareRecipe || 'Share Recipe'}</h1>
         <button
           onClick={() => createMutation.mutate()}
           disabled={!isValid || createMutation.isPending}
           className="bg-primary text-white px-4 py-1.5 rounded-full text-sm font-medium disabled:opacity-50"
         >
-          {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (t('publish') || 'Publish')}
+          {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.publish || 'Publish')}
         </button>
       </div>
       
       <div className="p-4 space-y-4">
         <div className="bg-white rounded-2xl p-4 space-y-4">
-          <h2 className="font-semibold text-gray-900">{t('basicInfo') || 'Basic Info'}</h2>
+          <h2 className="font-semibold text-gray-900">{t.basicInfo || 'Basic Info'}</h2>
           
           <div>
-            <label className="text-sm text-gray-500 mb-1 block">{t('recipeTitle') || 'Recipe Title'} *</label>
+            <label className="text-sm text-gray-500 mb-1 block">{t.recipeTitle || 'Recipe Title'} *</label>
             <input
               type="text"
               value={title}
@@ -176,7 +176,7 @@ export default function MobileRecipeCreate() {
           </div>
           
           <div>
-            <label className="text-sm text-gray-500 mb-1 block">{t('description') || 'Description'}</label>
+            <label className="text-sm text-gray-500 mb-1 block">{t.description || 'Description'}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -187,7 +187,7 @@ export default function MobileRecipeCreate() {
           </div>
           
           <div>
-            <label className="text-sm text-gray-500 mb-1 block">{t('imageUrl') || 'Image URL'}</label>
+            <label className="text-sm text-gray-500 mb-1 block">{t.imageUrl || 'Image URL'}</label>
             <input
               type="url"
               value={imageUrl}
@@ -199,7 +199,7 @@ export default function MobileRecipeCreate() {
           
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-gray-500 mb-1 block">{t('cuisine') || 'Cuisine'} *</label>
+              <label className="text-sm text-gray-500 mb-1 block">{t.cuisine || 'Cuisine'} *</label>
               <select
                 value={cuisine}
                 onChange={(e) => setCuisine(e.target.value)}
@@ -211,7 +211,7 @@ export default function MobileRecipeCreate() {
             </div>
             
             <div>
-              <label className="text-sm text-gray-500 mb-1 block">{t('category') || 'Category'} *</label>
+              <label className="text-sm text-gray-500 mb-1 block">{t.category || 'Category'} *</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -224,7 +224,7 @@ export default function MobileRecipeCreate() {
           </div>
           
           <div>
-            <label className="text-sm text-gray-500 mb-1 block">{t('difficulty') || 'Difficulty'}</label>
+            <label className="text-sm text-gray-500 mb-1 block">{t.difficulty || 'Difficulty'}</label>
             <div className="flex gap-2">
               {DIFFICULTIES.map(d => (
                 <button
@@ -243,7 +243,7 @@ export default function MobileRecipeCreate() {
           
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-sm text-gray-500 mb-1 block">{t('prepTime') || 'Prep (min)'}</label>
+              <label className="text-sm text-gray-500 mb-1 block">{t.prepTime || 'Prep (min)'}</label>
               <input
                 type="number"
                 value={prepTime}
@@ -253,7 +253,7 @@ export default function MobileRecipeCreate() {
               />
             </div>
             <div>
-              <label className="text-sm text-gray-500 mb-1 block">{t('cookTime') || 'Cook (min)'}</label>
+              <label className="text-sm text-gray-500 mb-1 block">{t.cookTime || 'Cook (min)'}</label>
               <input
                 type="number"
                 value={cookTime}
@@ -263,7 +263,7 @@ export default function MobileRecipeCreate() {
               />
             </div>
             <div>
-              <label className="text-sm text-gray-500 mb-1 block">{t('servings') || 'Servings'}</label>
+              <label className="text-sm text-gray-500 mb-1 block">{t.servings || 'Servings'}</label>
               <input
                 type="number"
                 value={servings}
@@ -276,7 +276,7 @@ export default function MobileRecipeCreate() {
           
           {restaurants && restaurants.length > 0 && (
             <div>
-              <label className="text-sm text-gray-500 mb-1 block">{t('fromRestaurant') || 'From Restaurant (optional)'}</label>
+              <label className="text-sm text-gray-500 mb-1 block">{t.fromRestaurant || 'From Restaurant (optional)'}</label>
               <select
                 value={restaurantId || ''}
                 onChange={(e) => setRestaurantId(e.target.value ? parseInt(e.target.value) : null)}
@@ -290,7 +290,7 @@ export default function MobileRecipeCreate() {
         </div>
         
         <div className="bg-white rounded-2xl p-4 space-y-4">
-          <h2 className="font-semibold text-gray-900">{t('dietaryTags') || 'Dietary Tags'}</h2>
+          <h2 className="font-semibold text-gray-900">{t.dietaryTags || 'Dietary Tags'}</h2>
           <div className="flex flex-wrap gap-2">
             {DIETARY_TAGS.map(tag => (
               <button
@@ -309,7 +309,7 @@ export default function MobileRecipeCreate() {
         
         <div className="bg-white rounded-2xl p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">{t('ingredients') || 'Ingredients'} *</h2>
+            <h2 className="font-semibold text-gray-900">{t.ingredients || 'Ingredients'} *</h2>
             <button onClick={addIngredient} className="text-primary text-sm flex items-center gap-1">
               <Plus className="w-4 h-4" /> Add
             </button>
@@ -353,7 +353,7 @@ export default function MobileRecipeCreate() {
         
         <div className="bg-white rounded-2xl p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">{t('instructions') || 'Instructions'} *</h2>
+            <h2 className="font-semibold text-gray-900">{t.instructions || 'Instructions'} *</h2>
             <button onClick={addInstruction} className="text-primary text-sm flex items-center gap-1">
               <Plus className="w-4 h-4" /> Add
             </button>
@@ -383,7 +383,7 @@ export default function MobileRecipeCreate() {
         </div>
         
         <div className="bg-white rounded-2xl p-4 space-y-4">
-          <h2 className="font-semibold text-gray-900">{t('tips') || 'Tips & Notes'}</h2>
+          <h2 className="font-semibold text-gray-900">{t.tips || 'Tips & Notes'}</h2>
           <textarea
             value={tips}
             onChange={(e) => setTips(e.target.value)}
