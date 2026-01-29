@@ -257,11 +257,21 @@ export default function MobileProfile() {
         }),
       });
       if (!response.ok) {
-        throw new Error('Failed to save dietary profile');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to save dietary profile');
       }
-      toast({ title: t.changesSaved || 'Changes saved' });
-    } catch (error) {
-      toast({ title: t.errorSaving || 'Error saving', variant: 'destructive' });
+      toast({ 
+        title: "✓ " + (t.changesSaved || 'Preferences saved successfully!'),
+        description: t.dietarySavedDesc || 'Your dietary preferences have been updated.',
+      });
+    } catch (error: any) {
+      const errorMessage = error.message === 'Unauthorized' 
+        ? (t.pleaseLogin || 'Please log in to save preferences')
+        : (t.errorSaving || 'Error saving preferences');
+      toast({ 
+        title: errorMessage, 
+        variant: 'destructive' 
+      });
     } finally {
       setIsSavingDietary(false);
     }
@@ -583,7 +593,7 @@ export default function MobileProfile() {
                     type="number"
                     value={dietaryProfile.age}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, age: e.target.value })}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
                     placeholder="25"
                   />
                 </div>
@@ -592,7 +602,7 @@ export default function MobileProfile() {
                   <select
                     value={dietaryProfile.gender}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, gender: e.target.value })}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px] appearance-none"
                   >
                     <option value="">{t.select || 'Select'}</option>
                     <option value="male">{t.male || 'Male'}</option>
@@ -609,7 +619,7 @@ export default function MobileProfile() {
                     type="number"
                     value={dietaryProfile.height}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, height: e.target.value })}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
                     placeholder="170"
                   />
                 </div>
@@ -619,7 +629,7 @@ export default function MobileProfile() {
                     type="text"
                     value={dietaryProfile.weight}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, weight: e.target.value })}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
                     placeholder="70"
                   />
                 </div>
@@ -629,7 +639,7 @@ export default function MobileProfile() {
                 <select
                   value={dietaryProfile.activityLevel}
                   onChange={(e) => setDietaryProfile({ ...dietaryProfile, activityLevel: e.target.value })}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px] appearance-none"
                 >
                   <option value="">{t.select || 'Select'}</option>
                   <option value="sedentary">{t.sedentary || 'Sedentary'}</option>
@@ -649,7 +659,7 @@ export default function MobileProfile() {
                 <select
                   value={dietaryProfile.healthGoal}
                   onChange={(e) => setDietaryProfile({ ...dietaryProfile, healthGoal: e.target.value })}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px] appearance-none"
                 >
                   <option value="">{t.select || 'Select'}</option>
                   <option value="weight_loss">{t.weightLoss || 'Weight Loss'}</option>
@@ -665,7 +675,7 @@ export default function MobileProfile() {
                   type="text"
                   value={dietaryProfile.targetWeight}
                   onChange={(e) => setDietaryProfile({ ...dietaryProfile, targetWeight: e.target.value })}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
                   placeholder="65"
                 />
               </div>
@@ -674,7 +684,7 @@ export default function MobileProfile() {
                 <select
                   value={dietaryProfile.budgetRange}
                   onChange={(e) => setDietaryProfile({ ...dietaryProfile, budgetRange: e.target.value })}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px] appearance-none"
                 >
                   <option value="">{t.select || 'Select'}</option>
                   <option value="low">{t.budgetLow || 'Budget (€5-15)'}</option>
@@ -687,7 +697,7 @@ export default function MobileProfile() {
                 <select
                   value={dietaryProfile.diningFrequency}
                   onChange={(e) => setDietaryProfile({ ...dietaryProfile, diningFrequency: e.target.value })}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px] appearance-none"
                 >
                   <option value="">{t.select || 'Select'}</option>
                   <option value="rarely">{t.rarely || 'Rarely'}</option>
@@ -774,7 +784,7 @@ export default function MobileProfile() {
                     type="number"
                     value={dietaryProfile.calorieTarget}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, calorieTarget: e.target.value })}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
                     placeholder="2000"
                   />
                 </div>
@@ -784,7 +794,7 @@ export default function MobileProfile() {
                     type="number"
                     value={dietaryProfile.proteinTarget}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, proteinTarget: e.target.value })}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
                     placeholder="150"
                   />
                 </div>
@@ -796,7 +806,7 @@ export default function MobileProfile() {
                     type="number"
                     value={dietaryProfile.carbTarget}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, carbTarget: e.target.value })}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
                     placeholder="250"
                   />
                 </div>
@@ -806,7 +816,7 @@ export default function MobileProfile() {
                     type="number"
                     value={dietaryProfile.fatTarget}
                     onChange={(e) => setDietaryProfile({ ...dietaryProfile, fatTarget: e.target.value })}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px]"
                     placeholder="65"
                   />
                 </div>
