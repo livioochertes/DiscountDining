@@ -149,8 +149,7 @@ export function registerAdminRoutes(app: Express) {
         admin: {
           id: admin.id,
           email: admin.email,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
+          fullName: admin.fullName,
           role: admin.role,
           permissions: admin.permissions,
         }
