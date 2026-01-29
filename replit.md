@@ -242,6 +242,7 @@ The platform includes a comprehensive cashback and loyalty management system:
 
 ## Recent Changes
 
+- **2025-01-29**: Enhanced Credit Request System with predefined credit types (admin-configurable amounts), personal data collection form (CNP validation, address, employment info), and improved credit status display in MobileWallet
 - **2025-01-29**: Added Cashback & Loyalty System with cashback groups, credit on account, loyalty tiers, auto-upgrade logic, restaurant mobile portal with QR scanning, and admin management
 - **2025-01-29**: Added Recipe Sharing System with discovery page, recipe detail, recipe creation, likes/saves/comments, and profile integration
 - **2025-01-29**: Added AI Support System with chat widget, knowledge base, FAQ pages, and admin helpdesk with real-time data
