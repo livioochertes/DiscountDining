@@ -56,6 +56,30 @@ export default function MobileProfile() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingDietary, setIsSavingDietary] = useState(false);
+  
+  // Extended dietary profile states
+  const [dietaryTab, setDietaryTab] = useState<'basic' | 'goals' | 'preferences' | 'nutrition'>('basic');
+  const [dietaryProfile, setDietaryProfile] = useState({
+    age: '',
+    gender: '',
+    height: '',
+    weight: '',
+    activityLevel: '',
+    healthGoal: '',
+    targetWeight: '',
+    budgetRange: '',
+    diningFrequency: '',
+    dietaryPreferences: [] as string[],
+    allergies: [] as string[],
+    preferredCuisines: [] as string[],
+    foodIntolerances: [] as string[],
+    healthConditions: [] as string[],
+    calorieTarget: '',
+    proteinTarget: '',
+    carbTarget: '',
+    fatTarget: '',
+  });
+  const [isLoadingDietaryProfile, setIsLoadingDietaryProfile] = useState(false);
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   const [swipedCardId, setSwipedCardId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -139,9 +163,7 @@ export default function MobileProfile() {
         });
       }
       if (sectionId === 'dietary' && user) {
-        const prefs = user.dietaryPreferences || [];
-        setSelectedDiet(prefs[0] || '');
-        setSelectedAllergies(user.allergies || []);
+        loadDietaryProfile();
       }
       if (sectionId === 'notifications' && user) {
         setNotificationSettings({
@@ -161,14 +183,82 @@ export default function MobileProfile() {
     );
   };
 
+  const toggleDietaryArrayField = (field: 'dietaryPreferences' | 'allergies' | 'preferredCuisines' | 'foodIntolerances' | 'healthConditions', value: string) => {
+    setDietaryProfile(prev => ({
+      ...prev,
+      [field]: prev[field].includes(value)
+        ? prev[field].filter(v => v !== value)
+        : [...prev[field], value]
+    }));
+  };
+
+  const loadDietaryProfile = async () => {
+    setIsLoadingDietaryProfile(true);
+    try {
+      const response = await fetch('/api/dietary/profile', { credentials: 'include' });
+      if (response.ok) {
+        const profile = await response.json();
+        if (profile) {
+          setDietaryProfile({
+            age: profile.age?.toString() || '',
+            gender: profile.gender || '',
+            height: profile.height?.toString() || '',
+            weight: profile.weight || '',
+            activityLevel: profile.activityLevel || '',
+            healthGoal: profile.healthGoal || '',
+            targetWeight: profile.targetWeight || '',
+            budgetRange: profile.budgetRange || '',
+            diningFrequency: profile.diningFrequency || '',
+            dietaryPreferences: profile.dietaryPreferences || [],
+            allergies: profile.allergies || [],
+            preferredCuisines: profile.preferredCuisines || [],
+            foodIntolerances: profile.foodIntolerances || [],
+            healthConditions: profile.healthConditions || [],
+            calorieTarget: profile.calorieTarget?.toString() || '',
+            proteinTarget: profile.proteinTarget?.toString() || '',
+            carbTarget: profile.carbTarget?.toString() || '',
+            fatTarget: profile.fatTarget?.toString() || '',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading dietary profile:', error);
+    } finally {
+      setIsLoadingDietaryProfile(false);
+    }
+  };
+
   const handleSaveDietary = async () => {
     setIsSavingDietary(true);
     try {
-      await apiRequest('PATCH', '/api/auth/profile', {
-        dietaryPreferences: selectedDiet ? [selectedDiet] : [],
-        allergies: selectedAllergies,
+      const response = await fetch('/api/dietary/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          age: dietaryProfile.age ? parseInt(dietaryProfile.age) : undefined,
+          gender: dietaryProfile.gender || undefined,
+          height: dietaryProfile.height ? parseInt(dietaryProfile.height) : undefined,
+          weight: dietaryProfile.weight || undefined,
+          activityLevel: dietaryProfile.activityLevel || undefined,
+          healthGoal: dietaryProfile.healthGoal || undefined,
+          targetWeight: dietaryProfile.targetWeight || undefined,
+          budgetRange: dietaryProfile.budgetRange || undefined,
+          diningFrequency: dietaryProfile.diningFrequency || undefined,
+          dietaryPreferences: dietaryProfile.dietaryPreferences,
+          allergies: dietaryProfile.allergies,
+          preferredCuisines: dietaryProfile.preferredCuisines,
+          foodIntolerances: dietaryProfile.foodIntolerances,
+          healthConditions: dietaryProfile.healthConditions,
+          calorieTarget: dietaryProfile.calorieTarget ? parseInt(dietaryProfile.calorieTarget) : undefined,
+          proteinTarget: dietaryProfile.proteinTarget ? parseInt(dietaryProfile.proteinTarget) : undefined,
+          carbTarget: dietaryProfile.carbTarget ? parseInt(dietaryProfile.carbTarget) : undefined,
+          fatTarget: dietaryProfile.fatTarget ? parseInt(dietaryProfile.fatTarget) : undefined,
+        }),
       });
-      await refetch();
+      if (!response.ok) {
+        throw new Error('Failed to save dietary profile');
+      }
       toast({ title: t.changesSaved || 'Changes saved' });
     } catch (error) {
       toast({ title: t.errorSaving || 'Error saving', variant: 'destructive' });
@@ -412,62 +502,331 @@ export default function MobileProfile() {
     </div>
   );
 
-  const renderDietaryContent = () => (
-    <div className="p-4 space-y-4 bg-gray-50 border-t border-gray-100">
-      <p className="text-sm text-gray-600">{t.selectDietaryPreferences || 'Select your dietary preferences to get personalized recommendations.'}</p>
-      
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">{t.dietType || 'Diet Type'}</label>
-        <div className="grid grid-cols-2 gap-2">
-          {['Standard', 'Vegetarian', 'Vegan', 'Pescatarian'].map((diet) => (
+  const dietaryOptions = [
+    { key: 'vegetarian', label: 'Vegetarian' },
+    { key: 'vegan', label: 'Vegan' },
+    { key: 'pescatarian', label: 'Pescatarian' },
+    { key: 'keto', label: 'Ketogenic' },
+    { key: 'paleo', label: 'Paleo' },
+    { key: 'mediterranean', label: 'Mediterranean' },
+    { key: 'gluten_free', label: 'Gluten-Free' },
+    { key: 'dairy_free', label: 'Dairy-Free' },
+    { key: 'low_carb', label: 'Low Carb' },
+    { key: 'high_protein', label: 'High Protein' },
+  ];
+
+  const allergyOptions = [
+    { key: 'nuts', label: 'Tree Nuts' },
+    { key: 'peanuts', label: 'Peanuts' },
+    { key: 'dairy', label: 'Dairy' },
+    { key: 'gluten', label: 'Gluten' },
+    { key: 'shellfish', label: 'Shellfish' },
+    { key: 'fish', label: 'Fish' },
+    { key: 'eggs', label: 'Eggs' },
+    { key: 'soy', label: 'Soy' },
+    { key: 'sesame', label: 'Sesame' },
+  ];
+
+  const cuisineOptions = [
+    { key: 'italian', label: 'Italian' },
+    { key: 'chinese', label: 'Chinese' },
+    { key: 'mexican', label: 'Mexican' },
+    { key: 'indian', label: 'Indian' },
+    { key: 'japanese', label: 'Japanese' },
+    { key: 'thai', label: 'Thai' },
+    { key: 'mediterranean', label: 'Mediterranean' },
+    { key: 'american', label: 'American' },
+    { key: 'french', label: 'French' },
+    { key: 'korean', label: 'Korean' },
+  ];
+
+  const renderDietaryContent = () => {
+    if (isLoadingDietaryProfile) {
+      return (
+        <div className="p-8 flex items-center justify-center bg-gray-50 border-t border-gray-100">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-gray-50 border-t border-gray-100">
+        <div className="flex border-b border-gray-200 overflow-x-auto">
+          {[
+            { id: 'basic', label: t.basicInfo || 'Basic Info' },
+            { id: 'goals', label: t.healthGoals || 'Goals' },
+            { id: 'preferences', label: t.foodPreferences || 'Food' },
+            { id: 'nutrition', label: t.nutritionTargets || 'Nutrition' },
+          ].map((tab) => (
             <button
-              key={diet}
-              type="button"
-              onClick={() => setSelectedDiet(diet.toLowerCase())}
+              key={tab.id}
+              onClick={() => setDietaryTab(tab.id as any)}
               className={cn(
-                "p-3 border rounded-xl text-sm transition-colors",
-                selectedDiet === diet.toLowerCase()
-                  ? "border-primary bg-primary/10 text-primary font-medium"
-                  : "border-gray-200 hover:border-primary hover:bg-primary/5"
+                "flex-1 min-w-[80px] px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors",
+                dietaryTab === tab.id
+                  ? "text-primary border-b-2 border-primary bg-white"
+                  : "text-gray-500 hover:text-gray-700"
               )}
             >
-              {diet}
+              {tab.label}
             </button>
           ))}
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">{t.allergies || 'Allergies'}</label>
-        <div className="flex flex-wrap gap-2">
-          {['Gluten', 'Dairy', 'Nuts', 'Shellfish', 'Eggs', 'Soy'].map((allergy) => (
-            <button
-              key={allergy}
-              type="button"
-              onClick={() => toggleAllergy(allergy.toLowerCase())}
-              className={cn(
-                "px-4 py-2 border rounded-full text-sm transition-colors",
-                selectedAllergies.includes(allergy.toLowerCase())
-                  ? "border-red-400 bg-red-50 text-red-600 font-medium"
-                  : "border-gray-200 hover:border-red-400 hover:bg-red-50 hover:text-red-600"
-              )}
-            >
-              {allergy}
-            </button>
-          ))}
+        <div className="p-4 space-y-4">
+          {dietaryTab === 'basic' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.age || 'Age'}</label>
+                  <input
+                    type="number"
+                    value={dietaryProfile.age}
+                    onChange={(e) => setDietaryProfile({ ...dietaryProfile, age: e.target.value })}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    placeholder="25"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.gender || 'Gender'}</label>
+                  <select
+                    value={dietaryProfile.gender}
+                    onChange={(e) => setDietaryProfile({ ...dietaryProfile, gender: e.target.value })}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                  >
+                    <option value="">{t.select || 'Select'}</option>
+                    <option value="male">{t.male || 'Male'}</option>
+                    <option value="female">{t.female || 'Female'}</option>
+                    <option value="other">{t.other || 'Other'}</option>
+                    <option value="prefer_not_to_say">{t.preferNotToSay || 'Prefer not to say'}</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.height || 'Height'} (cm)</label>
+                  <input
+                    type="number"
+                    value={dietaryProfile.height}
+                    onChange={(e) => setDietaryProfile({ ...dietaryProfile, height: e.target.value })}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    placeholder="170"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.weight || 'Weight'} (kg)</label>
+                  <input
+                    type="text"
+                    value={dietaryProfile.weight}
+                    onChange={(e) => setDietaryProfile({ ...dietaryProfile, weight: e.target.value })}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    placeholder="70"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 block mb-1">{t.activityLevel || 'Activity Level'}</label>
+                <select
+                  value={dietaryProfile.activityLevel}
+                  onChange={(e) => setDietaryProfile({ ...dietaryProfile, activityLevel: e.target.value })}
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                >
+                  <option value="">{t.select || 'Select'}</option>
+                  <option value="sedentary">{t.sedentary || 'Sedentary'}</option>
+                  <option value="lightly_active">{t.lightlyActive || 'Lightly Active'}</option>
+                  <option value="moderately_active">{t.moderatelyActive || 'Moderately Active'}</option>
+                  <option value="very_active">{t.veryActive || 'Very Active'}</option>
+                  <option value="extremely_active">{t.extremelyActive || 'Extremely Active'}</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {dietaryTab === 'goals' && (
+            <>
+              <div>
+                <label className="text-sm text-gray-500 block mb-1">{t.healthGoal || 'Health Goal'}</label>
+                <select
+                  value={dietaryProfile.healthGoal}
+                  onChange={(e) => setDietaryProfile({ ...dietaryProfile, healthGoal: e.target.value })}
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                >
+                  <option value="">{t.select || 'Select'}</option>
+                  <option value="weight_loss">{t.weightLoss || 'Weight Loss'}</option>
+                  <option value="weight_gain">{t.weightGain || 'Weight Gain'}</option>
+                  <option value="muscle_gain">{t.muscleGain || 'Muscle Gain'}</option>
+                  <option value="maintenance">{t.maintenance || 'Maintain Weight'}</option>
+                  <option value="general_health">{t.generalHealth || 'General Health'}</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 block mb-1">{t.targetWeight || 'Target Weight'} (kg)</label>
+                <input
+                  type="text"
+                  value={dietaryProfile.targetWeight}
+                  onChange={(e) => setDietaryProfile({ ...dietaryProfile, targetWeight: e.target.value })}
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                  placeholder="65"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 block mb-1">{t.budgetRange || 'Dining Budget'}</label>
+                <select
+                  value={dietaryProfile.budgetRange}
+                  onChange={(e) => setDietaryProfile({ ...dietaryProfile, budgetRange: e.target.value })}
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                >
+                  <option value="">{t.select || 'Select'}</option>
+                  <option value="low">{t.budgetLow || 'Budget (€5-15)'}</option>
+                  <option value="medium">{t.budgetMedium || 'Moderate (€15-30)'}</option>
+                  <option value="high">{t.budgetHigh || 'Premium (€30+)'}</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 block mb-1">{t.diningFrequency || 'Dining Frequency'}</label>
+                <select
+                  value={dietaryProfile.diningFrequency}
+                  onChange={(e) => setDietaryProfile({ ...dietaryProfile, diningFrequency: e.target.value })}
+                  className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                >
+                  <option value="">{t.select || 'Select'}</option>
+                  <option value="rarely">{t.rarely || 'Rarely'}</option>
+                  <option value="occasionally">{t.occasionally || '1-2x/month'}</option>
+                  <option value="regularly">{t.regularly || '1-2x/week'}</option>
+                  <option value="frequently">{t.frequently || '3+/week'}</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {dietaryTab === 'preferences' && (
+            <>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">{t.dietaryPreferences || 'Dietary Preferences'}</label>
+                <div className="flex flex-wrap gap-2">
+                  {dietaryOptions.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => toggleDietaryArrayField('dietaryPreferences', opt.key)}
+                      className={cn(
+                        "px-3 py-2 border rounded-full text-xs transition-colors",
+                        dietaryProfile.dietaryPreferences.includes(opt.key)
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-gray-200 hover:border-primary"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">{t.allergies || 'Allergies'}</label>
+                <div className="flex flex-wrap gap-2">
+                  {allergyOptions.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => toggleDietaryArrayField('allergies', opt.key)}
+                      className={cn(
+                        "px-3 py-2 border rounded-full text-xs transition-colors",
+                        dietaryProfile.allergies.includes(opt.key)
+                          ? "border-red-400 bg-red-50 text-red-600 font-medium"
+                          : "border-gray-200 hover:border-red-400"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">{t.preferredCuisines || 'Preferred Cuisines'}</label>
+                <div className="flex flex-wrap gap-2">
+                  {cuisineOptions.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => toggleDietaryArrayField('preferredCuisines', opt.key)}
+                      className={cn(
+                        "px-3 py-2 border rounded-full text-xs transition-colors",
+                        dietaryProfile.preferredCuisines.includes(opt.key)
+                          ? "border-green-500 bg-green-50 text-green-600 font-medium"
+                          : "border-gray-200 hover:border-green-500"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {dietaryTab === 'nutrition' && (
+            <>
+              <p className="text-sm text-gray-500">{t.nutritionTargetsDesc || 'Set your daily nutrition targets for personalized recommendations.'}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.calories || 'Calories'}</label>
+                  <input
+                    type="number"
+                    value={dietaryProfile.calorieTarget}
+                    onChange={(e) => setDietaryProfile({ ...dietaryProfile, calorieTarget: e.target.value })}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    placeholder="2000"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.protein || 'Protein'} (g)</label>
+                  <input
+                    type="number"
+                    value={dietaryProfile.proteinTarget}
+                    onChange={(e) => setDietaryProfile({ ...dietaryProfile, proteinTarget: e.target.value })}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    placeholder="150"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.carbs || 'Carbs'} (g)</label>
+                  <input
+                    type="number"
+                    value={dietaryProfile.carbTarget}
+                    onChange={(e) => setDietaryProfile({ ...dietaryProfile, carbTarget: e.target.value })}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    placeholder="250"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">{t.fat || 'Fat'} (g)</label>
+                  <input
+                    type="number"
+                    value={dietaryProfile.fatTarget}
+                    onChange={(e) => setDietaryProfile({ ...dietaryProfile, fatTarget: e.target.value })}
+                    className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm"
+                    placeholder="65"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          <button 
+            type="button"
+            onClick={handleSaveDietary}
+            disabled={isSavingDietary}
+            className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          >
+            {isSavingDietary && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSavingDietary ? (t.saving || 'Saving...') : (t.savePreferences || 'Save Preferences')}
+          </button>
         </div>
       </div>
-
-      <button 
-        type="button"
-        onClick={handleSaveDietary}
-        disabled={isSavingDietary}
-        className="w-full bg-primary text-white font-medium py-3 rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
-      >
-        {isSavingDietary ? (t.saving || 'Saving...') : (t.savePreferences || 'Save Preferences')}
-      </button>
-    </div>
-  );
+    );
+  };
 
   const getCardBrandColor = (brand: string) => {
     switch (brand.toLowerCase()) {
