@@ -46,6 +46,9 @@ The app has a dual-layout approach:
 - `/m/ai-menu` - AI-powered food recommendations
 - `/m/wallet` - Balance, vouchers, cashback, transactions
 - `/m/profile` - User settings and QR code
+- `/m/recipes` - Recipe discovery with cuisine/category/difficulty filters
+- `/m/recipes/create` - Share a new recipe
+- `/m/recipes/:id` - Recipe detail with comments, likes, saves
 
 **Mobile Components** (`client/src/components/mobile/`):
 - `MobileLayout.tsx` - 5-tab bottom navigation
@@ -152,8 +155,46 @@ The platform includes an AI-powered customer support system:
 
 **Escalation Keywords**: refund, rambursare, payment failed, account hacked, legal, speak to human, complaint, manager
 
+### Recipe Sharing System
+
+The platform includes a community recipe sharing feature:
+
+**Database Tables** (in `shared/schema.ts`):
+- `recipes` - Recipe content with JSONB for ingredients/instructions
+- `recipe_likes` - User likes on recipes
+- `recipe_saves` - User saved/bookmarked recipes
+- `recipe_comments` - Comments on recipes
+
+**API Endpoints** (`server/recipeRoutes.ts`):
+- `GET /api/recipes` - List recipes with filters (cuisine, category, difficulty, restaurant)
+- `GET /api/recipes/:id` - Get recipe detail with comments
+- `POST /api/recipes` - Create new recipe (auth required)
+- `PATCH /api/recipes/:id` - Update recipe (author only)
+- `DELETE /api/recipes/:id` - Delete recipe (author only)
+- `POST /api/recipes/:id/like` - Like recipe (auth required)
+- `DELETE /api/recipes/:id/like` - Unlike recipe
+- `POST /api/recipes/:id/save` - Save/bookmark recipe
+- `DELETE /api/recipes/:id/save` - Remove from saved
+- `POST /api/recipes/:id/comments` - Add comment
+- `GET /api/recipes/saved/list` - Get user's saved recipes
+- `GET /api/recipes/user/mine` - Get user's own recipes
+
+**Mobile Pages**:
+- `MobileRecipes.tsx` - Recipe discovery with search, cuisine/category/difficulty filters
+- `MobileRecipeDetail.tsx` - Full recipe view with ingredients, instructions, comments, like/save
+- `MobileRecipeCreate.tsx` - Create recipe form with ingredients/instructions builders
+
+**Features**:
+- JSONB storage for flexible ingredient/instruction formats
+- Optional restaurant association
+- Dietary tags (Vegetarian, Vegan, Gluten-Free, etc.)
+- Difficulty levels (easy, medium, hard)
+- Engagement metrics (likes, comments, saves, views)
+- Prep time, cook time, servings
+
 ## Recent Changes
 
+- **2025-01-29**: Added Recipe Sharing System with discovery page, recipe detail, recipe creation, likes/saves/comments, and profile integration
 - **2025-01-29**: Added AI Support System with chat widget, knowledge base, FAQ pages, and admin helpdesk with real-time data
 - **2025-01-26**: Added token-based OAuth exchange for mobile - server generates one-time token after OAuth, passes via deep link, app exchanges token for session in WebView context via /api/auth/mobile-exchange endpoint
 - **2025-01-26**: Implemented browser-based OAuth for Google Sign-In on mobile - opens external browser instead of WebView SDK, uses deep link (eatoff://oauth-callback) for callback, with proper session security (httpOnly, secure in production)

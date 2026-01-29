@@ -62,6 +62,9 @@ import MobileVerify2FA from "@/pages/mobile/MobileVerify2FA";
 import MobileHelpFAQ from "@/pages/mobile/MobileHelpFAQ";
 import MobileHelpTerms from "@/pages/mobile/MobileHelpTerms";
 import MobileHelpPrivacy from "@/pages/mobile/MobileHelpPrivacy";
+import MobileRecipes from "@/pages/mobile/MobileRecipes";
+import MobileRecipeDetail from "@/pages/mobile/MobileRecipeDetail";
+import MobileRecipeCreate from "@/pages/mobile/MobileRecipeCreate";
 import { useIsMobileApp } from "@/hooks/useIsMobile";
 import { useLocation } from "wouter";
 import eatOffLogo from "@assets/EatOff_Logo_1750512988041.png";
@@ -256,6 +259,9 @@ function Router() {
       <Route path="/m/help/faq" component={MobileHelpFAQ} />
       <Route path="/m/help/terms" component={MobileHelpTerms} />
       <Route path="/m/help/privacy" component={MobileHelpPrivacy} />
+      <Route path="/m/recipes" component={MobileRecipes} />
+      <Route path="/m/recipes/create" component={MobileRecipeCreate} />
+      <Route path="/m/recipes/:id" component={MobileRecipeDetail} />
       
       {/* User Section */}
       <Route path="/" component={Marketplace} />
