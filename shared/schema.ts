@@ -1407,3 +1407,192 @@ export type InsertLoyalCustomer = z.infer<typeof insertLoyalCustomerSchema>;
 
 export type PaymentRequest = typeof paymentRequests.$inferSelect;
 export type InsertPaymentRequest = z.infer<typeof insertPaymentRequestSchema>;
+
+// =============================================
+// AI Support System Tables
+// =============================================
+
+// Support conversations (chat sessions)
+export const supportConversations = pgTable("support_conversations", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  
+  // Conversation metadata
+  title: text("title"), // Auto-generated from first message
+  status: text("status").notNull().default("active"), // active, resolved, escalated
+  channel: text("channel").notNull().default("chat"), // chat, email, in_app
+  
+  // AI handling
+  isHandledByAI: boolean("is_handled_by_ai").default(true),
+  aiConfidenceScore: decimal("ai_confidence_score", { precision: 3, scale: 2 }), // 0-1 score
+  
+  // Escalation tracking
+  escalatedAt: timestamp("escalated_at"),
+  escalationReason: text("escalation_reason"),
+  assignedAgentId: integer("assigned_agent_id").references(() => eatoffAdmins.id),
+  
+  // Timestamps
+  lastMessageAt: timestamp("last_message_at"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Support messages within conversations
+export const supportMessages = pgTable("support_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => supportConversations.id, { onDelete: "cascade" }).notNull(),
+  
+  // Message content
+  role: text("role").notNull(), // user, assistant, system, agent
+  content: text("content").notNull(),
+  
+  // AI metadata
+  ragSourceIds: text("rag_source_ids").array(), // Knowledge base articles used
+  aiModelVersion: text("ai_model_version"),
+  
+  // Attachments
+  attachmentUrls: text("attachment_urls").array(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Support tickets for escalated issues
+export const supportTickets = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => supportConversations.id),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  
+  // Ticket details
+  ticketNumber: varchar("ticket_number", { length: 20 }).unique().notNull(), // e.g., "TKT-2024-00001"
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // payment, refund, voucher, technical, account, other
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  
+  // Status tracking
+  status: text("status").notNull().default("open"), // open, in_progress, waiting_customer, resolved, closed
+  
+  // Assignment
+  assignedAgentId: integer("assigned_agent_id").references(() => eatoffAdmins.id),
+  assignedAt: timestamp("assigned_at"),
+  
+  // Resolution
+  resolution: text("resolution"),
+  resolvedBy: integer("resolved_by").references(() => eatoffAdmins.id),
+  resolvedAt: timestamp("resolved_at"),
+  
+  // Customer satisfaction
+  csatRating: integer("csat_rating"), // 1-5 rating
+  csatFeedback: text("csat_feedback"),
+  
+  // Context bundle (stored as JSON for AI processing)
+  supportBundle: jsonb("support_bundle"), // Contains user data, vouchers, transactions, etc.
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Knowledge base for RAG
+export const knowledgeBase = pgTable("knowledge_base", {
+  id: serial("id").primaryKey(),
+  
+  // Content
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  category: text("category").notNull(), // faq, policy, feature, troubleshooting
+  subcategory: text("subcategory"),
+  
+  // Search and RAG
+  keywords: text("keywords").array(),
+  
+  // Visibility
+  isPublic: boolean("is_public").default(true), // Visible in Help Center
+  isActiveForAI: boolean("is_active_for_ai").default(true), // Used by AI agent
+  
+  // Metrics
+  viewCount: integer("view_count").default(0),
+  helpfulCount: integer("helpful_count").default(0),
+  notHelpfulCount: integer("not_helpful_count").default(0),
+  
+  // Management
+  createdBy: integer("created_by").references(() => eatoffAdmins.id),
+  lastUpdatedBy: integer("last_updated_by").references(() => eatoffAdmins.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Support analytics for tracking AI performance
+export const supportAnalytics = pgTable("support_analytics", {
+  id: serial("id").primaryKey(),
+  date: timestamp("date").notNull(),
+  
+  // Volume metrics
+  totalConversations: integer("total_conversations").default(0),
+  aiHandledConversations: integer("ai_handled_conversations").default(0),
+  escalatedConversations: integer("escalated_conversations").default(0),
+  
+  // Resolution metrics
+  avgResolutionTimeMinutes: integer("avg_resolution_time_minutes").default(0),
+  firstContactResolutionRate: decimal("first_contact_resolution_rate", { precision: 5, scale: 2 }).default("0.00"),
+  
+  // Satisfaction
+  avgCsatScore: decimal("avg_csat_score", { precision: 3, scale: 2 }).default("0.00"),
+  totalCsatResponses: integer("total_csat_responses").default(0),
+  
+  // AI performance
+  deflectionRate: decimal("deflection_rate", { precision: 5, scale: 2 }).default("0.00"), // % resolved without human
+  avgAiConfidence: decimal("avg_ai_confidence", { precision: 3, scale: 2 }).default("0.00"),
+  
+  // Top categories
+  topCategories: jsonb("top_categories"), // { category: count }
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for support tables
+export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastMessageAt: true,
+  escalatedAt: true,
+  resolvedAt: true,
+});
+
+export const insertSupportMessageSchema = createInsertSchema(supportMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  assignedAt: true,
+  resolvedAt: true,
+});
+
+export const insertKnowledgeBaseSchema = createInsertSchema(knowledgeBase).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  viewCount: true,
+  helpfulCount: true,
+  notHelpfulCount: true,
+});
+
+// Type exports for support system
+export type SupportConversation = typeof supportConversations.$inferSelect;
+export type InsertSupportConversation = z.infer<typeof insertSupportConversationSchema>;
+
+export type SupportMessage = typeof supportMessages.$inferSelect;
+export type InsertSupportMessage = z.infer<typeof insertSupportMessageSchema>;
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+
+export type KnowledgeBaseArticle = typeof knowledgeBase.$inferSelect;
+export type InsertKnowledgeBaseArticle = z.infer<typeof insertKnowledgeBaseSchema>;
+
+export type SupportAnalytics = typeof supportAnalytics.$inferSelect;
