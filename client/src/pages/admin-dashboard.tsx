@@ -923,6 +923,375 @@ function EatOffVoucherManagement() {
   );
 }
 
+// Wallet & Credit Management Tab
+interface CreditType {
+  id: number;
+  name: string;
+  amount: string;
+  description: string | null;
+  interestRate: string;
+  paymentTermDays: number;
+  displayOrder: number;
+  isActive: boolean;
+  isCustomAmount: boolean;
+  minCustomAmount: string | null;
+  maxCustomAmount: string | null;
+}
+
+interface CreditRequest {
+  id: number;
+  customerId: number;
+  status: string;
+  creditLimit: string;
+  requestedAmount: string | null;
+  fullName: string | null;
+  cnp: string | null;
+  phone: string | null;
+  createdAt: string;
+  customer?: { firstName: string; lastName: string; email: string };
+}
+
+function WalletCreditTab() {
+  const [showCreateCreditType, setShowCreateCreditType] = useState(false);
+  const [newCreditType, setNewCreditType] = useState({
+    name: '',
+    amount: '',
+    description: '',
+    interestRate: '0',
+    paymentTermDays: 30,
+    displayOrder: 0,
+    isCustomAmount: false,
+    minCustomAmount: '100',
+    maxCustomAmount: '10000'
+  });
+  const [isCreatingCreditType, setIsCreatingCreditType] = useState(false);
+  const [creditSubTab, setCreditSubTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const { toast } = useToast();
+
+  // Fetch credit types
+  const { data: creditTypes = [], refetch: refetchCreditTypes } = useQuery<CreditType[]>({
+    queryKey: ['/api/admin/credit-types'],
+  });
+
+  // Fetch credit requests
+  const { data: creditRequests = [], refetch: refetchCreditRequests } = useQuery<CreditRequest[]>({
+    queryKey: ['/api/admin/credit-requests'],
+  });
+
+  const handleCreateCreditType = async () => {
+    if (!newCreditType.name || (!newCreditType.isCustomAmount && !newCreditType.amount)) return;
+    setIsCreatingCreditType(true);
+    try {
+      const response = await fetch('/api/admin/credit-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: newCreditType.name,
+          amount: newCreditType.isCustomAmount ? '0' : newCreditType.amount,
+          description: newCreditType.description,
+          interestRate: newCreditType.interestRate,
+          paymentTermDays: newCreditType.paymentTermDays,
+          displayOrder: newCreditType.displayOrder,
+          isCustomAmount: newCreditType.isCustomAmount,
+          minCustomAmount: newCreditType.isCustomAmount ? newCreditType.minCustomAmount : null,
+          maxCustomAmount: newCreditType.isCustomAmount ? newCreditType.maxCustomAmount : null
+        }),
+      });
+      if (response.ok) {
+        setNewCreditType({
+          name: '', amount: '', description: '', interestRate: '0',
+          paymentTermDays: 30, displayOrder: 0, isCustomAmount: false,
+          minCustomAmount: '100', maxCustomAmount: '10000'
+        });
+        setShowCreateCreditType(false);
+        refetchCreditTypes();
+        toast({ title: "Credit type created successfully" });
+      }
+    } catch (error) {
+      console.error('Failed to create credit type:', error);
+      toast({ title: "Failed to create credit type", variant: "destructive" });
+    } finally {
+      setIsCreatingCreditType(false);
+    }
+  };
+
+  const handleToggleCreditType = async (id: number, isActive: boolean) => {
+    try {
+      await fetch(`/api/admin/credit-types/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isActive: !isActive }),
+      });
+      refetchCreditTypes();
+    } catch (error) {
+      console.error('Failed to toggle credit type:', error);
+    }
+  };
+
+  const handleApproveCreditRequest = async (id: number) => {
+    try {
+      const response = await fetch(`/api/admin/credit-requests/${id}/approve`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        refetchCreditRequests();
+        toast({ title: "Credit request approved" });
+      }
+    } catch (error) {
+      console.error('Failed to approve credit:', error);
+    }
+  };
+
+  const handleRejectCreditRequest = async (id: number) => {
+    try {
+      const response = await fetch(`/api/admin/credit-requests/${id}/reject`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        refetchCreditRequests();
+        toast({ title: "Credit request rejected" });
+      }
+    } catch (error) {
+      console.error('Failed to reject credit:', error);
+    }
+  };
+
+  const filteredRequests = creditRequests.filter(r => r.status === creditSubTab);
+
+  return (
+    <div className="space-y-6">
+      {/* Credit Types Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Credit Types (Predefined Amounts)</CardTitle>
+            <Button onClick={() => setShowCreateCreditType(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Credit Type
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {showCreateCreditType && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Name *</label>
+                  <Input
+                    value={newCreditType.name}
+                    onChange={(e) => setNewCreditType({ ...newCreditType, name: e.target.value })}
+                    placeholder="e.g., Credit Plus"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Amount (RON)</label>
+                  <Input
+                    type="number"
+                    value={newCreditType.amount}
+                    onChange={(e) => setNewCreditType({ ...newCreditType, amount: e.target.value })}
+                    placeholder="e.g., 1000"
+                    disabled={newCreditType.isCustomAmount}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Interest Rate %</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={newCreditType.interestRate}
+                    onChange={(e) => setNewCreditType({ ...newCreditType, interestRate: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Payment Term (Days)</label>
+                  <Input
+                    type="number"
+                    value={newCreditType.paymentTermDays}
+                    onChange={(e) => setNewCreditType({ ...newCreditType, paymentTermDays: parseInt(e.target.value) || 30 })}
+                    placeholder="30"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Display Order</label>
+                  <Input
+                    type="number"
+                    value={newCreditType.displayOrder}
+                    onChange={(e) => setNewCreditType({ ...newCreditType, displayOrder: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <Input
+                    value={newCreditType.description}
+                    onChange={(e) => setNewCreditType({ ...newCreditType, description: e.target.value })}
+                    placeholder="Optional description"
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <input
+                    type="checkbox"
+                    checked={newCreditType.isCustomAmount}
+                    onChange={(e) => setNewCreditType({ ...newCreditType, isCustomAmount: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <label className="text-sm">Custom Amount Option</label>
+                </div>
+              </div>
+              {newCreditType.isCustomAmount && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Min Amount (RON)</label>
+                    <Input
+                      type="number"
+                      value={newCreditType.minCustomAmount}
+                      onChange={(e) => setNewCreditType({ ...newCreditType, minCustomAmount: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Max Amount (RON)</label>
+                    <Input
+                      type="number"
+                      value={newCreditType.maxCustomAmount}
+                      onChange={(e) => setNewCreditType({ ...newCreditType, maxCustomAmount: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button onClick={handleCreateCreditType} disabled={isCreatingCreditType} className="bg-green-600 hover:bg-green-700">
+                  {isCreatingCreditType ? 'Creating...' : 'Create Credit Type'}
+                </Button>
+                <Button variant="outline" onClick={() => setShowCreateCreditType(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+
+          {creditTypes.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No credit types defined yet. Add one to get started.</p>
+          ) : (
+            <div className="space-y-2">
+              {creditTypes.map((type) => (
+                <div key={type.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span className="font-medium">{type.name}</span>
+                      {type.description && <span className="text-gray-500 text-sm ml-2">- {type.description}</span>}
+                    </div>
+                    <Badge variant={type.isCustomAmount ? "secondary" : "default"}>
+                      {type.isCustomAmount ? `${type.minCustomAmount}-${type.maxCustomAmount} RON` : `${type.amount} RON`}
+                    </Badge>
+                    <span className="text-sm text-gray-500">{type.interestRate}% interest</span>
+                    <span className="text-sm text-gray-500">{type.paymentTermDays} days</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={type.isActive ? "default" : "secondary"}>
+                      {type.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleCreditType(type.id, type.isActive)}
+                    >
+                      {type.isActive ? 'Deactivate' : 'Activate'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Credit Requests Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Credit Requests</CardTitle>
+          <div className="flex gap-2 mt-2">
+            <Button
+              variant={creditSubTab === 'pending' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCreditSubTab('pending')}
+            >
+              Pending ({creditRequests.filter(r => r.status === 'pending').length})
+            </Button>
+            <Button
+              variant={creditSubTab === 'approved' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCreditSubTab('approved')}
+            >
+              Approved ({creditRequests.filter(r => r.status === 'approved').length})
+            </Button>
+            <Button
+              variant={creditSubTab === 'rejected' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCreditSubTab('rejected')}
+            >
+              Rejected ({creditRequests.filter(r => r.status === 'rejected').length})
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredRequests.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No {creditSubTab} credit requests.</p>
+          ) : (
+            <div className="space-y-3">
+              {filteredRequests.map((request) => (
+                <div key={request.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">{request.fullName || 'Unknown'}</div>
+                    <div className="text-sm text-gray-500">
+                      CNP: {request.cnp || 'N/A'} | Phone: {request.phone || 'N/A'}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Requested: {request.requestedAmount || request.creditLimit} RON
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {new Date(request.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  {creditSubTab === 'pending' && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleApproveCreditRequest(request.id)}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRejectCreditRequest(request.id)}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                  {creditSubTab !== 'pending' && (
+                    <Badge variant={creditSubTab === 'approved' ? 'default' : 'destructive'}>
+                      {creditSubTab === 'approved' ? 'Approved' : 'Rejected'}
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [selectedTab, setSelectedTab] = useState("overview");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -2350,6 +2719,10 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
             </div>
+          )}
+
+          {selectedTab === "wallet" && (
+            <WalletCreditTab />
           )}
 
           {selectedTab === "finances" && (
