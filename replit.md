@@ -119,8 +119,42 @@ The app supports 6 languages with automatic detection:
 - Desktop pages partially translated (in progress)
 - City names remain as proper nouns (not translated)
 
+### AI Support System
+
+The platform includes an AI-powered customer support system:
+
+**Database Tables** (in `shared/schema.ts`):
+- `support_conversations` - Chat sessions with customers
+- `support_messages` - Individual messages in conversations
+- `support_tickets` - Escalated issues requiring human review
+- `knowledge_base` - FAQ articles for AI and customer self-service
+- `support_analytics` - Metrics tracking (deflection rate, CSAT)
+
+**API Endpoints** (`server/supportRoutes.ts`):
+- `POST /api/support/conversations` - Start new chat
+- `POST /api/support/conversations/:id/messages` - Send message (SSE streaming)
+- `GET /api/help/articles` - Public FAQ articles
+- Admin endpoints with auth: `/api/admin/support/tickets`, `/api/admin/knowledge-base`
+
+**Components**:
+- `SupportChatWidget.tsx` - Floating chat bubble with AI streaming responses
+- `MobileHelpFAQ.tsx` - FAQ page with search and categories
+- `MobileHelpTerms.tsx` - Terms of Service page
+- `MobileHelpPrivacy.tsx` - Privacy Policy page
+- Admin Helpdesk tab in `eatoff-admin-dashboard.tsx`
+
+**AI Features**:
+- Uses OpenAI via Replit AI Integrations
+- RAG-based knowledge base search for contextual answers
+- Automatic escalation to tickets for: refund, payment, legal, security issues
+- Responds in user's language (Romanian/English)
+- System prompt limits responses to 200 words
+
+**Escalation Keywords**: refund, rambursare, payment failed, account hacked, legal, speak to human, complaint, manager
+
 ## Recent Changes
 
+- **2025-01-29**: Added AI Support System with chat widget, knowledge base, FAQ pages, and admin helpdesk with real-time data
 - **2025-01-26**: Added token-based OAuth exchange for mobile - server generates one-time token after OAuth, passes via deep link, app exchanges token for session in WebView context via /api/auth/mobile-exchange endpoint
 - **2025-01-26**: Implemented browser-based OAuth for Google Sign-In on mobile - opens external browser instead of WebView SDK, uses deep link (eatoff://oauth-callback) for callback, with proper session security (httpOnly, secure in production)
 - **2025-01-26**: Added deep link handling in MobileSignIn and MobileSignUp with URL parsing error handling and scheme validation
