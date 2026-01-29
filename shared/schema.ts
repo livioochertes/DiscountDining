@@ -13,6 +13,20 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Mobile session tokens table (for native app authentication)
+export const mobileSessions = pgTable(
+  "mobile_sessions",
+  {
+    id: serial("id").primaryKey(),
+    token: varchar("token", { length: 255 }).notNull().unique(),
+    userId: varchar("user_id", { length: 255 }).notNull(),
+    userData: jsonb("user_data"),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("idx_mobile_sessions_token").on(table.token)],
+);
+
 // User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),

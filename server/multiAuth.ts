@@ -10,6 +10,31 @@ import { storage } from "./storage";
 import { pool } from "./db";
 import ConnectPgSimple from "connect-pg-simple";
 
+// Ensure mobile_sessions table exists (called at startup)
+async function ensureMobileSessionsTable(): Promise<void> {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS mobile_sessions (
+        id SERIAL PRIMARY KEY,
+        token VARCHAR(255) NOT NULL UNIQUE,
+        user_id VARCHAR(255) NOT NULL,
+        user_data JSONB,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_mobile_sessions_token ON mobile_sessions(token)
+    `);
+    console.log('[Mobile Sessions] Table ensured');
+  } catch (err: any) {
+    console.error('[Mobile Sessions] Failed to ensure table:', err.message);
+  }
+}
+
+// Initialize mobile sessions table on module load
+ensureMobileSessionsTable();
+
 // Temporary token store for mobile OAuth exchange (one-time use, 5 min expiry)
 // Maps token -> { user, expiresAt }
 const mobileAuthTokens = new Map<string, { user: any; expiresAt: number }>();
@@ -113,7 +138,9 @@ export async function generateMobileSessionToken(user: any): Promise<string> {
   } catch (err: any) {
     console.error('[Mobile Sessions] Failed to store token:', err.message);
     console.error('[Mobile Sessions] Error stack:', err.stack);
-    // Don't throw - return the token anyway but log the error
+    // CRITICAL: Throw the error so the token exchange fails properly
+    // Otherwise the app gets a token that doesn't exist in the database
+    throw new Error(`Failed to create mobile session: ${err.message}`);
   }
   
   return token;
