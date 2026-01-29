@@ -524,6 +524,16 @@ export default function MobileSignIn() {
         <p className="mt-8 text-center text-xs text-gray-400 max-w-xs mx-auto">
           {t.termsAgreement || 'Continuând, ești de acord cu Termenii și Condițiile și Politica de Confidențialitate'}
         </p>
+
+        {/* Restaurant Staff Link */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => setLocation('/m/restaurant/signin')}
+            className="text-sm text-gray-500 hover:text-primary transition-colors"
+          >
+            Ești angajat restaurant? <span className="font-semibold text-primary">Portal Restaurant</span>
+          </button>
+        </div>
       </div>
     </div>
   );

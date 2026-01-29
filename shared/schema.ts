@@ -412,6 +412,8 @@ export const eatoffVouchers = pgTable("eatoff_vouchers", {
   bonusPercentage: decimal("bonus_percentage", { precision: 5, scale: 2 }).default("0.00"), // Extra value for pay later
   paymentTermDays: integer("payment_term_days").default(0), // Days until payment is charged (30, 60, etc.)
   requiresPreauth: boolean("requires_preauth").default(false), // Pre-authorize card for later charge
+  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).default("0.00"), // Interest rate % for pay_later vouchers (0 = no interest)
+  allowsCashback: boolean("allows_cashback").default(true), // If true and has interest, customer can earn cashback
   
   // Validity settings
   validityMonths: integer("validity_months").default(12),
@@ -1706,3 +1708,314 @@ export type InsertRecipeSave = z.infer<typeof insertRecipeSaveSchema>;
 
 export type RecipeComment = typeof recipeComments.$inferSelect;
 export type InsertRecipeComment = z.infer<typeof insertRecipeCommentSchema>;
+
+// ============================================
+// CASHBACK & LOYALTY SYSTEM
+// ============================================
+
+// Cashback groups - can be created by EatOff or restaurants
+export const cashbackGroups = pgTable("cashback_groups", {
+  id: serial("id").primaryKey(),
+  
+  // Ownership - either EatOff (null restaurantId) or specific restaurant
+  restaurantId: integer("restaurant_id").references(() => restaurants.id), // null = EatOff group
+  
+  // Group details
+  name: text("name").notNull(),
+  description: text("description"),
+  cashbackPercentage: decimal("cashback_percentage", { precision: 5, scale: 2 }).notNull(), // e.g., 3.00, 5.00
+  
+  // Eligibility criteria
+  minSpendToJoin: decimal("min_spend_to_join", { precision: 10, scale: 2 }).default("0.00"), // minimum total spend to be eligible
+  minOrdersToJoin: integer("min_orders_to_join").default(0), // minimum orders to be eligible
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(1), // higher priority = preferred group if customer qualifies for multiple
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Customer enrollment in cashback groups
+export const customerCashbackEnrollments = pgTable("customer_cashback_enrollments", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  groupId: integer("group_id").references(() => cashbackGroups.id).notNull(),
+  
+  // Enrollment details
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  enrolledBy: varchar("enrolled_by"), // "self", "restaurant_scan", "eatoff_admin", "auto_upgrade"
+  enrolledByUserId: integer("enrolled_by_user_id"), // restaurant owner or admin who enrolled
+  
+  // Tracking
+  totalCashbackEarned: decimal("total_cashback_earned", { precision: 10, scale: 2 }).default("0.00"),
+  totalSpendInGroup: decimal("total_spend_in_group", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  deactivatedAt: timestamp("deactivated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Customer cashback balance tracking
+export const customerCashbackBalance = pgTable("customer_cashback_balance", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  
+  // Separate balances for EatOff and per-restaurant
+  eatoffCashbackBalance: decimal("eatoff_cashback_balance", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Total across all sources
+  totalCashbackBalance: decimal("total_cashback_balance", { precision: 10, scale: 2 }).default("0.00"),
+  totalCashbackEarned: decimal("total_cashback_earned", { precision: 10, scale: 2 }).default("0.00"),
+  totalCashbackUsed: decimal("total_cashback_used", { precision: 10, scale: 2 }).default("0.00"),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Per-restaurant cashback balance (for restaurant-specific cashback)
+export const customerRestaurantCashback = pgTable("customer_restaurant_cashback", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  
+  cashbackBalance: decimal("cashback_balance", { precision: 10, scale: 2 }).default("0.00"),
+  totalEarned: decimal("total_earned", { precision: 10, scale: 2 }).default("0.00"),
+  totalUsed: decimal("total_used", { precision: 10, scale: 2 }).default("0.00"),
+  totalSpent: decimal("total_spent", { precision: 10, scale: 2 }).default("0.00"), // for tier calculation
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Cashback transactions log
+export const cashbackTransactions = pgTable("cashback_transactions", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  groupId: integer("group_id").references(() => cashbackGroups.id),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id), // null = EatOff cashback
+  
+  // Transaction details
+  transactionType: varchar("transaction_type").notNull(), // "earned", "used", "expired", "adjustment"
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // Source transaction (what generated this cashback)
+  sourceOrderId: integer("source_order_id").references(() => orders.id),
+  sourceAmount: decimal("source_amount", { precision: 10, scale: 2 }), // order amount that generated cashback
+  
+  // Balance after transaction
+  balanceAfter: decimal("balance_after", { precision: 10, scale: 2 }).notNull(),
+  
+  description: text("description"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ============================================
+// CREDIT ON ACCOUNT SYSTEM
+// ============================================
+
+// Credit on account - only EatOff can issue
+export const customerCreditAccount = pgTable("customer_credit_account", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  
+  // Credit limits and balances
+  creditLimit: decimal("credit_limit", { precision: 10, scale: 2 }).default("0.00"), // approved credit limit
+  availableCredit: decimal("available_credit", { precision: 10, scale: 2 }).default("0.00"),
+  usedCredit: decimal("used_credit", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Default display limit (shown before approval)
+  defaultDisplayLimit: decimal("default_display_limit", { precision: 10, scale: 2 }).default("1000.00"),
+  
+  // Status
+  status: varchar("status").notNull().default("not_requested"), // not_requested, pending, approved, rejected, suspended
+  
+  // Approval details
+  requestedAt: timestamp("requested_at"),
+  requestedAmount: decimal("requested_amount", { precision: 10, scale: 2 }),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: integer("approved_by"), // admin user id
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Terms
+  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).default("0.00"), // annual interest rate %
+  paymentTermDays: integer("payment_term_days").default(30), // days to repay
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Credit usage transactions
+export const creditTransactions = pgTable("credit_transactions", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  creditAccountId: integer("credit_account_id").references(() => customerCreditAccount.id).notNull(),
+  
+  // Transaction details
+  transactionType: varchar("transaction_type").notNull(), // "usage", "repayment", "interest", "adjustment"
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // For usage: what was purchased
+  orderId: integer("order_id").references(() => orders.id),
+  voucherId: integer("voucher_id").references(() => eatoffVouchers.id),
+  
+  // For repayment
+  paymentMethod: varchar("payment_method"), // card, bank_transfer, wallet
+  paymentReference: varchar("payment_reference"),
+  
+  // Due date for this usage
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  
+  // Balance tracking
+  balanceAfter: decimal("balance_after", { precision: 10, scale: 2 }).notNull(),
+  
+  description: text("description"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ============================================
+// RESTAURANT LOYALTY/FIDELITY GROUPS
+// ============================================
+
+// Restaurant loyalty groups with discount tiers (different from cashback)
+export const loyaltyGroups = pgTable("loyalty_groups", {
+  id: serial("id").primaryKey(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  
+  // Group details
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Discount settings
+  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }).notNull(), // e.g., 10.00 for 10%
+  
+  // Tier thresholds
+  minSpendThreshold: decimal("min_spend_threshold", { precision: 10, scale: 2 }).default("0.00"), // minimum spend to be in this tier
+  maxSpendThreshold: decimal("max_spend_threshold", { precision: 10, scale: 2 }), // null = no max (top tier)
+  
+  // Auto-upgrade settings
+  autoUpgradeEnabled: boolean("auto_upgrade_enabled").default(true),
+  upgradeToGroupId: integer("upgrade_to_group_id"), // which group to upgrade to when max is exceeded
+  
+  // Display order (for showing tiers in order)
+  tierLevel: integer("tier_level").default(1), // 1 = lowest tier, higher = better
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Customer enrollment in loyalty groups
+export const customerLoyaltyEnrollments = pgTable("customer_loyalty_enrollments", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  groupId: integer("group_id").references(() => loyaltyGroups.id).notNull(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  
+  // Enrollment details
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  enrolledBy: varchar("enrolled_by"), // "restaurant_scan", "auto_upgrade", "manual"
+  enrolledByUserId: integer("enrolled_by_user_id"),
+  
+  // Progress tracking
+  totalSpentAtRestaurant: decimal("total_spent_at_restaurant", { precision: 10, scale: 2 }).default("0.00"),
+  totalDiscountReceived: decimal("total_discount_received", { precision: 10, scale: 2 }).default("0.00"),
+  orderCount: integer("order_count").default(0),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  upgradedFromGroupId: integer("upgraded_from_group_id"), // if auto-upgraded, previous group
+  upgradedAt: timestamp("upgraded_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ============================================
+// INSERT SCHEMAS FOR NEW TABLES
+// ============================================
+
+export const insertCashbackGroupSchema = createInsertSchema(cashbackGroups).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerCashbackEnrollmentSchema = createInsertSchema(customerCashbackEnrollments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCustomerCashbackBalanceSchema = createInsertSchema(customerCashbackBalance).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertCustomerRestaurantCashbackSchema = createInsertSchema(customerRestaurantCashback).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertCashbackTransactionSchema = createInsertSchema(cashbackTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCustomerCreditAccountSchema = createInsertSchema(customerCreditAccount).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCreditTransactionSchema = createInsertSchema(creditTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLoyaltyGroupSchema = createInsertSchema(loyaltyGroups).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerLoyaltyEnrollmentSchema = createInsertSchema(customerLoyaltyEnrollments).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ============================================
+// TYPE EXPORTS FOR NEW TABLES
+// ============================================
+
+export type CashbackGroup = typeof cashbackGroups.$inferSelect;
+export type InsertCashbackGroup = z.infer<typeof insertCashbackGroupSchema>;
+
+export type CustomerCashbackEnrollment = typeof customerCashbackEnrollments.$inferSelect;
+export type InsertCustomerCashbackEnrollment = z.infer<typeof insertCustomerCashbackEnrollmentSchema>;
+
+export type CustomerCashbackBalance = typeof customerCashbackBalance.$inferSelect;
+export type InsertCustomerCashbackBalance = z.infer<typeof insertCustomerCashbackBalanceSchema>;
+
+export type CustomerRestaurantCashback = typeof customerRestaurantCashback.$inferSelect;
+export type InsertCustomerRestaurantCashback = z.infer<typeof insertCustomerRestaurantCashbackSchema>;
+
+export type CashbackTransaction = typeof cashbackTransactions.$inferSelect;
+export type InsertCashbackTransaction = z.infer<typeof insertCashbackTransactionSchema>;
+
+export type CustomerCreditAccount = typeof customerCreditAccount.$inferSelect;
+export type InsertCustomerCreditAccount = z.infer<typeof insertCustomerCreditAccountSchema>;
+
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
+
+export type LoyaltyGroup = typeof loyaltyGroups.$inferSelect;
+export type InsertLoyaltyGroup = z.infer<typeof insertLoyaltyGroupSchema>;
+
+export type CustomerLoyaltyEnrollment = typeof customerLoyaltyEnrollments.$inferSelect;
+export type InsertCustomerLoyaltyEnrollment = z.infer<typeof insertCustomerLoyaltyEnrollmentSchema>;
