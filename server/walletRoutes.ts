@@ -641,21 +641,39 @@ function calculateGeneralVoucherDiscount(customerVoucher: any, orderAmount: numb
 // ============================================
 
 // Helper to get customer ID from various auth sources
-const getAuthCustomerId = (req: Request): number | null => {
+const getAuthCustomerId = async (req: Request): Promise<number | null> => {
   const mobileUser = (req as any).mobileUser;
-  if (mobileUser) return mobileUser.id || mobileUser.customerId;
+  if (mobileUser) {
+    if (typeof mobileUser.customerId === 'number') return mobileUser.customerId;
+    if (typeof mobileUser.id === 'number') return mobileUser.id;
+  }
   
   const user = (req as any).user;
-  if (user) return user.id || user.customerId;
+  if (user) {
+    if (typeof user.customerId === 'number') return user.customerId;
+    if (typeof user.id === 'number') return user.id;
+    
+    // For OAuth users (Apple/Google), look up customer by email
+    if (user.email && typeof user.id === 'string') {
+      const [customer] = await db
+        .select({ id: customers.id })
+        .from(customers)
+        .where(eq(customers.email, user.email))
+        .limit(1);
+      if (customer) return customer.id;
+    }
+  }
   
   const sessionOwnerId = (req.session as any)?.ownerId;
-  return sessionOwnerId || null;
+  if (typeof sessionOwnerId === 'number') return sessionOwnerId;
+  
+  return null;
 };
 
 // Get complete wallet overview with cashback and credit info
 router.get("/wallet/overview", async (req: Request, res: Response) => {
   try {
-    const customerId = getAuthCustomerId(req);
+    const customerId = await getAuthCustomerId(req);
     if (!customerId) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -733,7 +751,7 @@ router.get("/wallet/overview", async (req: Request, res: Response) => {
 // Request credit on account
 router.post("/wallet/credit/request", async (req: Request, res: Response) => {
   try {
-    const customerId = getAuthCustomerId(req);
+    const customerId = await getAuthCustomerId(req);
     if (!customerId) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -794,7 +812,7 @@ router.post("/wallet/credit/request", async (req: Request, res: Response) => {
 // Get credit account status
 router.get("/wallet/credit", async (req: Request, res: Response) => {
   try {
-    const customerId = getAuthCustomerId(req);
+    const customerId = await getAuthCustomerId(req);
     if (!customerId) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -821,7 +839,7 @@ router.get("/wallet/credit", async (req: Request, res: Response) => {
 // Get cashback transactions
 router.get("/wallet/cashback/transactions", async (req: Request, res: Response) => {
   try {
-    const customerId = getAuthCustomerId(req);
+    const customerId = await getAuthCustomerId(req);
     if (!customerId) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -843,7 +861,7 @@ router.get("/wallet/cashback/transactions", async (req: Request, res: Response) 
 // Get credit transactions
 router.get("/wallet/credit/transactions", async (req: Request, res: Response) => {
   try {
-    const customerId = getAuthCustomerId(req);
+    const customerId = await getAuthCustomerId(req);
     if (!customerId) {
       return res.status(401).json({ message: "Authentication required" });
     }
