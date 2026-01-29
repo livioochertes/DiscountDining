@@ -13,7 +13,17 @@ interface AuthenticatedRequest extends Request {
 
 // Enhanced authentication middleware that maps user ID properly for dietary routes
 const dietaryAuth: RequestHandler = async (req, res, next) => {
-  // First try the standard Passport authentication
+  // First check for mobile token auth (set by global middleware)
+  const mobileUser = (req as any).mobileUser;
+  if (mobileUser) {
+    const userIdString = String(mobileUser.id || mobileUser.customerId || '');
+    if (userIdString) {
+      (req as any).ownerId = userIdString;
+      return next();
+    }
+  }
+  
+  // Then try the standard Passport authentication
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     const user = req.user as any;
     const userIdString = String(user.id || user.customerId || '');
