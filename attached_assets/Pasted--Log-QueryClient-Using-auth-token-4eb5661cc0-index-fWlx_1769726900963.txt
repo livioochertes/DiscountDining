@@ -1,0 +1,105 @@
+[Log] [QueryClient] Using auth token: – "4eb5661cc0..." (index-fWlx1hhD.js, line 48)
+[Log] native CapacitorHttp.request (#98331018) (user-script:2, line 344)
+[Log] Object (user-script:2, line 345)
+
+callbackId: "98331018"
+
+methodName: "request"
+
+options: {url: "https://eatoff.app/api/auth/logout", method: "POST", data: undefined, dataType: "json", headers: {}}
+
+pluginId: "CapacitorHttp"
+
+type: "message"
+
+Object Prototype
+
+[Log] result CapacitorHttp.request (#98331018) (user-script:2, line 324)
+[Log] "{\"data\":{\"message\":\"Logout successful\"},\"status\":200,\"headers\":{\"nel\":\"{\\\"report_to\\\":\\\"cf-nel\\\",\\\"success_fraction\\\":0.0,\\\"max_age\\\":604800…"No Properties (user-script:2, line 329)
+[Debug] CapacitorHttp fetch 1769726844540 https://eatoff.app/api/auth/logout: 230.975ms (user-script:2, line 556)
+[Error] Failed to load resource: the server responded with a status of 401 () (user, line 0)
+[Log] [MobileSignIn] Setting up deep link handler, isNative: – true (index-fWlx1hhD.js, line 768)
+[Log] native StatusBar.getInfo (#98331019) (user-script:2, line 344)
+[Log] {callbackId: "98331019", pluginId: "StatusBar", methodName: "getInfo", options: {}}ObjectcallbackId: "98331019"methodName: "getInfo"options: {}ObjectpluginId: "StatusBar"type: "message"Object Prototype (user-script:2, line 345)
+[Log] native App.addListener (#98331020) (user-script:2, line 344)
+[Log] {callbackId: "98331020", pluginId: "App", methodName: "addListener", options: {eventName: "appUrlOpen"}}ObjectcallbackId: "98331020"methodName: "addListener"options: {eventName: "appUrlOpen"}ObjectpluginId: "App"type: "message"Object Prototype (user-script:2, line 345)
+[Error] Failed to load resource: the server responded with a status of 401 () (user, line 0)
+[Log] result StatusBar.getInfo (#98331019) (user-script:2, line 324)
+[Log] "{\"height\":54,\"style\":\"DEFAULT\",\"overlays\":true,\"color\":\"#000000\",\"visible\":true}"No Properties (user-script:2, line 329)
+[Error] Failed to load resource: the server responded with a status of 403 (Forbidden) (client, line 0)
+[Error] Refused to execute https://accounts.google.com/gsi/client as script because "X-Content-Type-Options: nosniff" was given and its Content-Type is not a script MIME type.
+[Log] [Apple Sign-In] Opening external browser: – "https://eatoff.app/api/auth/apple?mobile=true" (index-fWlx1hhD.js, line 768)
+[Log] native Browser.open (#98331021) (user-script:2, line 344)
+[Log] {callbackId: "98331021", pluginId: "Browser", methodName: "open", options: {url: "https://eatoff.app/api/auth/apple?mobile=true", presentationStyle: "popover"}}ObjectcallbackId: "98331021"methodName: "open"options: {url: "https://eatoff.app/api/auth/apple?mobile=true", presentationStyle: "popover"}ObjectpluginId: "Browser"type: "message"Object Prototype (user-script:2, line 345)
+[Log] result Browser.open (#98331021) (user-script:2, line 324)
+[Log] undefinedNo Properties (user-script:2, line 329)
+[Log] result App.addListener (#98331020) (user-script:2, line 324)
+[Log] "{\"iosOpenInPlace\":\"\",\"url\":\"eatoff://oauth-callback?token=1001ba453695de778f8025a030ab57ba7f5bf385c0eab634d7f74b97398f7f9e\",\"iosSourceApplic…"No Properties (user-script:2, line 329)
+[Log] [MobileSignIn] ======================================== (index-fWlx1hhD.js, line 768)
+[Log] [MobileSignIn] Deep link received: – "eatoff://oauth-callback?token=1001ba453695de778f8025a030ab57ba7f5bf385c0eab634d7f74b97398f7f9e" (index-fWlx1hhD.js, line 768)
+[Log] [MobileSignIn] ======================================== (index-fWlx1hhD.js, line 768)
+[Log] native Browser.close (#98331022) (user-script:2, line 344)
+[Log] {callbackId: "98331022", pluginId: "Browser", methodName: "close", options: {}}ObjectcallbackId: "98331022"methodName: "close"options: {}ObjectpluginId: "Browser"type: "message"Object Prototype (user-script:2, line 345)
+[Log] result Browser.close (#98331022) (user-script:2, line 324)
+[Log] undefinedNo Properties (user-script:2, line 329)
+[Log] [MobileSignIn] Browser closed (index-fWlx1hhD.js, line 768)
+[Log] [MobileSignIn] Received auth token, exchanging for session... (index-fWlx1hhD.js, line 768)
+[Log] [MobileSignIn] Using CapacitorHttp for native request to: – "https://eatoff.app/api/auth/mobile-exchange" (index-fWlx1hhD.js, line 768)
+[Log] native CapacitorHttp.post (#98331023) (user-script:2, line 344)
+[Log] {callbackId: "98331023", pluginId: "CapacitorHttp", methodName: "post", options: {url: "https://eatoff.app/api/auth/mobile-exchange", headers: {Content-Type: "application/json"}, data: {token: "1001ba453695de778f8025a030ab57ba7f5bf385c0eab634d7f74b97398f7f9e"}}}ObjectcallbackId: "98331023"methodName: "post"options: {url: "https://eatoff.app/api/auth/mobile-exchange", headers: {Content-Type: "application/json"}, data: {token: "1001ba453695de778f8025a030ab57ba7f5bf385c0eab634d7f74b97398f7f9e"}}ObjectpluginId: "CapacitorHttp"type: "message"Object Prototype (user-script:2, line 345)
+[Log] result CapacitorHttp.post (#98331023) (user-script:2, line 324)
+[Log] "{\"headers\":{\"nel\":\"{\\\"report_to\\\":\\\"cf-nel\\\",\\\"success_fraction\\\":0.0,\\\"max_age\\\":604800}\",\"content-encoding\":\"br\",\"report-to\":\"{\\\"group\\\":\\…" (user-script:2, line 329)
+No Properties
+
+[Log] [MobileSignIn] CapacitorHttp response status: – 200 (index-fWlx1hhD.js, line 768)
+[Log] [MobileSignIn] CapacitorHttp response data: – "{\"success\":true,\"sessionToken\":\"e43804e627630115ed3156aeb01d2b837e29aca3a512ab0d9402366af2716e85\",\"user\":{\"firstName\":null,\"id\":\"apple_00140…" (index-fWlx1hhD.js, line 768)
+"{\"success\":true,\"sessionToken\":\"e43804e627630115ed3156aeb01d2b837e29aca3a512ab0d9402366af2716e85\",\"user\":{\"firstName\":null,\"id\":\"apple_001405.91f6bd81ee3b4dcc9e63da8490603c49.2254\",\"email\":\"liviu.chertes@xhaccp.com\",\"profileImageUrl\":null,\"lastName\":null}}"
+[Log] [MobileSignIn] Session created successfully: – "apple_001405.91f6bd81ee3b4dcc9e63da8490603c49.2254" (index-fWlx1hhD.js, line 768)
+[Log] [MobileSignIn] Session token stored (index-fWlx1hhD.js, line 768)
+[Log] [MobileSignIn] Navigating to /m (index-fWlx1hhD.js, line 768)
+[Log] [QueryClient] Using auth token: – "e43804e627..." (index-fWlx1hhD.js, line 48, x2)
+[Log] native App.removeListener (#98331024) (user-script:2, line 344)
+[Log] {callbackId: "98331024", pluginId: "App", methodName: "removeListener", options: {eventName: "appUrlOpen", callbackId: "98331020"}}ObjectcallbackId: "98331024"methodName: "removeListener"options: {eventName: "appUrlOpen", callbackId: "98331020"}ObjectpluginId: "App"type: "message"Object Prototype (user-script:2, line 345)
+[Error] Failed to load resource: the server responded with a status of 401 () (user, line 0)
+[Log] [MobileHome] State: – {API_BASE_URL: "https://eatoff.app", restaurantsLoading: true, restaurantsCount: 0, …} (index-fWlx1hhD.js, line 767)
+{API_BASE_URL: "https://eatoff.app", restaurantsLoading: true, restaurantsCount: 0, error: undefined}Object
+[Log] [MobileHome] Credit vouchers mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Discount packages mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Restaurants with vouchers: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Fetching restaurants from: – "https://eatoff.app/api/restaurants?location=Cluj-Napoca" (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] API_BASE_URL value: – "https://eatoff.app" (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] State: – {API_BASE_URL: "https://eatoff.app", restaurantsLoading: true, restaurantsCount: 0, …} (index-fWlx1hhD.js, line 767)
+{API_BASE_URL: "https://eatoff.app", restaurantsLoading: true, restaurantsCount: 0, error: undefined}Object
+[Log] [MobileHome] Credit vouchers mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Discount packages mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Restaurants with vouchers: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] State: – {API_BASE_URL: "https://eatoff.app", restaurantsLoading: true, restaurantsCount: 0, …} (index-fWlx1hhD.js, line 767)
+{API_BASE_URL: "https://eatoff.app", restaurantsLoading: true, restaurantsCount: 0, error: undefined}Object
+[Log] [MobileHome] Credit vouchers mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Discount packages mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Restaurants with vouchers: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [QueryClient] Using auth token: – "e43804e627..." (index-fWlx1hhD.js, line 48)
+[Log] [MobileHome] Response status: – 200 (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Restaurants loaded: – 0 (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] State: – {API_BASE_URL: "https://eatoff.app", restaurantsLoading: false, restaurantsCount: 0, …} (index-fWlx1hhD.js, line 767)
+{API_BASE_URL: "https://eatoff.app", restaurantsLoading: false, restaurantsCount: 0, error: undefined}Object
+[Log] [MobileHome] Credit vouchers mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Discount packages mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Restaurants with vouchers: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] State: – {API_BASE_URL: "https://eatoff.app", restaurantsLoading: false, restaurantsCount: 0, …} (index-fWlx1hhD.js, line 767)
+{API_BASE_URL: "https://eatoff.app", restaurantsLoading: false, restaurantsCount: 0, error: undefined}Object
+[Log] [MobileHome] Credit vouchers mapped: – [Object, Object, Object] (3) (index-fWlx1hhD.js, line 767)
+[Object, Object, Object]Array (3)
+[Log] [MobileHome] Discount packages mapped: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [MobileHome] Restaurants with vouchers: – [] (0) (index-fWlx1hhD.js, line 767)
+[Error] Failed to load resource: the server responded with a status of 500 () (favorite-restaurants, line 0)
+[Log] [MobileHome] State: – {API_BASE_URL: "https://eatoff.app", restaurantsLoading: false, restaurantsCount: 0, …} (index-fWlx1hhD.js, line 767)
+{API_BASE_URL: "https://eatoff.app", restaurantsLoading: false, restaurantsCount: 0, error: undefined}Object
+[Log] [MobileHome] Credit vouchers mapped: – [Object, Object, Object] (3) (index-fWlx1hhD.js, line 767)
+[Object, Object, Object]Array (3)
+[Log] [MobileHome] Discount packages mapped: – [{name: "Ixy mica", voucherType: "discount", discount: "14.00"}, {name: "Test Vizibilitate", voucherType: "discount", discount: "11.00"}, {name: "Iky / Liviu", voucherType: "discount", discount: "50.00"}, …] (25) (index-fWlx1hhD.js, line 767)
+[{name: "Ixy mica", voucherType: "discount", discount: "14.00"}, {name: "Test Vizibilitate", voucherType: "discount", discount: "11.00"}, {name: "Iky / Liviu", voucherType: "discount", discount: "50.00"}, {name: "Iky 33%", voucherType: "discount", discount: "33.00"}, {name: "Family test 2", voucherType: "discount", discount: "22.00"}, {name: "Family", voucherType: "discount", discount: "10.00"}, {name: "Test", voucherType: "discount", discount: "15.00"}, {name: "EatOff test 25", voucherType: "discount", discount: "25.00"}, {name: "liviu C33", voucherType: "discount", discount: "33.00"}, {name: "liviu 25", voucherType: "discount", discount: "25.00"}, …]Array (25)
+[Log] [MobileHome] Restaurants with vouchers: – [] (0) (index-fWlx1hhD.js, line 767)
+[Log] [QueryClient] Using auth token: – "e43804e627..." (index-fWlx1hhD.js, line 48, x3)
+[Error] Failed to load resource: the server responded with a status of 500 () (user-vouchers, line 0)
+[Error] Failed to load resource: the server responded with a status of 502 () (overview, line 0)
