@@ -4,8 +4,9 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   User, ChevronRight, ChevronDown, Settings, Bell, CreditCard, Heart, 
   HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X, Trash2, Loader2,
-  Eye, EyeOff
+  Eye, EyeOff, MessageCircle
 } from 'lucide-react';
+import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -74,6 +75,7 @@ export default function MobileProfile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Fetch payment methods from Stripe - user.id is the customer's numeric ID
   const { data: paymentMethodsData, isLoading: isLoadingPaymentMethods, refetch: refetchPaymentMethods } = useQuery<{ paymentMethods: PaymentMethod[] }>({
@@ -993,14 +995,23 @@ export default function MobileProfile() {
 
   const renderHelpContent = () => (
     <div className="p-4 space-y-3 bg-gray-50 border-t border-gray-100">
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:opacity-90 transition-colors"
+      >
+        <MessageCircle className="w-5 h-5" />
+        <span className="font-medium">{t.chatWithUs || 'Chat with AI Support'}</span>
+        <ChevronRight className="w-5 h-5 ml-auto" />
+      </button>
+      
       {[
-        { label: t.faq || 'FAQ', icon: HelpCircle },
-        { label: t.contactSupport || 'Contact Support', icon: User },
-        { label: t.termsOfService || 'Terms of Service', icon: Shield },
-        { label: t.privacyPolicy || 'Privacy Policy', icon: Shield },
+        { label: t.faq || 'FAQ', icon: HelpCircle, onClick: () => setLocation('/m/help/faq') },
+        { label: t.termsOfService || 'Terms of Service', icon: Shield, onClick: () => setLocation('/m/help/terms') },
+        { label: t.privacyPolicy || 'Privacy Policy', icon: Shield, onClick: () => setLocation('/m/help/privacy') },
       ].map((item) => (
         <button
           key={item.label}
+          onClick={item.onClick}
           className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 hover:border-primary/50 transition-colors"
         >
           <item.icon className="w-5 h-5 text-gray-400" />
@@ -1262,6 +1273,22 @@ export default function MobileProfile() {
           EatOff v1.0.0
         </p>
       </div>
+
+      {/* AI Support Chat Widget */}
+      <SupportChatWidget
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        translations={{
+          chatTitle: t.supportChat || 'Support',
+          typeMessage: t.typeMessage || 'Type your message...',
+          send: t.send || 'Send',
+          startNewChat: t.startNewChat || 'Start a new conversation',
+          aiAssistant: t.aiAssistant || 'AI Assistant',
+          escalatedMessage: t.escalatedMessage || 'Your conversation has been transferred to a human agent.',
+          resolveChat: t.resolveChat || 'Mark as resolved',
+          wasHelpful: t.wasHelpful || 'Was this helpful?',
+        }}
+      />
     </MobileLayout>
   );
 }
