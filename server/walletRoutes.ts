@@ -643,30 +643,69 @@ function calculateGeneralVoucherDiscount(customerVoucher: any, orderAmount: numb
 // Helper to get customer ID from various auth sources
 const getAuthCustomerId = async (req: Request): Promise<number | null> => {
   const mobileUser = (req as any).mobileUser;
-  if (mobileUser) {
-    if (typeof mobileUser.customerId === 'number') return mobileUser.customerId;
-    if (typeof mobileUser.id === 'number') return mobileUser.id;
-  }
-  
   const user = (req as any).user;
-  if (user) {
-    if (typeof user.customerId === 'number') return user.customerId;
-    if (typeof user.id === 'number') return user.id;
+  const authUser = mobileUser || user;
+  
+  console.log('[WalletRoutes] getAuthCustomerId called');
+  console.log('[WalletRoutes] mobileUser:', mobileUser ? { id: mobileUser.id, email: mobileUser.email, customerId: mobileUser.customerId } : null);
+  console.log('[WalletRoutes] user:', user ? { id: user.id, email: user.email, customerId: user.customerId } : null);
+  
+  if (authUser) {
+    // Check if customerId is directly available
+    if (typeof authUser.customerId === 'number') {
+      console.log('[WalletRoutes] Found customerId directly:', authUser.customerId);
+      return authUser.customerId;
+    }
+    if (typeof authUser.id === 'number') {
+      console.log('[WalletRoutes] Found numeric id:', authUser.id);
+      return authUser.id;
+    }
     
-    // For OAuth users (Apple/Google), look up customer by email
-    if (user.email && typeof user.id === 'string') {
-      const [customer] = await db
+    // For OAuth users (Apple/Google), look up or create customer by email
+    if (authUser.email && typeof authUser.id === 'string') {
+      console.log('[WalletRoutes] OAuth user, looking up customer by email:', authUser.email);
+      
+      let [customer] = await db
         .select({ id: customers.id })
         .from(customers)
-        .where(eq(customers.email, user.email))
+        .where(eq(customers.email, authUser.email))
         .limit(1);
-      if (customer) return customer.id;
+      
+      // If customer doesn't exist, create one
+      if (!customer) {
+        console.log('[WalletRoutes] Customer not found, creating one for:', authUser.email);
+        const fullName = [authUser.firstName, authUser.lastName].filter(Boolean).join(' ') || 'User';
+        const [newCustomer] = await db
+          .insert(customers)
+          .values({
+            name: fullName,
+            email: authUser.email,
+            phone: null,
+            passwordHash: null,
+            balance: "0.00",
+            loyaltyPoints: 0,
+            totalPointsEarned: 0,
+            membershipTier: "Bronze"
+          })
+          .returning({ id: customers.id });
+        console.log('[WalletRoutes] Customer created with ID:', newCustomer?.id);
+        customer = newCustomer;
+      }
+      
+      if (customer) {
+        console.log('[WalletRoutes] Found/created customer ID:', customer.id);
+        return customer.id;
+      }
     }
   }
   
   const sessionOwnerId = (req.session as any)?.ownerId;
-  if (typeof sessionOwnerId === 'number') return sessionOwnerId;
+  if (typeof sessionOwnerId === 'number') {
+    console.log('[WalletRoutes] Found sessionOwnerId:', sessionOwnerId);
+    return sessionOwnerId;
+  }
   
+  console.log('[WalletRoutes] No customer ID found');
   return null;
 };
 
