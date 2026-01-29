@@ -1,13 +1,25 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent } from 'lucide-react';
+import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
 import { getMobileSessionToken } from '@/lib/queryClient';
+
+interface CreditType {
+  id: number;
+  name: string;
+  amount: string;
+  description: string | null;
+  interestRate: string;
+  paymentTermDays: number;
+  isCustomAmount: boolean;
+  minCustomAmount: string | null;
+  maxCustomAmount: string | null;
+}
 
 const API_BASE_URL = Capacitor.isNativePlatform() 
   ? 'https://0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev'
@@ -58,6 +70,25 @@ export default function MobileWallet() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<WalletTab>('vouchers');
   const queryClient = useQueryClient();
+  
+  // Credit request form state
+  const [showCreditForm, setShowCreditForm] = useState(false);
+  const [selectedCreditType, setSelectedCreditType] = useState<CreditType | null>(null);
+  const [customAmount, setCustomAmount] = useState('');
+  const [creditForm, setCreditForm] = useState({
+    fullName: '',
+    cnp: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    county: '',
+    postalCode: '',
+    employmentStatus: '',
+    monthlyIncome: '',
+    employer: ''
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { data: userStats } = useQuery<any>({
     queryKey: ['/api/users/stats'],
@@ -92,9 +123,75 @@ export default function MobileWallet() {
     enabled: !!user,
   });
 
-  // Request credit mutation
+  // Fetch credit types for the request form
+  const { data: creditTypes = [] } = useQuery<CreditType[]>({
+    queryKey: ['/api/credit-types'],
+    enabled: !!user && showCreditForm,
+  });
+
+  // Validate CNP (Romanian personal ID - 13 digits)
+  const validateCNP = (cnp: string): boolean => {
+    if (!/^\d{13}$/.test(cnp)) return false;
+    // Basic CNP validation
+    const controlWeights = [2, 7, 9, 1, 4, 6, 3, 5, 8, 2, 7, 9];
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      sum += parseInt(cnp[i]) * controlWeights[i];
+    }
+    let control = sum % 11;
+    if (control === 10) control = 1;
+    return control === parseInt(cnp[12]);
+  };
+
+  // Validate form before submission
+  const validateCreditForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!creditForm.fullName.trim()) errors.fullName = 'Numele complet este obligatoriu';
+    if (!creditForm.cnp.trim()) {
+      errors.cnp = 'CNP-ul este obligatoriu';
+    } else if (!validateCNP(creditForm.cnp)) {
+      errors.cnp = 'CNP invalid (trebuie să conțină 13 cifre valide)';
+    }
+    if (!creditForm.phone.trim()) errors.phone = 'Telefonul este obligatoriu';
+    if (!creditForm.address.trim()) errors.address = 'Adresa este obligatorie';
+    if (!creditForm.city.trim()) errors.city = 'Orașul este obligatoriu';
+    if (!creditForm.county.trim()) errors.county = 'Județul este obligatoriu';
+    
+    if (!selectedCreditType) {
+      errors.creditType = 'Selectați tipul de credit';
+    } else if (selectedCreditType.isCustomAmount) {
+      const amount = parseFloat(customAmount);
+      const min = parseFloat(selectedCreditType.minCustomAmount || '100');
+      const max = parseFloat(selectedCreditType.maxCustomAmount || '10000');
+      if (!customAmount || isNaN(amount) || amount < min || amount > max) {
+        errors.customAmount = `Suma trebuie să fie între ${min} și ${max} RON`;
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Request credit mutation with personal data
+  interface CreditRequestData {
+    creditTypeId: number;
+    requestedAmount: number;
+    fullName: string;
+    cnp: string;
+    phone: string;
+    email: string;
+    address: string;
+    city: string;
+    county: string;
+    postalCode: string;
+    employmentStatus: string;
+    monthlyIncome: string;
+    employer: string;
+  }
+
   const requestCreditMutation = useMutation({
-    mutationFn: async (amount: string) => {
+    mutationFn: async (data: CreditRequestData) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -104,19 +201,56 @@ export default function MobileWallet() {
           headers['Authorization'] = `Bearer ${token}`;
         }
       }
-      const response = await fetch(`${API_BASE_URL}/api/wallet/credit/request`, {
+      const response = await fetch(`${API_BASE_URL}/api/credit-request`, {
         method: 'POST',
         credentials: 'include',
         headers,
-        body: JSON.stringify({ requestedAmount: amount }),
+        body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to request credit');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to request credit');
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
+      setShowCreditForm(false);
+      setSelectedCreditType(null);
+      setCustomAmount('');
+      setCreditForm({
+        fullName: '',
+        cnp: '',
+        phone: '',
+        email: '',
+        address: '',
+        city: '',
+        county: '',
+        postalCode: '',
+        employmentStatus: '',
+        monthlyIncome: '',
+        employer: ''
+      });
+      setFormErrors({});
+    },
+    onError: (error: Error) => {
+      setFormErrors({ submit: error.message });
     },
   });
+
+  const handleSubmitCreditRequest = () => {
+    if (!validateCreditForm() || !selectedCreditType) return;
+    
+    const amount = selectedCreditType.isCustomAmount 
+      ? parseFloat(customAmount)
+      : parseFloat(selectedCreditType.amount);
+    
+    requestCreditMutation.mutate({
+      creditTypeId: selectedCreditType.id,
+      requestedAmount: amount,
+      ...creditForm,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -454,8 +588,246 @@ export default function MobileWallet() {
 
         {activeTab === 'credit' && (
           <div className="space-y-4">
-            {/* Credit Status Display */}
-            {walletOverview?.credit?.status === 'not_requested' && (
+            {/* Credit Request Form */}
+            {showCreditForm && (walletOverview?.credit?.status === 'not_requested' || walletOverview?.credit?.status === 'rejected') && (
+              <div className="bg-white rounded-2xl overflow-hidden">
+                {/* Form Header */}
+                <div className="bg-gradient-to-r from-primary to-green-600 p-4 flex items-center gap-3">
+                  <button 
+                    onClick={() => setShowCreditForm(false)}
+                    className="text-white p-1"
+                  >
+                    <ArrowLeft className="w-6 h-6" />
+                  </button>
+                  <h2 className="text-white font-semibold text-lg">Solicită Credit EatOff</h2>
+                </div>
+                
+                <div className="p-4 space-y-4">
+                  {/* Credit Type Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Alege suma creditului *</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {creditTypes.map((type) => (
+                        <button
+                          key={type.id}
+                          onClick={() => {
+                            setSelectedCreditType(type);
+                            if (!type.isCustomAmount) setCustomAmount('');
+                          }}
+                          className={cn(
+                            "p-3 rounded-xl border-2 text-left transition-all",
+                            selectedCreditType?.id === type.id
+                              ? "border-primary bg-primary/5"
+                              : "border-gray-200 hover:border-gray-300"
+                          )}
+                        >
+                          <p className="font-bold text-lg">
+                            {type.isCustomAmount ? 'Personalizat' : `${parseFloat(type.amount).toFixed(0)} RON`}
+                          </p>
+                          <p className="text-xs text-gray-500">{type.name}</p>
+                          {type.interestRate && parseFloat(type.interestRate) > 0 && (
+                            <p className="text-xs text-amber-600">{parseFloat(type.interestRate).toFixed(1)}% dobândă</p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    {formErrors.creditType && <p className="text-red-500 text-xs mt-1">{formErrors.creditType}</p>}
+                  </div>
+                  
+                  {/* Custom Amount Input */}
+                  {selectedCreditType?.isCustomAmount && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Suma dorită ({parseFloat(selectedCreditType.minCustomAmount || '100').toFixed(0)} - {parseFloat(selectedCreditType.maxCustomAmount || '10000').toFixed(0)} RON) *
+                      </label>
+                      <input
+                        type="number"
+                        value={customAmount}
+                        onChange={(e) => setCustomAmount(e.target.value)}
+                        placeholder="Introduceți suma"
+                        className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                      />
+                      {formErrors.customAmount && <p className="text-red-500 text-xs mt-1">{formErrors.customAmount}</p>}
+                    </div>
+                  )}
+                  
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">Date personale</h3>
+                    
+                    {/* Full Name */}
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nume complet *</label>
+                      <input
+                        type="text"
+                        value={creditForm.fullName}
+                        onChange={(e) => setCreditForm({...creditForm, fullName: e.target.value})}
+                        placeholder="Ion Popescu"
+                        className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                      />
+                      {formErrors.fullName && <p className="text-red-500 text-xs mt-1">{formErrors.fullName}</p>}
+                    </div>
+                    
+                    {/* CNP */}
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">CNP (Cod Numeric Personal) *</label>
+                      <input
+                        type="text"
+                        maxLength={13}
+                        value={creditForm.cnp}
+                        onChange={(e) => setCreditForm({...creditForm, cnp: e.target.value.replace(/\D/g, '')})}
+                        placeholder="1234567890123"
+                        className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                      />
+                      {formErrors.cnp && <p className="text-red-500 text-xs mt-1">{formErrors.cnp}</p>}
+                    </div>
+                    
+                    {/* Phone & Email */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
+                        <input
+                          type="tel"
+                          value={creditForm.phone}
+                          onChange={(e) => setCreditForm({...creditForm, phone: e.target.value})}
+                          placeholder="0722123456"
+                          className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                        />
+                        {formErrors.phone && <p className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={creditForm.email}
+                          onChange={(e) => setCreditForm({...creditForm, email: e.target.value})}
+                          placeholder="email@exemplu.ro"
+                          className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Address */}
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Adresă completă *</label>
+                      <input
+                        type="text"
+                        value={creditForm.address}
+                        onChange={(e) => setCreditForm({...creditForm, address: e.target.value})}
+                        placeholder="Str. Exemplu, Nr. 1, Bl. A1, Sc. 2, Ap. 10"
+                        className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                      />
+                      {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
+                    </div>
+                    
+                    {/* City, County, Postal Code */}
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Oraș *</label>
+                        <input
+                          type="text"
+                          value={creditForm.city}
+                          onChange={(e) => setCreditForm({...creditForm, city: e.target.value})}
+                          placeholder="București"
+                          className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                        />
+                        {formErrors.city && <p className="text-red-500 text-xs mt-1">{formErrors.city}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Județ *</label>
+                        <input
+                          type="text"
+                          value={creditForm.county}
+                          onChange={(e) => setCreditForm({...creditForm, county: e.target.value})}
+                          placeholder="Sector 1"
+                          className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                        />
+                        {formErrors.county && <p className="text-red-500 text-xs mt-1">{formErrors.county}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cod poștal</label>
+                        <input
+                          type="text"
+                          value={creditForm.postalCode}
+                          onChange={(e) => setCreditForm({...creditForm, postalCode: e.target.value})}
+                          placeholder="010101"
+                          className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Employment Info (Optional) */}
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">Informații angajare (opțional)</h3>
+                    
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Status angajare</label>
+                      <select
+                        value={creditForm.employmentStatus}
+                        onChange={(e) => setCreditForm({...creditForm, employmentStatus: e.target.value})}
+                        className="w-full p-3 border border-gray-200 rounded-xl text-[16px] bg-white"
+                      >
+                        <option value="">Selectează...</option>
+                        <option value="employed">Angajat</option>
+                        <option value="self-employed">Liber profesionist</option>
+                        <option value="student">Student</option>
+                        <option value="retired">Pensionar</option>
+                        <option value="other">Altele</option>
+                      </select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Venit lunar (RON)</label>
+                        <input
+                          type="number"
+                          value={creditForm.monthlyIncome}
+                          onChange={(e) => setCreditForm({...creditForm, monthlyIncome: e.target.value})}
+                          placeholder="3000"
+                          className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Angajator</label>
+                        <input
+                          type="text"
+                          value={creditForm.employer}
+                          onChange={(e) => setCreditForm({...creditForm, employer: e.target.value})}
+                          placeholder="Nume companie"
+                          className="w-full p-3 border border-gray-200 rounded-xl text-[16px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Error Message */}
+                  {formErrors.submit && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                      <p className="text-red-600 text-sm">{formErrors.submit}</p>
+                    </div>
+                  )}
+                  
+                  {/* Submit Button */}
+                  <button
+                    onClick={handleSubmitCreditRequest}
+                    disabled={requestCreditMutation.isPending}
+                    className="w-full bg-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {requestCreditMutation.isPending ? (
+                      <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                    ) : (
+                      <>
+                        Trimite Solicitarea
+                        <ChevronRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Credit Status Display (when not showing form) */}
+            {!showCreditForm && walletOverview?.credit?.status === 'not_requested' && (
               <>
                 <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-3">
@@ -487,18 +859,11 @@ export default function MobileWallet() {
                 </div>
 
                 <button 
-                  onClick={() => requestCreditMutation.mutate('1000.00')}
-                  disabled={requestCreditMutation.isPending}
-                  className="w-full bg-red-600 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-50"
+                  onClick={() => setShowCreditForm(true)}
+                  className="w-full bg-red-600 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
                 >
-                  {requestCreditMutation.isPending ? (
-                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                  ) : (
-                    <>
-                      Solicită Credit
-                      <ChevronRight className="w-5 h-5" />
-                    </>
-                  )}
+                  Solicită Credit
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </>
             )}
@@ -581,7 +946,7 @@ export default function MobileWallet() {
               </>
             )}
 
-            {walletOverview?.credit?.status === 'rejected' && (
+            {!showCreditForm && walletOverview?.credit?.status === 'rejected' && (
               <>
                 <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-3">
@@ -597,8 +962,7 @@ export default function MobileWallet() {
                 </div>
 
                 <button 
-                  onClick={() => requestCreditMutation.mutate('1000.00')}
-                  disabled={requestCreditMutation.isPending}
+                  onClick={() => setShowCreditForm(true)}
                   className="w-full bg-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
                 >
                   Solicită din nou

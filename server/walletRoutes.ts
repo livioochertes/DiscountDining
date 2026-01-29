@@ -1592,10 +1592,28 @@ router.delete("/admin/credit-types/:id", async (req, res) => {
 // ============================================
 
 // Submit credit request with personal data
-router.post("/credit-request", async (req, res) => {
+router.post("/credit-request", async (req: Request, res: Response) => {
   try {
+    // Get user from session
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ message: "Trebuie să fiți autentificat" });
+    }
+    
+    // Find customer by user ID
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.userId, user.id))
+      .limit(1);
+    
+    if (!customer) {
+      return res.status(404).json({ message: "Profilul clientului nu a fost găsit" });
+    }
+    
+    const customerId = customer.id;
+    
     const {
-      customerId,
       creditTypeId,
       requestedAmount, // For custom amount
       fullName,
