@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -44,8 +44,10 @@ export default function MobileSignUp() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
+    phone: '',
     password: ''
   });
 
@@ -249,9 +251,12 @@ export default function MobileSignUp() {
       const data = await response.json();
 
       if (response.ok) {
+        // Invalidate user query to refresh auth state
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        
         toast({
           title: t.registrationSuccess || 'Înregistrare reușită!',
-          description: t.verifyEmailSent || 'Verifică-ți emailul pentru a confirma contul.',
+          description: data.customer ? 'Contul tău a fost creat. Te poți loga acum.' : (t.verifyEmailSent || 'Verifică-ți emailul pentru a confirma contul.'),
         });
         
         setLocation('/m/signin');
@@ -369,20 +374,37 @@ export default function MobileSignUp() {
           <p className="text-gray-500">{t.joinEatOff || 'Alătură-te EatOff pentru oferte exclusive'}</p>
         </div>
 
-        <form onSubmit={handleSignUp} className="space-y-5 mt-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">{t.name || 'Nume'}</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                name="name"
-                type="text"
-                placeholder={t.yourName || 'Numele tău'}
-                value={formData.name}
-                onChange={handleInputChange}
-                className="pl-12 h-14 text-base rounded-xl bg-white border-gray-200 focus:border-amber-500 focus:ring-amber-500"
-                required
-              />
+        <form onSubmit={handleSignUp} className="space-y-4 mt-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">{t.firstName || 'Prenume'}</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  name="firstName"
+                  type="text"
+                  placeholder="Ion"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  className="pl-10 h-12 text-base rounded-xl bg-white border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">{t.lastName || 'Nume'}</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  name="lastName"
+                  type="text"
+                  placeholder="Popescu"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  className="pl-10 h-12 text-base rounded-xl bg-white border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                  required
+                />
+              </div>
             </div>
           </div>
 
@@ -396,7 +418,23 @@ export default function MobileSignUp() {
                 placeholder="email@exemplu.com"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="pl-12 h-14 text-base rounded-xl bg-white border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                className="pl-12 h-12 text-base rounded-xl bg-white border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">{t.phone || 'Telefon'}</label>
+            <div className="relative">
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                name="phone"
+                type="tel"
+                placeholder="+40 7XX XXX XXX"
+                value={formData.phone}
+                onChange={handleInputChange}
+                className="pl-12 h-12 text-base rounded-xl bg-white border-gray-200 focus:border-amber-500 focus:ring-amber-500"
                 required
               />
             </div>

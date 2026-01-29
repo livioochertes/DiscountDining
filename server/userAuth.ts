@@ -71,12 +71,58 @@ export function registerUserAuthRoutes(app: Express) {
         });
       }
 
-      // Generate verification codes
-      const emailCode = generateVerificationCode();
-      const smsCode = generateVerificationCode();
-      
       // Hash password
       const passwordHash = await hashPassword(password);
+
+      // In development mode, create user directly without verification
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      
+      if (isDevelopment) {
+        // Create customer account directly
+        const customer = await storage.createCustomer({
+          name: `${firstName} ${lastName}`,
+          email,
+          phone,
+          passwordHash,
+          balance: "0.00",
+          loyaltyPoints: 0,
+          totalPointsEarned: 0,
+          membershipTier: "Bronze",
+          age: null,
+          weight: null,
+          height: null,
+          activityLevel: null,
+          healthGoal: null,
+          dietaryPreferences: [],
+          allergies: [],
+          dislikes: [],
+          healthConditions: []
+        });
+
+        // Create session
+        if (req.session) {
+          req.session.ownerId = customer.id;
+          req.session.save((err) => {
+            if (err) console.error('Session save error:', err);
+          });
+        }
+
+        return res.json({ 
+          message: 'Account created successfully',
+          customer: {
+            id: customer.id,
+            name: customer.name,
+            email: customer.email,
+            phone: customer.phone,
+            membershipTier: customer.membershipTier,
+            loyaltyPoints: customer.loyaltyPoints
+          }
+        });
+      }
+
+      // Production: Generate and send verification codes
+      const emailCode = generateVerificationCode();
+      const smsCode = generateVerificationCode();
 
       // Store verification data temporarily
       const verificationKey = `${email}_${phone}`;
