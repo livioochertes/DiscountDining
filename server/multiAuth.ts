@@ -414,9 +414,36 @@ export async function setupMultiAuth(app: Express) {
         console.log('Is mobile OAuth:', isMobileOAuth);
         console.log('========================');
         
-        // Check if user has 2FA enabled
+        // Check if user has 2FA enabled or create customer if needed
         try {
-          const customer = await storage.getCustomerByEmail(user.email);
+          let customer = await storage.getCustomerByEmail(user.email);
+          
+          // If no customer exists with this email, create one
+          if (!customer && user.email) {
+            console.log('[Google OAuth] No customer found, creating one for:', user.email);
+            const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email.split('@')[0];
+            customer = await storage.createCustomer({
+              name: fullName,
+              email: user.email,
+              phone: null,
+              passwordHash: null,
+              balance: "0.00",
+              loyaltyPoints: 0,
+              totalPointsEarned: 0,
+              membershipTier: "Bronze",
+              age: null,
+              weight: null,
+              height: null,
+              activityLevel: null,
+              healthGoal: null,
+              dietaryPreferences: [],
+              allergies: [],
+              dislikes: [],
+              healthConditions: []
+            });
+            console.log('[Google OAuth] Customer created with ID:', customer.id);
+          }
+          
           if (customer && customer.twoFactorEnabled) {
             console.log('[Google OAuth] User has 2FA enabled, redirecting to verification');
             // Generate a pending 2FA token
