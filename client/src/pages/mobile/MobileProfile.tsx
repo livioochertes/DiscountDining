@@ -277,11 +277,27 @@ export default function MobileProfile() {
   };
 
   const handleDisable2fa = async () => {
+    // For users with password, require password; for OAuth users, require 2FA code
+    const hasPassword = user?.passwordHash;
+    if (hasPassword && !passwordForm.currentPassword) {
+      toast({ title: t.passwordRequired || 'Password is required', variant: 'destructive' });
+      return;
+    }
+    if (!hasPassword && twoFaCode.length !== 6) {
+      toast({ title: t.enterValidCode || 'Please enter a 6-digit code', variant: 'destructive' });
+      return;
+    }
+    
     setIsSettingUp2fa(true);
     try {
-      await apiRequest('POST', '/api/auth/2fa/disable', { password: passwordForm.currentPassword });
+      const payload = hasPassword 
+        ? { password: passwordForm.currentPassword }
+        : { code: twoFaCode };
+      await apiRequest('POST', '/api/auth/2fa/disable', payload);
       toast({ title: t.twoFaDisabled || '2FA disabled successfully' });
       setPrivacyView('main');
+      setTwoFaCode('');
+      setPasswordForm({ ...passwordForm, currentPassword: '' });
       refetch();
     } catch (error: any) {
       toast({ title: error.message || t.errorDisabling2fa || 'Error disabling 2FA', variant: 'destructive' });
@@ -766,17 +782,43 @@ export default function MobileProfile() {
                   <Check className="w-5 h-5" />
                   <span className="font-medium">{t.twoFaEnabled || '2FA is enabled'}</span>
                 </div>
-                <p className="text-sm text-gray-500">{t.twoFaDisableInfo || 'Enter your password to disable 2FA.'}</p>
-                <input
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-white"
-                  placeholder={t.password || 'Password'}
-                />
+                {user?.passwordHash ? (
+                  <>
+                    <p className="text-sm text-gray-500">{t.twoFaDisableInfo || 'Enter your password to disable 2FA.'}</p>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                        className="w-full p-3 pr-12 border border-gray-200 rounded-xl bg-white"
+                        placeholder={t.password || 'Password'}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-500">{t.twoFaDisableCodeInfo || 'Enter your authenticator code to disable 2FA.'}</p>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={twoFaCode}
+                      onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="w-full p-3 border border-gray-200 rounded-xl bg-white text-center text-2xl tracking-widest"
+                      placeholder="000000"
+                      maxLength={6}
+                    />
+                  </>
+                )}
                 <button
                   onClick={handleDisable2fa}
-                  disabled={isSettingUp2fa}
+                  disabled={isSettingUp2fa || (user?.passwordHash ? !passwordForm.currentPassword : twoFaCode.length !== 6)}
                   className="w-full bg-red-500 text-white font-medium py-3 rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors"
                 >
                   {isSettingUp2fa ? (t.saving || 'Saving...') : (t.disable2fa || 'Disable 2FA')}

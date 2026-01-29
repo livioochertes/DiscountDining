@@ -1,5 +1,6 @@
 import { Express, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import speakeasy from 'speakeasy';
 import { storage } from './storage';
 import { sendVerificationEmail } from './emailService';
 import { sendVerificationSMS } from './smsService';
@@ -741,9 +742,20 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(400).json({ message: 'Please setup 2FA first' });
       }
 
-      // For simplicity, accept any 6-digit code during setup (in production, validate against TOTP)
       if (code.length !== 6 || !/^\d+$/.test(code)) {
         return res.status(400).json({ message: 'Invalid code format. Please enter 6 digits.' });
+      }
+
+      // Validate TOTP code against secret
+      const isValid = speakeasy.totp.verify({
+        secret: customer.twoFactorSecret,
+        encoding: 'base32',
+        token: code,
+        window: 1 // Allow 1 step tolerance (30 seconds before/after)
+      });
+
+      if (!isValid) {
+        return res.status(400).json({ message: 'Invalid verification code. Please try again.' });
       }
 
       // Enable 2FA
@@ -764,21 +776,47 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      const { password } = req.body;
+      const { password, code } = req.body;
 
       const customer = await storage.getCustomer(customerId);
       if (!customer) {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      // Verify password if user has one
+      if (!customer.twoFactorEnabled) {
+        return res.status(400).json({ message: '2FA is not enabled' });
+      }
+
+      // Verify identity - require password OR 2FA code
       if (customer.passwordHash) {
+        // User has password - verify it
         if (!password) {
           return res.status(400).json({ message: 'Password is required to disable 2FA' });
         }
         const isValidPassword = await bcrypt.compare(password, customer.passwordHash);
         if (!isValidPassword) {
           return res.status(401).json({ message: 'Incorrect password' });
+        }
+      } else {
+        // OAuth user without password - require 2FA code verification
+        if (!code) {
+          return res.status(400).json({ message: '2FA code is required to disable 2FA' });
+        }
+        if (code.length !== 6 || !/^\d+$/.test(code)) {
+          return res.status(400).json({ message: 'Invalid code format. Please enter 6 digits.' });
+        }
+        // Validate TOTP code against secret
+        if (!customer.twoFactorSecret) {
+          return res.status(400).json({ message: '2FA secret not found' });
+        }
+        const isValidCode = speakeasy.totp.verify({
+          secret: customer.twoFactorSecret,
+          encoding: 'base32',
+          token: code,
+          window: 1
+        });
+        if (!isValidCode) {
+          return res.status(401).json({ message: 'Invalid verification code' });
         }
       }
 
@@ -821,8 +859,19 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(400).json({ message: '2FA is not enabled for this account' });
       }
       
-      // In production, validate the code against the TOTP secret
-      // For now, accept any 6-digit code (matching our simplified 2FA)
+      // Validate the code against the TOTP secret
+      if (!customer.twoFactorSecret) {
+        return res.status(400).json({ message: '2FA secret not found' });
+      }
+      const isValidCode = speakeasy.totp.verify({
+        secret: customer.twoFactorSecret,
+        encoding: 'base32',
+        token: code,
+        window: 1
+      });
+      if (!isValidCode) {
+        return res.status(401).json({ message: 'Invalid verification code' });
+      }
       
       if (tokenData.isMobile) {
         // Generate mobile session token
