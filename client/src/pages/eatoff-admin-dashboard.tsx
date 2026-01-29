@@ -55,6 +55,339 @@ interface CommissionMetrics {
   topPerformingRestaurant: string;
 }
 
+interface CashbackGroup {
+  id: number;
+  name: string;
+  description: string;
+  cashbackPercentage: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+interface CreditRequest {
+  id: number;
+  customerId: number;
+  customer?: { name: string; email: string };
+  requestedAmount: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+function WalletManagementTab() {
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [newGroup, setNewGroup] = useState({ name: '', description: '', cashbackPercentage: '3' });
+  const [isCreating, setIsCreating] = useState(false);
+  const [creditSubTab, setCreditSubTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+
+  // Fetch EatOff cashback groups
+  const { data: cashbackGroups = [], refetch: refetchGroups } = useQuery<CashbackGroup[]>({
+    queryKey: ['/api/admin/eatoff-cashback-groups'],
+  });
+
+  // Fetch credit requests
+  const { data: creditRequests = [], refetch: refetchCreditRequests } = useQuery<CreditRequest[]>({
+    queryKey: ['/api/admin/credit-requests'],
+  });
+
+  const handleCreateGroup = async () => {
+    if (!newGroup.name) return;
+    setIsCreating(true);
+    try {
+      const response = await fetch('/api/admin/eatoff-cashback-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: newGroup.name,
+          description: newGroup.description,
+          cashbackPercentage: newGroup.cashbackPercentage,
+        }),
+      });
+      if (response.ok) {
+        setNewGroup({ name: '', description: '', cashbackPercentage: '3' });
+        setShowCreateGroup(false);
+        refetchGroups();
+      }
+    } catch (error) {
+      console.error('Failed to create group:', error);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleCreditAction = async (requestId: number, action: 'approve' | 'reject') => {
+    try {
+      const response = await fetch(`/api/admin/credit-requests/${requestId}/${action}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        refetchCreditRequests();
+      }
+    } catch (error) {
+      console.error('Failed to process credit request:', error);
+    }
+  };
+
+  const filteredCreditRequests = creditRequests.filter(r => r.status === creditSubTab);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Wallet Management</h2>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cashback Groups</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{cashbackGroups.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Credits</CardTitle>
+            <Clock className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{creditRequests.filter(r => r.status === 'pending').length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Approved Credits</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{creditRequests.filter(r => r.status === 'approved').length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rejected Credits</CardTitle>
+            <XCircle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{creditRequests.filter(r => r.status === 'rejected').length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* EatOff Cashback Groups Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>EatOff Cashback Groups</CardTitle>
+            <Button onClick={() => setShowCreateGroup(true)} className="bg-green-600 hover:bg-green-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Group
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {showCreateGroup && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Group Name</Label>
+                  <Input
+                    value={newGroup.name}
+                    onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+                    placeholder="e.g., Gold Members"
+                  />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Input
+                    value={newGroup.description}
+                    onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                    placeholder="e.g., Premium customers"
+                  />
+                </div>
+                <div>
+                  <Label>Cashback %</Label>
+                  <Select
+                    value={newGroup.cashbackPercentage}
+                    onValueChange={(value) => setNewGroup({ ...newGroup, cashbackPercentage: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1%</SelectItem>
+                      <SelectItem value="2">2%</SelectItem>
+                      <SelectItem value="3">3%</SelectItem>
+                      <SelectItem value="5">5%</SelectItem>
+                      <SelectItem value="7">7%</SelectItem>
+                      <SelectItem value="10">10%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCreateGroup} disabled={isCreating}>
+                  {isCreating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Create
+                </Button>
+                <Button variant="outline" onClick={() => setShowCreateGroup(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Cashback %</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cashbackGroups.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                    No cashback groups created yet
+                  </TableCell>
+                </TableRow>
+              ) : (
+                cashbackGroups.map((group) => (
+                  <TableRow key={group.id}>
+                    <TableCell className="font-medium">{group.name}</TableCell>
+                    <TableCell>{group.description || '-'}</TableCell>
+                    <TableCell>
+                      <Badge className="bg-green-100 text-green-700">
+                        {parseFloat(group.cashbackPercentage).toFixed(0)}%
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={group.isActive ? "default" : "secondary"}>
+                        {group.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(group.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Credit Requests Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Credit Requests</CardTitle>
+          <div className="flex gap-2 mt-2">
+            <Button
+              variant={creditSubTab === 'pending' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCreditSubTab('pending')}
+            >
+              Pending ({creditRequests.filter(r => r.status === 'pending').length})
+            </Button>
+            <Button
+              variant={creditSubTab === 'approved' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCreditSubTab('approved')}
+            >
+              Approved ({creditRequests.filter(r => r.status === 'approved').length})
+            </Button>
+            <Button
+              variant={creditSubTab === 'rejected' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCreditSubTab('rejected')}
+            >
+              Rejected ({creditRequests.filter(r => r.status === 'rejected').length})
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Requested Amount</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                {creditSubTab === 'pending' && <TableHead>Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCreditRequests.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                    No {creditSubTab} credit requests
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredCreditRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium">{request.customer?.name || `Customer #${request.customerId}`}</TableCell>
+                    <TableCell>{request.customer?.email || '-'}</TableCell>
+                    <TableCell>
+                      <span className="font-bold">{parseFloat(request.requestedAmount).toFixed(0)} RON</span>
+                    </TableCell>
+                    <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        className={
+                          request.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                          request.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          'bg-red-100 text-red-700'
+                        }
+                      >
+                        {request.status === 'pending' ? 'Pending' : 
+                         request.status === 'approved' ? 'Approved' : 'Rejected'}
+                      </Badge>
+                    </TableCell>
+                    {creditSubTab === 'pending' && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleCreditAction(request.id, 'approve')}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            onClick={() => handleCreditAction(request.id, 'reject')}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function EatOffAdminDashboard() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
@@ -301,11 +634,12 @@ export default function EatOffAdminDashboard() {
       {/* Main Content */}
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="commissions">Commissions</TabsTrigger>
             <TabsTrigger value="restaurants">Restaurants</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="wallet">Wallet</TabsTrigger>
             <TabsTrigger value="marketing">Marketing</TabsTrigger>
             <TabsTrigger value="helpdesk">Helpdesk</TabsTrigger>
           </TabsList>
@@ -757,6 +1091,11 @@ export default function EatOffAdminDashboard() {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Wallet Management Tab */}
+          <TabsContent value="wallet" className="space-y-6">
+            <WalletManagementTab />
           </TabsContent>
 
           {/* Marketing Tab */}

@@ -192,8 +192,57 @@ The platform includes a community recipe sharing feature:
 - Engagement metrics (likes, comments, saves, views)
 - Prep time, cook time, servings
 
+### Cashback & Loyalty System
+
+The platform includes a comprehensive cashback and loyalty management system:
+
+**Database Tables** (in `shared/schema.ts`):
+- `cashback_groups` - Cashback group definitions (EatOff-wide or restaurant-specific)
+- `customer_cashback_enrollments` - Customer enrollments in cashback groups
+- `customer_cashback_balance` - EatOff-wide cashback balance tracking
+- `customer_restaurant_cashback` - Per-restaurant cashback and spending tracking
+- `cashback_transactions` - Cashback earn/redeem transactions
+- `customer_credit_account` - Credit on account (request/approval flow)
+- `credit_transactions` - Credit usage transactions
+- `loyalty_groups` - Restaurant-specific loyalty tier groups
+- `customer_loyalty_enrollments` - Customer tier enrollments
+
+**API Endpoints** (`server/walletRoutes.ts`):
+- `GET /api/wallet/overview` - Customer wallet overview (cashback, credit, enrollments)
+- `POST /api/wallet/credit/request` - Request credit on account
+- `GET/POST /api/admin/eatoff-cashback-groups` - Manage EatOff-wide cashback groups
+- `GET /api/admin/credit-requests` - View pending credit requests
+- `POST /api/admin/credit-requests/:id/approve` - Approve credit request
+- `GET/POST /api/restaurant/:id/cashback-groups` - Restaurant cashback groups
+- `GET/POST /api/restaurant/:id/loyalty-groups` - Restaurant loyalty groups
+- `POST /api/restaurant/:id/enroll-customer/cashback` - Enroll customer in group
+- `POST /api/restaurant/:id/check-loyalty-upgrade/:customerId` - Check tier upgrade
+- `POST /api/restaurant/:id/record-purchase/:customerId` - Record purchase + auto-upgrade
+
+**Mobile Pages**:
+- `MobileWallet.tsx` - Three-tab wallet (Vouchers, Cashback, Credit)
+- `MobileRestaurantSignIn.tsx` - Restaurant staff login
+- `MobileRestaurantDashboard.tsx` - QR scanning for customer enrollment
+
+**Restaurant Portal**:
+- New "Cashback" tab for managing restaurant-specific cashback groups
+- `RestaurantCashbackManagement.tsx` - CRUD for cashback groups
+
+**Admin Dashboard**:
+- New "Wallet" tab in EatOff admin for:
+  - Managing EatOff-wide cashback groups
+  - Approving/rejecting credit requests
+
+**Features**:
+- EatOff-wide and restaurant-specific cashback groups
+- Credit on account with request/approval flow (1000 RON default)
+- Automatic tier upgrades based on spending thresholds
+- QR code scanning for customer enrollment (Capacitor MLKit)
+- Per-restaurant cashback balance tracking
+
 ## Recent Changes
 
+- **2025-01-29**: Added Cashback & Loyalty System with cashback groups, credit on account, loyalty tiers, auto-upgrade logic, restaurant mobile portal with QR scanning, and admin management
 - **2025-01-29**: Added Recipe Sharing System with discovery page, recipe detail, recipe creation, likes/saves/comments, and profile integration
 - **2025-01-29**: Added AI Support System with chat widget, knowledge base, FAQ pages, and admin helpdesk with real-time data
 - **2025-01-26**: Added token-based OAuth exchange for mobile - server generates one-time token after OAuth, passes via deep link, app exchanges token for session in WebView context via /api/auth/mobile-exchange endpoint

@@ -1,13 +1,47 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin } from 'lucide-react';
+import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Capacitor } from '@capacitor/core';
+import { getMobileSessionToken } from '@/lib/queryClient';
+
+const API_BASE_URL = Capacitor.isNativePlatform() 
+  ? 'https://0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev'
+  : '';
 
 type WalletTab = 'vouchers' | 'cashback' | 'credit';
+
+interface WalletOverview {
+  cashback: {
+    eatoffCashbackBalance: string;
+    totalCashbackBalance: string;
+    totalCashbackEarned: string;
+    totalCashbackUsed: string;
+  };
+  credit: {
+    status: string;
+    creditLimit: string;
+    availableCredit: string;
+    usedCredit: string;
+    defaultDisplayLimit: string;
+    requestedAmount?: string;
+    interestRate?: string;
+    paymentTermDays?: number;
+  };
+  cashbackEnrollments: Array<{
+    enrollment: any;
+    group: any;
+  }>;
+  loyaltyEnrollments: Array<{
+    enrollment: any;
+    group: any;
+  }>;
+  restaurantCashbacks: Array<any>;
+}
 
 interface Transaction {
   id: number;
@@ -23,6 +57,7 @@ export default function MobileWallet() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<WalletTab>('vouchers');
+  const queryClient = useQueryClient();
 
   const { data: userStats } = useQuery<any>({
     queryKey: ['/api/users/stats'],
@@ -32,6 +67,55 @@ export default function MobileWallet() {
   const { data: vouchers = [] } = useQuery<any[]>({
     queryKey: ['/api/user-vouchers'],
     enabled: !!user,
+  });
+
+  // Fetch wallet overview with cashback and credit info
+  const { data: walletOverview } = useQuery<WalletOverview>({
+    queryKey: ['/api/wallet/overview'],
+    queryFn: async () => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      const response = await fetch(`${API_BASE_URL}/api/wallet/overview`, {
+        credentials: 'include',
+        headers,
+      });
+      if (!response.ok) throw new Error('Failed to fetch wallet overview');
+      return response.json();
+    },
+    enabled: !!user,
+  });
+
+  // Request credit mutation
+  const requestCreditMutation = useMutation({
+    mutationFn: async (amount: string) => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      const response = await fetch(`${API_BASE_URL}/api/wallet/credit/request`, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: JSON.stringify({ requestedAmount: amount }),
+      });
+      if (!response.ok) throw new Error('Failed to request credit');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
+    },
   });
 
   if (isLoading) {
@@ -101,23 +185,38 @@ export default function MobileWallet() {
       <div className="px-4 pt-4 pb-6 space-y-6">
         {/* Header Balance */}
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-6 text-white">
-          <p className="text-white/60 text-sm mb-1">Total Balance</p>
+          <p className="text-white/60 text-sm mb-1">Sold Total</p>
           <p className="text-4xl font-bold tracking-tight mb-4">
-            €{(userStats?.walletBalance || 0).toFixed(2)}
+            {(
+              parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0') +
+              (walletOverview?.credit?.status === 'approved' ? parseFloat(walletOverview?.credit?.availableCredit || '0') : 0)
+            ).toFixed(2)} RON
           </p>
           
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-white/50 text-xs">Vouchers</p>
-              <p className="text-lg font-semibold">€{(userStats?.voucherValue || 0).toFixed(2)}</p>
+              <p className="text-white/50 text-xs">Vouchere</p>
+              <p className="text-lg font-semibold">{vouchers.length}</p>
             </div>
             <div>
               <p className="text-white/50 text-xs">Cashback</p>
-              <p className="text-lg font-semibold text-green-400">€{(userStats?.totalCashback || 0).toFixed(2)}</p>
+              <p className="text-lg font-semibold text-green-400">
+                {parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(2)} RON
+              </p>
             </div>
             <div>
               <p className="text-white/50 text-xs">Credit</p>
-              <p className="text-lg font-semibold">€{(userStats?.creditLimit || 0).toFixed(2)}</p>
+              <p className={cn(
+                "text-lg font-semibold",
+                walletOverview?.credit?.status === 'approved' ? "text-white" : "text-red-400"
+              )}>
+                {walletOverview?.credit?.status === 'approved' 
+                  ? `${parseFloat(walletOverview?.credit?.availableCredit || '0').toFixed(0)} RON`
+                  : walletOverview?.credit?.status === 'pending'
+                    ? 'În așteptare'
+                    : 'Nesolicitat'
+                }
+              </p>
             </div>
           </div>
         </div>
@@ -254,52 +353,259 @@ export default function MobileWallet() {
 
         {activeTab === 'cashback' && (
           <div className="space-y-4">
+            {/* EatOff Cashback Balance */}
             <div className="bg-green-50 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-green-700 font-medium">Available Cashback</p>
-                <p className="text-2xl font-bold text-green-700">€{(userStats?.totalCashback || 0).toFixed(2)}</p>
+                <p className="text-green-700 font-medium">EatOff Cashback</p>
+                <p className="text-2xl font-bold text-green-700">
+                  {parseFloat(walletOverview?.cashback?.eatoffCashbackBalance || '0').toFixed(2)} RON
+                </p>
               </div>
-              <p className="text-sm text-green-600/70">Cashback is applied automatically at checkout</p>
+              <p className="text-sm text-green-600/70">Se aplică automat la plată</p>
             </div>
-            
-            <h3 className="font-semibold text-gray-900">Cashback Progress</h3>
+
+            {/* Total Cashback Stats */}
             <div className="bg-white border border-gray-100 rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600">Next reward at €100</span>
-                <span className="text-sm font-medium text-primary">€67/€100</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: '67%' }} />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500">Total câștigat</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {parseFloat(walletOverview?.cashback?.totalCashbackEarned || '0').toFixed(2)} RON
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Total folosit</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {parseFloat(walletOverview?.cashback?.totalCashbackUsed || '0').toFixed(2)} RON
+                  </p>
+                </div>
               </div>
             </div>
+
+            {/* Cashback Groups */}
+            {walletOverview?.cashbackEnrollments && walletOverview.cashbackEnrollments.length > 0 && (
+              <>
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Grupuri Cashback
+                </h3>
+                {walletOverview.cashbackEnrollments.map((item, index) => (
+                  <div key={index} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{item.group?.name || 'Grup Cashback'}</p>
+                      <p className="text-sm text-gray-500">{item.group?.description || ''}</p>
+                    </div>
+                    <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                      {parseFloat(item.group?.cashbackPercentage || '0')}%
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Loyalty Groups (Discount) */}
+            {walletOverview?.loyaltyEnrollments && walletOverview.loyaltyEnrollments.length > 0 && (
+              <>
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <BadgePercent className="w-4 h-4" />
+                  Grupuri Fidelizare
+                </h3>
+                {walletOverview.loyaltyEnrollments.map((item, index) => (
+                  <div key={index} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{item.group?.name || 'Grup Fidelizare'}</p>
+                      <p className="text-sm text-gray-500">Tier {item.group?.tierLevel || 1}</p>
+                    </div>
+                    <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">
+                      {parseFloat(item.group?.discountPercentage || '0')}% discount
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Restaurant Cashbacks */}
+            {walletOverview?.restaurantCashbacks && walletOverview.restaurantCashbacks.length > 0 && (
+              <>
+                <h3 className="font-semibold text-gray-900">Cashback per Restaurant</h3>
+                {walletOverview.restaurantCashbacks.map((rc, index) => (
+                  <div key={index} className="bg-white border border-gray-100 rounded-2xl p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Restaurant #{rc.restaurantId}</p>
+                      <p className="text-xs text-gray-400">Cheltuit: {parseFloat(rc.totalSpent || '0').toFixed(2)} RON</p>
+                    </div>
+                    <p className="font-bold text-green-600">{parseFloat(rc.cashbackBalance || '0').toFixed(2)} RON</p>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Empty state */}
+            {(!walletOverview?.cashbackEnrollments || walletOverview.cashbackEnrollments.length === 0) && 
+             (!walletOverview?.loyaltyEnrollments || walletOverview.loyaltyEnrollments.length === 0) && (
+              <div className="text-center py-8 bg-gray-50 rounded-2xl">
+                <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 mb-2">Nu ești înrolat în niciun grup de cashback</p>
+                <p className="text-sm text-gray-400">Vizitează restaurantele partenere pentru a te înscrie</p>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'credit' && (
           <div className="space-y-4">
-            <div className="bg-blue-50 rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-blue-700 font-medium">Credit Line</p>
-                  <p className="text-sm text-blue-600/70">Buy now, pay later</p>
+            {/* Credit Status Display */}
+            {walletOverview?.credit?.status === 'not_requested' && (
+              <>
+                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-red-700 font-medium flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5" />
+                        Credit pe Cont
+                      </p>
+                      <p className="text-sm text-red-600/70">Necesită solicitare și aprobare</p>
+                    </div>
+                    <CreditCard className="w-8 h-8 text-red-500" />
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-4xl font-bold text-red-600">
+                      {parseFloat(walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
+                    </p>
+                    <p className="text-sm text-red-500">disponibil după aprobare</p>
+                  </div>
                 </div>
-                <CreditCard className="w-8 h-8 text-blue-600" />
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-blue-700">€{(userStats?.creditLimit || 200).toFixed(0)}</p>
-                <p className="text-sm text-blue-600/70">available</p>
-              </div>
-            </div>
 
-            <div className="bg-white border border-gray-100 rounded-2xl p-4">
-              <p className="text-sm text-gray-600 mb-2">Cost: <span className="font-medium">+5% fee</span></p>
-              <p className="text-sm text-gray-500">Pay in restaurants with your credit line. Fee is applied at checkout.</p>
-            </div>
+                <div className="bg-white border border-gray-100 rounded-2xl p-4">
+                  <p className="text-sm text-gray-600 mb-2">
+                    <span className="font-medium">Cumpără acum, plătește mai târziu!</span>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Solicită credit pe cont pentru a plăti la restaurante fără numerar. 
+                    Creditul trebuie aprobat de EatOff.
+                  </p>
+                </div>
 
-            <button className="w-full bg-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2">
-              Request Credit Increase
-              <ChevronRight className="w-5 h-5" />
-            </button>
+                <button 
+                  onClick={() => requestCreditMutation.mutate('1000.00')}
+                  disabled={requestCreditMutation.isPending}
+                  className="w-full bg-red-600 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {requestCreditMutation.isPending ? (
+                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                  ) : (
+                    <>
+                      Solicită Credit
+                      <ChevronRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+
+            {walletOverview?.credit?.status === 'pending' && (
+              <>
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-amber-700 font-medium flex items-center gap-2">
+                        <Clock className="w-5 h-5" />
+                        Solicitare în așteptare
+                      </p>
+                      <p className="text-sm text-amber-600/70">Se așteaptă aprobarea EatOff</p>
+                    </div>
+                    <CreditCard className="w-8 h-8 text-amber-500" />
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-4xl font-bold text-amber-600">
+                      {parseFloat(walletOverview.credit.requestedAmount || walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
+                    </p>
+                    <p className="text-sm text-amber-500">solicitat</p>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-amber-100 rounded-2xl p-4">
+                  <p className="text-sm text-gray-600">
+                    Solicitarea ta este în curs de procesare. Vei primi o notificare când creditul va fi aprobat.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {walletOverview?.credit?.status === 'approved' && (
+              <>
+                <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-green-700 font-medium flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5" />
+                        Credit Aprobat
+                      </p>
+                      <p className="text-sm text-green-600/70">Plătește la orice restaurant partener</p>
+                    </div>
+                    <CreditCard className="w-8 h-8 text-green-600" />
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-4xl font-bold text-green-700">
+                      {parseFloat(walletOverview.credit.availableCredit || '0').toFixed(0)} RON
+                    </p>
+                    <p className="text-sm text-green-600">disponibil</p>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-100 rounded-2xl p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Limită totală</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {parseFloat(walletOverview.credit.creditLimit || '0').toFixed(0)} RON
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Utilizat</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {parseFloat(walletOverview.credit.usedCredit || '0').toFixed(0)} RON
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {parseFloat(walletOverview.credit.interestRate || '0') > 0 && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+                    <p className="text-sm text-blue-700">
+                      <span className="font-medium">Dobândă: {walletOverview.credit.interestRate}%</span>
+                      {' '}• Termen de plată: {walletOverview.credit.paymentTermDays || 30} zile
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {walletOverview?.credit?.status === 'rejected' && (
+              <>
+                <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-gray-700 font-medium flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5" />
+                        Solicitare respinsă
+                      </p>
+                      <p className="text-sm text-gray-500">Poți încerca din nou mai târziu</p>
+                    </div>
+                    <CreditCard className="w-8 h-8 text-gray-400" />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => requestCreditMutation.mutate('1000.00')}
+                  disabled={requestCreditMutation.isPending}
+                  className="w-full bg-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
+                >
+                  Solicită din nou
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
           </div>
         )}
 

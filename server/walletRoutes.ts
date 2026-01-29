@@ -1,15 +1,29 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { storage } from "./storage";
 import { nanoid } from "nanoid";
 import * as qr from "qr-image";
 import Stripe from "stripe";
+import { db } from "./db";
+import { eq, and, isNull, desc } from "drizzle-orm";
 import { 
   insertCustomerWalletSchema,
   insertGeneralVoucherSchema,
   insertCustomerGeneralVoucherSchema,
   insertPaymentTransactionSchema,
   insertWalletTransactionSchema,
-  insertQrCodeSchema
+  insertQrCodeSchema,
+  cashbackGroups,
+  customerCashbackEnrollments,
+  customerCashbackBalance,
+  customerRestaurantCashback,
+  cashbackTransactions,
+  customerCreditAccount,
+  creditTransactions,
+  loyaltyGroups,
+  customerLoyaltyEnrollments,
+  customers,
+  insertCashbackGroupSchema,
+  insertLoyaltyGroupSchema
 } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -619,5 +633,1132 @@ function calculateGeneralVoucherDiscount(customerVoucher: any, orderAmount: numb
   // For now, simplified implementation
   return Math.min(orderAmount * 0.1, parseFloat(customerVoucher.purchasePrice)); // 10% or voucher value
 }
+
+// ============================================
+// CASHBACK & CREDIT SYSTEM ROUTES
+// ============================================
+
+// Helper to get customer ID from various auth sources
+const getAuthCustomerId = (req: Request): number | null => {
+  const mobileUser = (req as any).mobileUser;
+  if (mobileUser) return mobileUser.id || mobileUser.customerId;
+  
+  const user = (req as any).user;
+  if (user) return user.id || user.customerId;
+  
+  const sessionOwnerId = (req.session as any)?.ownerId;
+  return sessionOwnerId || null;
+};
+
+// Get complete wallet overview with cashback and credit info
+router.get("/wallet/overview", async (req: Request, res: Response) => {
+  try {
+    const customerId = getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    // Get cashback balance
+    const [cashbackBalance] = await db
+      .select()
+      .from(customerCashbackBalance)
+      .where(eq(customerCashbackBalance.customerId, customerId))
+      .limit(1);
+    
+    // Get credit account status
+    const [creditAccount] = await db
+      .select()
+      .from(customerCreditAccount)
+      .where(eq(customerCreditAccount.customerId, customerId))
+      .limit(1);
+    
+    // Get cashback enrollments with group info
+    const cashbackEnrollments = await db
+      .select({
+        enrollment: customerCashbackEnrollments,
+        group: cashbackGroups
+      })
+      .from(customerCashbackEnrollments)
+      .leftJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(and(
+        eq(customerCashbackEnrollments.customerId, customerId),
+        eq(customerCashbackEnrollments.isActive, true)
+      ));
+    
+    // Get loyalty enrollments with group info
+    const loyaltyEnrollments = await db
+      .select({
+        enrollment: customerLoyaltyEnrollments,
+        group: loyaltyGroups
+      })
+      .from(customerLoyaltyEnrollments)
+      .leftJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
+      .where(and(
+        eq(customerLoyaltyEnrollments.customerId, customerId),
+        eq(customerLoyaltyEnrollments.isActive, true)
+      ));
+    
+    // Get restaurant-specific cashback balances
+    const restaurantCashbacks = await db
+      .select()
+      .from(customerRestaurantCashback)
+      .where(eq(customerRestaurantCashback.customerId, customerId));
+    
+    res.json({
+      cashback: cashbackBalance || {
+        eatoffCashbackBalance: "0.00",
+        totalCashbackBalance: "0.00",
+        totalCashbackEarned: "0.00",
+        totalCashbackUsed: "0.00"
+      },
+      credit: creditAccount || {
+        status: "not_requested",
+        creditLimit: "0.00",
+        availableCredit: "0.00",
+        usedCredit: "0.00",
+        defaultDisplayLimit: "1000.00"
+      },
+      cashbackEnrollments,
+      loyaltyEnrollments,
+      restaurantCashbacks
+    });
+  } catch (error) {
+    console.error("Error fetching wallet overview:", error);
+    res.status(500).json({ message: "Failed to fetch wallet overview" });
+  }
+});
+
+// Request credit on account
+router.post("/wallet/credit/request", async (req: Request, res: Response) => {
+  try {
+    const customerId = getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const { requestedAmount } = req.body;
+    
+    // Check if customer already has a credit account
+    const [existing] = await db
+      .select()
+      .from(customerCreditAccount)
+      .where(eq(customerCreditAccount.customerId, customerId))
+      .limit(1);
+    
+    if (existing) {
+      if (existing.status === "pending") {
+        return res.status(400).json({ message: "Credit request already pending" });
+      }
+      if (existing.status === "approved") {
+        return res.status(400).json({ message: "Credit already approved" });
+      }
+      
+      // Update existing request
+      const [updated] = await db
+        .update(customerCreditAccount)
+        .set({
+          status: "pending",
+          requestedAt: new Date(),
+          requestedAmount: requestedAmount || "1000.00",
+          rejectedAt: null,
+          rejectionReason: null,
+          updatedAt: new Date()
+        })
+        .where(eq(customerCreditAccount.id, existing.id))
+        .returning();
+      
+      return res.json(updated);
+    }
+    
+    // Create new credit account request
+    const [creditAccount] = await db
+      .insert(customerCreditAccount)
+      .values({
+        customerId,
+        status: "pending",
+        requestedAt: new Date(),
+        requestedAmount: requestedAmount || "1000.00",
+        defaultDisplayLimit: "1000.00"
+      })
+      .returning();
+    
+    res.json(creditAccount);
+  } catch (error) {
+    console.error("Error requesting credit:", error);
+    res.status(500).json({ message: "Failed to request credit" });
+  }
+});
+
+// Get credit account status
+router.get("/wallet/credit", async (req: Request, res: Response) => {
+  try {
+    const customerId = getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const [creditAccount] = await db
+      .select()
+      .from(customerCreditAccount)
+      .where(eq(customerCreditAccount.customerId, customerId))
+      .limit(1);
+    
+    res.json(creditAccount || {
+      status: "not_requested",
+      creditLimit: "0.00",
+      availableCredit: "0.00",
+      usedCredit: "0.00",
+      defaultDisplayLimit: "1000.00"
+    });
+  } catch (error) {
+    console.error("Error fetching credit:", error);
+    res.status(500).json({ message: "Failed to fetch credit" });
+  }
+});
+
+// Get cashback transactions
+router.get("/wallet/cashback/transactions", async (req: Request, res: Response) => {
+  try {
+    const customerId = getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const transactions = await db
+      .select()
+      .from(cashbackTransactions)
+      .where(eq(cashbackTransactions.customerId, customerId))
+      .orderBy(desc(cashbackTransactions.createdAt))
+      .limit(50);
+    
+    res.json(transactions);
+  } catch (error) {
+    console.error("Error fetching cashback transactions:", error);
+    res.status(500).json({ message: "Failed to fetch transactions" });
+  }
+});
+
+// Get credit transactions
+router.get("/wallet/credit/transactions", async (req: Request, res: Response) => {
+  try {
+    const customerId = getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const transactions = await db
+      .select()
+      .from(creditTransactions)
+      .where(eq(creditTransactions.customerId, customerId))
+      .orderBy(desc(creditTransactions.createdAt))
+      .limit(50);
+    
+    res.json(transactions);
+  } catch (error) {
+    console.error("Error fetching credit transactions:", error);
+    res.status(500).json({ message: "Failed to fetch transactions" });
+  }
+});
+
+// ============================================
+// ADMIN ROUTES FOR CASHBACK GROUPS
+// ============================================
+
+// Get all EatOff cashback groups
+router.get("/admin/cashback-groups", async (req: Request, res: Response) => {
+  try {
+    const groups = await db
+      .select()
+      .from(cashbackGroups)
+      .where(isNull(cashbackGroups.restaurantId))
+      .orderBy(desc(cashbackGroups.priority));
+    
+    res.json(groups);
+  } catch (error) {
+    console.error("Error fetching cashback groups:", error);
+    res.status(500).json({ message: "Failed to fetch cashback groups" });
+  }
+});
+
+// Create EatOff cashback group
+router.post("/admin/cashback-groups", async (req: Request, res: Response) => {
+  try {
+    const data = insertCashbackGroupSchema.parse(req.body);
+    
+    const [group] = await db
+      .insert(cashbackGroups)
+      .values({
+        ...data,
+        restaurantId: null // EatOff group
+      })
+      .returning();
+    
+    res.json(group);
+  } catch (error) {
+    console.error("Error creating cashback group:", error);
+    res.status(500).json({ message: "Failed to create cashback group" });
+  }
+});
+
+// Update EatOff cashback group
+router.patch("/admin/cashback-groups/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const data = req.body;
+    
+    const [group] = await db
+      .update(cashbackGroups)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(cashbackGroups.id, id), isNull(cashbackGroups.restaurantId)))
+      .returning();
+    
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+    
+    res.json(group);
+  } catch (error) {
+    console.error("Error updating cashback group:", error);
+    res.status(500).json({ message: "Failed to update cashback group" });
+  }
+});
+
+// Get all pending credit requests
+router.get("/admin/credit-requests", async (req: Request, res: Response) => {
+  try {
+    const requests = await db
+      .select({
+        creditAccount: customerCreditAccount,
+        customer: customers
+      })
+      .from(customerCreditAccount)
+      .leftJoin(customers, eq(customerCreditAccount.customerId, customers.id))
+      .where(eq(customerCreditAccount.status, "pending"))
+      .orderBy(customerCreditAccount.requestedAt);
+    
+    res.json(requests);
+  } catch (error) {
+    console.error("Error fetching credit requests:", error);
+    res.status(500).json({ message: "Failed to fetch credit requests" });
+  }
+});
+
+// Approve credit request
+router.post("/admin/credit-requests/:id/approve", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { creditLimit, interestRate, paymentTermDays, approvedBy } = req.body;
+    
+    const [updated] = await db
+      .update(customerCreditAccount)
+      .set({
+        status: "approved",
+        creditLimit: creditLimit || "1000.00",
+        availableCredit: creditLimit || "1000.00",
+        interestRate: interestRate || "0.00",
+        paymentTermDays: paymentTermDays || 30,
+        approvedAt: new Date(),
+        approvedBy,
+        updatedAt: new Date()
+      })
+      .where(eq(customerCreditAccount.id, id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ message: "Credit request not found" });
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error("Error approving credit:", error);
+    res.status(500).json({ message: "Failed to approve credit" });
+  }
+});
+
+// Reject credit request
+router.post("/admin/credit-requests/:id/reject", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { rejectionReason } = req.body;
+    
+    const [updated] = await db
+      .update(customerCreditAccount)
+      .set({
+        status: "rejected",
+        rejectedAt: new Date(),
+        rejectionReason: rejectionReason || "Request not approved",
+        updatedAt: new Date()
+      })
+      .where(eq(customerCreditAccount.id, id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ message: "Credit request not found" });
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error("Error rejecting credit:", error);
+    res.status(500).json({ message: "Failed to reject credit" });
+  }
+});
+
+// ============================================
+// RESTAURANT ROUTES FOR CASHBACK & LOYALTY
+// ============================================
+
+// Get restaurant cashback groups
+router.get("/restaurant/:restaurantId/cashback-groups", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    
+    const groups = await db
+      .select()
+      .from(cashbackGroups)
+      .where(eq(cashbackGroups.restaurantId, restaurantId))
+      .orderBy(desc(cashbackGroups.priority));
+    
+    res.json(groups);
+  } catch (error) {
+    console.error("Error fetching restaurant cashback groups:", error);
+    res.status(500).json({ message: "Failed to fetch cashback groups" });
+  }
+});
+
+// Create restaurant cashback group
+router.post("/restaurant/:restaurantId/cashback-groups", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const data = insertCashbackGroupSchema.parse(req.body);
+    
+    const [group] = await db
+      .insert(cashbackGroups)
+      .values({
+        ...data,
+        restaurantId
+      })
+      .returning();
+    
+    res.json(group);
+  } catch (error) {
+    console.error("Error creating restaurant cashback group:", error);
+    res.status(500).json({ message: "Failed to create cashback group" });
+  }
+});
+
+// Update restaurant cashback group
+router.patch("/restaurant/:restaurantId/cashback-groups/:id", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const id = parseInt(req.params.id);
+    const data = req.body;
+    
+    const [group] = await db
+      .update(cashbackGroups)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(cashbackGroups.id, id), eq(cashbackGroups.restaurantId, restaurantId)))
+      .returning();
+    
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+    
+    res.json(group);
+  } catch (error) {
+    console.error("Error updating restaurant cashback group:", error);
+    res.status(500).json({ message: "Failed to update cashback group" });
+  }
+});
+
+// Get restaurant loyalty groups
+router.get("/restaurant/:restaurantId/loyalty-groups", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    
+    const groups = await db
+      .select()
+      .from(loyaltyGroups)
+      .where(eq(loyaltyGroups.restaurantId, restaurantId))
+      .orderBy(loyaltyGroups.tierLevel);
+    
+    res.json(groups);
+  } catch (error) {
+    console.error("Error fetching loyalty groups:", error);
+    res.status(500).json({ message: "Failed to fetch loyalty groups" });
+  }
+});
+
+// Create restaurant loyalty group
+router.post("/restaurant/:restaurantId/loyalty-groups", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const data = insertLoyaltyGroupSchema.parse(req.body);
+    
+    const [group] = await db
+      .insert(loyaltyGroups)
+      .values({
+        ...data,
+        restaurantId
+      })
+      .returning();
+    
+    res.json(group);
+  } catch (error) {
+    console.error("Error creating loyalty group:", error);
+    res.status(500).json({ message: "Failed to create loyalty group" });
+  }
+});
+
+// Update restaurant loyalty group
+router.patch("/restaurant/:restaurantId/loyalty-groups/:id", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const id = parseInt(req.params.id);
+    const data = req.body;
+    
+    const [group] = await db
+      .update(loyaltyGroups)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(loyaltyGroups.id, id), eq(loyaltyGroups.restaurantId, restaurantId)))
+      .returning();
+    
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+    
+    res.json(group);
+  } catch (error) {
+    console.error("Error updating loyalty group:", error);
+    res.status(500).json({ message: "Failed to update loyalty group" });
+  }
+});
+
+// ============================================
+// CUSTOMER ENROLLMENT (via QR scan)
+// ============================================
+
+// Enroll customer in cashback group
+router.post("/restaurant/:restaurantId/enroll-customer/cashback", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const { customerId, groupId, enrolledByUserId } = req.body;
+    
+    // Verify the group belongs to this restaurant
+    const [group] = await db
+      .select()
+      .from(cashbackGroups)
+      .where(and(eq(cashbackGroups.id, groupId), eq(cashbackGroups.restaurantId, restaurantId)))
+      .limit(1);
+    
+    if (!group) {
+      return res.status(404).json({ message: "Group not found for this restaurant" });
+    }
+    
+    // Check if already enrolled
+    const [existing] = await db
+      .select()
+      .from(customerCashbackEnrollments)
+      .where(and(
+        eq(customerCashbackEnrollments.customerId, customerId),
+        eq(customerCashbackEnrollments.groupId, groupId)
+      ))
+      .limit(1);
+    
+    if (existing) {
+      if (existing.isActive) {
+        return res.status(400).json({ message: "Customer already enrolled in this group" });
+      }
+      // Reactivate
+      const [updated] = await db
+        .update(customerCashbackEnrollments)
+        .set({ isActive: true, deactivatedAt: null })
+        .where(eq(customerCashbackEnrollments.id, existing.id))
+        .returning();
+      return res.json(updated);
+    }
+    
+    // Create enrollment
+    const [enrollment] = await db
+      .insert(customerCashbackEnrollments)
+      .values({
+        customerId,
+        groupId,
+        enrolledBy: "restaurant_scan",
+        enrolledByUserId
+      })
+      .returning();
+    
+    // Initialize restaurant cashback tracking if not exists
+    const [existingCashback] = await db
+      .select()
+      .from(customerRestaurantCashback)
+      .where(and(
+        eq(customerRestaurantCashback.customerId, customerId),
+        eq(customerRestaurantCashback.restaurantId, restaurantId)
+      ))
+      .limit(1);
+    
+    if (!existingCashback) {
+      await db.insert(customerRestaurantCashback).values({
+        customerId,
+        restaurantId
+      });
+    }
+    
+    res.json(enrollment);
+  } catch (error) {
+    console.error("Error enrolling customer:", error);
+    res.status(500).json({ message: "Failed to enroll customer" });
+  }
+});
+
+// Enroll customer in loyalty group
+router.post("/restaurant/:restaurantId/enroll-customer/loyalty", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const { customerId, groupId, enrolledByUserId } = req.body;
+    
+    // Verify the group belongs to this restaurant
+    const [group] = await db
+      .select()
+      .from(loyaltyGroups)
+      .where(and(eq(loyaltyGroups.id, groupId), eq(loyaltyGroups.restaurantId, restaurantId)))
+      .limit(1);
+    
+    if (!group) {
+      return res.status(404).json({ message: "Group not found for this restaurant" });
+    }
+    
+    // Check if already enrolled in any loyalty group for this restaurant
+    const [existing] = await db
+      .select()
+      .from(customerLoyaltyEnrollments)
+      .where(and(
+        eq(customerLoyaltyEnrollments.customerId, customerId),
+        eq(customerLoyaltyEnrollments.restaurantId, restaurantId),
+        eq(customerLoyaltyEnrollments.isActive, true)
+      ))
+      .limit(1);
+    
+    if (existing) {
+      // Update to new group
+      const [updated] = await db
+        .update(customerLoyaltyEnrollments)
+        .set({ 
+          groupId,
+          upgradedFromGroupId: existing.groupId,
+          upgradedAt: new Date()
+        })
+        .where(eq(customerLoyaltyEnrollments.id, existing.id))
+        .returning();
+      return res.json(updated);
+    }
+    
+    // Create enrollment
+    const [enrollment] = await db
+      .insert(customerLoyaltyEnrollments)
+      .values({
+        customerId,
+        groupId,
+        restaurantId,
+        enrolledBy: "restaurant_scan",
+        enrolledByUserId
+      })
+      .returning();
+    
+    res.json(enrollment);
+  } catch (error) {
+    console.error("Error enrolling customer in loyalty:", error);
+    res.status(500).json({ message: "Failed to enroll customer" });
+  }
+});
+
+// Get customer info by ID (for restaurant scanning)
+router.get("/restaurant/:restaurantId/customer/:customerId", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const customerId = parseInt(req.params.customerId);
+    
+    // Get customer basic info
+    const [customer] = await db
+      .select({
+        id: customers.id,
+        name: customers.name,
+        email: customers.email,
+        profilePicture: customers.profilePicture
+      })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+    
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    
+    // Get customer's cashback enrollments for this restaurant
+    const cashbackEnrollmentsList = await db
+      .select({
+        enrollment: customerCashbackEnrollments,
+        group: cashbackGroups
+      })
+      .from(customerCashbackEnrollments)
+      .leftJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(and(
+        eq(customerCashbackEnrollments.customerId, customerId),
+        eq(cashbackGroups.restaurantId, restaurantId),
+        eq(customerCashbackEnrollments.isActive, true)
+      ));
+    
+    // Get customer's loyalty enrollment for this restaurant
+    const [loyaltyEnrollment] = await db
+      .select({
+        enrollment: customerLoyaltyEnrollments,
+        group: loyaltyGroups
+      })
+      .from(customerLoyaltyEnrollments)
+      .leftJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
+      .where(and(
+        eq(customerLoyaltyEnrollments.customerId, customerId),
+        eq(customerLoyaltyEnrollments.restaurantId, restaurantId),
+        eq(customerLoyaltyEnrollments.isActive, true)
+      ))
+      .limit(1);
+    
+    // Get restaurant cashback balance
+    const [restaurantCashback] = await db
+      .select()
+      .from(customerRestaurantCashback)
+      .where(and(
+        eq(customerRestaurantCashback.customerId, customerId),
+        eq(customerRestaurantCashback.restaurantId, restaurantId)
+      ))
+      .limit(1);
+    
+    res.json({
+      customer,
+      cashbackEnrollments: cashbackEnrollmentsList,
+      loyaltyEnrollment,
+      restaurantCashback: restaurantCashback || { cashbackBalance: "0.00", totalSpent: "0.00" }
+    });
+  } catch (error) {
+    console.error("Error fetching customer info:", error);
+    res.status(500).json({ message: "Failed to fetch customer info" });
+  }
+});
+
+// ============================================================
+// ADMIN ENDPOINTS FOR WALLET MANAGEMENT
+// ============================================================
+
+// Get all EatOff cashback groups (admin)
+router.get("/admin/eatoff-cashback-groups", async (req, res) => {
+  try {
+    const groups = await db
+      .select()
+      .from(cashbackGroups)
+      .where(isNull(cashbackGroups.restaurantId))
+      .orderBy(desc(cashbackGroups.createdAt));
+    
+    res.json(groups);
+  } catch (error) {
+    console.error("Error fetching EatOff cashback groups:", error);
+    res.status(500).json({ message: "Failed to fetch cashback groups" });
+  }
+});
+
+// Create EatOff cashback group (admin)
+router.post("/admin/eatoff-cashback-groups", async (req, res) => {
+  try {
+    const { name, description, cashbackPercentage } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ message: "Group name is required" });
+    }
+    
+    const [group] = await db.insert(cashbackGroups).values({
+      name,
+      description: description || null,
+      cashbackPercentage: cashbackPercentage || "3.00",
+      restaurantId: null, // EatOff-wide group
+      isActive: true,
+    }).returning();
+    
+    res.json(group);
+  } catch (error) {
+    console.error("Error creating EatOff cashback group:", error);
+    res.status(500).json({ message: "Failed to create cashback group" });
+  }
+});
+
+// Update EatOff cashback group (admin)
+router.patch("/admin/eatoff-cashback-groups/:id", async (req, res) => {
+  try {
+    const groupId = parseInt(req.params.id);
+    const { name, description, cashbackPercentage, isActive } = req.body;
+    
+    const [group] = await db.update(cashbackGroups)
+      .set({
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(cashbackPercentage !== undefined && { cashbackPercentage }),
+        ...(isActive !== undefined && { isActive }),
+      })
+      .where(eq(cashbackGroups.id, groupId))
+      .returning();
+    
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+    
+    res.json(group);
+  } catch (error) {
+    console.error("Error updating EatOff cashback group:", error);
+    res.status(500).json({ message: "Failed to update cashback group" });
+  }
+});
+
+// Get all credit requests (admin)
+router.get("/admin/credit-requests", async (req, res) => {
+  try {
+    const requests = await db
+      .select({
+        id: customerCreditAccount.id,
+        customerId: customerCreditAccount.customerId,
+        requestedAmount: customerCreditAccount.creditLimit,
+        status: customerCreditAccount.status,
+        createdAt: customerCreditAccount.createdAt,
+        customer: {
+          name: customers.name,
+          email: customers.email,
+        }
+      })
+      .from(customerCreditAccount)
+      .leftJoin(customers, eq(customerCreditAccount.customerId, customers.id))
+      .orderBy(desc(customerCreditAccount.createdAt));
+    
+    res.json(requests);
+  } catch (error) {
+    console.error("Error fetching credit requests:", error);
+    res.status(500).json({ message: "Failed to fetch credit requests" });
+  }
+});
+
+// Approve credit request (admin)
+router.post("/admin/credit-requests/:id/approve", async (req, res) => {
+  try {
+    const requestId = parseInt(req.params.id);
+    
+    const [creditAccount] = await db.update(customerCreditAccount)
+      .set({
+        status: "approved",
+        approvedAt: new Date(),
+      })
+      .where(eq(customerCreditAccount.id, requestId))
+      .returning();
+    
+    if (!creditAccount) {
+      return res.status(404).json({ message: "Credit request not found" });
+    }
+    
+    res.json({ message: "Credit approved", creditAccount });
+  } catch (error) {
+    console.error("Error approving credit request:", error);
+    res.status(500).json({ message: "Failed to approve credit request" });
+  }
+});
+
+// Reject credit request (admin)
+router.post("/admin/credit-requests/:id/reject", async (req, res) => {
+  try {
+    const requestId = parseInt(req.params.id);
+    
+    const [creditAccount] = await db.update(customerCreditAccount)
+      .set({
+        status: "rejected",
+      })
+      .where(eq(customerCreditAccount.id, requestId))
+      .returning();
+    
+    if (!creditAccount) {
+      return res.status(404).json({ message: "Credit request not found" });
+    }
+    
+    res.json({ message: "Credit rejected", creditAccount });
+  } catch (error) {
+    console.error("Error rejecting credit request:", error);
+    res.status(500).json({ message: "Failed to reject credit request" });
+  }
+});
+
+// Shared function to check and perform loyalty tier upgrade
+async function checkAndUpgradeLoyaltyTier(restaurantId: number, customerId: number) {
+  // Get customer's current loyalty enrollment
+  const [currentEnrollment] = await db
+    .select({
+      enrollment: customerLoyaltyEnrollments,
+      currentGroup: loyaltyGroups
+    })
+    .from(customerLoyaltyEnrollments)
+    .leftJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
+    .where(and(
+      eq(customerLoyaltyEnrollments.customerId, customerId),
+      eq(customerLoyaltyEnrollments.restaurantId, restaurantId),
+      eq(customerLoyaltyEnrollments.isActive, true)
+    ))
+    .limit(1);
+  
+  // Get customer's spending at this restaurant
+  const [customerSpending] = await db
+    .select()
+    .from(customerRestaurantCashback)
+    .where(and(
+      eq(customerRestaurantCashback.customerId, customerId),
+      eq(customerRestaurantCashback.restaurantId, restaurantId)
+    ))
+    .limit(1);
+  
+  const totalSpent = parseFloat(customerSpending?.totalSpent || '0');
+  const visitCount = customerSpending?.visitCount || 0;
+  
+  // Get all loyalty groups for this restaurant, ordered by tier level ascending
+  // This ensures we find the highest tier the customer qualifies for
+  const allGroups = await db
+    .select()
+    .from(loyaltyGroups)
+    .where(and(
+      eq(loyaltyGroups.restaurantId, restaurantId),
+      eq(loyaltyGroups.isActive, true),
+      eq(loyaltyGroups.autoUpgradeEnabled, true)
+    ))
+    .orderBy(loyaltyGroups.tierLevel);
+  
+  // Find the highest tier the customer qualifies for
+  let bestQualifyingGroup = null;
+  for (const group of allGroups) {
+    const minSpend = parseFloat(group.minSpendThreshold || '0');
+    
+    // Customer qualifies if they meet the minimum spend threshold
+    if (totalSpent >= minSpend) {
+      bestQualifyingGroup = group; // Keep updating to get highest qualifying tier
+    }
+  }
+  
+  if (!bestQualifyingGroup) {
+    return { upgraded: false, message: "No tier upgrade available", currentTier: currentEnrollment?.currentGroup?.tierLevel || 0 };
+  }
+  
+  const currentTierLevel = currentEnrollment?.currentGroup?.tierLevel || 0;
+  
+  // Check if upgrade is needed
+  if (bestQualifyingGroup.tierLevel > currentTierLevel) {
+    // Deactivate current enrollment if exists
+    if (currentEnrollment) {
+      await db.update(customerLoyaltyEnrollments)
+        .set({ isActive: false })
+        .where(eq(customerLoyaltyEnrollments.id, currentEnrollment.enrollment.id));
+    }
+    
+    // Create new enrollment at higher tier
+    const [newEnrollment] = await db.insert(customerLoyaltyEnrollments).values({
+      customerId,
+      restaurantId,
+      groupId: bestQualifyingGroup.id,
+      currentTierLevel: bestQualifyingGroup.tierLevel,
+      totalSpentAtRestaurant: totalSpent.toString(),
+      visitCount,
+      isActive: true,
+    }).returning();
+    
+    return {
+      upgraded: true,
+      previousTier: currentTierLevel,
+      newTier: bestQualifyingGroup.tierLevel,
+      groupName: bestQualifyingGroup.name,
+      discountPercentage: bestQualifyingGroup.discountPercentage,
+      enrollment: newEnrollment
+    };
+  }
+  
+  return {
+    upgraded: false,
+    currentTier: currentTierLevel,
+    message: "Customer already at this tier or higher"
+  };
+}
+
+// Auto-upgrade customer loyalty tier based on spending/visits
+router.post("/restaurant/:restaurantId/check-loyalty-upgrade/:customerId", async (req, res) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const customerId = parseInt(req.params.customerId);
+    
+    // TODO: Add auth check for restaurant owner
+    
+    const result = await checkAndUpgradeLoyaltyTier(restaurantId, customerId);
+    res.json(result);
+  } catch (error) {
+    console.error("Error checking loyalty upgrade:", error);
+    res.status(500).json({ message: "Failed to check loyalty upgrade" });
+  }
+});
+
+// Update customer spending and check for tier upgrade after purchase
+router.post("/restaurant/:restaurantId/record-purchase/:customerId", async (req, res) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const customerId = parseInt(req.params.customerId);
+    const { amount, description } = req.body;
+    
+    if (!amount || isNaN(parseFloat(amount))) {
+      return res.status(400).json({ message: "Valid amount is required" });
+    }
+    
+    const purchaseAmount = parseFloat(amount);
+    
+    // Update or create restaurant cashback record
+    const [existingRecord] = await db
+      .select()
+      .from(customerRestaurantCashback)
+      .where(and(
+        eq(customerRestaurantCashback.customerId, customerId),
+        eq(customerRestaurantCashback.restaurantId, restaurantId)
+      ))
+      .limit(1);
+    
+    if (existingRecord) {
+      await db.update(customerRestaurantCashback)
+        .set({
+          totalSpent: (parseFloat(existingRecord.totalSpent) + purchaseAmount).toFixed(2),
+          visitCount: (existingRecord.visitCount || 0) + 1,
+          lastVisitAt: new Date(),
+        })
+        .where(eq(customerRestaurantCashback.id, existingRecord.id));
+    } else {
+      await db.insert(customerRestaurantCashback).values({
+        customerId,
+        restaurantId,
+        cashbackBalance: "0.00",
+        totalSpent: purchaseAmount.toFixed(2),
+        visitCount: 1,
+        lastVisitAt: new Date(),
+      });
+    }
+    
+    // Calculate and add cashback if enrolled in cashback group
+    const [cashbackEnrollment] = await db
+      .select({
+        enrollment: customerCashbackEnrollments,
+        group: cashbackGroups
+      })
+      .from(customerCashbackEnrollments)
+      .leftJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(and(
+        eq(customerCashbackEnrollments.customerId, customerId),
+        eq(cashbackGroups.restaurantId, restaurantId),
+        eq(customerCashbackEnrollments.isActive, true)
+      ))
+      .limit(1);
+    
+    let cashbackEarned = 0;
+    if (cashbackEnrollment?.group) {
+      const percentage = parseFloat(cashbackEnrollment.group.cashbackPercentage);
+      cashbackEarned = purchaseAmount * (percentage / 100);
+      
+      // Update restaurant-specific cashback balance
+      const [updatedRecord] = await db
+        .select()
+        .from(customerRestaurantCashback)
+        .where(and(
+          eq(customerRestaurantCashback.customerId, customerId),
+          eq(customerRestaurantCashback.restaurantId, restaurantId)
+        ))
+        .limit(1);
+      
+      if (updatedRecord) {
+        await db.update(customerRestaurantCashback)
+          .set({
+            cashbackBalance: (parseFloat(updatedRecord.cashbackBalance) + cashbackEarned).toFixed(2),
+          })
+          .where(eq(customerRestaurantCashback.id, updatedRecord.id));
+      }
+      
+      // Record cashback transaction
+      await db.insert(cashbackTransactions).values({
+        customerId,
+        restaurantId,
+        amount: cashbackEarned.toFixed(2),
+        type: "earned",
+        description: description || `Cashback for purchase of ${purchaseAmount.toFixed(2)} RON`,
+      });
+    }
+    
+    // Check for loyalty tier upgrade using shared function
+    const upgradeResult = await checkAndUpgradeLoyaltyTier(restaurantId, customerId);
+    
+    res.json({
+      message: "Purchase recorded",
+      amount: purchaseAmount,
+      cashbackEarned,
+      loyaltyUpgrade: upgradeResult.upgraded ? upgradeResult : null
+    });
+  } catch (error) {
+    console.error("Error recording purchase:", error);
+    res.status(500).json({ message: "Failed to record purchase" });
+  }
+});
+
+// Enroll customer in EatOff cashback group (admin)
+router.post("/admin/enroll-customer/cashback", async (req, res) => {
+  try {
+    const { customerId, groupId } = req.body;
+    
+    if (!customerId || !groupId) {
+      return res.status(400).json({ message: "Customer ID and Group ID are required" });
+    }
+    
+    // Check if already enrolled
+    const [existing] = await db
+      .select()
+      .from(customerCashbackEnrollments)
+      .where(and(
+        eq(customerCashbackEnrollments.customerId, customerId),
+        eq(customerCashbackEnrollments.groupId, groupId),
+        eq(customerCashbackEnrollments.isActive, true)
+      ))
+      .limit(1);
+    
+    if (existing) {
+      return res.status(400).json({ message: "Customer already enrolled in this group" });
+    }
+    
+    const [enrollment] = await db.insert(customerCashbackEnrollments).values({
+      customerId,
+      groupId,
+      restaurantId: null, // EatOff-wide enrollment
+      isActive: true,
+    }).returning();
+    
+    // Create or update cashback balance
+    const [existingBalance] = await db
+      .select()
+      .from(customerCashbackBalance)
+      .where(eq(customerCashbackBalance.customerId, customerId))
+      .limit(1);
+    
+    if (!existingBalance) {
+      await db.insert(customerCashbackBalance).values({
+        customerId,
+        cashbackBalance: "0.00",
+        totalCashbackEarned: "0.00",
+        totalCashbackUsed: "0.00",
+      });
+    }
+    
+    res.json({ message: "Customer enrolled successfully", enrollment });
+  } catch (error) {
+    console.error("Error enrolling customer in cashback group:", error);
+    res.status(500).json({ message: "Failed to enroll customer" });
+  }
+});
 
 export { router as walletRoutes };
