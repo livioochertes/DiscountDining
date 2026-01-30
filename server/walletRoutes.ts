@@ -2117,4 +2117,220 @@ router.post("/admin/enroll-customer/cashback", async (req, res) => {
   }
 });
 
+// Authenticated wallet top-up - create payment intent for current user
+router.post("/wallet/topup/create-intent", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { amount } = req.body;
+    if (!amount || parseFloat(amount) <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+    
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(parseFloat(amount) * 100),
+        currency: "ron",
+        payment_method_types: ['card'],
+        metadata: {
+          type: "wallet_topup",
+          customerId: customerId.toString(),
+          customerEmail: customer.email || "",
+          customerName: customer.name || ""
+        },
+        description: `EatOff Wallet Top-up - ${customer.name}`,
+        receipt_email: customer.email || undefined
+      });
+    } catch (error: any) {
+      console.error("Stripe error:", error);
+      throw error;
+    }
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id
+    });
+  } catch (error: any) {
+    console.error("Error creating top-up payment intent:", error);
+    res.status(500).json({ message: "Error creating payment: " + error.message });
+  }
+});
+
+// Complete authenticated wallet top-up
+router.post("/wallet/topup/complete", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { paymentIntentId } = req.body;
+    if (!paymentIntentId) {
+      return res.status(400).json({ message: "Payment intent ID required" });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (paymentIntent.status !== "succeeded") {
+      return res.status(400).json({ message: "Payment not completed" });
+    }
+
+    if (paymentIntent.metadata.customerId !== customerId.toString()) {
+      return res.status(403).json({ message: "Payment does not belong to this user" });
+    }
+
+    const amount = (paymentIntent.amount / 100).toFixed(2);
+
+    // Update customer balance
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+
+    const previousBalance = parseFloat(customer?.balance || "0");
+    const newBalance = previousBalance + parseFloat(amount);
+
+    await db
+      .update(customers)
+      .set({ balance: newBalance.toFixed(2) })
+      .where(eq(customers.id, customerId));
+
+    res.json({
+      success: true,
+      previousBalance: previousBalance.toFixed(2),
+      newBalance: newBalance.toFixed(2),
+      amountAdded: amount
+    });
+  } catch (error: any) {
+    console.error("Error completing wallet top-up:", error);
+    res.status(500).json({ message: "Error completing top-up: " + error.message });
+  }
+});
+
+// Process split payment - deduct from multiple sources
+router.post("/wallet/split-payment", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { totalAmount, allocations, voucherAllocations, restaurantId } = req.body;
+    
+    if (!totalAmount || parseFloat(totalAmount) <= 0) {
+      return res.status(400).json({ message: "Invalid total amount" });
+    }
+
+    const total = parseFloat(totalAmount);
+    const personalAmount = parseFloat(allocations?.personal || "0");
+    const cashbackAmount = parseFloat(allocations?.cashback || "0");
+    const creditAmount = parseFloat(allocations?.credit || "0");
+    const voucherTotal = Object.values(voucherAllocations || {}).reduce((sum: number, val: any) => sum + parseFloat(val || "0"), 0);
+
+    const allocatedTotal = personalAmount + cashbackAmount + creditAmount + voucherTotal;
+    if (Math.abs(allocatedTotal - total) > 0.01) {
+      return res.status(400).json({ message: "Allocated amounts do not match total" });
+    }
+
+    // Fetch current balances
+    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
+    const [cashbackBalance] = await db.select().from(customerCashbackBalance).where(eq(customerCashbackBalance.customerId, customerId)).limit(1);
+    const [creditAccount] = await db.select().from(customerCreditAccount).where(eq(customerCreditAccount.customerId, customerId)).limit(1);
+
+    // Validate personal balance
+    const currentPersonalBalance = parseFloat(customer?.balance || "0");
+    if (personalAmount > currentPersonalBalance) {
+      return res.status(400).json({ message: "Insufficient personal balance" });
+    }
+
+    // Validate cashback balance
+    const currentCashback = parseFloat(cashbackBalance?.totalCashbackBalance || "0");
+    if (cashbackAmount > currentCashback) {
+      return res.status(400).json({ message: "Insufficient cashback balance" });
+    }
+
+    // Validate credit
+    if (creditAmount > 0) {
+      if (creditAccount?.status !== "approved") {
+        return res.status(400).json({ message: "Credit not approved" });
+      }
+      const availableCredit = parseFloat(creditAccount?.availableCredit || "0");
+      if (creditAmount > availableCredit) {
+        return res.status(400).json({ message: "Insufficient credit" });
+      }
+    }
+
+    // Validate vouchers
+    for (const [voucherId, amount] of Object.entries(voucherAllocations || {})) {
+      if (parseFloat(amount as string) > 0) {
+        // TODO: Validate voucher ownership and remaining value
+      }
+    }
+
+    // Process deductions
+    if (personalAmount > 0) {
+      await db
+        .update(customers)
+        .set({ balance: (currentPersonalBalance - personalAmount).toFixed(2) })
+        .where(eq(customers.id, customerId));
+    }
+
+    if (cashbackAmount > 0) {
+      const newCashbackBalance = currentCashback - cashbackAmount;
+      const newCashbackUsed = parseFloat(cashbackBalance?.totalCashbackUsed || "0") + cashbackAmount;
+      await db
+        .update(customerCashbackBalance)
+        .set({ 
+          totalCashbackBalance: newCashbackBalance.toFixed(2),
+          totalCashbackUsed: newCashbackUsed.toFixed(2)
+        })
+        .where(eq(customerCashbackBalance.customerId, customerId));
+    }
+
+    if (creditAmount > 0) {
+      const newUsedCredit = parseFloat(creditAccount?.usedCredit || "0") + creditAmount;
+      const newAvailableCredit = parseFloat(creditAccount?.creditLimit || "0") - newUsedCredit;
+      await db
+        .update(customerCreditAccount)
+        .set({
+          usedCredit: newUsedCredit.toFixed(2),
+          availableCredit: newAvailableCredit.toFixed(2)
+        })
+        .where(eq(customerCreditAccount.customerId, customerId));
+    }
+
+    // Generate unique payment code
+    const paymentCode = `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    res.json({
+      success: true,
+      paymentCode,
+      totalAmount: total.toFixed(2),
+      breakdown: {
+        personal: personalAmount.toFixed(2),
+        cashback: cashbackAmount.toFixed(2),
+        credit: creditAmount.toFixed(2),
+        vouchers: voucherTotal.toFixed(2)
+      }
+    });
+  } catch (error: any) {
+    console.error("Error processing split payment:", error);
+    res.status(500).json({ message: "Error processing payment: " + error.message });
+  }
+});
+
 export { router as walletRoutes };
