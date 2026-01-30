@@ -1740,7 +1740,7 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-50 flex justify-center px-4 pointer-events-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-gray-200 max-h-[70vh] overflow-y-auto pointer-events-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-3xl">
