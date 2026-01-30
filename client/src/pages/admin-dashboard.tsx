@@ -31,7 +31,11 @@ import {
   Plus,
   Building2,
   Edit,
-  X
+  X,
+  ChefHat,
+  Star,
+  Trash2,
+  Eye
 } from "lucide-react";
 import { SectionNavigation } from "@/components/SectionNavigation";
 import { useToast } from "@/hooks/use-toast";
@@ -1702,6 +1706,483 @@ function CommissionsTab() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// Chef Management Tab
+function ChefManagementTab({ adminToken }: { adminToken: string }) {
+  const [search, setSearch] = useState("");
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("");
+  const [featuredFilter, setFeaturedFilter] = useState<string>("all");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingChef, setEditingChef] = useState<any>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: chefs = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/chefs"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/chefs", {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch chefs");
+      return res.json();
+    },
+    enabled: !!adminToken,
+  });
+
+  const { data: restaurants = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/restaurants"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/restaurants", {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch restaurants");
+      return res.json();
+    },
+    enabled: !!adminToken,
+  });
+
+  const filteredChefs = useMemo(() => {
+    return chefs.filter(item => {
+      const chef = item.chef || item;
+      const restaurant = item.restaurant;
+      
+      if (search) {
+        const searchLower = search.toLowerCase();
+        if (!chef.chefName?.toLowerCase().includes(searchLower) &&
+            !chef.title?.toLowerCase().includes(searchLower) &&
+            !restaurant?.name?.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+      }
+
+      if (selectedRestaurantId && String(chef.restaurantId) !== selectedRestaurantId) {
+        return false;
+      }
+
+      if (featuredFilter === "featured" && !chef.isFeatured) return false;
+      if (featuredFilter === "not_featured" && chef.isFeatured) return false;
+
+      return true;
+    });
+  }, [chefs, search, selectedRestaurantId, featuredFilter]);
+
+  const handleToggleFeatured = async (chefId: number, currentFeatured: boolean) => {
+    try {
+      const res = await fetch(`/api/admin/chefs/${chefId}/featured`, {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}` 
+        },
+        body: JSON.stringify({ isFeatured: !currentFeatured })
+      });
+      if (!res.ok) throw new Error("Failed to update chef");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/chefs"] });
+      toast({ title: "Success", description: `Chef ${!currentFeatured ? "featured" : "unfeatured"} successfully` });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update chef", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteChef = async (chefId: number) => {
+    if (!confirm("Are you sure you want to delete this chef?")) return;
+    try {
+      const res = await fetch(`/api/admin/chefs/${chefId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
+      if (!res.ok) throw new Error("Failed to delete chef");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/chefs"] });
+      toast({ title: "Success", description: "Chef deleted successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete chef", variant: "destructive" });
+    }
+  };
+
+  const handleSaveChef = async (data: any) => {
+    try {
+      const isEdit = !!editingChef;
+      const url = isEdit ? `/api/admin/chefs/${editingChef.id}` : "/api/admin/chefs";
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}` 
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!res.ok) throw new Error("Failed to save chef");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/chefs"] });
+      toast({ title: "Success", description: `Chef ${isEdit ? "updated" : "created"} successfully` });
+      setIsCreateModalOpen(false);
+      setEditingChef(null);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save chef", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="flex items-center space-x-2">
+                <ChefHat className="h-5 w-5" />
+                <span>Chef Management</span>
+              </CardTitle>
+              <CardDescription>Manage restaurant chefs and featured profiles</CardDescription>
+            </div>
+            <Button onClick={() => { setEditingChef(null); setIsCreateModalOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Chef
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4 mb-6">
+            <Input 
+              placeholder="Search chefs..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+            <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="All Restaurants" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Restaurants</SelectItem>
+                {restaurants.map((r: any) => (
+                  <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={featuredFilter} onValueChange={setFeaturedFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Chefs</SelectItem>
+                <SelectItem value="featured">Featured Only</SelectItem>
+                <SelectItem value="not_featured">Not Featured</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-8">Loading chefs...</div>
+          ) : filteredChefs.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No chefs found</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredChefs.map((item) => {
+                const chef = item.chef || item;
+                const restaurant = item.restaurant;
+                return (
+                  <Card key={chef.id} className="overflow-hidden">
+                    <div className="relative h-32 bg-gradient-to-r from-teal-500 to-emerald-500">
+                      {chef.coverImage && (
+                        <img src={chef.coverImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                      )}
+                      {chef.isFeatured && (
+                        <Badge className="absolute top-2 right-2 bg-yellow-500">
+                          <Star className="h-3 w-3 mr-1" /> Featured
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-4 -mt-8 relative">
+                      <div className="w-16 h-16 rounded-full border-4 border-white bg-gray-200 overflow-hidden mb-2">
+                        {chef.profileImage ? (
+                          <img src={chef.profileImage} alt={chef.chefName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ChefHat className="h-8 w-8 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <h3 className="font-bold">{chef.chefName}</h3>
+                      {chef.title && <p className="text-sm text-muted-foreground">{chef.title}</p>}
+                      {restaurant && (
+                        <p className="text-sm text-muted-foreground flex items-center mt-1">
+                          <Store className="h-3 w-3 mr-1" />
+                          {restaurant.name}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                        <span>{chef.followersCount || 0} followers</span>
+                        {chef.experienceLevel && <span>• {chef.experienceLevel}</span>}
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleToggleFeatured(chef.id, chef.isFeatured)}
+                        >
+                          <Star className={`h-4 w-4 ${chef.isFeatured ? "fill-yellow-500 text-yellow-500" : ""}`} />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => { setEditingChef(chef); setIsCreateModalOpen(true); }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => window.open(`/chef/${chef.id}`, '_blank')}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => handleDeleteChef(chef.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {isCreateModalOpen && (
+        <ChefFormModal
+          chef={editingChef}
+          restaurants={restaurants}
+          onClose={() => { setIsCreateModalOpen(false); setEditingChef(null); }}
+          onSave={handleSaveChef}
+        />
+      )}
+    </div>
+  );
+}
+
+function ChefFormModal({ 
+  chef, 
+  restaurants, 
+  onClose, 
+  onSave 
+}: { 
+  chef: any; 
+  restaurants: any[]; 
+  onClose: () => void; 
+  onSave: (data: any) => void;
+}) {
+  const [formData, setFormData] = useState({
+    restaurantId: chef?.restaurantId || "",
+    chefName: chef?.chefName || "",
+    title: chef?.title || "",
+    bio: chef?.bio || "",
+    profileImage: chef?.profileImage || "",
+    coverImage: chef?.coverImage || "",
+    specialties: chef?.specialties?.join(", ") || "",
+    cuisineExpertise: chef?.cuisineExpertise?.join(", ") || "",
+    experienceLevel: chef?.experienceLevel || "professional",
+    yearsOfExperience: chef?.yearsOfExperience || 0,
+    instagram: chef?.instagram || "",
+    youtube: chef?.youtube || "",
+    website: chef?.website || "",
+    isPublic: chef?.isPublic !== false,
+    isFeatured: chef?.isFeatured || false,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      ...formData,
+      restaurantId: parseInt(formData.restaurantId as any),
+      specialties: formData.specialties.split(",").map(s => s.trim()).filter(Boolean),
+      cuisineExpertise: formData.cuisineExpertise.split(",").map(s => s.trim()).filter(Boolean),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div 
+        className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4 p-6"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">{chef ? "Edit Chef" : "Add New Chef"}</h2>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Restaurant *</label>
+            <Select 
+              value={String(formData.restaurantId)} 
+              onValueChange={(v) => setFormData({...formData, restaurantId: v})}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Restaurant" />
+              </SelectTrigger>
+              <SelectContent>
+                {restaurants.map((r: any) => (
+                  <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Chef Name *</label>
+              <Input 
+                value={formData.chefName}
+                onChange={(e) => setFormData({...formData, chefName: e.target.value})}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Title</label>
+              <Input 
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                placeholder="e.g., Head Chef"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Bio</label>
+            <Textarea 
+              value={formData.bio}
+              onChange={(e) => setFormData({...formData, bio: e.target.value})}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Profile Image URL</label>
+              <Input 
+                value={formData.profileImage}
+                onChange={(e) => setFormData({...formData, profileImage: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Cover Image URL</label>
+              <Input 
+                value={formData.coverImage}
+                onChange={(e) => setFormData({...formData, coverImage: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Specialties (comma-separated)</label>
+              <Input 
+                value={formData.specialties}
+                onChange={(e) => setFormData({...formData, specialties: e.target.value})}
+                placeholder="Italian, French, Pastry"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Cuisine Expertise (comma-separated)</label>
+              <Input 
+                value={formData.cuisineExpertise}
+                onChange={(e) => setFormData({...formData, cuisineExpertise: e.target.value})}
+                placeholder="Mediterranean, Asian"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Experience Level</label>
+              <Select 
+                value={formData.experienceLevel} 
+                onValueChange={(v) => setFormData({...formData, experienceLevel: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                  <SelectItem value="professional">Professional</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Years of Experience</label>
+              <Input 
+                type="number"
+                value={formData.yearsOfExperience}
+                onChange={(e) => setFormData({...formData, yearsOfExperience: parseInt(e.target.value) || 0})}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Instagram</label>
+              <Input 
+                value={formData.instagram}
+                onChange={(e) => setFormData({...formData, instagram: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">YouTube</label>
+              <Input 
+                value={formData.youtube}
+                onChange={(e) => setFormData({...formData, youtube: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Website</label>
+              <Input 
+                value={formData.website}
+                onChange={(e) => setFormData({...formData, website: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                checked={formData.isPublic}
+                onChange={(e) => setFormData({...formData, isPublic: e.target.checked})}
+                className="rounded"
+              />
+              <span className="text-sm">Public Profile</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                checked={formData.isFeatured}
+                onChange={(e) => setFormData({...formData, isFeatured: e.target.checked})}
+                className="rounded"
+              />
+              <span className="text-sm">Featured Chef</span>
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit">{chef ? "Update Chef" : "Create Chef"}</Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -3916,6 +4397,10 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
             </div>
+          )}
+
+          {selectedTab === "chefs" && (
+            <ChefManagementTab adminToken={adminToken || ""} />
           )}
 
           {selectedTab === "settings" && (

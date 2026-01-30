@@ -65,6 +65,103 @@ interface RecentVoucher {
   value: string;
 }
 
+function FeaturedChefsSection() {
+  const { t } = useLanguage();
+  
+  const { data: featuredChefs = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/chef-profiles/featured"],
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <ChefHat className="h-5 w-5" />
+            <span>Featured Chefs</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-lg"></div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (featuredChefs.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="flex items-center space-x-2">
+            <ChefHat className="h-5 w-5 text-primary" />
+            <span>Featured Chefs</span>
+          </CardTitle>
+          <Link href="/chefs">
+            <Button variant="ghost" size="sm">View All</Button>
+          </Link>
+        </div>
+        <CardDescription>Discover talented chefs from our partner restaurants</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {featuredChefs.slice(0, 6).map((item) => {
+            const chef = item.profile || item;
+            const restaurant = item.restaurant;
+            return (
+              <Link key={chef.id} href={`/chef/${chef.id}`}>
+                <div className="group cursor-pointer">
+                  <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 aspect-[4/3]">
+                    {chef.coverImage && (
+                      <img 
+                        src={chef.coverImage} 
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-10 h-10 rounded-full border-2 border-white bg-white overflow-hidden flex-shrink-0">
+                          {chef.profileImage ? (
+                            <img src={chef.profileImage} alt={chef.chefName} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                              <ChefHat className="h-5 w-5 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-medium text-sm truncate">{chef.chefName}</p>
+                          {restaurant && (
+                            <p className="text-white/80 text-xs truncate">{restaurant.name}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-yellow-500 text-xs">
+                        <Star className="h-3 w-3 mr-1 fill-current" /> Featured
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function UserDashboard() {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -425,6 +522,9 @@ export default function UserDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Featured Chefs Section */}
+            <FeaturedChefsSection />
           </TabsContent>
 
           <TabsContent value="orders" className="space-y-6">
