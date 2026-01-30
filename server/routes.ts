@@ -14,6 +14,7 @@ import orderCreationRoutes from "./orderCreationRoutes";
 import { loyaltyRoutes } from "./loyaltyRoutes";
 import { registerSupportRoutes } from "./supportRoutes";
 import { registerRecipeRoutes } from "./recipeRoutes";
+import { registerChefProfileRoutes } from "./chefProfileRoutes";
 import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { setupMultiAuth, isAuthenticated, consumeMobileAuthToken, validateMobileSessionToken, invalidateMobileSessionToken } from "./multiAuth";
@@ -238,6 +239,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register recipe sharing routes
   registerRecipeRoutes(app);
+
+  // Register chef profile routes
+  registerChefProfileRoutes(app);
 
   // Native Google Sign-In endpoint (for mobile app - no browser redirect)
   const googleWebClientId = process.env.GOOGLE_CLIENT_ID;
