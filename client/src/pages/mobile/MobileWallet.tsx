@@ -1226,19 +1226,11 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
         
         // Open Stripe checkout in external browser
         if (data.url) {
-          console.log('[TopUp] Opening browser with URL:', data.url);
-          try {
-            const { Browser } = await import('@capacitor/browser');
-            await Browser.open({ url: data.url, windowName: '_blank' });
-            setShowTopUp(false);
-            setTopUpAmount('');
-          } catch (browserErr: any) {
-            console.error('[TopUp] Browser error:', browserErr);
-            // Fallback: try opening in system browser
-            window.open(data.url, '_system');
-            setShowTopUp(false);
-            setTopUpAmount('');
-          }
+          console.log('[TopUp] Opening URL:', data.url);
+          // Use window.open for maximum compatibility
+          window.open(data.url, '_blank');
+          setShowTopUp(false);
+          setTopUpAmount('');
         } else {
           throw new Error('Nu s-a putut crea sesiunea de plată');
         }
