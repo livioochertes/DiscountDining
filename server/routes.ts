@@ -43,13 +43,13 @@ const appleAppSiteAssociation = {
     "apps": [],
     "details": [
       {
-        "appIDs": ["TEAMID.com.eatoff.app"],
+        "appIDs": ["JG48M2H4TS.com.eatoff.app"],
         "paths": ["/api/wallet/stripe-return*", "/app/*"]
       }
     ]
   },
   "webcredentials": {
-    "apps": ["TEAMID.com.eatoff.app"]
+    "apps": ["JG48M2H4TS.com.eatoff.app"]
   }
 };
 
