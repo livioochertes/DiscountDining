@@ -6,6 +6,7 @@ import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { getMobileSessionToken } from '@/lib/queryClient';
@@ -1663,11 +1664,14 @@ interface TopUpModalProps {
 
 function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
   const [topUpAmount, setTopUpAmount] = useState('');
   const [isLoadingStripe, setIsLoadingStripe] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  const currencyCode = marketplace?.currencyCode || 'RON';
+  const currencySymbol = marketplace?.currencySymbol || 'Lei';
   const predefinedAmounts = [200, 300, 500, 1000];
   
   const handleTopUpWithCard = async () => {
@@ -1687,7 +1691,7 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
           method: 'POST',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ amount: topUpAmount })
+          body: JSON.stringify({ amount: topUpAmount, currency: currencyCode.toLowerCase(), marketplaceId: marketplace?.id })
         });
         
         const data = await response.json();
@@ -1708,7 +1712,7 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
           method: 'POST',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ amount: topUpAmount })
+          body: JSON.stringify({ amount: topUpAmount, currency: currencyCode.toLowerCase(), marketplaceId: marketplace?.id })
         });
         
         if (!response.ok) {
@@ -1798,7 +1802,7 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
                     placeholder="0.00"
                     className="w-full px-4 py-4 text-2xl font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-center"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">RON</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{currencyCode}</span>
                 </div>
               </div>
               

@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { MarketplaceProvider } from "@/contexts/MarketplaceContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useRestaurantAuth } from "@/hooks/useRestaurantAuth";
 import RestaurantLoginModal from "@/components/RestaurantLoginModal";
@@ -375,8 +376,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <LanguageProvider>
-          <CartProvider>
-            <div className="min-h-screen bg-gray-50">
+          <MarketplaceProvider>
+            <CartProvider>
+              <div className="min-h-screen bg-gray-50">
               <Header />
               <div 
                 className="bg-gray-50" 
@@ -393,7 +395,8 @@ function App() {
               </div>
             </div>
             <Toaster />
-          </CartProvider>
+            </CartProvider>
+          </MarketplaceProvider>
         </LanguageProvider>
       </TooltipProvider>
     </QueryClientProvider>
