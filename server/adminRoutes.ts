@@ -844,7 +844,7 @@ export function registerAdminRoutes(app: Express) {
     try {
       const restaurantId = parseInt(req.params.id);
 
-      // Get restaurant details
+      // Get restaurant details with owner and marketplace info
       const [restaurant] = await db
         .select()
         .from(restaurants)
@@ -852,6 +852,22 @@ export function registerAdminRoutes(app: Express) {
 
       if (!restaurant) {
         return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      // Get owner/company details
+      const [owner] = await db
+        .select()
+        .from(restaurantOwners)
+        .where(eq(restaurantOwners.id, restaurant.ownerId));
+
+      // Get marketplace details
+      let marketplace = null;
+      if (restaurant.marketplaceId) {
+        const [mp] = await db
+          .select()
+          .from(marketplaces)
+          .where(eq(marketplaces.id, restaurant.marketplaceId));
+        marketplace = mp;
       }
 
       // Get menu items
@@ -872,6 +888,24 @@ export function registerAdminRoutes(app: Express) {
 
       res.json({
         restaurant,
+        owner: owner ? {
+          id: owner.id,
+          email: owner.email,
+          companyName: owner.companyName,
+          businessRegistrationNumber: owner.businessRegistrationNumber,
+          taxId: owner.taxId,
+          companyAddress: owner.companyAddress,
+          companyPhone: owner.companyPhone,
+          companyWebsite: owner.companyWebsite,
+          contactPersonName: owner.contactPersonName,
+          contactPersonTitle: owner.contactPersonTitle,
+          contactPersonPhone: owner.contactPersonPhone,
+          contactPersonEmail: owner.contactPersonEmail,
+          bankName: owner.bankName,
+          iban: owner.iban,
+          isVerified: owner.isVerified,
+        } : null,
+        marketplace,
         menuItems: menuItemsList,
         voucherPackages: voucherPackagesList
       });
