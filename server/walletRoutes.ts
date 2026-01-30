@@ -2125,7 +2125,7 @@ router.post("/wallet/topup/create-checkout-session", async (req: Request, res: R
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const { amount } = req.body;
+    const { amount, currency: requestCurrency, marketplaceId } = req.body;
     if (!amount || parseFloat(amount) <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
@@ -2140,31 +2140,55 @@ router.post("/wallet/topup/create-checkout-session", async (req: Request, res: R
       return res.status(404).json({ message: "Customer not found" });
     }
 
-    // Get default marketplace for currency
-    const { marketplaces } = await import("@shared/schema");
-    const [defaultMarketplace] = await db
-      .select()
-      .from(marketplaces)
-      .where(eq(marketplaces.isDefault, true))
-      .limit(1);
-    
-    // Fallback to first active marketplace or EUR if none exists
-    let currency = 'eur';
-    let currencySymbol = '€';
-    if (defaultMarketplace) {
-      currency = defaultMarketplace.currencyCode.toLowerCase();
-      currencySymbol = defaultMarketplace.currencySymbol;
-    } else {
-      // Try to get any active marketplace
-      const [anyMarketplace] = await db
+    // Use currency from request if provided, otherwise get from marketplace
+    let currency = requestCurrency?.toLowerCase() || '';
+    let currencySymbol = '';
+
+    if (!currency && marketplaceId) {
+      // Get currency from specified marketplace
+      const { marketplaces } = await import("@shared/schema");
+      const [marketplace] = await db
         .select()
         .from(marketplaces)
-        .where(eq(marketplaces.isActive, true))
+        .where(eq(marketplaces.id, marketplaceId))
         .limit(1);
-      if (anyMarketplace) {
-        currency = anyMarketplace.currencyCode.toLowerCase();
-        currencySymbol = anyMarketplace.currencySymbol;
+      if (marketplace) {
+        currency = marketplace.currencyCode.toLowerCase();
+        currencySymbol = marketplace.currencySymbol;
       }
+    }
+    
+    if (!currency) {
+      // Fallback to default marketplace
+      const { marketplaces } = await import("@shared/schema");
+      const [defaultMarketplace] = await db
+        .select()
+        .from(marketplaces)
+        .where(eq(marketplaces.isDefault, true))
+        .limit(1);
+      
+      if (defaultMarketplace) {
+        currency = defaultMarketplace.currencyCode.toLowerCase();
+        currencySymbol = defaultMarketplace.currencySymbol;
+      } else {
+        // Try to get any active marketplace
+        const [anyMarketplace] = await db
+          .select()
+          .from(marketplaces)
+          .where(eq(marketplaces.isActive, true))
+          .limit(1);
+        if (anyMarketplace) {
+          currency = anyMarketplace.currencyCode.toLowerCase();
+          currencySymbol = anyMarketplace.currencySymbol;
+        } else {
+          currency = 'eur';
+          currencySymbol = '€';
+        }
+      }
+    }
+    
+    if (!currencySymbol) {
+      currencySymbol = currency.toUpperCase();
     }
 
     console.log('[TopUp] Creating checkout session for amount:', amount, 'currency:', currency, 'customerId:', customerId);
@@ -2229,7 +2253,7 @@ router.post("/wallet/topup/create-intent", async (req: Request, res: Response) =
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const { amount } = req.body;
+    const { amount, currency: requestCurrency, marketplaceId } = req.body;
     if (!amount || parseFloat(amount) <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
@@ -2244,11 +2268,14 @@ router.post("/wallet/topup/create-intent", async (req: Request, res: Response) =
       return res.status(404).json({ message: "Customer not found" });
     }
 
+    // Use currency from request or fallback to ron
+    const currency = requestCurrency?.toLowerCase() || 'ron';
+
     let paymentIntent;
     try {
       paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(parseFloat(amount) * 100),
-        currency: "ron",
+        currency: currency,
         payment_method_types: ['card'],
         metadata: {
           type: "wallet_topup",
