@@ -2020,7 +2020,7 @@ export default function AdminDashboard() {
     };
   }, [isEnrollRestaurantModalOpen]);
   const [tempToken, setTempToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingRestaurantId, setLoadingRestaurantId] = useState<number | null>(null);
   const [showAllApproved, setShowAllApproved] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -2288,7 +2288,7 @@ export default function AdminDashboard() {
   const suspendedRestaurants = restaurants?.filter(r => !r.isActive) || [];
 
   const approveRestaurant = async (restaurantId: number) => {
-    setLoading(true);
+    setLoadingRestaurantId(restaurantId);
     try {
       const token = localStorage.getItem('adminToken');
       const response = await fetch(`/api/admin/restaurants/${restaurantId}/approve`, {
@@ -2320,12 +2320,12 @@ export default function AdminDashboard() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoadingRestaurantId(null);
     }
   };
 
   const suspendRestaurant = async (restaurantId: number) => {
-    setLoading(true);
+    setLoadingRestaurantId(restaurantId);
     try {
       const token = localStorage.getItem('adminToken');
       const response = await fetch(`/api/admin/restaurants/${restaurantId}/suspend`, {
@@ -2357,7 +2357,7 @@ export default function AdminDashboard() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoadingRestaurantId(null);
     }
   };
 
@@ -2947,8 +2947,8 @@ export default function AdminDashboard() {
                 {pendingRestaurants.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No pending restaurant approvals</p>
                 ) : (
-                  <div className="space-y-3">
-                    {pendingRestaurants.slice(0, 5).map((restaurant) => (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {pendingRestaurants.map((restaurant) => (
                       <div key={restaurant.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                         <div>
                           <p className="font-medium">{restaurant.name}</p>
@@ -2963,11 +2963,11 @@ export default function AdminDashboard() {
                               <Button
                                 size="sm"
                                 onClick={() => approveRestaurant(restaurant.id)}
-                                disabled={loading}
+                                disabled={loadingRestaurantId !== null}
                                 className="bg-green-600 hover:bg-green-700"
                               >
                                 <CheckCircle className="h-4 w-4 mr-1" />
-                                {loading ? "Approving..." : "Approve"}
+                                {loadingRestaurantId === restaurant.id ? "Approving..." : "Approve"}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -2980,10 +2980,10 @@ export default function AdminDashboard() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => suspendRestaurant(restaurant.id)}
-                                disabled={loading}
+                                disabled={loadingRestaurantId !== null}
                               >
                                 <XCircle className="h-4 w-4 mr-1" />
-                                {loading ? "Rejecting..." : "Reject"}
+                                {loadingRestaurantId === restaurant.id ? "Rejecting..." : "Reject"}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -3188,7 +3188,7 @@ export default function AdminDashboard() {
                               size="sm"
                               variant="outline"
                               onClick={() => openRestaurantManagementModal(restaurant)}
-                              disabled={loading}
+                              disabled={loadingRestaurantId !== null}
                             >
                               <Settings className="h-4 w-4 mr-1" />
                               Manage
@@ -3204,8 +3204,11 @@ export default function AdminDashboard() {
                               size="sm"
                               variant={restaurant.isActive ? "destructive" : "default"}
                               onClick={() => restaurant.isActive ? suspendRestaurant(restaurant.id) : approveRestaurant(restaurant.id)}
+                              disabled={loadingRestaurantId !== null}
                             >
-                              {restaurant.isActive ? "Suspend" : "Reactivate"}
+                              {loadingRestaurantId === restaurant.id 
+                                ? (restaurant.isActive ? "Suspending..." : "Reactivating...") 
+                                : (restaurant.isActive ? "Suspend" : "Reactivate")}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
