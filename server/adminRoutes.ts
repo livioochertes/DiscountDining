@@ -14,9 +14,10 @@ import {
   marketplaces,
   insertMarketplaceSchema,
   walletTransactions,
-  paymentTransactions
+  paymentTransactions,
+  geonamesCities
 } from "@shared/schema";
-import { eq, and, gte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, desc, sql, ilike, asc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { ObjectStorageService } from "./objectStorage";
@@ -1565,6 +1566,59 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching marketplaces:", error);
       res.status(500).json({ error: "Failed to fetch marketplaces" });
+    }
+  });
+
+  // Public endpoint to get cities from GeoNames database
+  app.get("/api/cities", async (req: Request, res: Response) => {
+    try {
+      const { country, search, limit = "100" } = req.query;
+      
+      const conditions = [];
+      
+      // Filter by country code (required for dropdown use)
+      if (country && typeof country === 'string') {
+        conditions.push(eq(geonamesCities.countryCode, country.toUpperCase()));
+      }
+      
+      // Optional search filter
+      if (search && typeof search === 'string' && search.length >= 2) {
+        conditions.push(ilike(geonamesCities.name, `${search}%`));
+      }
+
+      const query = db.select({
+        geonameId: geonamesCities.geonameId,
+        name: geonamesCities.name,
+        asciiName: geonamesCities.asciiName,
+        countryCode: geonamesCities.countryCode,
+        admin1Code: geonamesCities.admin1Code,
+        population: geonamesCities.population,
+        latitude: geonamesCities.latitude,
+        longitude: geonamesCities.longitude
+      })
+        .from(geonamesCities)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(geonamesCities.population))
+        .limit(parseInt(limit as string) || 100);
+
+      const cities = await query;
+      res.json(cities);
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      res.status(500).json({ error: "Failed to fetch cities" });
+    }
+  });
+
+  // Get available countries from GeoNames database
+  app.get("/api/countries", async (req: Request, res: Response) => {
+    try {
+      const countries = await db.selectDistinct({ countryCode: geonamesCities.countryCode })
+        .from(geonamesCities)
+        .orderBy(asc(geonamesCities.countryCode));
+      res.json(countries.map(c => c.countryCode));
+    } catch (error) {
+      console.error("Error fetching countries:", error);
+      res.status(500).json({ error: "Failed to fetch countries" });
     }
   });
 }
