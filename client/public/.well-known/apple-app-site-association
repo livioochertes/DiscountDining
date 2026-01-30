@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.eatoff.app"],
+        "paths": ["/api/wallet/stripe-return*", "/app/*"]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.com.eatoff.app"]
+  }
+}

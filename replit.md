@@ -1,269 +1,43 @@
 # EatOff
 
 ## Overview
-
-EatOff is a restaurant voucher platform enabling customers to purchase discounted meal packages with Pay Later functionality. The platform supports variable voucher packages, flexible pricing with interest charges or discounts, QR payment generation, wallet management, and restaurant portal.
+EatOff is a restaurant voucher platform that allows customers to purchase discounted meal packages with a Pay Later option. It features variable voucher packages, flexible pricing with interest or discounts, QR payment generation, wallet management, and a dedicated restaurant portal. The platform aims to provide a seamless experience for users to discover deals and manage their purchases, while offering restaurants tools to create and manage their offerings. It also includes community features like recipe sharing and an AI-powered support system to enhance user engagement and support.
 
 ## User Preferences
-
 - Preferred communication style: Simple, everyday language (Romanian preferred)
 - UI Pattern: Inline expandable sections preferred over modals for better UX
 - Component Choice: Native HTML select elements over Radix UI portaled components for positioning reliability
 
 ## System Architecture
 
-### Current State
+### Core Technologies
+The application is a full-stack JavaScript application built with:
+- **Frontend**: React 18 with Vite, Tailwind CSS for styling, and shadcn/ui for components.
+- **Backend**: Express.js with TypeScript for robust API development.
+- **Database**: PostgreSQL managed with Drizzle ORM for type-safe database interactions.
+- **Mobile Development**: Capacitor for wrapping the web app into native Android and iOS applications.
 
-Full-stack JavaScript application with:
+### Mobile Application Design
+The mobile app features a "Bright Clean" design system with a dual-layout approach for web (desktop) and mobile. Mobile layouts are inspired by Revolut and Glovo, prioritizing a responsive and intuitive user experience.
+- **Navigation**: 5-tab bottom navigation for core functionalities (Home, Explore, AI Menu, Wallet, Profile).
+- **Mobile Routes**: Dedicated `/m/*` routes for mobile-specific views, with automatic redirection for Capacitor builds.
+- **Design System**: White background, gray secondary text, teal/green accent, rounded corners (20-24px), and an 8px grid spacing.
 
-- **Frontend**: React 18 with Vite, Tailwind CSS, shadcn/ui components
-- **Backend**: Express.js with TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Payments**: Stripe integration for payment processing
-- **Storage**: Object Storage for file uploads
-
-### Mobile App (Capacitor)
-
-Native mobile apps are built using Capacitor, which wraps the web app:
-
-- **Config**: `capacitor.config.ts` - App ID: `com.eatoff.app`
-- **Android**: `android/` directory - Open with Android Studio
-- **iOS**: `ios/` directory - Open with Xcode
-
-#### Mobile UX Architecture
-
-The app has a dual-layout approach:
-- **Web (desktop)**: Existing layout with Header/Footer
-- **Mobile (Capacitor/responsive)**: Separate layout inspired by Revolut + Glovo
-
-**Mobile Detection**:
-- `client/src/hooks/useIsMobile.ts` - Hooks for screen size and Capacitor detection
-- Auto-redirect to `/m` routes when running in Capacitor
-
-**Mobile Routes** (`/m/*`):
-- `/m` - Home (wallet hero, search, categories, AI recommendations)
-- `/m/explore` - Restaurant discovery with filters
-- `/m/ai-menu` - AI-powered food recommendations
-- `/m/wallet` - Balance, vouchers, cashback, transactions
-- `/m/profile` - User settings and QR code
-- `/m/recipes` - Recipe discovery with cuisine/category/difficulty filters
-- `/m/recipes/create` - Share a new recipe
-- `/m/recipes/:id` - Recipe detail with comments, likes, saves
-
-**Mobile Components** (`client/src/components/mobile/`):
-- `MobileLayout.tsx` - 5-tab bottom navigation
-- `WalletCard.tsx` - Hero card with balance display
-- `CategoryChips.tsx` - Horizontal scrollable filters
-- `RestaurantCard.tsx` - Restaurant listing cards
-- `DealBanner.tsx` - Promotional banners
-
-**Design System**: "Bright Clean"
-- Background: White (#FFFFFF)
-- Secondary text: Gray (#667085)
-- Accent: Teal/green primary
-- Rounded corners: 20-24px
-- Spacing: 8px grid
-
-#### Mobile Build Commands
-```bash
-./mobile-build.sh         # Build with mobile env vars
-npm run build              # Build web assets
-npx cap sync              # Sync web assets to native platforms
-npx cap open android      # Open Android project in Android Studio
-npx cap open ios          # Open iOS project in Xcode
-```
-
-#### Mobile Permissions
-- **iOS**: Location permissions configured in `ios/App/App/Info.plist` (NSLocationWhenInUseUsageDescription)
-- **Android**: Location permissions configured in `android/app/src/main/AndroidManifest.xml` (ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION)
-
-### Key Files
-
-- `client/src/App.tsx` - Main React app with routing
-- `client/src/pages/` - Page components
-- `client/src/components/` - Reusable components
-- `server/routes.ts` - API endpoints
-- `server/storage.ts` - Database operations
-- `shared/schema.ts` - Drizzle ORM schema and types
-- `capacitor.config.ts` - Capacitor mobile app configuration
+### Key Features
+- **Multi-Language System**: Supports 6 languages (en, es, fr, de, it, ro) with auto-detection and persistence.
+- **AI Support System**: AI-powered customer support chat widget with RAG-based knowledge base, automatic escalation for critical issues, and multi-language responses.
+- **Recipe Sharing System**: Allows users to discover, share, like, save, and comment on recipes. Recipes can be associated with restaurants and include dietary tags and difficulty levels.
+- **Cashback & Loyalty System**: Comprehensive system for managing EatOff-wide and restaurant-specific cashback groups, customer credit accounts with an approval flow, and loyalty tiers with automatic upgrades based on spending.
+- **Marketplace System**: Supports multiple countries and currencies, with dynamic Stripe top-up based on the marketplace's currency.
 
 ## External Dependencies
 
-### Configured Services
-
-- **PostgreSQL** - Database (Neon-backed via Replit)
-- **Stripe** - Payment processing
-- **Object Storage** - File uploads
-- **Capacitor** - Native mobile app wrapper (Android/iOS)
-
-### Key Packages
-
-- `@capacitor/core`, `@capacitor/android`, `@capacitor/ios` - Mobile app framework
-- `@tanstack/react-query` - Data fetching
-- `drizzle-orm` - Type-safe ORM
-- `stripe` - Payment processing
-- `wouter` - Client-side routing
-
-## Multi-Language System
-
-The app supports 6 languages with automatic detection:
-- **Languages**: English (en), Spanish (es), French (fr), German (de), Italian (it), Romanian (ro)
-- **Auto-detection**: Uses `navigator.language` on first visit
-- **Persistence**: Selected language saved in localStorage
-- **Context**: `client/src/contexts/LanguageContext.tsx` contains all translations
-- **Usage**: `const { t, language, setLanguage } = useLanguage()` hook
-
-**Mobile Language Selector**:
-- Located in mobile header (MobileHome.tsx) next to notification bell
-- Dropdown with language options
-
-**Translation Coverage**:
-- All mobile pages fully translated
-- Desktop pages partially translated (in progress)
-- City names remain as proper nouns (not translated)
-
-### AI Support System
-
-The platform includes an AI-powered customer support system:
-
-**Database Tables** (in `shared/schema.ts`):
-- `support_conversations` - Chat sessions with customers
-- `support_messages` - Individual messages in conversations
-- `support_tickets` - Escalated issues requiring human review
-- `knowledge_base` - FAQ articles for AI and customer self-service
-- `support_analytics` - Metrics tracking (deflection rate, CSAT)
-
-**API Endpoints** (`server/supportRoutes.ts`):
-- `POST /api/support/conversations` - Start new chat
-- `POST /api/support/conversations/:id/messages` - Send message (SSE streaming)
-- `GET /api/help/articles` - Public FAQ articles
-- Admin endpoints with auth: `/api/admin/support/tickets`, `/api/admin/knowledge-base`
-
-**Components**:
-- `SupportChatWidget.tsx` - Floating chat bubble with AI streaming responses
-- `MobileHelpFAQ.tsx` - FAQ page with search and categories
-- `MobileHelpTerms.tsx` - Terms of Service page
-- `MobileHelpPrivacy.tsx` - Privacy Policy page
-- Admin Helpdesk tab in `eatoff-admin-dashboard.tsx`
-
-**AI Features**:
-- Uses OpenAI via Replit AI Integrations
-- RAG-based knowledge base search for contextual answers
-- Automatic escalation to tickets for: refund, payment, legal, security issues
-- Responds in user's language (Romanian/English)
-- System prompt limits responses to 200 words
-
-**Escalation Keywords**: refund, rambursare, payment failed, account hacked, legal, speak to human, complaint, manager
-
-### Recipe Sharing System
-
-The platform includes a community recipe sharing feature:
-
-**Database Tables** (in `shared/schema.ts`):
-- `recipes` - Recipe content with JSONB for ingredients/instructions
-- `recipe_likes` - User likes on recipes
-- `recipe_saves` - User saved/bookmarked recipes
-- `recipe_comments` - Comments on recipes
-
-**API Endpoints** (`server/recipeRoutes.ts`):
-- `GET /api/recipes` - List recipes with filters (cuisine, category, difficulty, restaurant)
-- `GET /api/recipes/:id` - Get recipe detail with comments
-- `POST /api/recipes` - Create new recipe (auth required)
-- `PATCH /api/recipes/:id` - Update recipe (author only)
-- `DELETE /api/recipes/:id` - Delete recipe (author only)
-- `POST /api/recipes/:id/like` - Like recipe (auth required)
-- `DELETE /api/recipes/:id/like` - Unlike recipe
-- `POST /api/recipes/:id/save` - Save/bookmark recipe
-- `DELETE /api/recipes/:id/save` - Remove from saved
-- `POST /api/recipes/:id/comments` - Add comment
-- `GET /api/recipes/saved/list` - Get user's saved recipes
-- `GET /api/recipes/user/mine` - Get user's own recipes
-
-**Mobile Pages**:
-- `MobileRecipes.tsx` - Recipe discovery with search, cuisine/category/difficulty filters
-- `MobileRecipeDetail.tsx` - Full recipe view with ingredients, instructions, comments, like/save
-- `MobileRecipeCreate.tsx` - Create recipe form with ingredients/instructions builders
-
-**Features**:
-- JSONB storage for flexible ingredient/instruction formats
-- Optional restaurant association
-- Dietary tags (Vegetarian, Vegan, Gluten-Free, etc.)
-- Difficulty levels (easy, medium, hard)
-- Engagement metrics (likes, comments, saves, views)
-- Prep time, cook time, servings
-
-### Cashback & Loyalty System
-
-The platform includes a comprehensive cashback and loyalty management system:
-
-**Database Tables** (in `shared/schema.ts`):
-- `cashback_groups` - Cashback group definitions (EatOff-wide or restaurant-specific)
-- `customer_cashback_enrollments` - Customer enrollments in cashback groups
-- `customer_cashback_balance` - EatOff-wide cashback balance tracking
-- `customer_restaurant_cashback` - Per-restaurant cashback and spending tracking
-- `cashback_transactions` - Cashback earn/redeem transactions
-- `customer_credit_account` - Credit on account (request/approval flow)
-- `credit_transactions` - Credit usage transactions
-- `loyalty_groups` - Restaurant-specific loyalty tier groups
-- `customer_loyalty_enrollments` - Customer tier enrollments
-
-**API Endpoints** (`server/walletRoutes.ts`):
-- `GET /api/wallet/overview` - Customer wallet overview (cashback, credit, enrollments)
-- `POST /api/wallet/credit/request` - Request credit on account
-- `GET/POST /api/admin/eatoff-cashback-groups` - Manage EatOff-wide cashback groups
-- `GET /api/admin/credit-requests` - View pending credit requests
-- `POST /api/admin/credit-requests/:id/approve` - Approve credit request
-- `GET/POST /api/restaurant/:id/cashback-groups` - Restaurant cashback groups
-- `GET/POST /api/restaurant/:id/loyalty-groups` - Restaurant loyalty groups
-- `POST /api/restaurant/:id/enroll-customer/cashback` - Enroll customer in group
-- `POST /api/restaurant/:id/check-loyalty-upgrade/:customerId` - Check tier upgrade
-- `POST /api/restaurant/:id/record-purchase/:customerId` - Record purchase + auto-upgrade
-
-**Mobile Pages**:
-- `MobileWallet.tsx` - Three-tab wallet (Vouchers, Cashback, Credit)
-- `MobileRestaurantSignIn.tsx` - Restaurant staff login
-- `MobileRestaurantDashboard.tsx` - QR scanning for customer enrollment
-
-**Restaurant Portal**:
-- New "Cashback" tab for managing restaurant-specific cashback groups
-- `RestaurantCashbackManagement.tsx` - CRUD for cashback groups
-
-**Admin Dashboard**:
-- New "Wallet" tab in EatOff admin for:
-  - Managing EatOff-wide cashback groups
-  - Approving/rejecting credit requests
-
-**Features**:
-- EatOff-wide and restaurant-specific cashback groups
-- Credit on account with request/approval flow (1000 RON default)
-- Automatic tier upgrades based on spending thresholds
-- QR code scanning for customer enrollment (Capacitor MLKit)
-- Per-restaurant cashback balance tracking
-
-## Recent Changes
-
-- **2025-01-29**: Enhanced Credit Request System with predefined credit types (admin-configurable amounts), personal data collection form (CNP validation, address, employment info), and improved credit status display in MobileWallet
-- **2025-01-29**: Added Cashback & Loyalty System with cashback groups, credit on account, loyalty tiers, auto-upgrade logic, restaurant mobile portal with QR scanning, and admin management
-- **2025-01-29**: Added Recipe Sharing System with discovery page, recipe detail, recipe creation, likes/saves/comments, and profile integration
-- **2025-01-29**: Added AI Support System with chat widget, knowledge base, FAQ pages, and admin helpdesk with real-time data
-- **2025-01-26**: Added token-based OAuth exchange for mobile - server generates one-time token after OAuth, passes via deep link, app exchanges token for session in WebView context via /api/auth/mobile-exchange endpoint
-- **2025-01-26**: Implemented browser-based OAuth for Google Sign-In on mobile - opens external browser instead of WebView SDK, uses deep link (eatoff://oauth-callback) for callback, with proper session security (httpOnly, secure in production)
-- **2025-01-26**: Added deep link handling in MobileSignIn and MobileSignUp with URL parsing error handling and scheme validation
-- **2025-01-26**: Configured Android manifest intent-filter for eatoff://oauth-callback deep link scheme
-- **2025-01-25**: Added priority (1-5) and position inline controls in Admin Dashboard for both restaurants and EatOff vouchers with PATCH API endpoints
-- **2025-01-25**: Updated voucher sorting across all mobile views (MobileHome, MobileExplore, per-restaurant rows) to use priority → position → voucher type → discount/bonus
-- **2025-01-25**: Fixed cache invalidation for EatOff voucher priority updates to include /api/eatoff-vouchers and /api/restaurants queries
-- **2025-01-25**: Complete multi-language implementation for all mobile pages - replaced all hardcoded Romanian text with translation keys across MobileHome, MobileExplore, MobileRestaurantDetail, MobileWallet, MobileProfile, MobileAIMenu, MobileSignIn
-- **2025-01-25**: Added language selector to mobile header with 6 language options and auto-detection from browser
-- **2025-01-25**: Fixed home page voucher list auto-refresh - now updates automatically when vouchers are created/updated/deleted from Admin or Restaurant Portal
-- **2025-01-25**: Migrated EatOff vouchers from in-memory storage to PostgreSQL database for data persistence
-- **2025-01-25**: Changed storage export from MemStorage to DatabaseStorage - all data now persists in PostgreSQL
-- **2025-01-25**: Added automatic seeding of EatOff vouchers to database if table is empty
-- **2025-01-25**: Fixed voucher value display on restaurant detail page - now correctly shows totalValue and bonusPercentage badges
-- **2025-01-22**: Implemented dynamic status bar height detection using `StatusBar.getInfo()` for proper spacing across all Android devices
-- **2025-01-22**: Implemented complete mobile UX with 5-tab navigation (Home, Explore, AI Menu, Wallet, Profile)
-- **2025-01-22**: Added mobile detection hooks, auto-redirect for Capacitor apps, and mobile-specific components
-- **2025-01-21**: Added Capacitor for native Android/iOS mobile app builds
-- Converted QR Payment Modal to inline expandable Card component
-- Fixed React hooks order violation in WalletPage
-- Replaced Radix UI dropdowns with native HTML select elements
+- **PostgreSQL**: Primary database for all application data (Neon-backed).
+- **Stripe**: Payment gateway for processing transactions.
+- **Object Storage**: Used for file uploads (e.g., recipe images).
+- **Capacitor**: Framework for building native mobile applications from the web codebase.
+- **OpenAI**: Powers the AI Support System via Replit AI Integrations.
+- **MLKit**: Used in Capacitor for QR code scanning functionalities in the restaurant portal.
+- **@tanstack/react-query**: For data fetching and caching in the frontend.
+- **drizzle-orm**: Type-safe ORM for database interactions.
+- **wouter**: Client-side routing library for React.

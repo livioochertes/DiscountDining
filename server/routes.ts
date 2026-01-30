@@ -37,6 +37,22 @@ if (process.env.STRIPE_SECRET_KEY) {
   });
 }
 
+// Apple App Site Association for Universal Links (iOS)
+const appleAppSiteAssociation = {
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.eatoff.app"],
+        "paths": ["/api/wallet/stripe-return*", "/app/*"]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.com.eatoff.app"]
+  }
+};
+
 // Financial tracking functions for restaurant payments and EatOff commission
 export async function updateRestaurantFinancials(restaurantId: number, amount: number, paymentType: 'cash' | 'points') {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -109,6 +125,12 @@ export async function updateEatOffDailySummary(date: Date, amount: number, payme
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Serve Apple App Site Association for Universal Links (iOS)
+  app.get('/.well-known/apple-app-site-association', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json(appleAppSiteAssociation);
+  });
   
   // Setup Replit Auth (includes session, passport, and OAuth routes)
   await setupAuth(app);
