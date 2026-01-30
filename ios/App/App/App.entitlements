@@ -2,10 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>com.apple.developer.associated-domains</key>
-	<array>
-		<string>applinks:eatoff.app</string>
-		<string>webcredentials:eatoff.app</string>
-	</array>
+        <key>com.apple.developer.associated-domains</key>
+        <array>
+                <string>applinks:eatoff.app</string>
+                <string>applinks:0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev</string>
+                <string>webcredentials:eatoff.app</string>
+        </array>
 </dict>
 </plist>
