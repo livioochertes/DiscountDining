@@ -12,7 +12,9 @@ import {
   voucherPackages,
   eatoffVouchers,
   marketplaces,
-  insertMarketplaceSchema
+  insertMarketplaceSchema,
+  walletTransactions,
+  paymentTransactions
 } from "@shared/schema";
 import { eq, and, gte, desc, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -185,35 +187,87 @@ export function registerAdminRoutes(app: Express) {
   // Get dashboard metrics
   app.get("/api/admin/dashboard", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
-      // Get basic metrics
+      // Get restaurant metrics
       const [restaurantCount] = await db
         .select({
           count: sql<number>`COUNT(*)`,
           active: sql<number>`COUNT(CASE WHEN ${restaurants.isActive} = true THEN 1 END)`,
+          approved: sql<number>`COUNT(CASE WHEN ${restaurants.isApproved} = true THEN 1 END)`,
+          pending: sql<number>`COUNT(CASE WHEN ${restaurants.isApproved} = false THEN 1 END)`,
         })
         .from(restaurants);
 
+      // Get user metrics
       const [userMetrics] = await db
         .select({
           totalUsers: sql<number>`COUNT(*)`,
         })
         .from(customers);
+      
+      // Get users created this month
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const [newUsersThisMonth] = await db
+        .select({
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(customers)
+        .where(gte(customers.createdAt, startOfMonth));
+      
+      // Get transaction stats
+      const [transactionStats] = await db
+        .select({
+          totalTransactions: sql<number>`COUNT(*)`,
+          totalAmount: sql<number>`COALESCE(SUM(CASE WHEN ${walletTransactions.type} = 'top_up' THEN ${walletTransactions.amount}::numeric ELSE 0 END), 0)`,
+        })
+        .from(walletTransactions);
+      
+      // Get this week's transactions
+      const startOfWeek = new Date();
+      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const [weeklyStats] = await db
+        .select({
+          count: sql<number>`COUNT(*)`,
+          amount: sql<number>`COALESCE(SUM(${walletTransactions.amount}::numeric), 0)`,
+        })
+        .from(walletTransactions)
+        .where(gte(walletTransactions.createdAt, startOfWeek));
+      
+      // Get today's transactions
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const [dailyStats] = await db
+        .select({
+          count: sql<number>`COUNT(*)`,
+          amount: sql<number>`COALESCE(SUM(${walletTransactions.amount}::numeric), 0)`,
+        })
+        .from(walletTransactions)
+        .where(gte(walletTransactions.createdAt, startOfDay));
 
       await logAdminAction(req.adminId!, "view_dashboard", "dashboard", undefined, undefined, undefined, req);
 
+      // Return in format expected by frontend
       res.json({
-        commission: {
-          totalEarnings: 1250.50,
-          monthlyEarnings: 340.25,
-          totalTransactions: 85,
-        },
-        restaurants: {
-          total: restaurantCount?.count || 0,
-          active: restaurantCount?.active || 0,
-        },
-        users: {
-          total: userMetrics?.totalUsers || 0,
-          active: 45,
+        totalUsers: Number(userMetrics?.totalUsers) || 0,
+        totalRestaurants: Number(restaurantCount?.count) || 0,
+        totalRevenue: Number(transactionStats?.totalAmount) || 0,
+        totalCommission: Number(transactionStats?.totalAmount) * 0.05 || 0, // 5% commission estimate
+        activeUsers: Number(newUsersThisMonth?.count) || 0,
+        activeRestaurants: Number(restaurantCount?.active) || 0,
+        pendingRestaurants: Number(restaurantCount?.pending) || 0,
+        approvedRestaurants: Number(restaurantCount?.approved) || 0,
+        transactionStats: {
+          total: Number(transactionStats?.totalTransactions) || 0,
+          totalAmount: Number(transactionStats?.totalAmount) || 0,
+          weeklyCount: Number(weeklyStats?.count) || 0,
+          weeklyAmount: Number(weeklyStats?.amount) || 0,
+          dailyCount: Number(dailyStats?.count) || 0,
+          dailyAmount: Number(dailyStats?.amount) || 0,
         }
       });
     } catch (error) {
