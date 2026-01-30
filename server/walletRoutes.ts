@@ -2140,29 +2140,57 @@ router.post("/wallet/topup/create-checkout-session", async (req: Request, res: R
       return res.status(404).json({ message: "Customer not found" });
     }
 
-    console.log('[TopUp] Creating checkout session for amount:', amount, 'customerId:', customerId);
+    // Get default marketplace for currency
+    const { marketplaces } = await import("@shared/schema");
+    const [defaultMarketplace] = await db
+      .select()
+      .from(marketplaces)
+      .where(eq(marketplaces.isDefault, true))
+      .limit(1);
+    
+    // Fallback to first active marketplace or EUR if none exists
+    let currency = 'eur';
+    let currencySymbol = '€';
+    if (defaultMarketplace) {
+      currency = defaultMarketplace.currencyCode.toLowerCase();
+      currencySymbol = defaultMarketplace.currencySymbol;
+    } else {
+      // Try to get any active marketplace
+      const [anyMarketplace] = await db
+        .select()
+        .from(marketplaces)
+        .where(eq(marketplaces.isActive, true))
+        .limit(1);
+      if (anyMarketplace) {
+        currency = anyMarketplace.currencyCode.toLowerCase();
+        currencySymbol = anyMarketplace.currencySymbol;
+      }
+    }
+
+    console.log('[TopUp] Creating checkout session for amount:', amount, 'currency:', currency, 'customerId:', customerId);
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
-          currency: 'eur',
+          currency: currency,
           product_data: {
             name: 'Alimentare portofel EatOff',
-            description: `Top-up ${amount} EUR`,
+            description: `Top-up ${amount} ${currencySymbol}`,
           },
           unit_amount: Math.round(parseFloat(amount) * 100),
         },
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `https://eatoff.app/m/wallet?topup=success&amount=${amount}`,
-      cancel_url: `https://eatoff.app/m/wallet?topup=cancelled`,
+      success_url: `${process.env.APP_URL || 'https://eatoff.app'}/api/wallet/stripe-return?status=success&amount=${amount}`,
+      cancel_url: `${process.env.APP_URL || 'https://eatoff.app'}/api/wallet/stripe-return?status=cancelled`,
       customer_email: customer.email || undefined,
       metadata: {
         type: "wallet_topup",
         customerId: customerId.toString(),
-        amount: amount
+        amount: amount,
+        currency: currency
       }
     });
     
@@ -2173,6 +2201,57 @@ router.post("/wallet/topup/create-checkout-session", async (req: Request, res: R
     console.error("Error creating checkout session:", error);
     res.status(500).json({ message: "Error creating checkout: " + error.message });
   }
+});
+
+// Stripe return redirect endpoint - redirects to app via deep link
+router.get("/wallet/stripe-return", async (req: Request, res: Response) => {
+  const status = req.query.status as string || 'unknown';
+  const amount = req.query.amount as string || '';
+  
+  console.log('[Stripe Return] Status:', status, 'Amount:', amount);
+  
+  // Create HTML page that redirects to the app via deep link
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Redirectare către EatOff</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+        .card { background: white; border-radius: 16px; padding: 32px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { color: ${status === 'success' ? '#10b981' : '#ef4444'}; margin-bottom: 16px; }
+        p { color: #666; margin-bottom: 24px; }
+        .btn { display: inline-block; background: #0ea5e9; color: white; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 600; }
+      </style>
+      <script>
+        // Try to open the app immediately
+        setTimeout(function() {
+          window.location.href = 'eatoff://stripe-return?status=${status}&amount=${amount}';
+        }, 500);
+        
+        // Fallback if app doesn't open
+        setTimeout(function() {
+          document.getElementById('fallback').style.display = 'block';
+        }, 2000);
+      </script>
+    </head>
+    <body>
+      <div class="card">
+        <h1>${status === 'success' ? '✓ Plată reușită!' : '✗ Plată anulată'}</h1>
+        <p>${status === 'success' ? 'Suma a fost adăugată în portofel.' : 'Plata a fost anulată.'}</p>
+        <p>Se deschide aplicația EatOff...</p>
+        <div id="fallback" style="display: none;">
+          <a href="eatoff://stripe-return?status=${status}&amount=${amount}" class="btn">Deschide EatOff</a>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
 });
 
 // Authenticated wallet top-up - create payment intent for current user

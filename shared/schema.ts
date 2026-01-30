@@ -90,6 +90,28 @@ export const restaurantOwners = pgTable("restaurant_owners", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Marketplaces - defines operating regions with their own currency
+export const marketplaces = pgTable("marketplaces", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // e.g., "Romania", "Romania - Bucuresti", "Spain"
+  country: text("country").notNull(), // Country name (allows multiple marketplaces per country)
+  countryCode: text("country_code").notNull(), // ISO country code (RO, ES, DE)
+  currencyCode: text("currency_code").notNull(), // ISO currency code (RON, EUR, USD)
+  currencySymbol: text("currency_symbol").notNull(), // Lei, €, $
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false), // Default marketplace for new restaurants
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMarketplaceSchema = createInsertSchema(marketplaces).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertMarketplace = z.infer<typeof insertMarketplaceSchema>;
+export type Marketplace = typeof marketplaces.$inferSelect;
+
 // Voucher package templates provided by the platform
 export const voucherTemplates = pgTable("voucher_templates", {
   id: serial("id").primaryKey(),
@@ -107,6 +129,7 @@ export const voucherTemplates = pgTable("voucher_templates", {
 export const restaurants = pgTable("restaurants", {
   id: serial("id").primaryKey(),
   ownerId: integer("owner_id").references(() => restaurantOwners.id).notNull(),
+  marketplaceId: integer("marketplace_id").references(() => marketplaces.id), // Which marketplace this restaurant belongs to
   name: text("name").notNull(),
   description: text("description").notNull(),
   cuisine: text("cuisine").notNull(),

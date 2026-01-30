@@ -10,7 +10,9 @@ import {
   restaurantOwners,
   menuItems,
   voucherPackages,
-  eatoffVouchers
+  eatoffVouchers,
+  marketplaces,
+  insertMarketplaceSchema
 } from "@shared/schema";
 import { eq, and, gte, desc, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -419,6 +421,7 @@ export function registerAdminRoutes(app: Express) {
         description,
         priceRange,
         imageUrl,
+        marketplaceId,
         companyName,
         companyAddress,
         taxId,
@@ -484,6 +487,7 @@ export function registerAdminRoutes(app: Express) {
           priceRange,
           imageUrl: imageUrl || `https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500&h=300&fit=crop&fm=webp&q=80`,
           restaurantCode,
+          marketplaceId: marketplaceId || null, // Marketplace for this restaurant
           isApproved: true, // Admin-enrolled restaurants are auto-approved
           isActive: true,
           approvedAt: new Date(),
@@ -1351,6 +1355,128 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error setting voucher image:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ============================================
+  // MARKETPLACE MANAGEMENT ROUTES
+  // ============================================
+
+  // Get all marketplaces
+  app.get("/api/admin/marketplaces", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const allMarketplaces = await db.select().from(marketplaces).orderBy(marketplaces.name);
+      res.json(allMarketplaces);
+    } catch (error) {
+      console.error("Error fetching marketplaces:", error);
+      res.status(500).json({ error: "Failed to fetch marketplaces" });
+    }
+  });
+
+  // Get single marketplace
+  app.get("/api/admin/marketplaces/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [marketplace] = await db.select().from(marketplaces).where(eq(marketplaces.id, id));
+      if (!marketplace) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+      res.json(marketplace);
+    } catch (error) {
+      console.error("Error fetching marketplace:", error);
+      res.status(500).json({ error: "Failed to fetch marketplace" });
+    }
+  });
+
+  // Create marketplace
+  app.post("/api/admin/marketplaces", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const parsed = insertMarketplaceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid marketplace data", details: parsed.error.errors });
+      }
+
+      // If this is set as default, unset other defaults first
+      if (parsed.data.isDefault) {
+        await db.update(marketplaces).set({ isDefault: false });
+      }
+
+      const [newMarketplace] = await db.insert(marketplaces).values(parsed.data).returning();
+      res.status(201).json(newMarketplace);
+    } catch (error) {
+      console.error("Error creating marketplace:", error);
+      res.status(500).json({ error: "Failed to create marketplace" });
+    }
+  });
+
+  // Update marketplace
+  app.patch("/api/admin/marketplaces/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+
+      // If setting as default, unset other defaults first
+      if (updates.isDefault === true) {
+        await db.update(marketplaces).set({ isDefault: false }).where(sql`1=1`);
+      }
+
+      const [updated] = await db.update(marketplaces)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(marketplaces.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating marketplace:", error);
+      res.status(500).json({ error: "Failed to update marketplace" });
+    }
+  });
+
+  // Delete marketplace
+  app.delete("/api/admin/marketplaces/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      // Check if any restaurants use this marketplace
+      const [restaurantUsingMarketplace] = await db.select()
+        .from(restaurants)
+        .where(eq(restaurants.marketplaceId, id))
+        .limit(1);
+
+      if (restaurantUsingMarketplace) {
+        return res.status(400).json({ 
+          error: "Cannot delete marketplace", 
+          message: "This marketplace has restaurants assigned to it. Please reassign them first." 
+        });
+      }
+
+      const [deleted] = await db.delete(marketplaces).where(eq(marketplaces.id, id)).returning();
+      if (!deleted) {
+        return res.status(404).json({ error: "Marketplace not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting marketplace:", error);
+      res.status(500).json({ error: "Failed to delete marketplace" });
+    }
+  });
+
+  // Public endpoint to get active marketplaces (for restaurant enrollment)
+  app.get("/api/marketplaces", async (req: Request, res: Response) => {
+    try {
+      const activeMarketplaces = await db.select()
+        .from(marketplaces)
+        .where(eq(marketplaces.isActive, true))
+        .orderBy(marketplaces.name);
+      res.json(activeMarketplaces);
+    } catch (error) {
+      console.error("Error fetching marketplaces:", error);
+      res.status(500).json({ error: "Failed to fetch marketplaces" });
     }
   });
 }
