@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -2894,7 +2895,7 @@ export default function AdminDashboard() {
               </Tooltip>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{metrics?.totalRevenue || 0}</div>
+              <div className="text-2xl font-bold">€{(metrics?.totalRevenue || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <p className="text-xs text-muted-foreground">
                 Platform transaction volume
               </p>
@@ -2914,9 +2915,9 @@ export default function AdminDashboard() {
               </Tooltip>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{metrics?.totalCommission || 0}</div>
+              <div className="text-2xl font-bold">€{(metrics?.totalCommission || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <p className="text-xs text-muted-foreground">
-                Platform commission revenue
+                Platform commission revenue (5%)
               </p>
             </CardContent>
           </Card>
@@ -3057,6 +3058,129 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Transaction Volume Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    <span>Transaction Volume</span>
+                  </CardTitle>
+                  <CardDescription>Daily, weekly and total transaction comparison</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={[
+                      { name: 'Today', amount: metrics?.transactionStats?.dailyAmount || 0, count: metrics?.transactionStats?.dailyCount || 0 },
+                      { name: 'This Week', amount: metrics?.transactionStats?.weeklyAmount || 0, count: metrics?.transactionStats?.weeklyCount || 0 },
+                      { name: 'All Time', amount: metrics?.transactionStats?.totalAmount || 0, count: metrics?.transactionStats?.total || 0 },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <RechartsTooltip formatter={(value: number) => [`€${value.toFixed(2)}`, 'Amount']} />
+                      <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Restaurant Distribution Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Store className="h-5 w-5 text-green-600" />
+                    <span>Restaurant Status</span>
+                  </CardTitle>
+                  <CardDescription>Distribution of restaurant statuses</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Active', value: metrics?.activeRestaurants || 0 },
+                          { name: 'Pending', value: metrics?.pendingRestaurants || 0 },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        <Cell fill="#22c55e" />
+                        <Cell fill="#eab308" />
+                      </Pie>
+                      <RechartsTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex justify-center gap-6 mt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      <span className="text-sm">Active ({metrics?.activeRestaurants || 0})</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <span className="text-sm">Pending ({metrics?.pendingRestaurants || 0})</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* User Growth Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="h-5 w-5 text-purple-600" />
+                    <span>User Overview</span>
+                  </CardTitle>
+                  <CardDescription>Total vs active users this month</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={[
+                      { name: 'Total Users', value: metrics?.totalUsers || 0 },
+                      { name: 'Active This Month', value: metrics?.activeUsers || 0 },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <RechartsTooltip />
+                      <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Revenue vs Commission Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <DollarSign className="h-5 w-5 text-yellow-600" />
+                    <span>Revenue Breakdown</span>
+                  </CardTitle>
+                  <CardDescription>Total revenue and EatOff commission</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={[
+                      { name: 'Total Revenue', value: metrics?.totalRevenue || 0 },
+                      { name: 'Commission (5%)', value: metrics?.totalCommission || 0 },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <RechartsTooltip formatter={(value: number) => [`€${value.toFixed(2)}`, 'Amount']} />
+                      <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
             </div>
           )}
 
