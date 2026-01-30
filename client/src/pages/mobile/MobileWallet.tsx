@@ -125,6 +125,9 @@ export default function MobileWallet() {
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
+  // Top-up modal state (for Add Money button)
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
+  
   // Credit request form state
   const [showCreditForm, setShowCreditForm] = useState(false);
   const [selectedCreditType, setSelectedCreditType] = useState<CreditType | null>(null);
@@ -378,7 +381,7 @@ export default function MobileWallet() {
           <div className="flex justify-between items-start mb-1">
             <p className="text-white/60 text-sm">{t.walletTotalBalance || 'Sold Total'}</p>
             <button 
-              onClick={() => setShowPaymentModal(true)}
+              onClick={() => setShowTopUpModal(true)}
               className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -1125,6 +1128,15 @@ export default function MobileWallet() {
           vouchers={vouchers}
         />
       )}
+      
+      {/* Top-up Modal (Add Money) */}
+      {showTopUpModal && (
+        <TopUpModal 
+          isOpen={showTopUpModal}
+          onClose={() => setShowTopUpModal(false)}
+          translations={t}
+        />
+      )}
     </MobileLayout>
   );
 }
@@ -1636,6 +1648,190 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
               'Generează Cod QR'
             )}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Top-up Modal Component (Add Money)
+interface TopUpModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  translations: any;
+}
+
+function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
+  const queryClient = useQueryClient();
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [isLoadingStripe, setIsLoadingStripe] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  const predefinedAmounts = [50, 100, 200, 500];
+  
+  const handleTopUpWithCard = async () => {
+    if (!topUpAmount || parseFloat(topUpAmount) <= 0) return;
+    
+    setIsLoadingStripe(true);
+    setError(null);
+    
+    try {
+      const token = await getMobileSessionToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      // For native mobile, use Stripe Checkout Session with redirect
+      if (Capacitor.isNativePlatform()) {
+        const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-checkout-session`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ amount: topUpAmount })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || (t.topUpPaymentError || 'Error creating payment'));
+        }
+        
+        if (data.url) {
+          window.open(data.url, '_blank');
+          onClose();
+        } else {
+          throw new Error(t.topUpSessionError || 'Could not create payment session');
+        }
+      } else {
+        // For web, use Payment Intent with embedded Elements
+        const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-intent`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ amount: topUpAmount })
+        });
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || (t.topUpPaymentError || 'Error creating payment'));
+        }
+        
+        const data = await response.json();
+        setClientSecret(data.clientSecret);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoadingStripe(false);
+    }
+  };
+  
+  const handleTopUpSuccess = () => {
+    setClientSecret(null);
+    setTopUpAmount('');
+    queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
+    onClose();
+  };
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+      <div className="bg-white w-full rounded-t-3xl max-h-[85vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white">
+          <h2 className="text-xl font-bold text-gray-900">{t.topUpTitle || 'Add Money'}</h2>
+          <button 
+            onClick={onClose}
+            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+          >
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+        
+        <div className="p-4 space-y-5">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+          
+          {clientSecret && stripePromise ? (
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <TopUpStripeForm 
+                amount={topUpAmount} 
+                onSuccess={handleTopUpSuccess}
+                onCancel={() => setClientSecret(null)}
+              />
+            </Elements>
+          ) : (
+            <>
+              {/* Predefined Amounts */}
+              <div>
+                <p className="text-sm text-gray-600 mb-3">{t.topUpSelectAmount || 'Select amount'}</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {predefinedAmounts.map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => setTopUpAmount(val.toString())}
+                      className={cn(
+                        "py-3 rounded-xl text-lg font-semibold transition-colors",
+                        topUpAmount === val.toString() 
+                          ? "bg-primary text-white" 
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      )}
+                    >
+                      {val}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Custom Amount Input */}
+              <div>
+                <p className="text-sm text-gray-600 mb-2">{t.topUpCustomAmount || 'Or enter custom amount'}</p>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={topUpAmount}
+                    onChange={(e) => setTopUpAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-4 text-2xl font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-center"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">RON</span>
+                </div>
+              </div>
+              
+              {/* Pay Button */}
+              <button 
+                onClick={handleTopUpWithCard}
+                disabled={!topUpAmount || parseFloat(topUpAmount) <= 0 || isLoadingStripe}
+                className={cn(
+                  "w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2",
+                  topUpAmount && parseFloat(topUpAmount) > 0 && !isLoadingStripe
+                    ? "bg-primary text-white"
+                    : "bg-gray-200 text-gray-400"
+                )}
+              >
+                {isLoadingStripe ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {t.topUpLoading || 'Loading...'}
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5" />
+                    {t.topUpPayWithCard || 'Pay with Card'}
+                  </>
+                )}
+              </button>
+              
+              {/* Info */}
+              <p className="text-xs text-gray-400 text-center">
+                {t.topUpSecurePayment || 'Secure payment processed by Stripe'}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
