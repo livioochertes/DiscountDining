@@ -183,10 +183,12 @@ export default function MobileWallet() {
     enabled: !!user,
   });
 
-  // Fetch credit types for the request form (always fetch to show max available)
+  // Fetch credit types for the request form (always fetch fresh to show max available)
   const { data: creditTypes = [] } = useQuery<CreditType[]>({
     queryKey: ['/api/credit-types'],
     enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
   
   // Calculate max credit from available credit types
