@@ -79,6 +79,7 @@ const restaurantEnrollmentSchema = z.object({
   description: z.string().min(1, "Description is required"),
   priceRange: z.string().min(1, "Price range is required"),
   imageUrl: z.string().optional(),
+  marketplaceId: z.number().min(1, "Marketplace is required"),
   // Company details
   companyName: z.string().min(1, "Company name is required"),
   companyAddress: z.string().min(1, "Company address is required"),
@@ -241,6 +242,16 @@ function EatOffVoucherManagement() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch EatOff vouchers');
+      return response.json();
+    }
+  });
+
+  // Fetch marketplaces for restaurant enrollment
+  const { data: marketplacesList = [] } = useQuery<Marketplace[]>({
+    queryKey: ['/api/marketplaces'],
+    queryFn: async () => {
+      const response = await fetch('/api/marketplaces');
+      if (!response.ok) throw new Error('Failed to fetch marketplaces');
       return response.json();
     }
   });
@@ -949,6 +960,302 @@ interface CreditRequest {
   phone: string | null;
   createdAt: string;
   customer?: { firstName: string; lastName: string; email: string };
+}
+
+interface Marketplace {
+  id: number;
+  name: string;
+  country: string;
+  countryCode: string;
+  currencyCode: string;
+  currencySymbol: string;
+  isActive: boolean;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function MarketplacesTab() {
+  const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    country: '',
+    countryCode: '',
+    currencyCode: '',
+    currencySymbol: '',
+    isActive: true,
+    isDefault: false
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const { data: marketplaces = [], refetch } = useQuery<Marketplace[]>({
+    queryKey: ['/api/admin/marketplaces'],
+  });
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      country: '',
+      countryCode: '',
+      currencyCode: '',
+      currencySymbol: '',
+      isActive: true,
+      isDefault: false
+    });
+    setShowCreate(false);
+    setEditingId(null);
+  };
+
+  const handleEdit = (marketplace: Marketplace) => {
+    setFormData({
+      name: marketplace.name,
+      country: marketplace.country,
+      countryCode: marketplace.countryCode,
+      currencyCode: marketplace.currencyCode,
+      currencySymbol: marketplace.currencySymbol,
+      isActive: marketplace.isActive,
+      isDefault: marketplace.isDefault
+    });
+    setEditingId(marketplace.id);
+    setShowCreate(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const url = editingId 
+        ? `/api/admin/marketplaces/${editingId}` 
+        : '/api/admin/marketplaces';
+      const method = editingId ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to save marketplace');
+      }
+
+      toast({
+        title: editingId ? 'Marketplace updated' : 'Marketplace created',
+        description: `${formData.name} has been ${editingId ? 'updated' : 'created'} successfully.`
+      });
+
+      resetForm();
+      refetch();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/marketplaces/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || data.error || 'Failed to delete marketplace');
+      }
+
+      toast({
+        title: 'Marketplace deleted',
+        description: `${name} has been deleted successfully.`
+      });
+      refetch();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Store className="h-5 w-5" />
+              Marketplaces
+            </CardTitle>
+            <CardDescription>
+              Manage operating regions with their currencies. Each restaurant belongs to one marketplace.
+            </CardDescription>
+          </div>
+          <Button onClick={() => setShowCreate(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add Marketplace
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {showCreate && (
+            <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
+              <h3 className="font-semibold">{editingId ? 'Edit Marketplace' : 'Create New Marketplace'}</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name</label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Romania, Spain - Barcelona"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Country</label>
+                  <Input
+                    value={formData.country}
+                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                    placeholder="e.g., Romania, Spain"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Country Code (ISO)</label>
+                  <Input
+                    value={formData.countryCode}
+                    onChange={(e) => setFormData({ ...formData, countryCode: e.target.value.toUpperCase() })}
+                    placeholder="e.g., RO, ES, DE"
+                    maxLength={3}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Currency Code (ISO)</label>
+                  <Input
+                    value={formData.currencyCode}
+                    onChange={(e) => setFormData({ ...formData, currencyCode: e.target.value.toUpperCase() })}
+                    placeholder="e.g., RON, EUR, USD"
+                    maxLength={3}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Currency Symbol</label>
+                  <Input
+                    value={formData.currencySymbol}
+                    onChange={(e) => setFormData({ ...formData, currencySymbol: e.target.value })}
+                    placeholder="e.g., Lei, €, $"
+                    required
+                  />
+                </div>
+                <div className="flex items-center gap-6 pt-6">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span className="text-sm">Active</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.isDefault}
+                      onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span className="text-sm">Default</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : editingId ? 'Update' : 'Create'}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Name</th>
+                  <th className="text-left p-2">Country</th>
+                  <th className="text-left p-2">Code</th>
+                  <th className="text-left p-2">Currency</th>
+                  <th className="text-left p-2">Status</th>
+                  <th className="text-left p-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {marketplaces.map((mp) => (
+                  <tr key={mp.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-2 font-medium">{mp.name}</td>
+                    <td className="p-2">{mp.country}</td>
+                    <td className="p-2">{mp.countryCode}</td>
+                    <td className="p-2">
+                      <span className="font-mono">{mp.currencyCode}</span>
+                      <span className="text-gray-500 ml-1">({mp.currencySymbol})</span>
+                    </td>
+                    <td className="p-2">
+                      <div className="flex gap-1">
+                        {mp.isActive ? (
+                          <Badge className="bg-green-100 text-green-800">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary">Inactive</Badge>
+                        )}
+                        {mp.isDefault && (
+                          <Badge className="bg-blue-100 text-blue-800">Default</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(mp)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(mp.id, mp.name)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {marketplaces.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-4 text-center text-gray-500">
+                      No marketplaces configured yet. Add your first marketplace to get started.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 function WalletCreditTab() {
@@ -3083,6 +3390,10 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {selectedTab === "marketplaces" && (
+            <MarketplacesTab />
+          )}
+
           {selectedTab === "wallet" && (
             <WalletCreditTab />
           )}
@@ -3289,6 +3600,34 @@ export default function AdminDashboard() {
                             <SelectItem value="Chinese">Chinese</SelectItem>
                             <SelectItem value="Japanese">Japanese</SelectItem>
                             <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={enrollmentForm.control}
+                    name="marketplaceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Marketplace</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(parseInt(value))} 
+                          value={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select marketplace" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {marketplacesList.map((mp) => (
+                              <SelectItem key={mp.id} value={mp.id.toString()}>
+                                {mp.name} ({mp.currencyCode})
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />

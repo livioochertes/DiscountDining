@@ -7,9 +7,11 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { getMobileSessionToken } from '@/lib/queryClient';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import { useToast } from '@/hooks/use-toast';
 
 const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY 
   ? loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
@@ -75,6 +77,50 @@ export default function MobileWallet() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<WalletTab>('vouchers');
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  // Listen for Stripe return deep link
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const handleAppUrlOpen = App.addListener('appUrlOpen', async (event) => {
+      console.log('[MobileWallet] Deep link received:', event.url);
+      
+      try {
+        const url = new URL(event.url);
+        
+        // Handle stripe-return deep link
+        if (url.protocol === 'eatoff:' && url.host === 'stripe-return') {
+          const status = url.searchParams.get('status');
+          const amount = url.searchParams.get('amount');
+          
+          console.log('[MobileWallet] Stripe return status:', status, 'amount:', amount);
+          
+          if (status === 'success') {
+            toast({
+              title: 'Plată reușită!',
+              description: amount ? `${amount} Lei au fost adăugați în portofel.` : 'Suma a fost adăugată în portofel.',
+            });
+            // Refresh wallet data
+            queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/users/stats'] });
+          } else if (status === 'cancelled') {
+            toast({
+              title: 'Plată anulată',
+              description: 'Plata a fost anulată.',
+              variant: 'destructive'
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[MobileWallet] Error parsing deep link:', err);
+      }
+    });
+
+    return () => {
+      handleAppUrlOpen.remove();
+    };
+  }, [queryClient, toast]);
   
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
