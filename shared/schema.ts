@@ -1771,6 +1771,81 @@ export type RecipeComment = typeof recipeComments.$inferSelect;
 export type InsertRecipeComment = z.infer<typeof insertRecipeCommentSchema>;
 
 // ============================================
+// CHEF'S PROFILE SYSTEM
+// ============================================
+
+export const chefProfiles = pgTable("chef_profiles", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull().unique(),
+  
+  // Chef Info
+  chefName: text("chef_name").notNull(),
+  bio: text("bio"),
+  profileImage: text("profile_image"),
+  coverImage: text("cover_image"),
+  
+  // Expertise
+  specialties: text("specialties").array(), // ["Italian", "French", "Pastry", "Grilling"]
+  cuisineExpertise: text("cuisine_expertise").array(), // ["Mediterranean", "Asian", "Mexican"]
+  cookingStyles: text("cooking_styles").array(), // ["Traditional", "Modern", "Fusion", "Healthy"]
+  
+  // Experience
+  experienceLevel: varchar("experience_level"), // beginner, intermediate, advanced, professional
+  yearsOfExperience: integer("years_of_experience"),
+  certifications: text("certifications").array(), // ["Le Cordon Bleu", "Culinary Institute"]
+  
+  // Social links
+  website: text("website"),
+  instagram: text("instagram"),
+  youtube: text("youtube"),
+  tiktok: text("tiktok"),
+  
+  // Favorite recipes (curated list)
+  favoriteRecipeIds: integer("favorite_recipe_ids").array(),
+  
+  // Stats
+  followersCount: integer("followers_count").default(0),
+  followingCount: integer("following_count").default(0),
+  recipesCount: integer("recipes_count").default(0),
+  totalLikesReceived: integer("total_likes_received").default(0),
+  
+  // Settings
+  isPublic: boolean("is_public").default(true),
+  acceptsCollaborations: boolean("accepts_collaborations").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Chef follows (users following chefs)
+export const chefFollows = pgTable("chef_follows", {
+  id: serial("id").primaryKey(),
+  followerId: integer("follower_id").references(() => customers.id).notNull(),
+  chefId: integer("chef_id").references(() => chefProfiles.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertChefProfileSchema = createInsertSchema(chefProfiles).omit({
+  id: true,
+  followersCount: true,
+  followingCount: true,
+  recipesCount: true,
+  totalLikesReceived: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChefFollowSchema = createInsertSchema(chefFollows).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ChefProfile = typeof chefProfiles.$inferSelect;
+export type InsertChefProfile = z.infer<typeof insertChefProfileSchema>;
+export type ChefFollow = typeof chefFollows.$inferSelect;
+export type InsertChefFollow = z.infer<typeof insertChefFollowSchema>;
+
+// ============================================
 // CASHBACK & LOYALTY SYSTEM
 // ============================================
 
