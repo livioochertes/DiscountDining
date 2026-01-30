@@ -992,6 +992,14 @@ function MarketplacesTab() {
 
   const { data: marketplaces = [], refetch } = useQuery<Marketplace[]>({
     queryKey: ['/api/admin/marketplaces'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/marketplaces', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch marketplaces');
+      return response.json();
+    }
   });
 
   const resetForm = () => {
