@@ -1668,7 +1668,7 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const predefinedAmounts = [50, 100, 200, 500];
+  const predefinedAmounts = [200, 300, 500, 1000];
   
   const handleTopUpWithCard = async () => {
     if (!topUpAmount || parseFloat(topUpAmount) <= 0) return;
@@ -1736,8 +1736,8 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-      <div className="bg-white w-full rounded-t-3xl max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end pb-20">
+      <div className="bg-white w-full rounded-t-3xl max-h-[70vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white">
           <h2 className="text-xl font-bold text-gray-900">{t.topUpTitle || 'Add Money'}</h2>
@@ -1807,29 +1807,24 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
                 onClick={handleTopUpWithCard}
                 disabled={!topUpAmount || parseFloat(topUpAmount) <= 0 || isLoadingStripe}
                 className={cn(
-                  "w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2",
+                  "w-full py-4 rounded-2xl font-bold text-lg flex flex-col items-center justify-center",
                   topUpAmount && parseFloat(topUpAmount) > 0 && !isLoadingStripe
                     ? "bg-primary text-white"
                     : "bg-gray-200 text-gray-400"
                 )}
               >
                 {isLoadingStripe ? (
-                  <>
+                  <div className="flex items-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
                     {t.topUpLoading || 'Loading...'}
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <CreditCard className="w-5 h-5" />
-                    {t.topUpPayWithCard || 'Pay with Card'}
+                    <span>{t.topUpAddCredit || 'Add Credit'}</span>
+                    <span className="text-xs font-normal opacity-80">{t.topUpFundsAdded || 'Funds will be added to your EatOff wallet'}</span>
                   </>
                 )}
               </button>
-              
-              {/* Info */}
-              <p className="text-xs text-gray-400 text-center">
-                {t.topUpSecurePayment || 'Secure payment processed by Stripe'}
-              </p>
             </>
           )}
         </div>
