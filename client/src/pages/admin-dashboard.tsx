@@ -3697,7 +3697,7 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => openEditPartnerModal(partner)}
-                            disabled={loading}
+                            disabled={partnerLoading}
                           >
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
@@ -3706,7 +3706,7 @@ export default function AdminDashboard() {
                             size="sm"
                             variant={partner.isActive ? "destructive" : "default"}
                             onClick={() => togglePartnerStatus(partner.id, partner.isActive)}
-                            disabled={loading}
+                            disabled={partnerLoading}
                           >
                             {partner.isActive ? "Suspend" : "Activate"}
                           </Button>
@@ -4339,9 +4339,9 @@ export default function AdminDashboard() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={loading}
+                  disabled={savingDetails}
                 >
-                  {loading ? 'Enrolling...' : 'Enroll Restaurant'}
+                  {savingDetails ? 'Enrolling...' : 'Enroll Restaurant'}
                 </Button>
               </div>
             </form>
@@ -5422,7 +5422,7 @@ export default function AdminDashboard() {
                                   size="sm"
                                   variant="default"
                                   onClick={() => handleActivateVoucherPackage(pkg)}
-                                  disabled={loading}
+                                  disabled={false}
                                   className="bg-green-600 hover:bg-green-700"
                                 >
                                   <CheckCircle className="h-3 w-3" />
