@@ -39,6 +39,7 @@ import HowItWorks from "@/pages/how-it-works";
 import Support from "@/pages/support";
 import RestaurantSuccessStories from "@/pages/restaurant-success-stories";
 import RestaurantHelp from "@/pages/restaurant-help";
+import ChefProfile from "@/pages/chef-profile";
 import { MenuCart } from "@/components/menu-cart";
 import { GlobalRestaurantSwitchDialog } from "@/components/GlobalRestaurantSwitchDialog";
 import CookieConsent from "@/components/CookieConsent";
@@ -306,6 +307,10 @@ function Router() {
       
       {/* Restaurant Help */}
       <Route path="/restaurant-help" component={RestaurantHelp} />
+      
+      {/* Chef Profile */}
+      <Route path="/chef-profile" component={ChefProfile} />
+      <Route path="/chef-profile/:id" component={ChefProfile} />
       
       {/* Legal Pages - Direct Loading */}
       <Route path="/privacy-policy" component={PrivacyPolicy} />
