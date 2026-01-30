@@ -1207,20 +1207,45 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
       
-      const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-intent`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ amount: topUpAmount })
-      });
-      
-      if (!response.ok) {
+      // For native mobile, use Stripe Checkout Session with redirect
+      if (Capacitor.isNativePlatform()) {
+        const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-checkout-session`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ amount: topUpAmount })
+        });
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || 'Eroare la crearea plății');
+        }
+        
         const data = await response.json();
-        throw new Error(data.message || 'Eroare la crearea plății');
+        // Open Stripe checkout in external browser
+        if (data.url) {
+          const { Browser } = await import('@capacitor/browser');
+          await Browser.open({ url: data.url });
+          setShowTopUp(false);
+          setTopUpAmount('');
+        }
+      } else {
+        // For web, use Payment Intent with embedded Elements
+        const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-intent`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ amount: topUpAmount })
+        });
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || 'Eroare la crearea plății');
+        }
+        
+        const data = await response.json();
+        setClientSecret(data.clientSecret);
       }
-      
-      const data = await response.json();
-      setClientSecret(data.clientSecret);
     } catch (err: any) {
       setError(err.message);
     } finally {
