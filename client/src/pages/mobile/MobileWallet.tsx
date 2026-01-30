@@ -1740,10 +1740,10 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end pb-20">
-      <div className="bg-white w-full rounded-t-3xl max-h-[70vh] overflow-y-auto">
+    <div className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-50 flex justify-center px-4 pointer-events-none">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-gray-200 max-h-[70vh] overflow-y-auto pointer-events-auto">
         {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white">
+        <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-3xl">
           <h2 className="text-xl font-bold text-gray-900">{t.topUpTitle || 'Add Money'}</h2>
           <button 
             onClick={onClose}
