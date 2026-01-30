@@ -13,6 +13,28 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// GeoNames cities database for location selection
+export const geonamesCities = pgTable(
+  "geonames_cities",
+  {
+    geonameId: integer("geoname_id").primaryKey(),
+    name: varchar("name", { length: 200 }).notNull(),
+    asciiName: varchar("ascii_name", { length: 200 }),
+    countryCode: varchar("country_code", { length: 2 }).notNull(),
+    admin1Code: varchar("admin1_code", { length: 20 }), // state/region
+    population: integer("population").default(0),
+    latitude: decimal("latitude", { precision: 10, scale: 7 }),
+    longitude: decimal("longitude", { precision: 10, scale: 7 }),
+    timezone: varchar("timezone", { length: 40 }),
+  },
+  (table) => [
+    index("idx_geonames_country").on(table.countryCode),
+    index("idx_geonames_name").on(table.name),
+  ],
+);
+
+export type GeonamesCity = typeof geonamesCities.$inferSelect;
+
 // Mobile session tokens table (for native app authentication)
 export const mobileSessions = pgTable(
   "mobile_sessions",
