@@ -1992,7 +1992,16 @@ export default function AdminDashboard() {
   const [editingPartner, setEditingPartner] = useState<any>(null);
   const [isRestaurantManagementModalOpen, setIsRestaurantManagementModalOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
-  const [managementTab, setManagementTab] = useState<'menu' | 'vouchers'>('menu');
+  const [managementTab, setManagementTab] = useState<'details' | 'menu' | 'vouchers'>('details');
+  
+  // Restaurant filtering and grouping
+  const [restaurantFilter, setRestaurantFilter] = useState({
+    marketplace: 'all',
+    city: 'all',
+    status: 'all',
+    company: 'all'
+  });
+  const [restaurantGroupBy, setRestaurantGroupBy] = useState<'none' | 'marketplace' | 'city'>('none');
   const [isAddMenuItemModalOpen, setIsAddMenuItemModalOpen] = useState(false);
   const [isEditMenuItemModalOpen, setIsEditMenuItemModalOpen] = useState(false);
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
@@ -2242,6 +2251,17 @@ export default function AdminDashboard() {
         }
       });
       if (!response.ok) throw new Error('Failed to fetch restaurants');
+      return response.json();
+    }
+  });
+
+  // Fetch marketplaces for filtering
+  const { data: marketplacesList } = useQuery<any[]>({
+    queryKey: ['/api/marketplaces'],
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const response = await fetch('/api/marketplaces');
+      if (!response.ok) throw new Error('Failed to fetch marketplaces');
       return response.json();
     }
   });
@@ -3213,10 +3233,164 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                    Showing {approvedRestaurants?.length || 0} approved restaurants
+                  {/* Filters and Grouping */}
+                  <div className="flex flex-wrap gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Marketplace</label>
+                      <select
+                        value={restaurantFilter.marketplace}
+                        onChange={(e) => setRestaurantFilter(f => ({ ...f, marketplace: e.target.value }))}
+                        className="w-full text-sm border rounded-md px-2 py-1.5 dark:bg-gray-700 dark:border-gray-600"
+                      >
+                        <option value="all">All Marketplaces</option>
+                        {marketplacesList?.map(mp => (
+                          <option key={mp.id} value={mp.id}>{mp.name} ({mp.country})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">City</label>
+                      <select
+                        value={restaurantFilter.city}
+                        onChange={(e) => setRestaurantFilter(f => ({ ...f, city: e.target.value }))}
+                        className="w-full text-sm border rounded-md px-2 py-1.5 dark:bg-gray-700 dark:border-gray-600"
+                      >
+                        <option value="all">All Cities</option>
+                        {Array.from(new Set(restaurants?.map(r => r.location).filter(Boolean))).sort().map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1 min-w-[120px]">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                      <select
+                        value={restaurantFilter.status}
+                        onChange={(e) => setRestaurantFilter(f => ({ ...f, status: e.target.value }))}
+                        className="w-full text-sm border rounded-md px-2 py-1.5 dark:bg-gray-700 dark:border-gray-600"
+                      >
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                    </div>
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Group By</label>
+                      <select
+                        value={restaurantGroupBy}
+                        onChange={(e) => setRestaurantGroupBy(e.target.value as 'none' | 'marketplace' | 'city')}
+                        className="w-full text-sm border rounded-md px-2 py-1.5 dark:bg-gray-700 dark:border-gray-600"
+                      >
+                        <option value="none">No Grouping</option>
+                        <option value="marketplace">By Marketplace</option>
+                        <option value="city">By City</option>
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setRestaurantFilter({ marketplace: 'all', city: 'all', status: 'all', company: 'all' });
+                          setRestaurantGroupBy('none');
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </div>
                   </div>
-                  {approvedRestaurants?.map((restaurant) => (
+
+                  {/* Filtered Results Count */}
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing {(() => {
+                      let filtered = approvedRestaurants || [];
+                      if (restaurantFilter.city !== 'all') {
+                        filtered = filtered.filter(r => r.location === restaurantFilter.city);
+                      }
+                      if (restaurantFilter.status !== 'all') {
+                        if (restaurantFilter.status === 'active') filtered = filtered.filter(r => r.isActive);
+                        else if (restaurantFilter.status === 'suspended') filtered = filtered.filter(r => !r.isActive);
+                      }
+                      if (restaurantFilter.marketplace !== 'all') {
+                        filtered = filtered.filter(r => (r as any).marketplaceId?.toString() === restaurantFilter.marketplace);
+                      }
+                      return filtered.length;
+                    })()} of {approvedRestaurants?.length || 0} approved restaurants
+                  </div>
+
+                  {/* Grouped or Flat Restaurant List */}
+                  {restaurantGroupBy !== 'none' ? (
+                    // Grouped View
+                    <div className="space-y-6">
+                      {(() => {
+                        let filtered = approvedRestaurants || [];
+                        if (restaurantFilter.city !== 'all') filtered = filtered.filter(r => r.location === restaurantFilter.city);
+                        if (restaurantFilter.status !== 'all') {
+                          if (restaurantFilter.status === 'active') filtered = filtered.filter(r => r.isActive);
+                          else if (restaurantFilter.status === 'suspended') filtered = filtered.filter(r => !r.isActive);
+                        }
+                        if (restaurantFilter.marketplace !== 'all') {
+                          filtered = filtered.filter(r => (r as any).marketplaceId?.toString() === restaurantFilter.marketplace);
+                        }
+
+                        const groups: Record<string, typeof filtered> = {};
+                        filtered.forEach(r => {
+                          const key = restaurantGroupBy === 'city' ? (r.location || 'Unknown') : ((r as any).marketplaceId?.toString() || 'none');
+                          if (!groups[key]) groups[key] = [];
+                          groups[key].push(r);
+                        });
+
+                        const getMarketplaceName = (id: string) => {
+                          if (id === 'none') return 'No Marketplace';
+                          const mp = marketplacesList?.find(m => m.id.toString() === id);
+                          return mp ? `${mp.name} (${mp.country})` : `Marketplace ${id}`;
+                        };
+
+                        return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([groupKey, groupRestaurants]) => (
+                          <div key={groupKey} className="border rounded-lg overflow-hidden">
+                            <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2 font-medium flex items-center justify-between">
+                              <span>{restaurantGroupBy === 'city' ? groupKey : getMarketplaceName(groupKey)}</span>
+                              <Badge variant="secondary">{groupRestaurants.length} restaurants</Badge>
+                            </div>
+                            <div className="divide-y">
+                              {groupRestaurants.map((restaurant) => (
+                                <div key={restaurant.id} className="flex items-center justify-between p-4">
+                                  <div className="flex-1">
+                                    <h4 className="font-medium">{restaurant.name}</h4>
+                                    <p className="text-sm text-muted-foreground">{restaurant.email} • {restaurant.location}</p>
+                                    <div className="flex space-x-2 mt-2">
+                                      <Badge variant="default" className="bg-green-600">Approved</Badge>
+                                      <Badge variant={restaurant.isActive ? "default" : "destructive"}>
+                                        {restaurant.isActive ? "Active" : "Suspended"}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                  <div className="flex space-x-2">
+                                    <Button size="sm" variant="outline" onClick={() => openRestaurantManagementModal(restaurant)}>
+                                      <Settings className="h-4 w-4 mr-1" /> Manage
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  ) : (
+                    // Flat View (original)
+                    <div className="space-y-4">
+                      {(() => {
+                    let filtered = approvedRestaurants || [];
+                    if (restaurantFilter.city !== 'all') filtered = filtered.filter(r => r.location === restaurantFilter.city);
+                    if (restaurantFilter.status !== 'all') {
+                      if (restaurantFilter.status === 'active') filtered = filtered.filter(r => r.isActive);
+                      else if (restaurantFilter.status === 'suspended') filtered = filtered.filter(r => !r.isActive);
+                    }
+                    if (restaurantFilter.marketplace !== 'all') {
+                      filtered = filtered.filter(r => (r as any).marketplaceId?.toString() === restaurantFilter.marketplace);
+                    }
+                    return filtered;
+                  })().map((restaurant) => (
                     <div key={restaurant.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex-1">
                         <h4 className="font-medium">{restaurant.name}</h4>
@@ -3342,6 +3516,8 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -4736,6 +4912,16 @@ export default function AdminDashboard() {
           <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
             <div className="flex space-x-8">
               <button
+                onClick={() => setManagementTab('details')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  managementTab === 'details'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                Details
+              </button>
+              <button
                 onClick={() => setManagementTab('menu')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   managementTab === 'menu'
@@ -4771,6 +4957,186 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <>
+              {/* Details Tab */}
+              {managementTab === 'details' && (
+                <div className="space-y-6">
+                  {/* Restaurant Information */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Store className="h-5 w-5" />
+                        Restaurant Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Restaurant Code</label>
+                        <p className="text-gray-900 dark:text-white font-mono">{selectedRestaurant?.restaurantCode || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Cuisine</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.cuisine}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Price Range</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.priceRange}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.description}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Address</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.address}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Location/City</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.location}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.phone || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.email || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Website</label>
+                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.website || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
+                        <div className="flex gap-2 mt-1">
+                          <Badge className={selectedRestaurant?.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                            {selectedRestaurant?.isApproved ? 'Approved' : 'Pending'}
+                          </Badge>
+                          <Badge className={selectedRestaurant?.isActive ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}>
+                            {selectedRestaurant?.isActive ? 'Active' : 'Suspended'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Marketplace Information */}
+                  {restaurantDetails?.marketplace && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Building2 className="h-5 w-5" />
+                          Marketplace
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Marketplace Name</label>
+                          <p className="text-gray-900 dark:text-white">{restaurantDetails.marketplace.name}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Country</label>
+                          <p className="text-gray-900 dark:text-white">{restaurantDetails.marketplace.country} ({restaurantDetails.marketplace.countryCode})</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Currency</label>
+                          <p className="text-gray-900 dark:text-white">{restaurantDetails.marketplace.currencySymbol} ({restaurantDetails.marketplace.currencyCode})</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Company/Owner Information */}
+                  {restaurantDetails?.owner && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Building2 className="h-5 w-5" />
+                          Company Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Name</label>
+                            <p className="text-gray-900 dark:text-white font-semibold">{restaurantDetails.owner.companyName}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">CUI / Tax ID</label>
+                            <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.taxId || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Registration Number</label>
+                            <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.businessRegistrationNumber || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Email</label>
+                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.email}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Address</label>
+                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyAddress}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Phone</label>
+                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyPhone}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Website</label>
+                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyWebsite || 'N/A'}</p>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-4">
+                          <h4 className="font-medium text-gray-900 dark:text-white mb-3">Contact Person</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
+                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonName}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Title</label>
+                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonTitle}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
+                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonPhone}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
+                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonEmail}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-4">
+                          <h4 className="font-medium text-gray-900 dark:text-white mb-3">Banking Information</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Bank Name</label>
+                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.bankName || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">IBAN</label>
+                              <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.iban || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2">
+                          <Badge className={restaurantDetails.owner.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                            {restaurantDetails.owner.isVerified ? 'Verified Company' : 'Pending Verification'}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+
               {/* Menu Items Tab */}
               {managementTab === 'menu' && (
                 <div className="space-y-6">
