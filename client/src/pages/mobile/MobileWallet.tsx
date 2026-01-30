@@ -183,11 +183,16 @@ export default function MobileWallet() {
     enabled: !!user,
   });
 
-  // Fetch credit types for the request form
+  // Fetch credit types for the request form (always fetch to show max available)
   const { data: creditTypes = [] } = useQuery<CreditType[]>({
     queryKey: ['/api/credit-types'],
-    enabled: !!user && showCreditForm,
+    enabled: !!user,
   });
+  
+  // Calculate max credit from available credit types
+  const maxCreditAmount = creditTypes.length > 0 
+    ? Math.max(...creditTypes.filter(ct => !ct.isCustomAmount).map(ct => parseFloat(ct.amount) || 0))
+    : 0;
 
   // Validate CNP (Romanian personal ID - 13 digits)
   const validateCNP = (cnp: string): boolean => {
@@ -690,13 +695,13 @@ export default function MobileWallet() {
                   >
                     <ArrowLeft className="w-6 h-6" />
                   </button>
-                  <h2 className="text-white font-semibold text-lg">Solicită Credit EatOff</h2>
+                  <h2 className="text-white font-semibold text-lg">{t.walletRequestCredit}</h2>
                 </div>
                 
                 <div className="p-4 space-y-4">
                   {/* Credit Type Selection */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Alege suma creditului *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.walletSelectCreditAmount} *</label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {creditTypes.map((type) => (
                         <button
@@ -713,7 +718,7 @@ export default function MobileWallet() {
                           )}
                         >
                           <p className="font-bold text-sm">
-                            {type.isCustomAmount ? 'Custom' : `${parseFloat(type.amount).toFixed(0)}`}
+                            {type.isCustomAmount ? t.walletCustomAmount : `${parseFloat(type.amount).toFixed(0)}`}
                           </p>
                           <p className="text-[10px] text-gray-500 truncate">{type.name}</p>
                           {type.interestRate && parseFloat(type.interestRate) > 0 && (
@@ -924,22 +929,22 @@ export default function MobileWallet() {
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-red-700 font-medium text-sm flex items-center gap-1.5">
                       <AlertCircle className="w-4 h-4" />
-                      Credit pe Cont
+                      {t.walletCreditOnAccount}
                     </p>
                     <CreditCard className="w-5 h-5 text-red-500" />
                   </div>
                   <div className="flex items-baseline gap-1.5">
                     <p className="text-2xl font-bold text-red-600">
-                      {parseFloat(walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
+                      {t.walletMaxAvailable} {maxCreditAmount > 0 ? maxCreditAmount : parseFloat(walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
                     </p>
-                    <p className="text-xs text-red-500">disponibil după aprobare</p>
+                    <p className="text-xs text-red-500">{t.walletAvailableAfterApproval}</p>
                   </div>
                 </div>
 
                 <div className="bg-white border border-gray-100 rounded-xl p-3">
                   <p className="text-xs text-gray-600">
-                    <span className="font-medium">Cumpără acum, plătește mai târziu!</span>
-                    {' '}Creditul trebuie aprobat de EatOff.
+                    <span className="font-medium">{t.walletBuyNowPayLater}</span>
+                    {' '}{t.walletCreditNeedsApproval}
                   </p>
                 </div>
 
@@ -947,7 +952,7 @@ export default function MobileWallet() {
                   onClick={() => setShowCreditForm(true)}
                   className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
                 >
-                  Solicită Credit
+                  {t.walletRequestNewCredit}
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </>
@@ -959,7 +964,7 @@ export default function MobileWallet() {
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-amber-700 font-medium text-sm flex items-center gap-1.5">
                       <Clock className="w-4 h-4" />
-                      În așteptare
+                      {t.walletPendingApproval}
                     </p>
                     <CreditCard className="w-5 h-5 text-amber-500" />
                   </div>
@@ -967,13 +972,13 @@ export default function MobileWallet() {
                     <p className="text-2xl font-bold text-amber-600">
                       {parseFloat(walletOverview.credit.requestedAmount || walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
                     </p>
-                    <p className="text-xs text-amber-500">solicitat</p>
+                    <p className="text-xs text-amber-500">{t.walletRequested}</p>
                   </div>
                 </div>
 
                 <div className="bg-white border border-amber-100 rounded-xl p-3">
                   <p className="text-xs text-gray-600">
-                    Solicitarea ta este în curs de procesare. Vei primi o notificare când creditul va fi aprobat.
+                    {t.walletRequestBeingProcessed}
                   </p>
                 </div>
               </>
@@ -985,7 +990,7 @@ export default function MobileWallet() {
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-green-700 font-medium text-sm flex items-center gap-1.5">
                       <CheckCircle className="w-4 h-4" />
-                      Credit Aprobat
+                      {t.walletCreditApproved}
                     </p>
                     <CreditCard className="w-5 h-5 text-green-600" />
                   </div>
@@ -993,20 +998,20 @@ export default function MobileWallet() {
                     <p className="text-2xl font-bold text-green-700">
                       {parseFloat(walletOverview.credit.availableCredit || '0').toFixed(0)} RON
                     </p>
-                    <p className="text-xs text-green-600">disponibil</p>
+                    <p className="text-xs text-green-600">{t.walletAvailable}</p>
                   </div>
                 </div>
 
                 <div className="bg-white border border-gray-100 rounded-xl p-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-[10px] text-gray-500">Limită totală</p>
+                      <p className="text-[10px] text-gray-500">{t.walletTotalLimit}</p>
                       <p className="text-base font-bold text-gray-900">
                         {parseFloat(walletOverview.credit.creditLimit || '0').toFixed(0)} RON
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-gray-500">Utilizat</p>
+                      <p className="text-[10px] text-gray-500">{t.walletUsed}</p>
                       <p className="text-base font-bold text-gray-900">
                         {parseFloat(walletOverview.credit.usedCredit || '0').toFixed(0)} RON
                       </p>
@@ -1017,8 +1022,8 @@ export default function MobileWallet() {
                 {parseFloat(walletOverview.credit.interestRate || '0') > 0 && (
                   <div className="bg-blue-50 border border-blue-100 rounded-xl p-2.5">
                     <p className="text-xs text-blue-700">
-                      <span className="font-medium">Dobândă: {walletOverview.credit.interestRate}%</span>
-                      {' '}• Termen: {walletOverview.credit.paymentTermDays || 30} zile
+                      <span className="font-medium">{t.walletInterest}: {walletOverview.credit.interestRate}%</span>
+                      {' '}• {t.walletTerm}: {walletOverview.credit.paymentTermDays || 30} {t.walletDays}
                     </p>
                   </div>
                 )}
@@ -1031,18 +1036,18 @@ export default function MobileWallet() {
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-gray-700 font-medium text-sm flex items-center gap-1.5">
                       <AlertCircle className="w-4 h-4" />
-                      Solicitare respinsă
+                      {t.walletRejectedStatus}
                     </p>
                     <CreditCard className="w-5 h-5 text-gray-400" />
                   </div>
-                  <p className="text-xs text-gray-500">Poți încerca din nou mai târziu</p>
+                  <p className="text-xs text-gray-500">{t.walletTryAgainLater}</p>
                 </div>
 
                 <button 
                   onClick={() => setShowCreditForm(true)}
                   className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
                 >
-                  Solicită din nou
+                  {t.walletRequestAgain}
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </>
