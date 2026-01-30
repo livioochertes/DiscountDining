@@ -26,6 +26,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (Capacitor.isNativePlatform
 type WalletTab = 'vouchers' | 'cashback' | 'credit';
 
 interface WalletOverview {
+  personalBalance: string;
   cashback: {
     eatoffCashbackBalance: string;
     totalCashbackBalance: string;
@@ -68,6 +69,9 @@ export default function MobileWallet() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<WalletTab>('vouchers');
   const queryClient = useQueryClient();
+  
+  // Payment modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   // Credit request form state
   const [showCreditForm, setShowCreditForm] = useState(false);
@@ -357,13 +361,19 @@ export default function MobileWallet() {
 
         {/* Quick Actions */}
         <div className="flex gap-3">
-          <button className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-3.5 rounded-2xl font-semibold">
+          <button 
+            onClick={() => setLocation('/m/explore')}
+            className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-3.5 rounded-2xl font-semibold"
+          >
             <ArrowDownLeft className="w-5 h-5" />
-            Buy Voucher
+            Cumpără Voucher
           </button>
-          <button className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-900 py-3.5 rounded-2xl font-semibold">
-            <ArrowUpRight className="w-5 h-5" />
-            Use Voucher
+          <button 
+            onClick={() => setShowPaymentModal(true)}
+            className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-900 py-3.5 rounded-2xl font-semibold"
+          >
+            <CreditCard className="w-5 h-5" />
+            Plătește
           </button>
         </div>
 
@@ -1035,6 +1045,211 @@ export default function MobileWallet() {
           )}
         </section>
       </div>
+      
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <PaymentModal 
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          personalBalance={parseFloat(walletOverview?.personalBalance || '0')}
+          cashbackBalance={parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0')}
+          creditBalance={walletOverview?.credit?.status === 'approved' ? parseFloat(walletOverview?.credit?.availableCredit || '0') : 0}
+          vouchers={vouchers}
+        />
+      )}
     </MobileLayout>
+  );
+}
+
+// Payment Modal Component
+interface PaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  personalBalance: number;
+  cashbackBalance: number;
+  creditBalance: number;
+  vouchers: any[];
+}
+
+function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, creditBalance, vouchers }: PaymentModalProps) {
+  const [totalAmount, setTotalAmount] = useState('');
+  const [allocations, setAllocations] = useState<Record<string, number>>({
+    personal: 0,
+    cashback: 0,
+    credit: 0
+  });
+  const [voucherAllocations, setVoucherAllocations] = useState<Record<number, number>>({});
+  
+  const totalAllocated = allocations.personal + allocations.cashback + allocations.credit + 
+    Object.values(voucherAllocations).reduce((sum, val) => sum + val, 0);
+  const remaining = parseFloat(totalAmount || '0') - totalAllocated;
+  
+  const handleAllocationChange = (source: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setAllocations(prev => ({ ...prev, [source]: numValue }));
+  };
+  
+  const handleVoucherAllocationChange = (voucherId: number, value: string, maxValue: number) => {
+    const numValue = Math.min(parseFloat(value) || 0, maxValue);
+    setVoucherAllocations(prev => ({ ...prev, [voucherId]: numValue }));
+  };
+  
+  const activeVouchers = vouchers.filter(v => v.status === 'active');
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+      <div className="bg-white w-full rounded-t-3xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+          <h2 className="text-xl font-bold">Plătește</h2>
+          <button onClick={onClose} className="p-2 rounded-full bg-gray-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-4 space-y-6">
+          {/* Total Amount Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Suma de plată (RON)
+            </label>
+            <input
+              type="number"
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              placeholder="0.00"
+              className="w-full px-4 py-3 text-2xl font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary"
+            />
+          </div>
+          
+          {/* Payment Sources */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-gray-900">Selectează sursa de plată</h3>
+            
+            {/* Personal Balance */}
+            <div className="bg-blue-50 rounded-xl p-4">
+              <div className="flex justify-between items-center mb-2">
+                <div>
+                  <p className="font-medium text-blue-900">Sold Personal</p>
+                  <p className="text-sm text-blue-700">Disponibil: {personalBalance.toFixed(2)} RON</p>
+                </div>
+                <Wallet className="w-6 h-6 text-blue-600" />
+              </div>
+              <input
+                type="number"
+                value={allocations.personal || ''}
+                onChange={(e) => handleAllocationChange('personal', e.target.value)}
+                max={personalBalance}
+                placeholder="0.00"
+                className="w-full px-3 py-2 border border-blue-200 rounded-lg bg-white"
+              />
+            </div>
+            
+            {/* Cashback */}
+            {cashbackBalance > 0 && (
+              <div className="bg-green-50 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <p className="font-medium text-green-900">Cashback</p>
+                    <p className="text-sm text-green-700">Disponibil: {cashbackBalance.toFixed(2)} RON</p>
+                  </div>
+                  <TrendingUp className="w-6 h-6 text-green-600" />
+                </div>
+                <input
+                  type="number"
+                  value={allocations.cashback || ''}
+                  onChange={(e) => handleAllocationChange('cashback', e.target.value)}
+                  max={cashbackBalance}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 border border-green-200 rounded-lg bg-white"
+                />
+              </div>
+            )}
+            
+            {/* Credit */}
+            {creditBalance > 0 && (
+              <div className="bg-purple-50 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <p className="font-medium text-purple-900">Credit</p>
+                    <p className="text-sm text-purple-700">Disponibil: {creditBalance.toFixed(2)} RON</p>
+                  </div>
+                  <CreditCard className="w-6 h-6 text-purple-600" />
+                </div>
+                <input
+                  type="number"
+                  value={allocations.credit || ''}
+                  onChange={(e) => handleAllocationChange('credit', e.target.value)}
+                  max={creditBalance}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 border border-purple-200 rounded-lg bg-white"
+                />
+              </div>
+            )}
+            
+            {/* Vouchers */}
+            {activeVouchers.length > 0 && (
+              <div className="space-y-3">
+                <p className="font-medium text-gray-700">Vouchere</p>
+                {activeVouchers.map((voucher: any) => {
+                  const voucherValue = parseFloat(voucher.remainingValue || voucher.value || '0');
+                  return (
+                    <div key={voucher.id} className="bg-orange-50 rounded-xl p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <p className="font-medium text-orange-900">{voucher.restaurantName || 'Voucher'}</p>
+                          <p className="text-sm text-orange-700">Disponibil: {voucherValue.toFixed(2)} RON</p>
+                        </div>
+                        <Gift className="w-6 h-6 text-orange-600" />
+                      </div>
+                      <input
+                        type="number"
+                        value={voucherAllocations[voucher.id] || ''}
+                        onChange={(e) => handleVoucherAllocationChange(voucher.id, e.target.value, voucherValue)}
+                        max={voucherValue}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 border border-orange-200 rounded-lg bg-white"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          
+          {/* Summary */}
+          <div className="bg-gray-100 rounded-xl p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-600">Total alocat:</span>
+              <span className="font-semibold">{totalAllocated.toFixed(2)} RON</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Rămâne de plătit:</span>
+              <span className={cn(
+                "font-bold text-lg",
+                remaining > 0 ? "text-red-600" : remaining < 0 ? "text-amber-600" : "text-green-600"
+              )}>
+                {remaining.toFixed(2)} RON
+              </span>
+            </div>
+          </div>
+          
+          {/* Generate QR Button */}
+          <button
+            disabled={remaining !== 0 || parseFloat(totalAmount || '0') <= 0}
+            className={cn(
+              "w-full py-4 rounded-2xl font-bold text-lg",
+              remaining === 0 && parseFloat(totalAmount || '0') > 0
+                ? "bg-primary text-white"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            )}
+          >
+            Generează Cod QR
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

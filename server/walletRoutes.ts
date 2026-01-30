@@ -722,7 +722,20 @@ router.get("/wallet/overview", async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required" });
     }
     
-    console.log('[WalletOverview] Fetching cashback balance...');
+    // Fetch personal balance from customers table
+    let personalBalance = "0.00";
+    try {
+      const [customer] = await db
+        .select({ balance: customers.balance })
+        .from(customers)
+        .where(eq(customers.id, customerId))
+        .limit(1);
+      personalBalance = customer?.balance || "0.00";
+    } catch (dbErr) {
+      console.error('[WalletOverview] Error fetching personal balance:', dbErr);
+    }
+    
+    // Fetch cashback balance
     let cashbackBalance: any = null;
     try {
       const result = await db
@@ -731,7 +744,6 @@ router.get("/wallet/overview", async (req: Request, res: Response) => {
         .where(eq(customerCashbackBalance.customerId, customerId))
         .limit(1);
       cashbackBalance = result[0];
-      console.log('[WalletOverview] Cashback balance fetched:', !!cashbackBalance);
     } catch (dbErr) {
       console.error('[WalletOverview] Error fetching cashback balance:', dbErr);
     }
@@ -800,8 +812,8 @@ router.get("/wallet/overview", async (req: Request, res: Response) => {
       console.error('[WalletOverview] Error fetching restaurant cashbacks:', dbErr);
     }
     
-    console.log('[WalletOverview] Building response...');
     const response = {
+      personalBalance,
       cashback: cashbackBalance || {
         eatoffCashbackBalance: "0.00",
         totalCashbackBalance: "0.00",
