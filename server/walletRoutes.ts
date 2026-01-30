@@ -2140,14 +2140,16 @@ router.post("/wallet/topup/create-checkout-session", async (req: Request, res: R
       return res.status(404).json({ message: "Customer not found" });
     }
 
+    console.log('[TopUp] Creating checkout session for amount:', amount, 'customerId:', customerId);
+    
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
-          currency: 'ron',
+          currency: 'eur',
           product_data: {
             name: 'Alimentare portofel EatOff',
-            description: `Top-up ${amount} Lei`,
+            description: `Top-up ${amount} EUR`,
           },
           unit_amount: Math.round(parseFloat(amount) * 100),
         },
@@ -2163,6 +2165,8 @@ router.post("/wallet/topup/create-checkout-session", async (req: Request, res: R
         amount: amount
       }
     });
+    
+    console.log('[TopUp] Checkout session created:', session.id, 'URL:', session.url);
 
     res.json({ url: session.url, sessionId: session.id });
   } catch (error: any) {
