@@ -375,27 +375,43 @@ export default function MobileWallet() {
       <div className="px-4 pt-4 pb-6 space-y-6">
         {/* Header Balance */}
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-6 text-white">
-          <p className="text-white/60 text-sm mb-1">Sold Total</p>
+          <div className="flex justify-between items-start mb-1">
+            <p className="text-white/60 text-sm">{t.walletTotalBalance || 'Sold Total'}</p>
+            <button 
+              onClick={() => setShowPaymentModal(true)}
+              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              {t.walletAddMoney || 'Adaugă bani'}
+            </button>
+          </div>
           <p className="text-4xl font-bold tracking-tight mb-4">
             {(
+              parseFloat(walletOverview?.personalBalance || '0') +
               parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0') +
               (walletOverview?.credit?.status === 'approved' ? parseFloat(walletOverview?.credit?.availableCredit || '0') : 0)
             ).toFixed(2)} RON
           </p>
           
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-3">
             <div>
-              <p className="text-white/50 text-xs">Vouchere</p>
-              <p className="text-lg font-semibold">{vouchers.length}</p>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs">Cashback</p>
-              <p className="text-lg font-semibold text-green-400">
-                {parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(2)} RON
+              <p className="text-white/50 text-xs">{t.walletPersonal || 'Personal'}</p>
+              <p className="text-lg font-semibold text-blue-400">
+                {parseFloat(walletOverview?.personalBalance || '0').toFixed(0)} RON
               </p>
             </div>
             <div>
-              <p className="text-white/50 text-xs">Credit</p>
+              <p className="text-white/50 text-xs">{t.vouchers || 'Vouchere'}</p>
+              <p className="text-lg font-semibold">{vouchers.length}</p>
+            </div>
+            <div>
+              <p className="text-white/50 text-xs">{t.walletCashback || 'Cashback'}</p>
+              <p className="text-lg font-semibold text-green-400">
+                {parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(0)} RON
+              </p>
+            </div>
+            <div>
+              <p className="text-white/50 text-xs">{t.walletCredit || 'Credit'}</p>
               <p className={cn(
                 "text-lg font-semibold",
                 walletOverview?.credit?.status === 'approved' ? "text-white" : "text-red-400"
@@ -403,8 +419,8 @@ export default function MobileWallet() {
                 {walletOverview?.credit?.status === 'approved' 
                   ? `${parseFloat(walletOverview?.credit?.availableCredit || '0').toFixed(0)} RON`
                   : walletOverview?.credit?.status === 'pending'
-                    ? 'În așteptare'
-                    : 'Nesolicitat'
+                    ? (t.walletPending || 'Așteptare')
+                    : (t.walletNotRequested || 'N/A')
                 }
               </p>
             </div>
@@ -418,14 +434,14 @@ export default function MobileWallet() {
             className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-3.5 rounded-2xl font-semibold"
           >
             <ArrowDownLeft className="w-5 h-5" />
-            Cumpără Voucher
+            {t.walletBuyVoucher || 'Cumpără Voucher'}
           </button>
           <button 
             onClick={() => setShowPaymentModal(true)}
             className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-900 py-3.5 rounded-2xl font-semibold"
           >
             <CreditCard className="w-5 h-5" />
-            Plătește
+            {t.walletPay || 'Plătește'}
           </button>
         </div>
 
@@ -459,12 +475,12 @@ export default function MobileWallet() {
         {/* Tab Content */}
         {activeTab === 'vouchers' && (
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-900">Active Vouchers</h3>
+            <h3 className="font-semibold text-gray-900">{t.walletActiveVouchers || 'Vouchere Active'}</h3>
             {vouchers.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-2xl">
                 <Gift className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 mb-4">No active vouchers</p>
-                <button className="text-primary font-medium">Buy your first voucher</button>
+                <p className="text-gray-500 mb-4">{t.walletNoActiveVouchers || 'Nu ai vouchere active'}</p>
+                <button className="text-primary font-medium">{t.walletBuyFirstVoucher || 'Cumpără primul tău voucher'}</button>
               </div>
             ) : (
               vouchers.map((voucher: any) => {
@@ -552,25 +568,25 @@ export default function MobileWallet() {
             {/* EatOff Cashback Balance */}
             <div className="bg-green-50 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-green-700 font-medium">EatOff Cashback</p>
+                <p className="text-green-700 font-medium">{t.walletEatoffCashback || 'Cashback EatOff'}</p>
                 <p className="text-2xl font-bold text-green-700">
                   {parseFloat(walletOverview?.cashback?.eatoffCashbackBalance || '0').toFixed(2)} RON
                 </p>
               </div>
-              <p className="text-sm text-green-600/70">Se aplică automat la plată</p>
+              <p className="text-sm text-green-600/70">{t.walletAppliedAutomatically || 'Se aplică automat la plată'}</p>
             </div>
 
             {/* Total Cashback Stats */}
             <div className="bg-white border border-gray-100 rounded-2xl p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-500">Total câștigat</p>
+                  <p className="text-xs text-gray-500">{t.walletTotalEarned || 'Total câștigat'}</p>
                   <p className="text-lg font-bold text-gray-900">
                     {parseFloat(walletOverview?.cashback?.totalCashbackEarned || '0').toFixed(2)} RON
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Total folosit</p>
+                  <p className="text-xs text-gray-500">{t.walletTotalUsed || 'Total folosit'}</p>
                   <p className="text-lg font-bold text-gray-900">
                     {parseFloat(walletOverview?.cashback?.totalCashbackUsed || '0').toFixed(2)} RON
                   </p>
@@ -583,7 +599,7 @@ export default function MobileWallet() {
               <>
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Grupuri Cashback
+                  {t.walletCashbackGroups || 'Grupuri Cashback'}
                 </h3>
                 {walletOverview.cashbackEnrollments.map((item, index) => (
                   <div key={index} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between">
@@ -604,7 +620,7 @@ export default function MobileWallet() {
               <>
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <BadgePercent className="w-4 h-4" />
-                  Grupuri Fidelizare
+                  {t.walletLoyaltyGroups || 'Grupuri Fidelizare'}
                 </h3>
                 {walletOverview.loyaltyEnrollments.map((item, index) => (
                   <div key={index} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between">
@@ -623,7 +639,7 @@ export default function MobileWallet() {
             {/* Restaurant Cashbacks */}
             {walletOverview?.restaurantCashbacks && walletOverview.restaurantCashbacks.length > 0 && (
               <>
-                <h3 className="font-semibold text-gray-900">Cashback per Restaurant</h3>
+                <h3 className="font-semibold text-gray-900">{t.walletCashbackPerRestaurant || 'Cashback per Restaurant'}</h3>
                 {walletOverview.restaurantCashbacks.map((rc, index) => (
                   <div key={index} className="bg-white border border-gray-100 rounded-2xl p-3 flex items-center justify-between">
                     <div>
@@ -641,8 +657,8 @@ export default function MobileWallet() {
              (!walletOverview?.loyaltyEnrollments || walletOverview.loyaltyEnrollments.length === 0) && (
               <div className="text-center py-8 bg-gray-50 rounded-2xl">
                 <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 mb-2">Nu ești înrolat în niciun grup de cashback</p>
-                <p className="text-sm text-gray-400">Vizitează restaurantele partenere pentru a te înscrie</p>
+                <p className="text-gray-500 mb-2">{t.walletNoCashbackEnrolled || 'Nu ești înrolat în niciun grup de cashback'}</p>
+                <p className="text-sm text-gray-400">{t.walletVisitPartnerRestaurants || 'Vizitează restaurantele partenere pentru a te înscrie'}</p>
               </div>
             )}
           </div>
@@ -654,8 +670,8 @@ export default function MobileWallet() {
             {!walletOverview?.credit && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
                 <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-600 font-medium">Se încarcă datele...</p>
-                <p className="text-sm text-gray-400 mt-1">Dacă problema persistă, reîncărcați pagina</p>
+                <p className="text-gray-600 font-medium">{t.walletLoadingData || 'Se încarcă datele...'}</p>
+                <p className="text-sm text-gray-400 mt-1">{t.walletReloadPage || 'Dacă problema persistă, reîncărcați pagina'}</p>
               </div>
             )}
             
