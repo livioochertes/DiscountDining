@@ -1110,7 +1110,7 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="bg-white rounded-lg p-3">
         <p className="text-sm text-gray-600 mb-1">
-          Suma: <span className="font-semibold">{amount} Lei</span>
+          Suma: <span className="font-semibold">{amount} EUR</span>
         </p>
       </div>
       <div className="bg-white rounded-lg p-3">
@@ -1147,7 +1147,7 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
               Se procesează...
             </>
           ) : (
-            `Plătește ${amount} Lei`
+            `Plătește ${amount} EUR`
           )}
         </button>
       </div>
@@ -1209,6 +1209,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
       
       // For native mobile, use Stripe Checkout Session with redirect
       if (Capacitor.isNativePlatform()) {
+        console.log('[TopUp] Creating checkout session for mobile...');
         const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-checkout-session`, {
           method: 'POST',
           headers,
@@ -1216,18 +1217,30 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
           body: JSON.stringify({ amount: topUpAmount })
         });
         
+        const data = await response.json();
+        console.log('[TopUp] Response:', response.status, data);
+        
         if (!response.ok) {
-          const data = await response.json();
           throw new Error(data.message || 'Eroare la crearea plății');
         }
         
-        const data = await response.json();
         // Open Stripe checkout in external browser
         if (data.url) {
-          const { Browser } = await import('@capacitor/browser');
-          await Browser.open({ url: data.url });
-          setShowTopUp(false);
-          setTopUpAmount('');
+          console.log('[TopUp] Opening browser with URL:', data.url);
+          try {
+            const { Browser } = await import('@capacitor/browser');
+            await Browser.open({ url: data.url, windowName: '_blank' });
+            setShowTopUp(false);
+            setTopUpAmount('');
+          } catch (browserErr: any) {
+            console.error('[TopUp] Browser error:', browserErr);
+            // Fallback: try opening in system browser
+            window.open(data.url, '_system');
+            setShowTopUp(false);
+            setTopUpAmount('');
+          }
+        } else {
+          throw new Error('Nu s-a putut crea sesiunea de plată');
         }
       } else {
         // For web, use Payment Intent with embedded Elements
