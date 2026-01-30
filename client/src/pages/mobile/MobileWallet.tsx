@@ -1110,7 +1110,7 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="bg-white rounded-lg p-3">
         <p className="text-sm text-gray-600 mb-1">
-          Suma: <span className="font-semibold">{amount} RON</span>
+          Suma: <span className="font-semibold">{amount} Lei</span>
         </p>
       </div>
       <div className="bg-white rounded-lg p-3">
@@ -1147,7 +1147,7 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
               Se procesează...
             </>
           ) : (
-            `Plătește ${amount} RON`
+            `Plătește ${amount} Lei`
           )}
         </button>
       </div>
@@ -1378,7 +1378,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
                 ) : (
                   <>
                     <div className="flex gap-2 mb-3">
-                      {[50, 100, 200, 500].map((val) => (
+                      {[200, 300, 500, 1000].map((val) => (
                         <button
                           key={val}
                           onClick={() => setTopUpAmount(val.toString())}
@@ -1389,7 +1389,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
                               : "bg-white text-blue-700 border border-blue-300"
                           )}
                         >
-                          {val} RON
+                          {val}
                         </button>
                       ))}
                     </div>
