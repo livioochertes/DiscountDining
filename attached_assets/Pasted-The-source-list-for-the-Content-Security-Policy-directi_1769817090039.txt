@@ -1,0 +1,170 @@
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.Understand this error
+142The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?Understand this error
+142The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.Understand this error
+DiscountDining:1 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.Understand this error
+DiscountDining:1 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?Understand this error
+DiscountDining:1 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.Understand this error
+d5fe82125a9b1e7f.js:2 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+d5fe82125a9b1e7f.js:2 Download the Apollo DevTools for a better development experience: https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm
+installHook.js:1 [ai-chat] Creating connection with chat proxy enabled
+overrideMethod @ installHook.js:1Understand this warning
+d5fe82125a9b1e7f.js:2 [LaunchDarkly] LaunchDarkly client initialized
+89Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'ambient-light-sensor'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'battery'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'execution-while-not-rendered'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'execution-while-out-of-viewport'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'layout-animations'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'legacy-image-formats'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'navigation-override'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'oversized-images'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'publickey-credentials'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'speaker-selection'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'unoptimized-images'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'unsized-media'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'pointer-lock'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Allow attribute will take precedence over 'allowfullscreen'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+9a2446c69ceea6f9.js:2 Allow attribute will take precedence over 'allowpaymentrequest'.
+z @ 9a2446c69ceea6f9.js:2Understand this warning
+4DiscountDining:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was receivedUnderstand this error
+installHook.js:1 Cache data may be lost when replacing the hostingBuildDeployActionUpdates field of a Subscription object.
+
+This could cause additional (usually avoidable) network requests to fetch data that were otherwise cached.
+
+To address this problem (which is not a bug in Apollo Client), either ensure all objects of type HostingBuildDeployLogAction and HostingBuildDeployStatusAction have an ID or a custom merge function, or define a custom merge function for the Subscription.hostingBuildDeployActionUpdates field, so InMemoryCache can safely merge these objects:
+
+  existing: {"__typename":"HostingBuildDeployLogAction","log":"\r\u001b[38;2;169;169;169m2026-01-30T14:42:07Z\u001b[37m \u001b[32minfo\u001b[37m: Build: b661ae0e-66e0-43bf-ae12-5fb76d5eddf7\r\n"}
+  incoming: {"__typename":"HostingBuildDeployStatusAction","status":"security_scanning","message":null,"debugSummary":null}
+
+For more information about these options, please refer to the documentation:
+
+  * Ensuring entity objects have IDs: https://go.apollo.dev/c/generating-unique-identifiers
+  * Defining custom merge functions: https://go.apollo.dev/c/merging-non-normalized-objects
+
+overrideMethod @ installHook.js:1Understand this warning
+t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://eatoff.app/&size=32:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://eatoff.app&size=32:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+installHook.js:1 [Coframe] Mutation callback infinite loop protection triggered, disconnecting mutation observer Object
+overrideMethod @ installHook.js:1Understand this error
+t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://eatoff.app&size=32:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+47aa3df8927f381f6.js:2 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'version')
+    at l (7aa3df8927f381f6.js:2:28259)
+    at c (7aa3df8927f381f6.js:2:29159)
+    at 7aa3df8927f381f6.js:2:30214
+    at Object.next (7541a3aaa165c9c4.js:2:4315)
+    at t (7541a3aaa165c9c4.js:2:11493)
+    at a (7541a3aaa165c9c4.js:2:11690)
+    at 7541a3aaa165c9c4.js:2:11749
+    at new Promise (<anonymous>)
+    at 7541a3aaa165c9c4.js:2:11631
+    at o.handleReconnect (7aa3df8927f381f6.js:2:32321)
+    at 7aa3df8927f381f6.js:2:26313
+    at Object.next (7541a3aaa165c9c4.js:2:4315)
+    at t (7541a3aaa165c9c4.js:2:11493)
+    at a (7541a3aaa165c9c4.js:2:11690)
+    at 7541a3aaa165c9c4.js:2:11749
+    at new Promise (<anonymous>)
+    at 7541a3aaa165c9c4.js:2:11631
+    at o.handleStatus (7aa3df8927f381f6.js:2:27784)
+    at 7aa3df8927f381f6.js:2:36586
+    at 67483a7e2b2224d3.js:2:14990
+    at Array.forEach (<anonymous>)
+    at e.handleCommand (67483a7e2b2224d3.js:2:14963)
+    at WebSocket.onSocketMessage (67483a7e2b2224d3.js:2:81156)Understand this error
+js.stripe.com/v3/.deploy_status_henson.json:1  Failed to load resource: net::ERR_NETWORK_IO_SUSPENDEDUnderstand this error
+js.stripe.com/v3/.deploy_status_henson.json:1  Failed to load resource: net::ERR_NETWORK_IO_SUSPENDEDUnderstand this error
+js.stripe.com/v3/.deploy_status_henson.json:1  Failed to load resource: net::ERR_NETWORK_IO_SUSPENDEDUnderstand this error
+js.stripe.com/v3/.deploy_status_henson.json:1  Failed to load resource: net::ERR_NETWORK_IO_SUSPENDEDUnderstand this error
+37aa3df8927f381f6.js:2 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'version')
+    at l (7aa3df8927f381f6.js:2:28259)
+    at c (7aa3df8927f381f6.js:2:29159)
+    at 7aa3df8927f381f6.js:2:30214
+    at Object.next (7541a3aaa165c9c4.js:2:4315)
+    at t (7541a3aaa165c9c4.js:2:11493)
+    at a (7541a3aaa165c9c4.js:2:11690)
+    at 7541a3aaa165c9c4.js:2:11749
+    at new Promise (<anonymous>)
+    at 7541a3aaa165c9c4.js:2:11631
+    at o.handleReconnect (7aa3df8927f381f6.js:2:32321)
+    at 7aa3df8927f381f6.js:2:26313
+    at Object.next (7541a3aaa165c9c4.js:2:4315)
+    at t (7541a3aaa165c9c4.js:2:11493)
+    at a (7541a3aaa165c9c4.js:2:11690)
+    at 7541a3aaa165c9c4.js:2:11749
+    at new Promise (<anonymous>)
+    at 7541a3aaa165c9c4.js:2:11631
+    at o.handleStatus (7aa3df8927f381f6.js:2:27784)
+    at 7aa3df8927f381f6.js:2:36586
+    at 67483a7e2b2224d3.js:2:14990
+    at Array.forEach (<anonymous>)
+    at e.handleCommand (67483a7e2b2224d3.js:2:14963)
+    at WebSocket.onSocketMessage (67483a7e2b2224d3.js:2:81156)Understand this error
+/graphql:1  Failed to load resource: net::ERR_CONNECTION_CLOSEDUnderstand this error
+stallwart.build.js:1 stallwart: failed ping 1
+stallwart.build.js:1 stallwart: failed ping 2
+stallwart.build.js:1 stallwart: failed ping 3
+region1.analytics.google.com/g/collect?v=2&tid=G-MPJY3F1YEL&gtm=45je61r1h1v9135634466za20g&_p=1769782901146&gcd=13l3lPl2l2l1&npa=0&dma_cps=syphamo&dma=1&ul=en-us&sr=1710x1107&cid=1565779592.1762280319&ecid=1369728313&ir=1&uaa=arm&uab=64&uafvl=Not(A%253ABrand%3B8.0.0.0%7CChromium%3B144.0.7559.97%7CGoogle%2520Chrome%3B144.0.7559.97&uamb=0&uam=&uap=macOS&uapv=26.2.0&uaw=0&are=1&frm=0&pscdl=noapi&_eu=EBAIAGQ&tag_exp=103116026~103200004~104527907~104528501~104684208~104684211~115938465~115938469~116185181~116185182~116988315~117041588&dl=https%3A%2F%2Freplit.com%2F%40livioochertes%2FDiscountDining&dp=%2F%40livioochertes%2FDiscountDining&dt=replEnvironmentDesktop&sid=1769799340&sct=214&seg=1&_tu=wAQ&_s=226&tfd=22528176:1  Failed to load resource: net::ERR_CONNECTION_CLOSEDUnderstand this error
+t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://array.map&size=32:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://array.map/&size=32:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://array.map&size=32:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://array.map/&size=32:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+Grammarly-check.js:1 [Violation] Permissions policy violation: unload is not allowed in this document.
+(anonymous) @ Grammarly-check.js:1Understand this error
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'battery'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'layout-animations'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'navigation-override'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'oversized-images'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Unrecognized feature: 'unsized-media'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/__replco/workspace_iframe.html?initialPath=%2Fchef-profile&id=%3Ar15hv%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/restaurant-portal/auth/user:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/auth/user:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/dietary/recommendations?:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/auth/user:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+images.unsplash.com/photo-1563379091339-03246963d51a?w=320&h=192&fit=crop&fm=webp&q=80:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+images.unsplash.com/photo-1565299585323-38174c8617c1?w=320&h=192&fit=crop&fm=webp&q=80:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+images.unsplash.com/photo-1563379091339-03246963d51a?w=320&h=192&fit=crop&fm=webp&q=80:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/auth/user:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+injected.js:37 [QueryClient] Platform detection: Object
+0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev:5000/api/auth/user:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+stallwart.build.js:1 stallwart: failed ping 1
+stallwart.build.js:1 stallwart: failed ping 2
+stallwart.build.js:1 stallwart: failed ping 3
+stallwart.build.js:1 stallwart: failed ping 4
+stallwart.build.js:1 stallwart: failed ping 5
+stallwart.build.js:1 stallwart: session stalled

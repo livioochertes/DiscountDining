@@ -1713,7 +1713,7 @@ function CommissionsTab() {
 // Chef Management Tab
 function ChefManagementTab() {
   const [search, setSearch] = useState("");
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("");
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("all");
   const [featuredFilter, setFeaturedFilter] = useState<string>("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingChef, setEditingChef] = useState<any>(null);
@@ -1758,7 +1758,7 @@ function ChefManagementTab() {
         }
       }
 
-      if (selectedRestaurantId && String(chef.restaurantId) !== selectedRestaurantId) {
+      if (selectedRestaurantId && selectedRestaurantId !== "all" && String(chef.restaurantId) !== selectedRestaurantId) {
         return false;
       }
 
@@ -1858,7 +1858,7 @@ function ChefManagementTab() {
                 <SelectValue placeholder="All Restaurants" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Restaurants</SelectItem>
+                <SelectItem value="all">All Restaurants</SelectItem>
                 {restaurants.map((r: any) => (
                   <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
                 ))}
