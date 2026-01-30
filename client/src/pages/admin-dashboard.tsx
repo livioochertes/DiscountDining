@@ -2009,6 +2009,13 @@ export default function AdminDashboard() {
     company: 'all'
   });
   const [restaurantGroupBy, setRestaurantGroupBy] = useState<'none' | 'marketplace' | 'city'>('none');
+  
+  // Partner filtering and grouping
+  const [partnerFilter, setPartnerFilter] = useState({
+    status: 'all',
+    verified: 'all'
+  });
+  const [partnerGroupBy, setPartnerGroupBy] = useState<'none' | 'status' | 'verified'>('none');
   const [isAddMenuItemModalOpen, setIsAddMenuItemModalOpen] = useState(false);
   const [isEditMenuItemModalOpen, setIsEditMenuItemModalOpen] = useState(false);
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
@@ -3643,6 +3650,46 @@ export default function AdminDashboard() {
                     Add New Partner
                   </Button>
                 </div>
+                
+                {/* Partner Filters */}
+                <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Status:</span>
+                    <select
+                      className="border rounded px-2 py-1 text-sm"
+                      value={partnerFilter.status}
+                      onChange={(e) => setPartnerFilter(prev => ({ ...prev, status: e.target.value }))}
+                    >
+                      <option value="all">All</option>
+                      <option value="active">Active</option>
+                      <option value="suspended">Suspended</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Verified:</span>
+                    <select
+                      className="border rounded px-2 py-1 text-sm"
+                      value={partnerFilter.verified}
+                      onChange={(e) => setPartnerFilter(prev => ({ ...prev, verified: e.target.value }))}
+                    >
+                      <option value="all">All</option>
+                      <option value="verified">Verified</option>
+                      <option value="unverified">Unverified</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Group by:</span>
+                    <select
+                      className="border rounded px-2 py-1 text-sm"
+                      value={partnerGroupBy}
+                      onChange={(e) => setPartnerGroupBy(e.target.value as 'none' | 'status' | 'verified')}
+                    >
+                      <option value="none">No grouping</option>
+                      <option value="status">Status</option>
+                      <option value="verified">Verification</option>
+                    </select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {partnersLoading ? (
@@ -3652,67 +3699,114 @@ export default function AdminDashboard() {
                   </div>
                 ) : partners && partners.length > 0 ? (
                   <div className="space-y-4">
-                    {partners.map((partner) => (
-                      <div key={partner.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-4">
-                            <div>
-                              <h4 className="font-semibold text-lg">{partner.companyName}</h4>
-                              <p className="text-sm text-muted-foreground">VAT: {partner.vatCode}</p>
-                              <div className="mt-1 space-y-1">
-                                {partner.contactPersonPhone && (
-                                  <p className="text-xs text-muted-foreground">📞 {partner.contactPersonPhone}</p>
-                                )}
-                                {partner.contactPersonEmail && (
-                                  <p className="text-xs text-muted-foreground">✉️ {partner.contactPersonEmail}</p>
-                                )}
-                                {partner.companyEmail && partner.companyEmail !== partner.contactPersonEmail && (
-                                  <p className="text-xs text-muted-foreground">🏢 {partner.companyEmail}</p>
-                                )}
+                    {(() => {
+                      // Apply filters
+                      let filtered = [...partners];
+                      if (partnerFilter.status !== 'all') {
+                        filtered = filtered.filter(p => 
+                          partnerFilter.status === 'active' ? p.isActive : !p.isActive
+                        );
+                      }
+                      if (partnerFilter.verified !== 'all') {
+                        filtered = filtered.filter(p => 
+                          partnerFilter.verified === 'verified' ? p.isVerified : !p.isVerified
+                        );
+                      }
+                      
+                      // Partner card renderer
+                      const renderPartnerCard = (partner: Partner) => (
+                        <div key={partner.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-4">
+                              <div>
+                                <h4 className="font-semibold text-lg">{partner.companyName}</h4>
+                                <p className="text-sm text-muted-foreground">VAT: {partner.vatCode}</p>
+                                <div className="mt-1 space-y-1">
+                                  {partner.contactPersonPhone && (
+                                    <p className="text-xs text-muted-foreground">📞 {partner.contactPersonPhone}</p>
+                                  )}
+                                  {partner.contactPersonEmail && (
+                                    <p className="text-xs text-muted-foreground">✉️ {partner.contactPersonEmail}</p>
+                                  )}
+                                  {partner.companyEmail && partner.companyEmail !== partner.contactPersonEmail && (
+                                    <p className="text-xs text-muted-foreground">🏢 {partner.companyEmail}</p>
+                                  )}
+                                </div>
                               </div>
                             </div>
+                            <div className="mt-2 flex items-center space-x-4 text-sm">
+                              <span className="text-muted-foreground">
+                                <strong>Contact:</strong> {partner.contactPersonName} ({partner.contactPersonTitle})
+                              </span>
+                              <span className="text-muted-foreground">
+                                <strong>Restaurants:</strong> {partner.restaurantCount || 0}
+                              </span>
+                              <span className="text-muted-foreground">
+                                <strong>Revenue:</strong> €{partner.totalRevenue?.toFixed(2) || '0.00'}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex space-x-2">
+                              <Badge variant={partner.isVerified ? "default" : "secondary"}>
+                                {partner.isVerified ? "Verified" : "Unverified"}
+                              </Badge>
+                              <Badge variant={partner.isActive ? "default" : "destructive"}>
+                                {partner.isActive ? "Active" : "Suspended"}
+                              </Badge>
+                            </div>
                           </div>
-                          <div className="mt-2 flex items-center space-x-4 text-sm">
-                            <span className="text-muted-foreground">
-                              <strong>Contact:</strong> {partner.contactPersonName} ({partner.contactPersonTitle})
-                            </span>
-                            <span className="text-muted-foreground">
-                              <strong>Restaurants:</strong> {partner.restaurantCount || 0}
-                            </span>
-                            <span className="text-muted-foreground">
-                              <strong>Revenue:</strong> €{partner.totalRevenue?.toFixed(2) || '0.00'}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex space-x-2">
-                            <Badge variant={partner.isVerified ? "default" : "secondary"}>
-                              {partner.isVerified ? "Verified" : "Unverified"}
-                            </Badge>
-                            <Badge variant={partner.isActive ? "default" : "destructive"}>
-                              {partner.isActive ? "Active" : "Suspended"}
-                            </Badge>
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditPartnerModal(partner)}
+                              disabled={partnerLoading}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={partner.isActive ? "destructive" : "default"}
+                              onClick={() => togglePartnerStatus(partner.id, partner.isActive)}
+                              disabled={partnerLoading}
+                            >
+                              {partner.isActive ? "Suspend" : "Activate"}
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditPartnerModal(partner)}
-                            disabled={partnerLoading}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={partner.isActive ? "destructive" : "default"}
-                            onClick={() => togglePartnerStatus(partner.id, partner.isActive)}
-                            disabled={partnerLoading}
-                          >
-                            {partner.isActive ? "Suspend" : "Activate"}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                      
+                      // Apply grouping
+                      if (partnerGroupBy === 'none') {
+                        return filtered.length > 0 ? filtered.map(renderPartnerCard) : (
+                          <div className="text-center py-4 text-muted-foreground">No partners match the filters</div>
+                        );
+                      } else {
+                        // Group by status or verified
+                        const groups: Record<string, Partner[]> = {};
+                        filtered.forEach(p => {
+                          const key = partnerGroupBy === 'status' 
+                            ? (p.isActive ? 'Active' : 'Suspended')
+                            : (p.isVerified ? 'Verified' : 'Unverified');
+                          if (!groups[key]) groups[key] = [];
+                          groups[key].push(p);
+                        });
+                        
+                        return Object.entries(groups).map(([groupName, groupPartners]) => (
+                          <div key={groupName} className="mb-6">
+                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                              <span className={`w-3 h-3 rounded-full ${
+                                groupName === 'Active' || groupName === 'Verified' ? 'bg-green-500' : 'bg-red-500'
+                              }`}></span>
+                              {groupName} ({groupPartners.length})
+                            </h3>
+                            <div className="space-y-3">
+                              {groupPartners.map(renderPartnerCard)}
+                            </div>
+                          </div>
+                        ));
+                      }
+                    })()}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
