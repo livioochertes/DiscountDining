@@ -426,6 +426,57 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // Update restaurant details (location, address, phone)
+  app.put("/api/admin/restaurants/:id/update-details", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { location, address, phone } = req.body;
+
+      // Validate that at least one field is provided
+      if (!location && !address && !phone) {
+        return res.status(400).json({ message: "At least one field (location, address, or phone) is required" });
+      }
+
+      const [oldRestaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, parseInt(id)));
+
+      if (!oldRestaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const updateData: any = {};
+      if (location && typeof location === 'string' && location.trim()) updateData.location = location.trim();
+      if (address && typeof address === 'string') updateData.address = address.trim();
+      if (phone && typeof phone === 'string') updateData.phone = phone.trim();
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+
+      await db
+        .update(restaurants)
+        .set(updateData)
+        .where(eq(restaurants.id, parseInt(id)));
+
+      await logAdminAction(
+        req.adminId!,
+        "update_restaurant_details",
+        "restaurant",
+        id,
+        { location: oldRestaurant.location, address: oldRestaurant.address, phone: oldRestaurant.phone },
+        updateData,
+        req
+      );
+
+      res.json({ message: "Restaurant details updated successfully" });
+    } catch (error) {
+      console.error("Update restaurant details error:", error);
+      res.status(500).json({ message: "Failed to update restaurant details" });
+    }
+  });
+
   // Update restaurant status
   app.patch("/api/admin/restaurants/:id/status", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
