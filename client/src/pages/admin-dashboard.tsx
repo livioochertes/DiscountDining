@@ -1711,7 +1711,7 @@ function CommissionsTab() {
 }
 
 // Chef Management Tab
-function ChefManagementTab({ adminToken }: { adminToken: string }) {
+function ChefManagementTab() {
   const [search, setSearch] = useState("");
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("");
   const [featuredFilter, setFeaturedFilter] = useState<string>("all");
@@ -1719,29 +1719,29 @@ function ChefManagementTab({ adminToken }: { adminToken: string }) {
   const [editingChef, setEditingChef] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const getToken = () => localStorage.getItem('adminToken') || '';
 
   const { data: chefs = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/chefs"],
     queryFn: async () => {
       const res = await fetch("/api/admin/chefs", {
-        headers: { Authorization: `Bearer ${adminToken}` }
+        headers: { Authorization: `Bearer ${getToken()}` }
       });
       if (!res.ok) throw new Error("Failed to fetch chefs");
       return res.json();
     },
-    enabled: !!adminToken,
   });
 
   const { data: restaurants = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/restaurants"],
     queryFn: async () => {
       const res = await fetch("/api/admin/restaurants", {
-        headers: { Authorization: `Bearer ${adminToken}` }
+        headers: { Authorization: `Bearer ${getToken()}` }
       });
       if (!res.ok) throw new Error("Failed to fetch restaurants");
       return res.json();
     },
-    enabled: !!adminToken,
   });
 
   const filteredChefs = useMemo(() => {
@@ -1775,7 +1775,7 @@ function ChefManagementTab({ adminToken }: { adminToken: string }) {
         method: "PATCH",
         headers: { 
           "Content-Type": "application/json",
-          Authorization: `Bearer ${adminToken}` 
+          Authorization: `Bearer ${getToken()}` 
         },
         body: JSON.stringify({ isFeatured: !currentFeatured })
       });
@@ -1792,7 +1792,7 @@ function ChefManagementTab({ adminToken }: { adminToken: string }) {
     try {
       const res = await fetch(`/api/admin/chefs/${chefId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${adminToken}` }
+        headers: { Authorization: `Bearer ${getToken()}` }
       });
       if (!res.ok) throw new Error("Failed to delete chef");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/chefs"] });
@@ -1812,7 +1812,7 @@ function ChefManagementTab({ adminToken }: { adminToken: string }) {
         method,
         headers: { 
           "Content-Type": "application/json",
-          Authorization: `Bearer ${adminToken}` 
+          Authorization: `Bearer ${getToken()}` 
         },
         body: JSON.stringify(data)
       });
@@ -4400,7 +4400,7 @@ export default function AdminDashboard() {
           )}
 
           {selectedTab === "chefs" && (
-            <ChefManagementTab adminToken={adminToken || ""} />
+            <ChefManagementTab />
           )}
 
           {selectedTab === "settings" && (
