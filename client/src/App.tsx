@@ -40,6 +40,7 @@ import Support from "@/pages/support";
 import RestaurantSuccessStories from "@/pages/restaurant-success-stories";
 import RestaurantHelp from "@/pages/restaurant-help";
 import ChefProfile from "@/pages/chef-profile";
+import ChefsList from "@/pages/chefs-list";
 import { MenuCart } from "@/components/menu-cart";
 import { GlobalRestaurantSwitchDialog } from "@/components/GlobalRestaurantSwitchDialog";
 import CookieConsent from "@/components/CookieConsent";
@@ -308,7 +309,9 @@ function Router() {
       {/* Restaurant Help */}
       <Route path="/restaurant-help" component={RestaurantHelp} />
       
-      {/* Chef Profile */}
+      {/* Chefs */}
+      <Route path="/chefs" component={ChefsList} />
+      <Route path="/chef/:id" component={ChefProfile} />
       <Route path="/chef-profile" component={ChefProfile} />
       <Route path="/chef-profile/:id" component={ChefProfile} />
       

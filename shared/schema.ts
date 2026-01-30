@@ -214,6 +214,7 @@ export const menuItems = pgTable("menu_items", {
   calories: integer("calories"),
   preparationTime: integer("preparation_time"), // in minutes
   isPopular: boolean("is_popular").default(false),
+  signatureChefId: integer("signature_chef_id"), // Chef who created this signature dish
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1776,13 +1777,21 @@ export type InsertRecipeComment = z.infer<typeof insertRecipeCommentSchema>;
 
 export const chefProfiles = pgTable("chef_profiles", {
   id: serial("id").primaryKey(),
-  customerId: integer("customer_id").references(() => customers.id).notNull().unique(),
+  
+  // Restaurant association - chef belongs to a restaurant (required)
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  
+  // Optional customer link (if chef is also a registered customer)
+  customerId: integer("customer_id").references(() => customers.id).unique(),
   
   // Chef Info
   chefName: text("chef_name").notNull(),
   bio: text("bio"),
   profileImage: text("profile_image"),
   coverImage: text("cover_image"),
+  
+  // Professional Title (Head Chef, Sous Chef, Pastry Chef, etc.)
+  title: text("title"),
   
   // Expertise
   specialties: text("specialties").array(), // ["Italian", "French", "Pastry", "Grilling"]
@@ -1809,7 +1818,8 @@ export const chefProfiles = pgTable("chef_profiles", {
   recipesCount: integer("recipes_count").default(0),
   totalLikesReceived: integer("total_likes_received").default(0),
   
-  // Settings
+  // Featured & Settings
+  isFeatured: boolean("is_featured").default(false), // Featured on home page
   isPublic: boolean("is_public").default(true),
   acceptsCollaborations: boolean("accepts_collaborations").default(false),
   
@@ -1831,6 +1841,7 @@ export const insertChefProfileSchema = createInsertSchema(chefProfiles).omit({
   followingCount: true,
   recipesCount: true,
   totalLikesReceived: true,
+  isFeatured: true,
   createdAt: true,
   updatedAt: true,
 });

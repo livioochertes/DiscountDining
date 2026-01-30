@@ -15,7 +15,8 @@ import {
   insertMarketplaceSchema,
   walletTransactions,
   paymentTransactions,
-  geonamesCities
+  geonamesCities,
+  chefProfiles
 } from "@shared/schema";
 import { eq, and, gte, desc, sql, ilike, asc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -1670,6 +1671,235 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching countries:", error);
       res.status(500).json({ error: "Failed to fetch countries" });
+    }
+  });
+
+  // ============================================
+  // CHEF MANAGEMENT (Admin Only)
+  // ============================================
+
+  app.get("/api/admin/chefs", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { search, restaurantId, featured } = req.query;
+
+      const chefs = await db
+        .select({
+          chef: chefProfiles,
+          restaurant: {
+            id: restaurants.id,
+            name: restaurants.name,
+          }
+        })
+        .from(chefProfiles)
+        .leftJoin(restaurants, eq(chefProfiles.restaurantId, restaurants.id))
+        .orderBy(desc(chefProfiles.createdAt));
+
+      let filtered = chefs;
+
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        filtered = filtered.filter(c => 
+          c.chef.chefName.toLowerCase().includes(searchLower) ||
+          c.chef.title?.toLowerCase().includes(searchLower) ||
+          c.restaurant?.name?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      if (restaurantId) {
+        const restId = parseInt(restaurantId as string);
+        filtered = filtered.filter(c => c.chef.restaurantId === restId);
+      }
+
+      if (featured === 'true') {
+        filtered = filtered.filter(c => c.chef.isFeatured);
+      } else if (featured === 'false') {
+        filtered = filtered.filter(c => !c.chef.isFeatured);
+      }
+
+      res.json(filtered);
+    } catch (error) {
+      console.error("Error fetching chefs:", error);
+      res.status(500).json({ message: "Failed to fetch chefs" });
+    }
+  });
+
+  app.get("/api/admin/chefs/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const chefId = parseInt(id);
+
+      const [result] = await db
+        .select({
+          chef: chefProfiles,
+          restaurant: {
+            id: restaurants.id,
+            name: restaurants.name,
+          }
+        })
+        .from(chefProfiles)
+        .leftJoin(restaurants, eq(chefProfiles.restaurantId, restaurants.id))
+        .where(eq(chefProfiles.id, chefId));
+
+      if (!result) {
+        return res.status(404).json({ message: "Chef not found" });
+      }
+
+      const signatureDishes = await db
+        .select()
+        .from(menuItems)
+        .where(eq(menuItems.signatureChefId, chefId));
+
+      res.json({ ...result, signatureDishes });
+    } catch (error) {
+      console.error("Error fetching chef:", error);
+      res.status(500).json({ message: "Failed to fetch chef" });
+    }
+  });
+
+  app.post("/api/admin/chefs", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { restaurantId, chefName, title, bio, profileImage, coverImage, specialties, cuisineExpertise, cookingStyles, experienceLevel, yearsOfExperience, certifications, website, instagram, youtube, tiktok, isPublic, isFeatured } = req.body;
+
+      if (!restaurantId || !chefName) {
+        return res.status(400).json({ message: "Restaurant and chef name are required" });
+      }
+
+      const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, restaurantId));
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const [chef] = await db
+        .insert(chefProfiles)
+        .values({
+          restaurantId,
+          chefName,
+          title: title || null,
+          bio: bio || null,
+          profileImage: profileImage || null,
+          coverImage: coverImage || null,
+          specialties: specialties || [],
+          cuisineExpertise: cuisineExpertise || [],
+          cookingStyles: cookingStyles || [],
+          experienceLevel: experienceLevel || 'professional',
+          yearsOfExperience: yearsOfExperience || 0,
+          certifications: certifications || [],
+          website: website || null,
+          instagram: instagram || null,
+          youtube: youtube || null,
+          tiktok: tiktok || null,
+          isPublic: isPublic !== false,
+          isFeatured: isFeatured || false,
+        })
+        .returning();
+
+      await logAdminAction(req.adminId!, 'create_chef', 'chef', String(chef.id), null, chef, req);
+      res.status(201).json(chef);
+    } catch (error) {
+      console.error("Error creating chef:", error);
+      res.status(500).json({ message: "Failed to create chef" });
+    }
+  });
+
+  app.put("/api/admin/chefs/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const chefId = parseInt(id);
+
+      const [existing] = await db.select().from(chefProfiles).where(eq(chefProfiles.id, chefId));
+      if (!existing) {
+        return res.status(404).json({ message: "Chef not found" });
+      }
+
+      const updateData: any = { updatedAt: new Date() };
+      const fields = ['restaurantId', 'chefName', 'title', 'bio', 'profileImage', 'coverImage', 'specialties', 'cuisineExpertise', 'cookingStyles', 'experienceLevel', 'yearsOfExperience', 'certifications', 'website', 'instagram', 'youtube', 'tiktok', 'isPublic', 'isFeatured'];
+
+      fields.forEach(field => {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      });
+
+      const [updated] = await db
+        .update(chefProfiles)
+        .set(updateData)
+        .where(eq(chefProfiles.id, chefId))
+        .returning();
+
+      await logAdminAction(req.adminId!, 'update_chef', 'chef', String(chefId), existing, updated, req);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating chef:", error);
+      res.status(500).json({ message: "Failed to update chef" });
+    }
+  });
+
+  app.delete("/api/admin/chefs/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const chefId = parseInt(id);
+
+      const [existing] = await db.select().from(chefProfiles).where(eq(chefProfiles.id, chefId));
+      if (!existing) {
+        return res.status(404).json({ message: "Chef not found" });
+      }
+
+      await db.update(menuItems).set({ signatureChefId: null }).where(eq(menuItems.signatureChefId, chefId));
+      await db.delete(chefProfiles).where(eq(chefProfiles.id, chefId));
+
+      await logAdminAction(req.adminId!, 'delete_chef', 'chef', String(chefId), existing, null, req);
+      res.json({ message: "Chef deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting chef:", error);
+      res.status(500).json({ message: "Failed to delete chef" });
+    }
+  });
+
+  app.patch("/api/admin/chefs/:id/featured", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { isFeatured } = req.body;
+      const chefId = parseInt(id);
+
+      const [updated] = await db
+        .update(chefProfiles)
+        .set({ isFeatured, updatedAt: new Date() })
+        .where(eq(chefProfiles.id, chefId))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: "Chef not found" });
+      }
+
+      await logAdminAction(req.adminId!, 'toggle_chef_featured', 'chef', String(chefId), null, { isFeatured }, req);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating chef featured status:", error);
+      res.status(500).json({ message: "Failed to update chef" });
+    }
+  });
+
+  app.patch("/api/admin/menu-items/:id/signature-chef", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { signatureChefId } = req.body;
+      const menuItemId = parseInt(id);
+
+      const [updated] = await db
+        .update(menuItems)
+        .set({ signatureChefId: signatureChefId || null })
+        .where(eq(menuItems.id, menuItemId))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: "Menu item not found" });
+      }
+
+      await logAdminAction(req.adminId!, 'update_menu_item_signature_chef', 'menu_item', String(menuItemId), null, { signatureChefId }, req);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating menu item signature chef:", error);
+      res.status(500).json({ message: "Failed to update menu item" });
     }
   });
 }
