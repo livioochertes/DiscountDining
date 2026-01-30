@@ -947,13 +947,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/restaurants", async (req, res) => {
     try {
-      const { location, cuisine, priceRange, minDiscount } = req.query;
+      const { location, cuisine, priceRange, minDiscount, marketplaceId } = req.query;
       
       const filters = {
         location: location as string,
         cuisine: cuisine as string,
         priceRange: priceRange as string,
-        minDiscount: minDiscount ? parseInt(minDiscount as string) : undefined
+        minDiscount: minDiscount ? parseInt(minDiscount as string) : undefined,
+        marketplaceId: marketplaceId ? parseInt(marketplaceId as string) : undefined
       };
 
       const restaurants = await storage.getRestaurantsByFilters(filters);

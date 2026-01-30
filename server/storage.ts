@@ -112,6 +112,7 @@ export interface IStorage {
     cuisine?: string;
     priceRange?: string;
     minDiscount?: number;
+    marketplaceId?: number;
   }): Promise<Restaurant[]>;
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
   updateRestaurant(id: number, restaurant: Partial<InsertRestaurant>): Promise<Restaurant | undefined>;
@@ -1492,10 +1493,17 @@ export class MemStorage implements IStorage {
     cuisine?: string;
     priceRange?: string;
     minDiscount?: number;
+    marketplaceId?: number;
   }): Promise<Restaurant[]> {
     console.log('Storage filters received:', filters);
     let restaurants = Array.from(this.restaurants.values()).filter(r => r.isActive);
     console.log(`Starting with ${restaurants.length} active restaurants`);
+
+    if (filters.marketplaceId !== undefined) {
+      console.log(`Filtering by marketplace: ${filters.marketplaceId}`);
+      restaurants = restaurants.filter(r => r.marketplaceId === filters.marketplaceId);
+      console.log(`After marketplace filter: ${restaurants.length} restaurants`);
+    }
 
     if (filters.location && filters.location !== "All Locations") {
       console.log(`Filtering by location: ${filters.location}`);
@@ -2169,15 +2177,16 @@ export class DatabaseStorage implements IStorage {
     cuisine?: string;
     priceRange?: string;
     minDiscount?: number;
+    marketplaceId?: number;
   }): Promise<Restaurant[]> {
-    let query = db.select().from(restaurants).where(
-      and(
-        eq(restaurants.isActive, true),
-        eq(restaurants.isApproved, true)
-      )
-    );
+    const conditions = [
+      eq(restaurants.isActive, true),
+      eq(restaurants.isApproved, true)
+    ];
     
-    const conditions = [];
+    if (filters.marketplaceId !== undefined) {
+      conditions.push(eq(restaurants.marketplaceId, filters.marketplaceId));
+    }
     
     if (filters.location && filters.location !== "All Locations") {
       conditions.push(eq(restaurants.location, filters.location));
@@ -2191,15 +2200,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(restaurants.priceRange, filters.priceRange));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(
-        eq(restaurants.isActive, true),
-        eq(restaurants.isApproved, true),
-        ...conditions
-      ));
-    }
-    
-    let result = await query;
+    let result = await db.select().from(restaurants).where(and(...conditions));
     
     // Handle minDiscount filter separately since it requires checking voucher packages
     if (filters.minDiscount !== undefined) {

@@ -10,6 +10,7 @@ import { RestaurantCardSmall } from '@/components/mobile/RestaurantCard';
 import { DealBanner, SmallDealCard } from '@/components/mobile/DealBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 import LanguageSelector from '@/components/LanguageSelector';
 import { useUserLocation } from '@/hooks/useUserLocation';
 
@@ -206,15 +207,21 @@ export default function MobileHome() {
     error: gpsError,
     requestGpsLocation
   } = useUserLocation();
+  
+  // Marketplace for filtering restaurants
+  const { marketplace, detectedCountry } = useMarketplace();
 
   const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
-    queryKey: ['/api/restaurants', gpsCity],
+    queryKey: ['/api/restaurants', gpsCity, marketplace?.id],
     queryFn: async () => {
-      const url = gpsCity 
-        ? `${API_BASE_URL}/api/restaurants?location=${encodeURIComponent(gpsCity)}`
+      const params = new URLSearchParams();
+      if (gpsCity) params.append('location', gpsCity);
+      if (marketplace?.id) params.append('marketplaceId', marketplace.id.toString());
+      
+      const url = params.toString() 
+        ? `${API_BASE_URL}/api/restaurants?${params.toString()}`
         : `${API_BASE_URL}/api/restaurants`;
-      console.log('[MobileHome] Fetching restaurants from:', url);
-      console.log('[MobileHome] API_BASE_URL value:', API_BASE_URL);
+      console.log('[MobileHome] Fetching restaurants from:', url, 'Marketplace:', marketplace?.name);
       try {
         const res = await fetch(url);
         console.log('[MobileHome] Response status:', res.status);
@@ -224,7 +231,7 @@ export default function MobileHome() {
           throw new Error('Failed to fetch restaurants');
         }
         const data = await res.json();
-        console.log('[MobileHome] Restaurants loaded:', data.length);
+        console.log('[MobileHome] Restaurants loaded:', data.length, 'for marketplace:', marketplace?.name);
         return data;
       } catch (err) {
         console.error('[MobileHome] Fetch error:', err);
