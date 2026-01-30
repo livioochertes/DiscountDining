@@ -1999,6 +1999,7 @@ export default function AdminDashboard() {
   const [editedPhone, setEditedPhone] = useState('');
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
+  const [partnerLoading, setPartnerLoading] = useState(false);
   
   // Restaurant filtering and grouping
   const [restaurantFilter, setRestaurantFilter] = useState({
@@ -4629,10 +4630,10 @@ export default function AdminDashboard() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={loading}
+                  disabled={partnerLoading}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {loading ? 'Creating...' : 'Create Partner'}
+                  {partnerLoading ? 'Creating...' : 'Create Partner'}
                 </Button>
               </div>
             </form>
@@ -4940,10 +4941,10 @@ export default function AdminDashboard() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={loading}
+                  disabled={partnerLoading}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {loading ? 'Updating...' : 'Update Partner'}
+                  {partnerLoading ? 'Updating...' : 'Update Partner'}
                 </Button>
               </div>
             </form>
