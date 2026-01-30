@@ -697,7 +697,7 @@ export default function MobileWallet() {
                   {/* Credit Type Selection */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Alege suma creditului *</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-1.5">
                       {creditTypes.map((type) => (
                         <button
                           key={type.id}
@@ -706,18 +706,18 @@ export default function MobileWallet() {
                             if (!type.isCustomAmount) setCustomAmount('');
                           }}
                           className={cn(
-                            "p-3 rounded-xl border-2 text-left transition-all",
+                            "p-2 rounded-lg border-2 text-left transition-all",
                             selectedCreditType?.id === type.id
                               ? "border-primary bg-primary/5"
                               : "border-gray-200 hover:border-gray-300"
                           )}
                         >
-                          <p className="font-bold text-lg">
-                            {type.isCustomAmount ? 'Personalizat' : `${parseFloat(type.amount).toFixed(0)} RON`}
+                          <p className="font-bold text-sm">
+                            {type.isCustomAmount ? 'Custom' : `${parseFloat(type.amount).toFixed(0)}`}
                           </p>
-                          <p className="text-xs text-gray-500">{type.name}</p>
+                          <p className="text-[10px] text-gray-500 truncate">{type.name}</p>
                           {type.interestRate && parseFloat(type.interestRate) > 0 && (
-                            <p className="text-xs text-amber-600">{parseFloat(type.interestRate).toFixed(1)}% dobândă</p>
+                            <p className="text-[10px] text-amber-600">{parseFloat(type.interestRate).toFixed(1)}%</p>
                           )}
                         </button>
                       ))}
@@ -920,68 +920,59 @@ export default function MobileWallet() {
             {/* Credit Status Display (when not showing form) */}
             {!showCreditForm && walletOverview?.credit?.status === 'not_requested' && (
               <>
-                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-red-700 font-medium flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5" />
-                        Credit pe Cont
-                      </p>
-                      <p className="text-sm text-red-600/70">Necesită solicitare și aprobare</p>
-                    </div>
-                    <CreditCard className="w-8 h-8 text-red-500" />
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-red-700 font-medium text-sm flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4" />
+                      Credit pe Cont
+                    </p>
+                    <CreditCard className="w-5 h-5 text-red-500" />
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-4xl font-bold text-red-600">
+                  <div className="flex items-baseline gap-1.5">
+                    <p className="text-2xl font-bold text-red-600">
                       {parseFloat(walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
                     </p>
-                    <p className="text-sm text-red-500">disponibil după aprobare</p>
+                    <p className="text-xs text-red-500">disponibil după aprobare</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-100 rounded-2xl p-4">
-                  <p className="text-sm text-gray-600 mb-2">
+                <div className="bg-white border border-gray-100 rounded-xl p-3">
+                  <p className="text-xs text-gray-600">
                     <span className="font-medium">Cumpără acum, plătește mai târziu!</span>
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Solicită credit pe cont pentru a plăti la restaurante fără numerar. 
-                    Creditul trebuie aprobat de EatOff.
+                    {' '}Creditul trebuie aprobat de EatOff.
                   </p>
                 </div>
 
                 <button 
                   onClick={() => setShowCreditForm(true)}
-                  className="w-full bg-red-600 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
+                  className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
                 >
                   Solicită Credit
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </>
             )}
 
             {walletOverview?.credit?.status === 'pending' && (
               <>
-                <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-amber-700 font-medium flex items-center gap-2">
-                        <Clock className="w-5 h-5" />
-                        Solicitare în așteptare
-                      </p>
-                      <p className="text-sm text-amber-600/70">Se așteaptă aprobarea EatOff</p>
-                    </div>
-                    <CreditCard className="w-8 h-8 text-amber-500" />
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-amber-700 font-medium text-sm flex items-center gap-1.5">
+                      <Clock className="w-4 h-4" />
+                      În așteptare
+                    </p>
+                    <CreditCard className="w-5 h-5 text-amber-500" />
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-4xl font-bold text-amber-600">
+                  <div className="flex items-baseline gap-1.5">
+                    <p className="text-2xl font-bold text-amber-600">
                       {parseFloat(walletOverview.credit.requestedAmount || walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
                     </p>
-                    <p className="text-sm text-amber-500">solicitat</p>
+                    <p className="text-xs text-amber-500">solicitat</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-amber-100 rounded-2xl p-4">
-                  <p className="text-sm text-gray-600">
+                <div className="bg-white border border-amber-100 rounded-xl p-3">
+                  <p className="text-xs text-gray-600">
                     Solicitarea ta este în curs de procesare. Vei primi o notificare când creditul va fi aprobat.
                   </p>
                 </div>
@@ -990,36 +981,33 @@ export default function MobileWallet() {
 
             {walletOverview?.credit?.status === 'approved' && (
               <>
-                <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-green-700 font-medium flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5" />
-                        Credit Aprobat
-                      </p>
-                      <p className="text-sm text-green-600/70">Plătește la orice restaurant partener</p>
-                    </div>
-                    <CreditCard className="w-8 h-8 text-green-600" />
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-green-700 font-medium text-sm flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4" />
+                      Credit Aprobat
+                    </p>
+                    <CreditCard className="w-5 h-5 text-green-600" />
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-4xl font-bold text-green-700">
+                  <div className="flex items-baseline gap-1.5">
+                    <p className="text-2xl font-bold text-green-700">
                       {parseFloat(walletOverview.credit.availableCredit || '0').toFixed(0)} RON
                     </p>
-                    <p className="text-sm text-green-600">disponibil</p>
+                    <p className="text-xs text-green-600">disponibil</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-100 rounded-2xl p-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white border border-gray-100 rounded-xl p-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-xs text-gray-500">Limită totală</p>
-                      <p className="text-lg font-bold text-gray-900">
+                      <p className="text-[10px] text-gray-500">Limită totală</p>
+                      <p className="text-base font-bold text-gray-900">
                         {parseFloat(walletOverview.credit.creditLimit || '0').toFixed(0)} RON
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Utilizat</p>
-                      <p className="text-lg font-bold text-gray-900">
+                      <p className="text-[10px] text-gray-500">Utilizat</p>
+                      <p className="text-base font-bold text-gray-900">
                         {parseFloat(walletOverview.credit.usedCredit || '0').toFixed(0)} RON
                       </p>
                     </div>
@@ -1027,10 +1015,10 @@ export default function MobileWallet() {
                 </div>
 
                 {parseFloat(walletOverview.credit.interestRate || '0') > 0 && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-                    <p className="text-sm text-blue-700">
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-2.5">
+                    <p className="text-xs text-blue-700">
                       <span className="font-medium">Dobândă: {walletOverview.credit.interestRate}%</span>
-                      {' '}• Termen de plată: {walletOverview.credit.paymentTermDays || 30} zile
+                      {' '}• Termen: {walletOverview.credit.paymentTermDays || 30} zile
                     </p>
                   </div>
                 )}
@@ -1039,25 +1027,23 @@ export default function MobileWallet() {
 
             {!showCreditForm && walletOverview?.credit?.status === 'rejected' && (
               <>
-                <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-gray-700 font-medium flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5" />
-                        Solicitare respinsă
-                      </p>
-                      <p className="text-sm text-gray-500">Poți încerca din nou mai târziu</p>
-                    </div>
-                    <CreditCard className="w-8 h-8 text-gray-400" />
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-gray-700 font-medium text-sm flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4" />
+                      Solicitare respinsă
+                    </p>
+                    <CreditCard className="w-5 h-5 text-gray-400" />
                   </div>
+                  <p className="text-xs text-gray-500">Poți încerca din nou mai târziu</p>
                 </div>
 
                 <button 
                   onClick={() => setShowCreditForm(true)}
-                  className="w-full bg-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
+                  className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
                 >
                   Solicită din nou
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </>
             )}
