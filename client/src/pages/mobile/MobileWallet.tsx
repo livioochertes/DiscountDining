@@ -99,54 +99,29 @@ export default function MobileWallet() {
   });
 
   // Fetch wallet overview with cashback and credit info
-  const { data: walletOverview, error: walletError, isLoading: walletLoading } = useQuery<WalletOverview>({
+  const { data: walletOverview } = useQuery<WalletOverview>({
     queryKey: ['/api/wallet/overview'],
     queryFn: async () => {
-      console.log('[MobileWallet] Starting wallet fetch...');
-      console.log('[MobileWallet] API_BASE_URL:', API_BASE_URL);
-      console.log('[MobileWallet] isNativePlatform:', Capacitor.isNativePlatform());
-      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       if (Capacitor.isNativePlatform()) {
         const token = await getMobileSessionToken();
-        console.log('[MobileWallet] Token exists:', !!token);
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
         }
       }
       
-      const url = `${API_BASE_URL}/api/wallet/overview`;
-      console.log('[MobileWallet] Fetching from:', url);
-      
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/overview`, {
         credentials: 'include',
         headers,
       });
       
-      console.log('[MobileWallet] Response status:', response.status);
-      console.log('[MobileWallet] Response ok:', response.ok);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[MobileWallet] Wallet fetch error:', errorText);
-        throw new Error(`Failed to fetch wallet overview: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('[MobileWallet] Wallet data received:', JSON.stringify(data).substring(0, 200));
-      return data;
+      if (!response.ok) throw new Error('Failed to fetch wallet overview');
+      return response.json();
     },
     enabled: !!user,
   });
-
-  // Debug: Log wallet overview data when it changes
-  useEffect(() => {
-    console.log('[MobileWallet] walletOverview:', walletOverview);
-    console.log('[MobileWallet] credit status:', walletOverview?.credit?.status);
-    console.log('[MobileWallet] credit data:', walletOverview?.credit);
-  }, [walletOverview]);
 
   // Fetch credit types for the request form
   const { data: creditTypes = [] } = useQuery<CreditType[]>({
@@ -613,17 +588,6 @@ export default function MobileWallet() {
 
         {activeTab === 'credit' && (
           <div className="space-y-4">
-            {/* Debug info - remove after debugging */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs">
-              <p className="font-medium text-blue-700">Debug Info:</p>
-              <p>user exists: {user ? 'YES' : 'NO'}</p>
-              <p>walletLoading: {walletLoading ? 'YES' : 'NO'}</p>
-              <p>walletError: {walletError ? String(walletError) : 'NONE'}</p>
-              <p>walletOverview exists: {walletOverview ? 'YES' : 'NO'}</p>
-              <p>credit exists: {walletOverview?.credit ? 'YES' : 'NO'}</p>
-              <p>credit status: {walletOverview?.credit?.status || 'N/A'}</p>
-            </div>
-            
             {/* Fallback when no wallet data */}
             {!walletOverview?.credit && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
