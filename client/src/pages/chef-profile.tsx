@@ -15,6 +15,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChefProfile {
   id: number;
@@ -75,6 +76,7 @@ export default function ChefProfilePage() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<ChefProfile>>({});
   const [newSpecialty, setNewSpecialty] = useState("");
@@ -105,6 +107,10 @@ export default function ChefProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-chef-profile"] });
       setIsEditing(false);
+      toast({ title: "Profile created", description: "Your chef profile has been created successfully." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to create profile", variant: "destructive" });
     },
   });
 
@@ -116,6 +122,10 @@ export default function ChefProfilePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/my-chef-profile"] });
       queryClient.invalidateQueries({ queryKey: ["/api/chef-profiles", id] });
       setIsEditing(false);
+      toast({ title: "Profile updated", description: "Your changes have been saved." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to update profile", variant: "destructive" });
     },
   });
 
@@ -125,6 +135,10 @@ export default function ChefProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chef-profiles", id] });
+      toast({ title: isFollowing ? "Unfollowed" : "Following", description: isFollowing ? "You unfollowed this chef" : "You are now following this chef" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Action failed", variant: "destructive" });
     },
   });
 

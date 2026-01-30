@@ -106,6 +106,11 @@ export function registerChefProfileRoutes(app: Express) {
         return res.status(404).json({ message: "Chef profile not found" });
       }
 
+      const isOwner = req.ownerId && profile.profile.customerId === req.ownerId;
+      if (!profile.profile.isPublic && !isOwner) {
+        return res.status(403).json({ message: "This profile is private" });
+      }
+
       const chefRecipes = await db
         .select()
         .from(recipes)
