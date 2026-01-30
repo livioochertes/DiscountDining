@@ -1993,6 +1993,12 @@ export default function AdminDashboard() {
   const [isRestaurantManagementModalOpen, setIsRestaurantManagementModalOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [managementTab, setManagementTab] = useState<'details' | 'menu' | 'vouchers'>('details');
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editedLocation, setEditedLocation] = useState('');
+  const [editedAddress, setEditedAddress] = useState('');
+  const [editedPhone, setEditedPhone] = useState('');
+  const [citySearchQuery, setCitySearchQuery] = useState('');
+  const [savingDetails, setSavingDetails] = useState(false);
   
   // Restaurant filtering and grouping
   const [restaurantFilter, setRestaurantFilter] = useState({
@@ -2114,6 +2120,22 @@ export default function AdminDashboard() {
       ownerPassword: "",
       contactPerson: "",
     },
+  });
+
+  // Watch marketplace selection to load cities
+  const selectedEnrollmentMarketplaceId = enrollmentForm.watch('marketplaceId');
+  const selectedEnrollmentMarketplace = marketplacesList?.find(mp => mp.id === selectedEnrollmentMarketplaceId);
+
+  // Cities for enrollment form based on selected marketplace
+  const { data: enrollmentCities = [] } = useQuery<any[]>({
+    queryKey: ['/api/cities', 'enrollment', selectedEnrollmentMarketplace?.countryCode],
+    enabled: !!selectedEnrollmentMarketplace?.countryCode,
+    queryFn: async () => {
+      const country = selectedEnrollmentMarketplace?.countryCode || 'RO';
+      const response = await fetch(`/api/cities?country=${country}&limit=300`);
+      if (!response.ok) throw new Error('Failed to fetch cities');
+      return response.json();
+    }
   });
 
   // Form for partner management
@@ -2501,6 +2523,80 @@ export default function AdminDashboard() {
       return response.json();
     }
   });
+
+  // Cities query based on marketplace country code
+  const { data: availableCities = [] } = useQuery<any[]>({
+    queryKey: ['/api/cities', restaurantDetails?.marketplace?.countryCode, citySearchQuery],
+    enabled: isEditingDetails && !!restaurantDetails?.marketplace?.countryCode,
+    queryFn: async () => {
+      const country = restaurantDetails?.marketplace?.countryCode || 'RO';
+      let url = `/api/cities?country=${country}&limit=200`;
+      if (citySearchQuery.length >= 2) {
+        url += `&search=${encodeURIComponent(citySearchQuery)}`;
+      }
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch cities');
+      return response.json();
+    }
+  });
+
+  // Start editing restaurant details
+  const startEditingDetails = () => {
+    setEditedLocation(selectedRestaurant?.location || '');
+    setEditedAddress(selectedRestaurant?.address || '');
+    setEditedPhone(selectedRestaurant?.phone || '');
+    setCitySearchQuery('');
+    setIsEditingDetails(true);
+  };
+
+  // Save restaurant details
+  const saveRestaurantDetails = async () => {
+    if (!selectedRestaurant) return;
+    
+    setSavingDetails(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/restaurants/${selectedRestaurant.id}/update-details`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          location: editedLocation,
+          address: editedAddress,
+          phone: editedPhone
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to update restaurant');
+
+      toast({
+        title: "Salvat",
+        description: "Detaliile restaurantului au fost actualizate",
+      });
+
+      setIsEditingDetails(false);
+      await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants', selectedRestaurant.id, 'details'] });
+      
+      // Update the selected restaurant locally
+      setSelectedRestaurant(prev => prev ? {
+        ...prev,
+        location: editedLocation,
+        address: editedAddress,
+        phone: editedPhone
+      } : null);
+    } catch (error) {
+      toast({
+        title: "Eroare",
+        description: "Nu s-au putut salva modificările",
+        variant: "destructive"
+      });
+    } finally {
+      setSavingDetails(false);
+    }
+  };
 
   // Update partner information
   const handleUpdatePartner = async (data: PartnerFormData) => {
@@ -3918,10 +4014,25 @@ export default function AdminDashboard() {
                     name="location"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                          <Input placeholder="City, Country" {...field} />
-                        </FormControl>
+                        <FormLabel>Oraș / Location</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value}
+                          disabled={!selectedEnrollmentMarketplace}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={selectedEnrollmentMarketplace ? "Selectează orașul" : "Selectează întâi marketplace-ul"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-[300px]">
+                            {enrollmentCities.map((city: any) => (
+                              <SelectItem key={city.geonameId} value={city.name}>
+                                {city.name} {city.population > 50000 ? `(${(city.population / 1000).toFixed(0)}k)` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -4962,11 +5073,25 @@ export default function AdminDashboard() {
                 <div className="space-y-6">
                   {/* Restaurant Information */}
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                       <CardTitle className="flex items-center gap-2">
                         <Store className="h-5 w-5" />
                         Restaurant Information
                       </CardTitle>
+                      {!isEditingDetails ? (
+                        <Button size="sm" variant="outline" onClick={startEditingDetails}>
+                          <Edit className="h-4 w-4 mr-1" /> Editează
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setIsEditingDetails(false)}>
+                            Anulează
+                          </Button>
+                          <Button size="sm" onClick={saveRestaurantDetails} disabled={savingDetails}>
+                            {savingDetails ? 'Se salvează...' : 'Salvează'}
+                          </Button>
+                        </div>
+                      )}
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -4991,15 +5116,46 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Address</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.address}</p>
+                        {isEditingDetails ? (
+                          <Input 
+                            value={editedAddress}
+                            onChange={(e) => setEditedAddress(e.target.value)}
+                            placeholder="Adresa restaurantului"
+                          />
+                        ) : (
+                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.address}</p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Location/City</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.location}</p>
+                        {isEditingDetails ? (
+                          <select
+                            value={editedLocation}
+                            onChange={(e) => setEditedLocation(e.target.value)}
+                            className="w-full h-10 px-3 border rounded-md dark:bg-gray-800 dark:border-gray-600"
+                          >
+                            <option value="">Selectează oraș</option>
+                            {availableCities.map((city: any) => (
+                              <option key={city.geonameId} value={city.name}>
+                                {city.name} {city.population > 50000 ? `(${(city.population / 1000).toFixed(0)}k)` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.location}</p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.phone || 'N/A'}</p>
+                        {isEditingDetails ? (
+                          <Input 
+                            value={editedPhone}
+                            onChange={(e) => setEditedPhone(e.target.value)}
+                            placeholder="Telefon"
+                          />
+                        ) : (
+                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.phone || 'N/A'}</p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>

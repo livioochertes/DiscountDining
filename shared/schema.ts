@@ -33,6 +33,8 @@ export const geonamesCities = pgTable(
   ],
 );
 
+export const insertGeonamesCitySchema = createInsertSchema(geonamesCities);
+export type InsertGeonamesCity = z.infer<typeof insertGeonamesCitySchema>;
 export type GeonamesCity = typeof geonamesCities.$inferSelect;
 
 // Mobile session tokens table (for native app authentication)
