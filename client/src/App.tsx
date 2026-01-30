@@ -362,10 +362,12 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <LanguageProvider>
-            <CartProvider>
-              <Router />
-              <Toaster />
-            </CartProvider>
+            <MarketplaceProvider>
+              <CartProvider>
+                <Router />
+                <Toaster />
+              </CartProvider>
+            </MarketplaceProvider>
           </LanguageProvider>
         </TooltipProvider>
       </QueryClientProvider>
