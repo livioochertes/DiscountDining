@@ -452,6 +452,24 @@ export default function Profile() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <ChefHat className="h-5 w-5 mr-2 text-primary" />
+                Chef Profile
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">Share your culinary expertise and recipes with others</p>
+              <Button 
+                onClick={() => setLocation("/chef-profile")}
+                className="w-full"
+              >
+                View Chef Profile
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
