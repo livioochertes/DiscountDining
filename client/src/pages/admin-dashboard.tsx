@@ -124,6 +124,16 @@ interface DashboardMetrics {
   totalCommission: number;
   activeUsers: number;
   activeRestaurants: number;
+  pendingRestaurants: number;
+  approvedRestaurants: number;
+  transactionStats: {
+    total: number;
+    totalAmount: number;
+    weeklyCount: number;
+    weeklyAmount: number;
+    dailyCount: number;
+    dailyAmount: number;
+  };
 }
 
 interface Restaurant {
@@ -2866,7 +2876,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{metrics?.totalRestaurants || 0}</div>
               <p className="text-xs text-muted-foreground">
-                {metrics?.activeRestaurants || 0} active partners
+                {metrics?.activeRestaurants || 0} active, {metrics?.pendingRestaurants || 0} pending
               </p>
             </CardContent>
           </Card>
@@ -2918,23 +2928,25 @@ export default function AdminDashboard() {
           {selectedTab === "overview" && (
             <div className="space-y-6">
             {/* Pending Approvals */}
-            {pendingRestaurants.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertTriangle className="h-5 w-5 text-yellow-600 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Restaurants awaiting admin approval to join EatOff</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <span>Pending Restaurant Approvals</span>
-                    <Badge variant="secondary">{pendingRestaurants.length}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Restaurants awaiting admin approval to join EatOff</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <span>Pending Restaurant Approvals</span>
+                  <Badge variant="secondary">{pendingRestaurants.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pendingRestaurants.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No pending restaurant approvals</p>
+                ) : (
                   <div className="space-y-3">
                     {pendingRestaurants.slice(0, 5).map((restaurant) => (
                       <div key={restaurant.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -2982,81 +2994,11 @@ export default function AdminDashboard() {
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </CardContent>
+            </Card>
 
-            {/* Approved Restaurants */}
-            {approvedRestaurants.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span>Approved Restaurants</span>
-                      <Badge variant="default" className="bg-green-600">{approvedRestaurants.length}</Badge>
-                    </div>
-                    {approvedRestaurants.length > 5 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAllApproved(!showAllApproved)}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        {showAllApproved ? "Show Less" : `Show All (${approvedRestaurants.length})`}
-                      </Button>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className={`space-y-3 ${showAllApproved && approvedRestaurants.length > 5 ? 'max-h-96 overflow-y-auto' : ''}`}>
-                    {(showAllApproved ? approvedRestaurants : approvedRestaurants.slice(0, 5)).map((restaurant) => (
-                      <div key={restaurant.id} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{restaurant.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">{restaurant.email}</p>
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground">
-                              Code: {restaurant.restaurantCode || 'N/A'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Approved: {restaurant.approvedAt ? new Date(restaurant.approvedAt).toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex space-x-2 flex-shrink-0">
-                          <Badge variant="default" className="bg-green-600">Active</Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => suspendRestaurant(restaurant.id)}
-                            disabled={loading}
-                            className="text-red-600 border-red-600 hover:bg-red-50"
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            {loading ? "Suspending..." : "Suspend"}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {showAllApproved && approvedRestaurants.length > 5 && (
-                    <div className="mt-3 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAllApproved(false)}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        Show Less
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Recent Activity */}
+            {/* Transaction Statistics */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -3065,25 +3007,52 @@ export default function AdminDashboard() {
                       <BarChart3 className="h-5 w-5 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Real-time platform growth and activity metrics</p>
+                      <p>Transaction volume and platform activity</p>
                     </TooltipContent>
                   </Tooltip>
-                  <span>Platform Activity</span>
+                  <span>Transaction Statistics</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <h4 className="font-medium text-blue-900 dark:text-blue-100">User Growth</h4>
-                      <p className="text-2xl font-bold text-blue-600">{metrics?.activeUsers || 0}</p>
-                      <p className="text-sm text-blue-600">Active users this month</p>
-                    </div>
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <h4 className="font-medium text-green-900 dark:text-green-100">Partner Growth</h4>
-                      <p className="text-2xl font-bold text-green-600">{metrics?.activeRestaurants || 0}</p>
-                      <p className="text-sm text-green-600">Active restaurant partners</p>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100">Today</h4>
+                    <p className="text-2xl font-bold text-blue-600">€{(metrics?.transactionStats?.dailyAmount || 0).toFixed(2)}</p>
+                    <p className="text-sm text-blue-600">{metrics?.transactionStats?.dailyCount || 0} transactions</p>
+                  </div>
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <h4 className="font-medium text-green-900 dark:text-green-100">This Week</h4>
+                    <p className="text-2xl font-bold text-green-600">€{(metrics?.transactionStats?.weeklyAmount || 0).toFixed(2)}</p>
+                    <p className="text-sm text-green-600">{metrics?.transactionStats?.weeklyCount || 0} transactions</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <h4 className="font-medium text-purple-900 dark:text-purple-100">All Time</h4>
+                    <p className="text-2xl font-bold text-purple-600">€{(metrics?.transactionStats?.totalAmount || 0).toFixed(2)}</p>
+                    <p className="text-sm text-purple-600">{metrics?.transactionStats?.total || 0} transactions</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Platform Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <span>Platform Growth</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100">New Users This Month</h4>
+                    <p className="text-2xl font-bold text-blue-600">{metrics?.activeUsers || 0}</p>
+                    <p className="text-sm text-blue-600">of {metrics?.totalUsers || 0} total users</p>
+                  </div>
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <h4 className="font-medium text-green-900 dark:text-green-100">Active Restaurants</h4>
+                    <p className="text-2xl font-bold text-green-600">{metrics?.activeRestaurants || 0}</p>
+                    <p className="text-sm text-green-600">of {metrics?.totalRestaurants || 0} total restaurants</p>
                   </div>
                 </div>
               </CardContent>
@@ -3103,7 +3072,7 @@ export default function AdminDashboard() {
                   <div>
                     <CardTitle>Restaurant Management</CardTitle>
                     <CardDescription>
-                      Manage restaurant approvals, suspensions, and partnership status
+                      Manage approved restaurant partners and enroll new restaurants
                     </CardDescription>
                   </div>
                   <Button
@@ -3121,17 +3090,15 @@ export default function AdminDashboard() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                    Showing {restaurants?.length || 0} restaurants
+                    Showing {approvedRestaurants?.length || 0} approved restaurants
                   </div>
-                  {restaurants?.map((restaurant) => (
+                  {approvedRestaurants?.map((restaurant) => (
                     <div key={restaurant.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex-1">
                         <h4 className="font-medium">{restaurant.name}</h4>
                         <p className="text-sm text-muted-foreground">{restaurant.email}</p>
                         <div className="flex space-x-2 mt-2">
-                          <Badge variant={restaurant.isApproved ? "default" : "secondary"}>
-                            {restaurant.isApproved ? "Approved" : "Pending"}
-                          </Badge>
+                          <Badge variant="default" className="bg-green-600">Approved</Badge>
                           <Badge variant={restaurant.isActive ? "default" : "destructive"}>
                             {restaurant.isActive ? "Active" : "Suspended"}
                           </Badge>
