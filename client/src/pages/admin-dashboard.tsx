@@ -2123,6 +2123,17 @@ export default function AdminDashboard() {
     },
   });
 
+  // Fetch marketplaces for enrollment form (must be before usage)
+  const { data: marketplacesList = [] } = useQuery<any[]>({
+    queryKey: ['/api/marketplaces'],
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const response = await fetch('/api/marketplaces');
+      if (!response.ok) throw new Error('Failed to fetch marketplaces');
+      return response.json();
+    }
+  });
+
   // Watch marketplace selection to load cities
   const selectedEnrollmentMarketplaceId = enrollmentForm.watch('marketplaceId');
   const selectedEnrollmentMarketplace = marketplacesList?.find(mp => mp.id === selectedEnrollmentMarketplaceId);
@@ -2274,17 +2285,6 @@ export default function AdminDashboard() {
         }
       });
       if (!response.ok) throw new Error('Failed to fetch restaurants');
-      return response.json();
-    }
-  });
-
-  // Fetch marketplaces for filtering
-  const { data: marketplacesList } = useQuery<any[]>({
-    queryKey: ['/api/marketplaces'],
-    enabled: isAuthenticated,
-    queryFn: async () => {
-      const response = await fetch('/api/marketplaces');
-      if (!response.ok) throw new Error('Failed to fetch marketplaces');
       return response.json();
     }
   });
