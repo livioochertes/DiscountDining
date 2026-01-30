@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   User, ChevronRight, ChevronDown, Settings, Bell, CreditCard, Heart, 
   HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X, Trash2, Loader2,
-  Eye, EyeOff, MessageCircle, ChefHat
+  Eye, EyeOff, MessageCircle, ChefHat, MapPin
 } from 'lucide-react';
 import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { QRCodeSVG } from 'qrcode.react';
@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiRequest, queryClient, clearMobileSessionToken, getMobileSessionToken } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { useToast } from '@/hooks/use-toast';
 import { Capacitor } from '@capacitor/core';
 
@@ -41,6 +42,7 @@ interface MenuItem {
 
 export default function MobileProfile() {
   const { t, language, setLanguage } = useLanguage();
+  const { marketplace, allMarketplaces, setMarketplaceManually, detectedCountry } = useMarketplace();
   const { user, isLoading, refetch } = useAuth();
   const [, setLocation] = useLocation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -1080,6 +1082,54 @@ export default function MobileProfile() {
     </div>
   );
 
+  const getCountryFlag = (countryCode: string) => {
+    const flags: Record<string, string> = {
+      'RO': '🇷🇴', 'ES': '🇪🇸', 'FR': '🇫🇷', 'DE': '🇩🇪', 'IT': '🇮🇹', 
+      'GB': '🇬🇧', 'US': '🇺🇸', 'PT': '🇵🇹', 'NL': '🇳🇱', 'BE': '🇧🇪',
+      'AT': '🇦🇹', 'CH': '🇨🇭', 'PL': '🇵🇱', 'CZ': '🇨🇿', 'HU': '🇭🇺',
+      'GR': '🇬🇷', 'BG': '🇧🇬', 'HR': '🇭🇷', 'RS': '🇷🇸', 'SK': '🇸🇰'
+    };
+    return flags[countryCode.toUpperCase()] || '🌍';
+  };
+
+  const renderMarketplaceContent = () => (
+    <div className="p-4 space-y-3 bg-gray-50 border-t border-gray-100">
+      {detectedCountry && (
+        <div className="text-sm text-gray-500 mb-2">
+          {t.detectedLocation || 'Detected location'}: {detectedCountry}
+        </div>
+      )}
+      {allMarketplaces.filter(m => m.isActive).map((mp) => (
+        <button
+          key={mp.id}
+          onClick={() => setMarketplaceManually(mp)}
+          className={cn(
+            "w-full flex items-center justify-between p-4 rounded-xl transition-colors",
+            marketplace?.id === mp.id 
+              ? "bg-primary/10 border-2 border-primary" 
+              : "bg-white border border-gray-200 hover:border-primary/50"
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{getCountryFlag(mp.countryCode)}</span>
+            <div className="text-left">
+              <span className="font-medium block">{mp.name}</span>
+              <span className="text-sm text-gray-500">{mp.currencyCode} ({mp.currencySymbol})</span>
+            </div>
+          </div>
+          {marketplace?.id === mp.id && (
+            <Check className="w-5 h-5 text-primary" />
+          )}
+        </button>
+      ))}
+      {allMarketplaces.filter(m => m.isActive).length === 0 && (
+        <div className="text-center text-gray-500 py-4">
+          {t.noMarketplacesAvailable || 'No marketplaces available'}
+        </div>
+      )}
+    </div>
+  );
+
   const renderPrivacyContent = () => {
     if (privacyView === 'changePassword') {
       return (
@@ -1513,6 +1563,7 @@ export default function MobileProfile() {
       case 'payment': return renderPaymentContent();
       case 'notifications': return renderNotificationsContent();
       case 'language': return renderLanguageContent();
+      case 'marketplace': return renderMarketplaceContent();
       case 'privacy': return renderPrivacyContent();
       case 'help': return renderHelpContent();
       case 'points': return renderLoyaltyPointsContent();
@@ -1543,6 +1594,7 @@ export default function MobileProfile() {
       items: [
         { id: 'notifications', icon: Bell, label: t.notifications || 'Notifications', expandable: true },
         { id: 'language', icon: Globe, label: t.language || 'Language', subtitle: language.toUpperCase(), expandable: true },
+        { id: 'marketplace', icon: MapPin, label: t.marketplace || 'Marketplace', subtitle: marketplace?.name || t.selectMarketplace || 'Select marketplace', expandable: true },
         { id: 'privacy', icon: Shield, label: t.privacySecurity || 'Privacy & Security', expandable: true },
       ],
     },
