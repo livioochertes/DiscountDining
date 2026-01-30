@@ -220,7 +220,7 @@ export function registerAdminRoutes(app: Express) {
       const [transactionStats] = await db
         .select({
           totalTransactions: sql<number>`COUNT(*)`,
-          totalAmount: sql<number>`COALESCE(SUM(CASE WHEN ${walletTransactions.type} = 'top_up' THEN ${walletTransactions.amount}::numeric ELSE 0 END), 0)`,
+          totalAmount: sql<number>`COALESCE(SUM(CASE WHEN ${walletTransactions.transactionType} = 'deposit' THEN ${walletTransactions.amount}::numeric ELSE 0 END), 0)`,
         })
         .from(walletTransactions);
       

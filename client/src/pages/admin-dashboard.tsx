@@ -2964,7 +2964,7 @@ export default function AdminDashboard() {
                               <Button
                                 size="sm"
                                 onClick={() => approveRestaurant(restaurant.id)}
-                                disabled={loadingRestaurantId !== null}
+                                disabled={loadingRestaurantId === restaurant.id}
                                 className="bg-green-600 hover:bg-green-700"
                               >
                                 <CheckCircle className="h-4 w-4 mr-1" />
@@ -2981,7 +2981,7 @@ export default function AdminDashboard() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => suspendRestaurant(restaurant.id)}
-                                disabled={loadingRestaurantId !== null}
+                                disabled={loadingRestaurantId === restaurant.id}
                               >
                                 <XCircle className="h-4 w-4 mr-1" />
                                 {loadingRestaurantId === restaurant.id ? "Rejecting..." : "Reject"}
@@ -3312,7 +3312,7 @@ export default function AdminDashboard() {
                               size="sm"
                               variant="outline"
                               onClick={() => openRestaurantManagementModal(restaurant)}
-                              disabled={loadingRestaurantId !== null}
+                              disabled={loadingRestaurantId === restaurant.id}
                             >
                               <Settings className="h-4 w-4 mr-1" />
                               Manage
@@ -3328,7 +3328,7 @@ export default function AdminDashboard() {
                               size="sm"
                               variant={restaurant.isActive ? "destructive" : "default"}
                               onClick={() => restaurant.isActive ? suspendRestaurant(restaurant.id) : approveRestaurant(restaurant.id)}
-                              disabled={loadingRestaurantId !== null}
+                              disabled={loadingRestaurantId === restaurant.id}
                             >
                               {loadingRestaurantId === restaurant.id 
                                 ? (restaurant.isActive ? "Suspending..." : "Reactivating...") 
