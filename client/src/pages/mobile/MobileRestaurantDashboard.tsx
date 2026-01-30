@@ -11,9 +11,7 @@ import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 
-const API_BASE_URL = Capacitor.isNativePlatform() 
-  ? 'https://0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev'
-  : '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (Capacitor.isNativePlatform() ? 'https://eatoff.app' : '');
 
 interface RestaurantSession {
   token: string;
