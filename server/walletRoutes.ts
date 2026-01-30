@@ -2117,6 +2117,60 @@ router.post("/admin/enroll-customer/cashback", async (req, res) => {
   }
 });
 
+// Create Stripe Checkout Session for mobile app top-up
+router.post("/wallet/topup/create-checkout-session", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { amount } = req.body;
+    if (!amount || parseFloat(amount) <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+    
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'ron',
+          product_data: {
+            name: 'Alimentare portofel EatOff',
+            description: `Top-up ${amount} Lei`,
+          },
+          unit_amount: Math.round(parseFloat(amount) * 100),
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `https://eatoff.app/m/wallet?topup=success&amount=${amount}`,
+      cancel_url: `https://eatoff.app/m/wallet?topup=cancelled`,
+      customer_email: customer.email || undefined,
+      metadata: {
+        type: "wallet_topup",
+        customerId: customerId.toString(),
+        amount: amount
+      }
+    });
+
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (error: any) {
+    console.error("Error creating checkout session:", error);
+    res.status(500).json({ message: "Error creating checkout: " + error.message });
+  }
+});
+
 // Authenticated wallet top-up - create payment intent for current user
 router.post("/wallet/topup/create-intent", async (req: Request, res: Response) => {
   try {
