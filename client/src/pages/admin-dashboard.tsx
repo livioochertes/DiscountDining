@@ -3034,21 +3034,41 @@ export default function AdminDashboard() {
     return restaurantDetails?.marketplace?.countryCode || 'RO';
   };
 
+  // Compute country code for cities - derive it outside the query for proper caching
+  const citiesCountryCode = useMemo(() => {
+    if (editedMarketplaceId) {
+      const selectedMp = marketplacesList?.find(mp => mp.id === editedMarketplaceId);
+      return selectedMp?.countryCode || 'RO';
+    }
+    return restaurantDetails?.marketplace?.countryCode || 'RO';
+  }, [editedMarketplaceId, marketplacesList, restaurantDetails?.marketplace?.countryCode]);
+
   // Cities query based on marketplace country code
-  const { data: availableCities = [] } = useQuery<any[]>({
-    queryKey: ['/api/cities', editedMarketplaceId, restaurantDetails?.marketplace?.countryCode, citySearchQuery],
+  const { data: availableCities = [], isLoading: citiesLoading, refetch: refetchCities } = useQuery<any[]>({
+    queryKey: ['/api/cities', 'restaurant-edit', citiesCountryCode, citySearchQuery],
     enabled: isEditingDetails,
+    staleTime: 0,
     queryFn: async () => {
-      const country = getCountryCodeForCities();
-      let url = `/api/cities?country=${country}&limit=200`;
+      let url = `/api/cities?country=${citiesCountryCode}&limit=200`;
       if (citySearchQuery.length >= 2) {
         url += `&search=${encodeURIComponent(citySearchQuery)}`;
       }
+      console.log('[Cities Query] Fetching cities for country:', citiesCountryCode, 'URL:', url);
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch cities');
-      return response.json();
+      const data = await response.json();
+      console.log('[Cities Query] Received', data.length, 'cities');
+      return data;
     }
   });
+
+  // Force refetch cities when editing mode is enabled or marketplace changes
+  useEffect(() => {
+    if (isEditingDetails) {
+      console.log('[Cities Effect] Triggering refetch, country:', citiesCountryCode);
+      refetchCities();
+    }
+  }, [isEditingDetails, citiesCountryCode, refetchCities]);
 
   // Start editing restaurant details
   const startEditingDetails = () => {
@@ -5733,18 +5753,26 @@ export default function AdminDashboard() {
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Location/City</label>
                         {isEditingDetails ? (
-                          <select
-                            value={editedLocation}
-                            onChange={(e) => setEditedLocation(e.target.value)}
-                            className="w-full h-10 px-3 border rounded-md dark:bg-gray-800 dark:border-gray-600"
-                          >
-                            <option value="">Selectează oraș</option>
-                            {availableCities.map((city: any) => (
-                              <option key={city.geonameId} value={city.name}>
-                                {city.name} {city.population > 50000 ? `(${(city.population / 1000).toFixed(0)}k)` : ''}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <select
+                              value={editedLocation}
+                              onChange={(e) => setEditedLocation(e.target.value)}
+                              className="w-full h-10 px-3 border rounded-md dark:bg-gray-800 dark:border-gray-600"
+                              disabled={citiesLoading}
+                            >
+                              <option value="">{citiesLoading ? 'Se încarcă...' : 'Selectează oraș'}</option>
+                              {!citiesLoading && availableCities.map((city: any) => (
+                                <option key={city.geonameId} value={city.name}>
+                                  {city.name} {city.population > 50000 ? `(${(city.population / 1000).toFixed(0)}k)` : ''}
+                                </option>
+                              ))}
+                            </select>
+                            {citiesLoading && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <div className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full"></div>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <p className="text-gray-900 dark:text-white">{selectedRestaurant?.location}</p>
                         )}
