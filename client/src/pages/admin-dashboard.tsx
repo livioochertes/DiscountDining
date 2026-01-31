@@ -5786,7 +5786,14 @@ export default function AdminDashboard() {
                               disabled={citiesLoading}
                             />
                             {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
-                              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xl max-h-60 overflow-auto" style={{ backgroundColor: 'white' }}>
+                              <div 
+                                className="absolute w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-xl max-h-60 overflow-auto"
+                                style={{ 
+                                  zIndex: 99999, 
+                                  backgroundColor: '#ffffff',
+                                  position: 'absolute'
+                                }}
+                              >
                                 {(() => {
                                   const searchTerm = citySearchQuery.toLowerCase();
                                   const filtered = availableCities
@@ -5794,13 +5801,14 @@ export default function AdminDashboard() {
                                     .sort((a: any, b: any) => a.name.localeCompare(b.name));
                                   
                                   if (filtered.length === 0) {
-                                    return <div className="p-2 text-gray-500">Nu s-au găsit orașe</div>;
+                                    return <div className="p-2 text-gray-500" style={{ backgroundColor: '#ffffff' }}>Nu s-au găsit orașe</div>;
                                   }
                                   
                                   return filtered.map((city: any) => (
                                     <div
                                       key={city.geonameId}
-                                      className="p-2 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-900 dark:text-white"
+                                      className="p-2 hover:bg-gray-100 cursor-pointer text-gray-900"
+                                      style={{ backgroundColor: '#ffffff' }}
                                       onMouseDown={(e) => e.preventDefault()}
                                       onClick={() => {
                                         setEditedLocation(city.name);
