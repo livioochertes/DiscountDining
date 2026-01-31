@@ -9,7 +9,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, ChefHat, Star, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
+import { Badge } from "@/components/ui/badge";
 import RestaurantCard from "@/components/restaurant-card";
 import RestaurantModal from "@/components/restaurant-modal";
 import { AIAssistant } from "@/components/AIAssistant";
@@ -22,6 +24,99 @@ import { useAuth } from "@/hooks/useAuth";
 import { imageCache } from "@/lib/imageCache";
 import { optimizeImageUrl } from "@/lib/imageOptimizer";
 import { instantImageLoader } from "@/lib/instantImageLoader";
+
+function FeaturedChefsSection() {
+  const { t } = useLanguage();
+  
+  const { data: featuredChefs = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/chef-profiles/featured"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mb-10">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
+            <ChefHat className="h-6 w-6" />
+            Featured Chefs
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-40 bg-gray-100 animate-pulse rounded-xl"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (featuredChefs.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mb-10">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
+          <ChefHat className="h-6 w-6" />
+          Featured Chefs
+        </h2>
+        <Link href="/chefs">
+          <Button variant="ghost" className="text-primary hover:text-primary/80">
+            View All Chefs <ArrowRight className="h-4 w-4 ml-1" />
+          </Button>
+        </Link>
+      </div>
+      <p className="text-muted-foreground mb-4">Discover talented chefs from our partner restaurants</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {featuredChefs.slice(0, 4).map((item) => {
+          const chef = item.profile || item;
+          const restaurant = item.restaurant;
+          return (
+            <Link key={chef.id} href={`/chef/${chef.id}`}>
+              <div className="group cursor-pointer transition-transform hover:scale-[1.02]">
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 aspect-[4/3] shadow-md hover:shadow-lg transition-shadow">
+                  {chef.coverImage && (
+                    <img 
+                      src={chef.coverImage} 
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-10 h-10 rounded-full border-2 border-white bg-white overflow-hidden flex-shrink-0">
+                        {chef.profileImage ? (
+                          <img src={chef.profileImage} alt={chef.chefName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                            <ChefHat className="h-5 w-5 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white font-medium text-sm truncate">{chef.chefName}</p>
+                        {restaurant && (
+                          <p className="text-white/80 text-xs truncate">{restaurant.name}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute top-2 right-2">
+                    <Badge className="bg-yellow-500 text-xs">
+                      <Star className="h-3 w-3 mr-1 fill-current" /> Featured
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function Marketplace() {
   const [filters, setFilters] = useState<RestaurantFilters>({});
@@ -527,6 +622,9 @@ export default function Marketplace() {
               <h1 className="text-4xl font-bold text-primary mb-2">{t.restaurant_vouchers}</h1>
               <p className="text-xl text-muted-foreground">{t.discover_save_dine}</p>
             </div>
+            
+            {/* Featured Chefs Section */}
+            <FeaturedChefsSection />
             
             <div className="restaurant-header flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-primary">{t.availableRestaurants}</h2>
