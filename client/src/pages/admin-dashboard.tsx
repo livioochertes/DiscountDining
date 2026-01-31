@@ -2001,9 +2001,20 @@ function ChefFormModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.restaurantId || !formData.chefName.trim()) {
+      return;
+    }
+    
+    const restaurantIdNum = parseInt(formData.restaurantId as any);
+    if (isNaN(restaurantIdNum)) {
+      return;
+    }
+    
     onSave({
       ...formData,
-      restaurantId: parseInt(formData.restaurantId as any),
+      restaurantId: restaurantIdNum,
       specialties: formData.specialties.split(",").map(s => s.trim()).filter(Boolean),
       cuisineExpertise: formData.cuisineExpertise.split(",").map(s => s.trim()).filter(Boolean),
     });
