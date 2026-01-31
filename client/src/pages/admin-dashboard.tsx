@@ -2494,6 +2494,7 @@ export default function AdminDashboard() {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
+  const restaurantModalRef = useRef<HTMLDivElement>(null);
   
   // Restaurant filtering and grouping
   const [restaurantFilter, setRestaurantFilter] = useState({
@@ -3078,6 +3079,16 @@ export default function AdminDashboard() {
     prevEditingRef.current = isEditingDetails;
     prevCountryRef.current = citiesCountryCode;
   }, [isEditingDetails, citiesCountryCode, refetchCities]);
+
+  // Focus modal once when opening
+  useEffect(() => {
+    if (isRestaurantManagementModalOpen) {
+      requestAnimationFrame(() => {
+        restaurantModalRef.current?.focus();
+        restaurantModalRef.current?.scrollIntoView({ block: 'center' });
+      });
+    }
+  }, [isRestaurantManagementModalOpen]);
 
   // Start editing restaurant details
   const startEditingDetails = () => {
@@ -5601,7 +5612,7 @@ export default function AdminDashboard() {
           justifyContent: 'center',
           zIndex: 99999
         }}
-        onClick={(e) => {
+        onMouseDown={(e) => {
           if (e.target === e.currentTarget) {
             setIsRestaurantManagementModalOpen(false);
             setSelectedRestaurant(null);
@@ -5609,17 +5620,12 @@ export default function AdminDashboard() {
         }}
       >
         <div 
-          ref={(el) => {
-            if (el) {
-              el.focus();
-              el.scrollIntoView({ behavior: 'instant', block: 'center' });
-            }
-          }}
+          ref={restaurantModalRef}
           tabIndex={-1}
           className="dark:bg-gray-800 dark:border-gray-700"
           style={{
             position: 'relative',
-            width: 'min(90vw, 1152px)', // max-w-6xl equivalent
+            width: 'min(90vw, 1152px)',
             maxHeight: '85vh',
             background: 'white',
             border: '1px solid #e5e7eb',
@@ -5630,6 +5636,7 @@ export default function AdminDashboard() {
             outline: 'none',
             margin: 'auto'
           }}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-6">
