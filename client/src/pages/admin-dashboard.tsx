@@ -35,7 +35,8 @@ import {
   ChefHat,
   Star,
   Trash2,
-  Eye
+  Eye,
+  Globe
 } from "lucide-react";
 import { SectionNavigation } from "@/components/SectionNavigation";
 import { useToast } from "@/hooks/use-toast";
