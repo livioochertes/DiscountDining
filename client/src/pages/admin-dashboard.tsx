@@ -5772,6 +5772,7 @@ export default function AdminDashboard() {
                         {isEditingDetails ? (
                           <div className="relative">
                             <Input
+                              id="city-search-input"
                               value={citySearchQuery}
                               onChange={(e) => {
                                 setCitySearchQuery(e.target.value);
@@ -5785,36 +5786,65 @@ export default function AdminDashboard() {
                               placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
                               disabled={citiesLoading}
                             />
-                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
-                              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-md max-h-60 overflow-auto z-[100000]">
-                                {(() => {
-                                  const searchTerm = citySearchQuery.toLowerCase();
-                                  const filtered = availableCities
-                                    .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
-                                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
-                                  
-                                  if (filtered.length === 0) {
-                                    return <div className="px-3 py-2 text-gray-500">Nu s-au găsit orașe</div>;
-                                  }
-                                  
-                                  return filtered.map((city: any) => (
-                                    <button
-                                      key={city.geonameId}
-                                      type="button"
-                                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        setEditedLocation(city.name);
-                                        setCitySearchQuery(city.name);
-                                        setShowCityDropdown(false);
-                                      }}
-                                    >
-                                      {city.name}
-                                    </button>
-                                  ));
-                                })()}
-                              </div>
-                            )}
+                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && (() => {
+                              const inputEl = document.getElementById('city-search-input');
+                              const rect = inputEl?.getBoundingClientRect();
+                              if (!rect) return null;
+                              
+                              const searchTerm = citySearchQuery.toLowerCase();
+                              const filtered = availableCities
+                                .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
+                                .sort((a: any, b: any) => a.name.localeCompare(b.name));
+                              
+                              return (
+                                <div 
+                                  style={{
+                                    position: 'fixed',
+                                    top: rect.bottom + 4,
+                                    left: rect.left,
+                                    width: rect.width,
+                                    maxHeight: 240,
+                                    overflowY: 'auto',
+                                    backgroundColor: '#ffffff',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: 6,
+                                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                                    zIndex: 999999
+                                  }}
+                                >
+                                  {filtered.length === 0 ? (
+                                    <div style={{ padding: '8px 12px', color: '#6b7280' }}>Nu s-au găsit orașe</div>
+                                  ) : (
+                                    filtered.map((city: any) => (
+                                      <button
+                                        key={city.geonameId}
+                                        type="button"
+                                        style={{
+                                          display: 'block',
+                                          width: '100%',
+                                          textAlign: 'left',
+                                          padding: '8px 12px',
+                                          backgroundColor: '#ffffff',
+                                          color: '#111827',
+                                          border: 'none',
+                                          cursor: 'pointer'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          setEditedLocation(city.name);
+                                          setCitySearchQuery(city.name);
+                                          setShowCityDropdown(false);
+                                        }}
+                                      >
+                                        {city.name}
+                                      </button>
+                                    ))
+                                  )}
+                                </div>
+                              );
+                            })()}
                             {citiesLoading && (
                               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                 <div className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full"></div>
