@@ -2492,6 +2492,7 @@ export default function AdminDashboard() {
   const [editedMarketplaceId, setEditedMarketplaceId] = useState<number | null>(null);
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [cityDropdownRect, setCityDropdownRect] = useState<DOMRect | null>(null);
   const cityInputRef = useRef<HTMLDivElement>(null);
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
@@ -5779,17 +5780,19 @@ export default function AdminDashboard() {
                                 setEditedLocation(e.target.value);
                                 setShowCityDropdown(true);
                               }}
-                              onFocus={() => setShowCityDropdown(true)}
+                              onFocus={() => {
+                                if (cityInputRef.current) {
+                                  setCityDropdownRect(cityInputRef.current.getBoundingClientRect());
+                                }
+                                setShowCityDropdown(true);
+                              }}
                               onBlur={() => {
                                 setTimeout(() => setShowCityDropdown(false), 120);
                               }}
                               placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
                               disabled={citiesLoading}
                             />
-                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && (() => {
-                              const rect = cityInputRef.current?.getBoundingClientRect();
-                              if (!rect) return null;
-                              
+                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && cityDropdownRect && (() => {
                               const searchTerm = citySearchQuery.toLowerCase();
                               const filtered = availableCities
                                 .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
@@ -5799,9 +5802,9 @@ export default function AdminDashboard() {
                                 <div 
                                   style={{
                                     position: 'fixed',
-                                    top: rect.bottom + 4,
-                                    left: rect.left,
-                                    width: rect.width,
+                                    top: cityDropdownRect.bottom + 4,
+                                    left: cityDropdownRect.left,
+                                    width: cityDropdownRect.width,
                                     maxHeight: 240,
                                     overflowY: 'auto',
                                     backgroundColor: '#ffffff',
