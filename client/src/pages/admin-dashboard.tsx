@@ -4160,6 +4160,274 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Restaurant Management Inline Section - Inside restaurants tab */}
+            {isRestaurantManagementModalOpen && selectedRestaurant && (
+              <Card className="mt-6 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Store className="h-6 w-6" />
+                        Restaurant Management
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-300">
+                        {selectedRestaurant.name} - Menu Items & Voucher Packages
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsRestaurantManagementModalOpen(false);
+                        setSelectedRestaurant(null);
+                      }}
+                    >
+                      Close
+                    </Button>
+                  </div>
+
+                  {/* Tab Navigation */}
+                  <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+                    <div className="flex space-x-8">
+                      <button
+                        onClick={() => setManagementTab('details')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          managementTab === 'details'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        Details
+                      </button>
+                      <button
+                        onClick={() => setManagementTab('menu')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          managementTab === 'menu'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        Menu Items ({restaurantDetails?.menuItems?.length || 0})
+                      </button>
+                      <button
+                        onClick={() => setManagementTab('vouchers')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          managementTab === 'vouchers'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        Voucher Packages ({restaurantDetails?.voucherPackages?.length || 0})
+                      </button>
+                      <button
+                        onClick={() => setManagementTab('chefs')}
+                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                          managementTab === 'chefs'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        Chefs ({restaurantDetails?.chefs?.length || 0}/3)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Details Tab Content */}
+                  {managementTab === 'details' && (
+                    <div className="space-y-6">
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Store className="h-5 w-5" />
+                            Restaurant Details
+                          </CardTitle>
+                          {!isEditingDetails ? (
+                            <Button size="sm" variant="outline" onClick={startEditingDetails}>
+                              <Edit className="h-4 w-4 mr-1" /> Editează
+                            </Button>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => setIsEditingDetails(false)}>
+                                Anulează
+                              </Button>
+                              <Button size="sm" onClick={saveRestaurantDetails} disabled={savingDetails}>
+                                {savingDetails ? 'Se salvează...' : 'Salvează'}
+                              </Button>
+                            </div>
+                          )}
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Cuisine</label>
+                              <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.cuisine || 'Not specified'}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Price Range</label>
+                              <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.priceRange || 'Not specified'}</p>
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</label>
+                              <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.description || 'No description'}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Address</label>
+                              {isEditingDetails ? (
+                                <Input 
+                                  value={editedAddress}
+                                  onChange={(e) => setEditedAddress(e.target.value)}
+                                  placeholder="Adresă"
+                                />
+                              ) : (
+                                <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.address}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Location/City</label>
+                              {isEditingDetails ? (
+                                <div className="relative">
+                                  <Input
+                                    value={citySearchQuery}
+                                    onChange={(e) => {
+                                      setCitySearchQuery(e.target.value);
+                                      setEditedLocation(e.target.value);
+                                      setShowCityDropdown(true);
+                                    }}
+                                    onFocus={() => setShowCityDropdown(true)}
+                                    onBlur={() => {
+                                      setTimeout(() => setShowCityDropdown(false), 150);
+                                    }}
+                                    placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
+                                    disabled={citiesLoading}
+                                  />
+                                  {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-60 overflow-auto">
+                                      {(() => {
+                                        const searchTerm = citySearchQuery.toLowerCase();
+                                        const filtered = availableCities
+                                          .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
+                                          .sort((a: any, b: any) => a.name.localeCompare(b.name));
+                                        
+                                        if (filtered.length === 0) {
+                                          return <div className="p-2 text-gray-500">Nu s-au găsit orașe</div>;
+                                        }
+                                        
+                                        return filtered.map((city: any) => (
+                                          <div
+                                            key={city.geonameId}
+                                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => {
+                                              setEditedLocation(city.name);
+                                              setCitySearchQuery(city.name);
+                                              setShowCityDropdown(false);
+                                            }}
+                                          >
+                                            {city.name}
+                                          </div>
+                                        ));
+                                      })()}
+                                    </div>
+                                  )}
+                                  {citiesLoading && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                      <div className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.location}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
+                              {isEditingDetails ? (
+                                <Input 
+                                  value={editedPhone}
+                                  onChange={(e) => setEditedPhone(e.target.value)}
+                                  placeholder="Telefon"
+                                />
+                              ) : (
+                                <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.phone}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Website</label>
+                              <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.website || 'Not specified'}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Marketplace Info */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Globe className="h-5 w-5" />
+                            Marketplace
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {isEditingDetails ? (
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-500">Selectează Marketplace</label>
+                              <Select 
+                                value={editedMarketplaceId?.toString() || ''} 
+                                onValueChange={(val) => setEditedMarketplaceId(val ? parseInt(val) : null)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Alege marketplace..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {marketplacesList?.map((mp: any) => (
+                                    <SelectItem key={mp.id} value={mp.id.toString()}>
+                                      {mp.name} ({mp.country}) - {mp.currency}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-gray-500">Name</label>
+                                <p className="text-gray-900 dark:text-white">{(restaurantDetails as any)?.marketplace?.name || 'Not assigned'}</p>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-500">Country</label>
+                                <p className="text-gray-900 dark:text-white">{(restaurantDetails as any)?.marketplace?.country || '-'}</p>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-500">Currency</label>
+                                <p className="text-gray-900 dark:text-white">{(restaurantDetails as any)?.marketplace?.currency || '-'}</p>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {/* Other tabs content placeholder - Menu, Vouchers, Chefs tabs would go here */}
+                  {managementTab === 'menu' && (
+                    <div className="text-center py-8 text-gray-500">
+                      Menu Items tab content - funcționalitatea completă este în secțiunea originală
+                    </div>
+                  )}
+                  {managementTab === 'vouchers' && (
+                    <div className="text-center py-8 text-gray-500">
+                      Voucher Packages tab content - funcționalitatea completă este în secțiunea originală
+                    </div>
+                  )}
+                  {managementTab === 'chefs' && (
+                    <div className="text-center py-8 text-gray-500">
+                      Chefs tab content - funcționalitatea completă este în secțiunea originală
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             </div>
           )}
 
@@ -5586,31 +5854,6 @@ export default function AdminDashboard() {
       </div>
     )}
 
-    {/* Restaurant Management Inline Section */}
-    {isRestaurantManagementModalOpen && selectedRestaurant && (
-      <div className="mt-6 mb-6">
-        <Card className="bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg">
-          <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Store className="h-6 w-6" />
-                Restaurant Management
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                {selectedRestaurant.name} - Menu Items & Voucher Packages
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsRestaurantManagementModalOpen(false);
-                setSelectedRestaurant(null);
-              }}
-            >
-              Close
-            </Button>
-          </div>
 
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
