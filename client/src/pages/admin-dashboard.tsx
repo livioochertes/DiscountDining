@@ -5586,52 +5586,11 @@ export default function AdminDashboard() {
       </div>
     )}
 
-    {/* Restaurant Management Modal - Viewport Centered */}
+    {/* Restaurant Management Inline Section */}
     {isRestaurantManagementModalOpen && selectedRestaurant && (
-      <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999
-        }}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setIsRestaurantManagementModalOpen(false);
-            setSelectedRestaurant(null);
-          }
-        }}
-      >
-        <div 
-          ref={(el) => {
-            if (el) {
-              el.focus();
-              el.scrollIntoView({ behavior: 'instant', block: 'center' });
-            }
-          }}
-          tabIndex={-1}
-          className="dark:bg-gray-800 dark:border-gray-700"
-          style={{
-            position: 'relative',
-            width: 'min(90vw, 1152px)', // max-w-6xl equivalent
-            maxHeight: '85vh',
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '0.5rem',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            overflowY: 'auto',
-            padding: '24px',
-            outline: 'none',
-            margin: 'auto'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div className="mt-6 mb-6">
+        <Card className="bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg">
+          <CardContent className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -6222,11 +6181,10 @@ export default function AdminDashboard() {
               )}
             </>
           )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
     )}
-
-
 
     {/* Edit Voucher Package Modal - Viewport Centered */}
     {isEditVoucherPackageModalOpen && (
