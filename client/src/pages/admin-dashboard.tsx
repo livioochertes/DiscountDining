@@ -5786,7 +5786,7 @@ export default function AdminDashboard() {
                               disabled={citiesLoading}
                             />
                             {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
-                              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-60 overflow-auto">
+                              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-xl max-h-60 overflow-auto" style={{ backgroundColor: 'white' }}>
                                 {(() => {
                                   const searchTerm = citySearchQuery.toLowerCase();
                                   const filtered = availableCities
@@ -5800,7 +5800,7 @@ export default function AdminDashboard() {
                                   return filtered.map((city: any) => (
                                     <div
                                       key={city.geonameId}
-                                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                      className="p-2 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-900 dark:text-white"
                                       onMouseDown={(e) => e.preventDefault()}
                                       onClick={() => {
                                         setEditedLocation(city.name);
