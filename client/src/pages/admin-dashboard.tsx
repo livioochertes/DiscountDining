@@ -5780,20 +5780,13 @@ export default function AdminDashboard() {
                               }}
                               onFocus={() => setShowCityDropdown(true)}
                               onBlur={() => {
-                                setTimeout(() => setShowCityDropdown(false), 150);
+                                setTimeout(() => setShowCityDropdown(false), 120);
                               }}
                               placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
                               disabled={citiesLoading}
                             />
                             {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
-                              <div 
-                                className="absolute w-full mt-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-xl max-h-60 overflow-auto"
-                                style={{ 
-                                  zIndex: 99999, 
-                                  backgroundColor: '#ffffff',
-                                  position: 'absolute'
-                                }}
-                              >
+                              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-md max-h-60 overflow-auto z-[100000]">
                                 {(() => {
                                   const searchTerm = citySearchQuery.toLowerCase();
                                   const filtered = availableCities
@@ -5801,23 +5794,23 @@ export default function AdminDashboard() {
                                     .sort((a: any, b: any) => a.name.localeCompare(b.name));
                                   
                                   if (filtered.length === 0) {
-                                    return <div className="p-2 text-gray-500" style={{ backgroundColor: '#ffffff' }}>Nu s-au găsit orașe</div>;
+                                    return <div className="px-3 py-2 text-gray-500">Nu s-au găsit orașe</div>;
                                   }
                                   
                                   return filtered.map((city: any) => (
-                                    <div
+                                    <button
                                       key={city.geonameId}
-                                      className="p-2 hover:bg-gray-100 cursor-pointer text-gray-900"
-                                      style={{ backgroundColor: '#ffffff' }}
-                                      onMouseDown={(e) => e.preventDefault()}
-                                      onClick={() => {
+                                      type="button"
+                                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
                                         setEditedLocation(city.name);
                                         setCitySearchQuery(city.name);
                                         setShowCityDropdown(false);
                                       }}
                                     >
                                       {city.name}
-                                    </div>
+                                    </button>
                                   ));
                                 })()}
                               </div>
