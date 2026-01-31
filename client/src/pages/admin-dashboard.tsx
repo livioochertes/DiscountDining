@@ -3044,17 +3044,14 @@ export default function AdminDashboard() {
     return restaurantDetails?.marketplace?.countryCode || 'RO';
   }, [editedMarketplaceId, marketplacesList, restaurantDetails?.marketplace?.countryCode]);
 
-  // Cities query based on marketplace country code
+  // Cities query based on marketplace country code - load all cities once, filter client-side
   const { data: availableCities = [], isLoading: citiesLoading, refetch: refetchCities } = useQuery<any[]>({
-    queryKey: ['/api/cities', 'restaurant-edit', citiesCountryCode, citySearchQuery],
+    queryKey: ['/api/cities', 'restaurant-edit', citiesCountryCode],
     enabled: isEditingDetails,
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     queryFn: async () => {
-      let url = `/api/cities?country=${citiesCountryCode}&limit=200`;
-      if (citySearchQuery.length >= 2) {
-        url += `&search=${encodeURIComponent(citySearchQuery)}`;
-      }
-      console.log('[Cities Query] Fetching cities for country:', citiesCountryCode, 'URL:', url);
+      const url = `/api/cities?country=${citiesCountryCode}&limit=500`;
+      console.log('[Cities Query] Fetching cities for country:', citiesCountryCode);
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch cities');
       const data = await response.json();
