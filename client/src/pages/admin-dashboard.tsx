@@ -5795,7 +5795,7 @@ export default function AdminDashboard() {
                                 .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
                                 .sort((a: any, b: any) => a.name.localeCompare(b.name));
                               
-                              return (
+                              return createPortal(
                                 <div 
                                   style={{
                                     position: 'fixed',
@@ -5841,7 +5841,8 @@ export default function AdminDashboard() {
                                       </button>
                                     ))
                                   )}
-                                </div>
+                                </div>,
+                                document.body
                               );
                             })()}
                             {citiesLoading && (
