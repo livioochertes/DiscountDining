@@ -294,6 +294,7 @@ export function registerAdminRoutes(app: Express) {
           restaurantCode: restaurants.restaurantCode,
           approvedAt: restaurants.approvedAt,
           createdAt: restaurants.createdAt,
+          marketplaceId: restaurants.marketplaceId,
         })
         .from(restaurants)
         .orderBy(
