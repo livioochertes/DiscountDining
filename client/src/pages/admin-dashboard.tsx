@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -2491,6 +2491,7 @@ export default function AdminDashboard() {
   const [editedPhone, setEditedPhone] = useState('');
   const [editedMarketplaceId, setEditedMarketplaceId] = useState<number | null>(null);
   const [citySearchQuery, setCitySearchQuery] = useState('');
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
   
@@ -3063,11 +3064,22 @@ export default function AdminDashboard() {
   });
 
   // Force refetch cities when editing mode is enabled or marketplace changes
+  // Using a ref to track previous values to avoid unnecessary refetches
+  const prevEditingRef = useRef(isEditingDetails);
+  const prevCountryRef = useRef(citiesCountryCode);
+  
   useEffect(() => {
-    if (isEditingDetails) {
+    const wasEditing = prevEditingRef.current;
+    const prevCountry = prevCountryRef.current;
+    
+    // Only refetch if entering edit mode OR if country changed while editing
+    if (isEditingDetails && (!wasEditing || prevCountry !== citiesCountryCode)) {
       console.log('[Cities Effect] Triggering refetch, country:', citiesCountryCode);
       refetchCities();
     }
+    
+    prevEditingRef.current = isEditingDetails;
+    prevCountryRef.current = citiesCountryCode;
   }, [isEditingDetails, citiesCountryCode, refetchCities]);
 
   // Start editing restaurant details
@@ -3076,7 +3088,8 @@ export default function AdminDashboard() {
     setEditedAddress(selectedRestaurant?.address || '');
     setEditedPhone(selectedRestaurant?.phone || '');
     setEditedMarketplaceId(selectedRestaurant?.marketplaceId || null);
-    setCitySearchQuery('');
+    setCitySearchQuery(selectedRestaurant?.location || '');
+    setShowCityDropdown(false);
     setIsEditingDetails(true);
   };
 
@@ -5754,19 +5767,49 @@ export default function AdminDashboard() {
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Location/City</label>
                         {isEditingDetails ? (
                           <div className="relative">
-                            <select
-                              value={editedLocation}
-                              onChange={(e) => setEditedLocation(e.target.value)}
-                              className="w-full h-10 px-3 border rounded-md dark:bg-gray-800 dark:border-gray-600"
+                            <Input
+                              value={citySearchQuery}
+                              onChange={(e) => {
+                                setCitySearchQuery(e.target.value);
+                                setEditedLocation(e.target.value);
+                                setShowCityDropdown(true);
+                              }}
+                              onFocus={() => setShowCityDropdown(true)}
+                              onBlur={() => {
+                                setTimeout(() => setShowCityDropdown(false), 150);
+                              }}
+                              placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
                               disabled={citiesLoading}
-                            >
-                              <option value="">{citiesLoading ? 'Se încarcă...' : 'Selectează oraș'}</option>
-                              {!citiesLoading && availableCities.map((city: any) => (
-                                <option key={city.geonameId} value={city.name}>
-                                  {city.name} {city.population > 50000 ? `(${(city.population / 1000).toFixed(0)}k)` : ''}
-                                </option>
-                              ))}
-                            </select>
+                            />
+                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
+                              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-60 overflow-auto">
+                                {(() => {
+                                  const searchTerm = citySearchQuery.toLowerCase();
+                                  const filtered = availableCities
+                                    .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
+                                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
+                                  
+                                  if (filtered.length === 0) {
+                                    return <div className="p-2 text-gray-500">Nu s-au găsit orașe</div>;
+                                  }
+                                  
+                                  return filtered.map((city: any) => (
+                                    <div
+                                      key={city.geonameId}
+                                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      onClick={() => {
+                                        setEditedLocation(city.name);
+                                        setCitySearchQuery(city.name);
+                                        setShowCityDropdown(false);
+                                      }}
+                                    >
+                                      {city.name}
+                                    </div>
+                                  ));
+                                })()}
+                              </div>
+                            )}
                             {citiesLoading && (
                               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                 <div className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full"></div>
