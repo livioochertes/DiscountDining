@@ -2489,6 +2489,7 @@ export default function AdminDashboard() {
   const [editedLocation, setEditedLocation] = useState('');
   const [editedAddress, setEditedAddress] = useState('');
   const [editedPhone, setEditedPhone] = useState('');
+  const [editedMarketplaceId, setEditedMarketplaceId] = useState<number | null>(null);
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
@@ -3024,12 +3025,21 @@ export default function AdminDashboard() {
     }
   });
 
+  // Get country code from edited marketplace or existing marketplace or default to RO
+  const getCountryCodeForCities = () => {
+    if (editedMarketplaceId) {
+      const selectedMp = marketplacesList?.find(mp => mp.id === editedMarketplaceId);
+      return selectedMp?.countryCode || 'RO';
+    }
+    return restaurantDetails?.marketplace?.countryCode || 'RO';
+  };
+
   // Cities query based on marketplace country code
   const { data: availableCities = [] } = useQuery<any[]>({
-    queryKey: ['/api/cities', restaurantDetails?.marketplace?.countryCode, citySearchQuery],
-    enabled: isEditingDetails && !!restaurantDetails?.marketplace?.countryCode,
+    queryKey: ['/api/cities', editedMarketplaceId, restaurantDetails?.marketplace?.countryCode, citySearchQuery],
+    enabled: isEditingDetails,
     queryFn: async () => {
-      const country = restaurantDetails?.marketplace?.countryCode || 'RO';
+      const country = getCountryCodeForCities();
       let url = `/api/cities?country=${country}&limit=200`;
       if (citySearchQuery.length >= 2) {
         url += `&search=${encodeURIComponent(citySearchQuery)}`;
@@ -3045,6 +3055,7 @@ export default function AdminDashboard() {
     setEditedLocation(selectedRestaurant?.location || '');
     setEditedAddress(selectedRestaurant?.address || '');
     setEditedPhone(selectedRestaurant?.phone || '');
+    setEditedMarketplaceId(selectedRestaurant?.marketplaceId || null);
     setCitySearchQuery('');
     setIsEditingDetails(true);
   };
@@ -3065,7 +3076,8 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           location: editedLocation,
           address: editedAddress,
-          phone: editedPhone
+          phone: editedPhone,
+          marketplaceId: editedMarketplaceId
         })
       });
 
@@ -3085,7 +3097,8 @@ export default function AdminDashboard() {
         ...prev,
         location: editedLocation,
         address: editedAddress,
-        phone: editedPhone
+        phone: editedPhone,
+        marketplaceId: editedMarketplaceId
       } : null);
     } catch (error) {
       toast({
@@ -5767,16 +5780,45 @@ export default function AdminDashboard() {
                           </Badge>
                         </div>
                       </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Marketplace</label>
+                        {isEditingDetails ? (
+                          <select
+                            value={editedMarketplaceId?.toString() || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditedMarketplaceId(val ? parseInt(val) : null);
+                              // Reset location when marketplace changes
+                              setEditedLocation('');
+                            }}
+                            className="w-full h-10 px-3 border rounded-md dark:bg-gray-800 dark:border-gray-600"
+                          >
+                            <option value="">Selectează Marketplace</option>
+                            {marketplacesList?.map((mp: any) => (
+                              <option key={mp.id} value={mp.id.toString()}>
+                                {mp.name} ({mp.country} - {mp.currencySymbol})
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="text-gray-900 dark:text-white">
+                            {restaurantDetails?.marketplace ? 
+                              `${restaurantDetails.marketplace.name} (${restaurantDetails.marketplace.country})` : 
+                              <span className="text-orange-500">Nu este setat</span>
+                            }
+                          </p>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
-                  {/* Marketplace Information */}
-                  {restaurantDetails?.marketplace && (
+                  {/* Marketplace Details - Show only when marketplace is set and not editing */}
+                  {restaurantDetails?.marketplace && !isEditingDetails && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Building2 className="h-5 w-5" />
-                          Marketplace
+                          Marketplace Details
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">

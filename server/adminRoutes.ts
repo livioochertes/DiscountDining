@@ -431,11 +431,11 @@ export function registerAdminRoutes(app: Express) {
   app.put("/api/admin/restaurants/:id/update-details", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const { location, address, phone } = req.body;
+      const { location, address, phone, marketplaceId } = req.body;
 
       // Validate that at least one field is provided
-      if (!location && !address && !phone) {
-        return res.status(400).json({ message: "At least one field (location, address, or phone) is required" });
+      if (!location && !address && !phone && marketplaceId === undefined) {
+        return res.status(400).json({ message: "At least one field (location, address, phone, or marketplaceId) is required" });
       }
 
       const [oldRestaurant] = await db
@@ -451,6 +451,17 @@ export function registerAdminRoutes(app: Express) {
       if (location && typeof location === 'string' && location.trim()) updateData.location = location.trim();
       if (address && typeof address === 'string') updateData.address = address.trim();
       if (phone && typeof phone === 'string') updateData.phone = phone.trim();
+      // Handle marketplaceId - can be null to unset, or a number to set
+      if (marketplaceId !== undefined) {
+        if (marketplaceId === null || marketplaceId === '') {
+          updateData.marketplaceId = null;
+        } else {
+          const parsedMpId = parseInt(marketplaceId);
+          if (!isNaN(parsedMpId)) {
+            updateData.marketplaceId = parsedMpId;
+          }
+        }
+      }
 
       if (Object.keys(updateData).length === 0) {
         return res.status(400).json({ message: "No valid fields to update" });
@@ -466,7 +477,7 @@ export function registerAdminRoutes(app: Express) {
         "update_restaurant_details",
         "restaurant",
         id,
-        { location: oldRestaurant.location, address: oldRestaurant.address, phone: oldRestaurant.phone },
+        { location: oldRestaurant.location, address: oldRestaurant.address, phone: oldRestaurant.phone, marketplaceId: oldRestaurant.marketplaceId },
         updateData,
         req
       );
