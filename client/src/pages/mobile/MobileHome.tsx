@@ -508,7 +508,7 @@ export default function MobileHome() {
           onBuyVoucher={handleBuyVoucher}
           onUseVoucher={handleUseVoucher}
           isGuest={!user}
-          userName={user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : ''}
+          userName={user ? (user.name || user.email) : ''}
           customerCode={user?.customerCode || ''}
           loyaltyTier={(user as any)?.loyaltyTier || 'Bronze'}
         />
