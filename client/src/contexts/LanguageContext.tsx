@@ -253,9 +253,7 @@ const translations = {
     walletAvailable: 'available',
     walletTotalLimit: 'Total limit',
     walletUsed: 'Used',
-    walletInterest: 'Interest',
     walletTerm: 'Term',
-    walletDays: 'days',
     
     // Top-up Modal
     topUpTitle: 'Add Money',
@@ -498,7 +496,7 @@ const translations = {
     // Admin Panel
     admin: {
       login: 'Admin Login',
-      email: 'Email Address',
+      loginEmail: 'Email Address',
       password: 'Password',
       twoFactorCode: '2FA Code',
       signIn: 'Sign In',
@@ -2435,7 +2433,7 @@ const translations = {
     // Admin Panel
     admin: {
       login: 'Autentificare Admin',
-      email: 'Adresă Email',
+      loginEmail: 'Adresă Email',
       password: 'Parolă',
       twoFactorCode: 'Cod 2FA',
       signIn: 'Conectare',
