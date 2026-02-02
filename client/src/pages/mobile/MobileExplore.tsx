@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X, Star, Loader2 } from 'lucide-react';
@@ -243,6 +243,15 @@ export default function MobileExplore() {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Auto-focus search input on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
   
   // GPS location hook
   const { 
@@ -545,6 +554,7 @@ export default function MobileExplore() {
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
