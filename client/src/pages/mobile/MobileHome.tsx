@@ -199,6 +199,23 @@ export default function MobileHome() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showGreeting, setShowGreeting] = useState(true);
+  
+  // Hide greeting after 15 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowGreeting(false);
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Get greeting based on current hour
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return t.goodMorning;
+    if (hour >= 12 && hour < 18) return t.goodAfternoon;
+    return t.goodEvening;
+  };
   
   // GPS location hook
   const { 
@@ -421,7 +438,9 @@ export default function MobileHome() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-gray-500 text-sm">{t.goodMorning} 👋</p>
+            {showGreeting && (
+              <p className="text-gray-500 text-sm transition-opacity duration-500">{getGreeting()} 👋</p>
+            )}
             <h1 className="text-xl font-bold text-gray-900">
               {user?.name || t.guest}
             </h1>
