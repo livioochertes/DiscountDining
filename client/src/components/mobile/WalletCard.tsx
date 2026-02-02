@@ -1,4 +1,4 @@
-import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Gift, Brain } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Gift, Brain, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WalletCardProps {
@@ -86,12 +86,14 @@ interface ActionRowProps {
   onAIMenu?: () => void;
   onCashback?: () => void;
   onCredit?: () => void;
+  onRestaurants?: () => void;
 }
 
-export function ActionRow({ onBuyVoucher, onAIMenu, onCashback, onCredit }: ActionRowProps) {
+export function ActionRow({ onBuyVoucher, onAIMenu, onCashback, onCredit, onRestaurants }: ActionRowProps) {
   const actions = [
     { icon: Gift, label: 'Buy Voucher', onClick: onBuyVoucher, color: 'bg-orange-50 text-orange-600' },
     { icon: Brain, label: 'AI Menu', onClick: onAIMenu, color: 'bg-purple-50 text-purple-600' },
+    { icon: Store, label: 'Restaurants', onClick: onRestaurants, color: 'bg-teal-50 text-teal-600' },
     { icon: Wallet, label: 'Cashback', onClick: onCashback, color: 'bg-green-50 text-green-600' },
     { icon: CreditCard, label: 'Credit', onClick: onCredit, color: 'bg-blue-50 text-blue-600' },
   ];

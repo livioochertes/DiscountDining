@@ -413,6 +413,7 @@ export default function MobileHome() {
   const handleAIMenu = () => setLocation('/m/ai-menu');
   const handleCashback = () => setLocation('/m/wallet');
   const handleCredit = () => setLocation('/m/wallet');
+  const handleRestaurants = () => setLocation('/m/explore?tab=restaurants');
 
   return (
     <MobileLayout>
@@ -473,6 +474,7 @@ export default function MobileHome() {
           onAIMenu={handleAIMenu}
           onCashback={handleCashback}
           onCredit={handleCredit}
+          onRestaurants={handleRestaurants}
         />
 
         {/* Search Bar */}
