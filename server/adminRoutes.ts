@@ -1683,6 +1683,47 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // Seed cities endpoint - for syncing cities to production
+  // Uses SEED_SECRET for authentication instead of admin token
+  app.post("/api/admin/seed-cities", async (req: Request, res: Response) => {
+    try {
+      const seedSecret = req.headers['x-seed-secret'];
+      const expectedSecret = process.env.SEED_SECRET || 'eatoff-seed-2024-secret';
+      
+      if (seedSecret !== expectedSecret) {
+        return res.status(401).json({ error: "Invalid seed secret" });
+      }
+      
+      const { cities } = req.body;
+      
+      if (!cities || !Array.isArray(cities)) {
+        return res.status(400).json({ error: "Cities array required" });
+      }
+      
+      // Check current count
+      const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(geonamesCities);
+      
+      if (Number(count) > 100000) {
+        return res.json({ message: "Cities already seeded", count: Number(count) });
+      }
+      
+      // Insert in batches
+      const batchSize = 500;
+      let inserted = 0;
+      
+      for (let i = 0; i < cities.length; i += batchSize) {
+        const batch = cities.slice(i, i + batchSize);
+        await db.insert(geonamesCities).values(batch).onConflictDoNothing();
+        inserted += batch.length;
+      }
+      
+      res.json({ message: "Cities seeded successfully", inserted });
+    } catch (error) {
+      console.error("Error seeding cities:", error);
+      res.status(500).json({ error: "Failed to seed cities" });
+    }
+  });
+
   // Get available countries from GeoNames database
   app.get("/api/countries", async (req: Request, res: Response) => {
     try {
