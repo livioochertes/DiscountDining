@@ -570,8 +570,8 @@ export default function MobileHome() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-gray-900">Recommended for you</h2>
             <button 
-              onClick={() => setLocation('/m/ai-menu')}
-              className="text-primary text-sm font-medium"
+              onClick={() => setLocation('/m/explore?tab=restaurants')}
+              className="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors"
             >
               See all
             </button>
