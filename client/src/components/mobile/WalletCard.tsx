@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Gift, Brain, Store, X, Crown } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Gift, Brain, Store, X, Crown, Utensils } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
 
@@ -122,16 +123,15 @@ export function WalletCard({
         </div>
       </div>
 
-      {/* Loyalty Card Overlay - centered in viewport */}
-      {showLoyaltyCard && (
+      {/* Loyalty Card Overlay - using Portal to render at document body level */}
+      {showLoyaltyCard && createPortal(
         <div 
-          className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/70 z-[99999] flex items-center justify-center p-4"
           onClick={() => setShowLoyaltyCard(false)}
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         >
           <div 
             className={cn(
-              "relative w-full max-w-sm aspect-[1.6/1] rounded-2xl p-6 shadow-2xl bg-gradient-to-br",
+              "relative w-full max-w-md aspect-[1.6/1] rounded-2xl p-6 shadow-2xl bg-gradient-to-br",
               tierColors[loyaltyTier]
             )}
             onClick={(e) => e.stopPropagation()}
@@ -145,50 +145,50 @@ export function WalletCard({
             </button>
 
             {/* Card chip decoration */}
-            <div className="absolute top-6 left-6 w-10 h-8 rounded bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 shadow-inner" />
+            <div className="absolute top-6 left-6 w-12 h-9 rounded bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 shadow-inner" />
 
-            {/* EatOff Logo - SVG with fork icon */}
-            <div className="absolute top-5 right-14 flex items-center gap-1.5">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={tierTextColors[loyaltyTier]}>
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
-                <path d="M9 7v10M15 7v4c0 1.1-.9 2-2 2h-1M12 13v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <span className={cn("text-lg font-bold tracking-wide", tierTextColors[loyaltyTier])}>
+            {/* EatOff Logo - Utensils icon + styled text */}
+            <div className="absolute top-5 right-14 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <Utensils className={cn("w-4 h-4", tierTextColors[loyaltyTier])} />
+              </div>
+              <span className={cn("text-xl font-bold italic tracking-tight", tierTextColors[loyaltyTier])}>
                 EatOff
               </span>
             </div>
 
             {/* Member tier badge */}
-            <div className="absolute top-16 left-6 flex items-center gap-2">
+            <div className="absolute top-[70px] left-6 flex items-center gap-2">
               <Crown className={cn("w-5 h-5", tierTextColors[loyaltyTier])} />
               <span className={cn("text-sm font-semibold uppercase tracking-wider", tierTextColors[loyaltyTier])}>
                 {loyaltyTier} Member
               </span>
             </div>
 
-            {/* QR Code */}
-            <div className="absolute bottom-6 left-4 bg-white p-2 rounded-lg shadow-lg">
+            {/* QR Code - larger */}
+            <div className="absolute bottom-5 left-5 bg-white p-2.5 rounded-xl shadow-lg">
               <QRCodeSVG 
                 value={displayCode} 
-                size={56}
+                size={80}
                 level="M"
               />
             </div>
 
-            {/* Customer Code - positioned further right to avoid QR overlap */}
-            <div className="absolute bottom-4 left-[100px] right-4">
-              <p className={cn("text-[10px] opacity-70 mb-0.5", tierTextColors[loyaltyTier])}>
+            {/* Customer Code - positioned further right, larger text */}
+            <div className="absolute bottom-5 left-[120px] right-4">
+              <p className={cn("text-xs opacity-70 mb-1", tierTextColors[loyaltyTier])}>
                 Card Number
               </p>
-              <p className={cn("text-sm font-mono font-bold tracking-wider", tierTextColors[loyaltyTier])}>
+              <p className={cn("text-lg font-mono font-bold tracking-widest", tierTextColors[loyaltyTier])}>
                 {displayCode}
               </p>
-              <p className={cn("text-xs font-medium mt-1 truncate", tierTextColors[loyaltyTier])}>
+              <p className={cn("text-base font-semibold mt-2 truncate", tierTextColors[loyaltyTier])}>
                 {displayName}
               </p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
