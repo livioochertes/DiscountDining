@@ -617,6 +617,8 @@ const translations = {
     
     // Mobile
     goodMorning: 'Good morning',
+    goodAfternoon: 'Good afternoon',
+    goodEvening: 'Good evening',
     availableVouchers: 'Available Vouchers',
     seeAll: 'See all',
     guest: 'Guest',
@@ -1057,6 +1059,8 @@ const translations = {
     
     // Mobile
     goodMorning: 'Buenos días',
+    goodAfternoon: 'Buenas tardes',
+    goodEvening: 'Buenas noches',
     availableVouchers: 'Vales disponibles',
     seeAll: 'Ver todo',
     guest: 'Invitado',
@@ -1474,6 +1478,8 @@ const translations = {
     
     // Mobile
     goodMorning: 'Bonjour',
+    goodAfternoon: 'Bon après-midi',
+    goodEvening: 'Bonsoir',
     availableVouchers: 'Bons disponibles',
     seeAll: 'Voir tout',
     guest: 'Invité',
@@ -1891,6 +1897,8 @@ const translations = {
     
     // Mobile
     goodMorning: 'Guten Morgen',
+    goodAfternoon: 'Guten Tag',
+    goodEvening: 'Guten Abend',
     availableVouchers: 'Verfügbare Gutscheine',
     seeAll: 'Alle anzeigen',
     guest: 'Gast',
@@ -2308,6 +2316,8 @@ const translations = {
     
     // Mobile
     goodMorning: 'Buongiorno',
+    goodAfternoon: 'Buon pomeriggio',
+    goodEvening: 'Buonasera',
     availableVouchers: 'Voucher disponibili',
     seeAll: 'Vedi tutto',
     guest: 'Ospite',
@@ -2907,6 +2917,8 @@ const translations = {
     
     // Mobile
     goodMorning: 'Bună dimineața',
+    goodAfternoon: 'Bună ziua',
+    goodEvening: 'Bună seara',
     availableVouchers: 'Vouchere disponibile',
     seeAll: 'Vezi toate',
     guest: 'Vizitator',
