@@ -245,12 +245,17 @@ export default function MobileExplore() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Auto-focus search input on mount
+  // Auto-focus search input only when coming from search bar (focus=search param)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 100);
-    return () => clearTimeout(timer);
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldFocus = urlParams.get('focus') === 'search';
+    
+    if (shouldFocus) {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
   }, []);
   
   // GPS location hook
