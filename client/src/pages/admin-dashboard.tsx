@@ -2496,6 +2496,12 @@ export default function AdminDashboard() {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
+  const [editedOwnerCompanyName, setEditedOwnerCompanyName] = useState('');
+  const [editedOwnerTaxId, setEditedOwnerTaxId] = useState('');
+  const [editedOwnerBusinessRegistration, setEditedOwnerBusinessRegistration] = useState('');
+  const [editedOwnerEmail, setEditedOwnerEmail] = useState('');
+  const [editedOwnerPhone, setEditedOwnerPhone] = useState('');
+  const [editedOwnerContactPerson, setEditedOwnerContactPerson] = useState('');
   
   // Restaurant filtering and grouping
   const [restaurantFilter, setRestaurantFilter] = useState({
@@ -3109,6 +3115,12 @@ export default function AdminDashboard() {
     setEditedMarketplaceId(selectedRestaurant?.marketplaceId || null);
     setCitySearchQuery(selectedRestaurant?.location || '');
     setShowCityDropdown(false);
+    setEditedOwnerCompanyName(restaurantDetails?.owner?.companyName || '');
+    setEditedOwnerTaxId(restaurantDetails?.owner?.taxId || '');
+    setEditedOwnerBusinessRegistration(restaurantDetails?.owner?.businessRegistrationNumber || '');
+    setEditedOwnerEmail(restaurantDetails?.owner?.email || '');
+    setEditedOwnerPhone(restaurantDetails?.owner?.companyPhone || '');
+    setEditedOwnerContactPerson(restaurantDetails?.owner?.contactPersonName || '');
     setIsEditingDetails(true);
   };
 
@@ -3129,22 +3141,19 @@ export default function AdminDashboard() {
           location: editedLocation,
           address: editedAddress,
           phone: editedPhone,
-          marketplaceId: editedMarketplaceId
+          marketplaceId: editedMarketplaceId,
+          ownerCompanyName: editedOwnerCompanyName,
+          ownerTaxId: editedOwnerTaxId,
+          ownerBusinessRegistration: editedOwnerBusinessRegistration,
+          ownerEmail: editedOwnerEmail,
+          ownerPhone: editedOwnerPhone,
+          ownerContactPerson: editedOwnerContactPerson
         })
       });
 
       if (!response.ok) throw new Error('Failed to update restaurant');
-
-      toast({
-        title: "Salvat",
-        description: "Detaliile restaurantului au fost actualizate",
-      });
-
-      setIsEditingDetails(false);
-      await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants', selectedRestaurant.id, 'details'] });
       
-      // Update the selected restaurant locally
+      // Update the selected restaurant locally BEFORE exiting edit mode
       setSelectedRestaurant(prev => prev ? {
         ...prev,
         location: editedLocation,
@@ -3152,6 +3161,34 @@ export default function AdminDashboard() {
         phone: editedPhone,
         marketplaceId: editedMarketplaceId
       } : null);
+      
+      // Update restaurantDetails cache optimistically
+      queryClient.setQueryData(
+        ['/api/admin/restaurants', selectedRestaurant.id, 'details'],
+        (oldData: any) => oldData ? {
+          ...oldData,
+          owner: oldData.owner ? {
+            ...oldData.owner,
+            companyName: editedOwnerCompanyName,
+            taxId: editedOwnerTaxId,
+            businessRegistrationNumber: editedOwnerBusinessRegistration,
+            email: editedOwnerEmail,
+            companyPhone: editedOwnerPhone,
+            contactPersonName: editedOwnerContactPerson
+          } : oldData.owner
+        } : oldData
+      );
+      
+      setIsEditingDetails(false);
+
+      toast({
+        title: "Salvat",
+        description: "Detaliile restaurantului au fost actualizate",
+      });
+
+      // Invalidate in background to refresh from server
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants', selectedRestaurant.id, 'details'] });
     } catch (error) {
       toast({
         title: "Eroare",
@@ -4431,27 +4468,76 @@ export default function AdminDashboard() {
                                       <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         <div>
                                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Nume Companie</label>
-                                          <p className="text-gray-900 dark:text-white font-semibold">{restaurantDetails.owner.companyName}</p>
+                                          {isEditingDetails ? (
+                                            <Input 
+                                              value={editedOwnerCompanyName}
+                                              onChange={(e) => setEditedOwnerCompanyName(e.target.value)}
+                                              placeholder="Nume companie"
+                                            />
+                                          ) : (
+                                            <p className="text-gray-900 dark:text-white font-semibold">{restaurantDetails.owner.companyName}</p>
+                                          )}
                                         </div>
                                         <div>
                                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">CUI</label>
-                                          <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.taxId || 'N/A'}</p>
+                                          {isEditingDetails ? (
+                                            <Input 
+                                              value={editedOwnerTaxId}
+                                              onChange={(e) => setEditedOwnerTaxId(e.target.value)}
+                                              placeholder="CUI"
+                                            />
+                                          ) : (
+                                            <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.taxId || 'N/A'}</p>
+                                          )}
                                         </div>
                                         <div>
                                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Nr. Înregistrare</label>
-                                          <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.businessRegistrationNumber || 'N/A'}</p>
+                                          {isEditingDetails ? (
+                                            <Input 
+                                              value={editedOwnerBusinessRegistration}
+                                              onChange={(e) => setEditedOwnerBusinessRegistration(e.target.value)}
+                                              placeholder="Nr. înregistrare"
+                                            />
+                                          ) : (
+                                            <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.businessRegistrationNumber || 'N/A'}</p>
+                                          )}
                                         </div>
                                         <div>
                                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email Companie</label>
-                                          <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.email}</p>
+                                          {isEditingDetails ? (
+                                            <Input 
+                                              type="email"
+                                              value={editedOwnerEmail}
+                                              onChange={(e) => setEditedOwnerEmail(e.target.value)}
+                                              placeholder="Email companie"
+                                            />
+                                          ) : (
+                                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.email}</p>
+                                          )}
                                         </div>
                                         <div>
                                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Telefon Companie</label>
-                                          <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyPhone}</p>
+                                          {isEditingDetails ? (
+                                            <Input 
+                                              value={editedOwnerPhone}
+                                              onChange={(e) => setEditedOwnerPhone(e.target.value)}
+                                              placeholder="Telefon companie"
+                                            />
+                                          ) : (
+                                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyPhone}</p>
+                                          )}
                                         </div>
                                         <div>
                                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Persoană Contact</label>
-                                          <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonName}</p>
+                                          {isEditingDetails ? (
+                                            <Input 
+                                              value={editedOwnerContactPerson}
+                                              onChange={(e) => setEditedOwnerContactPerson(e.target.value)}
+                                              placeholder="Persoană contact"
+                                            />
+                                          ) : (
+                                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonName}</p>
+                                          )}
                                         </div>
                                       </CardContent>
                                     </Card>
