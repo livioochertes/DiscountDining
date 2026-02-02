@@ -45,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import PackageForm from "@/components/package-form";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import LanguageSelector from "@/components/LanguageSelector";
 
 // Admin login schema
 const adminLoginSchema = z.object({
@@ -2496,6 +2497,7 @@ export default function AdminDashboard() {
   const [editedMarketplaceId, setEditedMarketplaceId] = useState<number | null>(null);
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [highlightedCityIndex, setHighlightedCityIndex] = useState(-1);
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
   const [editedOwnerCompanyName, setEditedOwnerCompanyName] = useState('');
@@ -3545,8 +3547,9 @@ export default function AdminDashboard() {
               onTabChange={setSelectedTab}
               activeTab={selectedTab}
             />
-            {/* Admin Logout Button */}
-            <div className="absolute top-4 right-6">
+            {/* Admin Logout Button + Language Selector */}
+            <div className="absolute top-4 right-6 flex items-center gap-3">
+              <LanguageSelector />
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -3554,7 +3557,7 @@ export default function AdminDashboard() {
                 className="flex items-center gap-2 bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
               >
                 <Lock className="h-4 w-4" />
-                Logout
+                {t.admin?.logout || 'Logout'}
               </Button>
             </div>
           </div>
@@ -4345,51 +4348,100 @@ export default function AdminDashboard() {
                                       <div>
                                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.city || 'Oraș'}</label>
                                         {isEditingDetails ? (
-                                          <div className="relative">
-                                            <Input
-                                              value={citySearchQuery}
-                                              onChange={(e) => {
-                                                setCitySearchQuery(e.target.value);
-                                                setEditedLocation(e.target.value);
-                                                setShowCityDropdown(true);
-                                              }}
-                                              onFocus={() => setShowCityDropdown(true)}
-                                              onBlur={() => {
-                                                setTimeout(() => setShowCityDropdown(false), 120);
-                                              }}
-                                              placeholder={citiesLoading ? (t.admin?.loading || 'Se încarcă...') : (t.admin?.searchCity || 'Caută oraș...')}
-                                              disabled={citiesLoading}
-                                            />
-                                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
-                                              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-md max-h-60 overflow-auto z-[100000]" style={{ isolation: 'isolate' }}>
-                                                {(() => {
-                                                  const searchTerm = citySearchQuery.toLowerCase();
-                                                  const filtered = availableCities
-                                                    .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
-                                                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
-                                                  
-                                                  if (filtered.length === 0) {
-                                                    return <div className="px-3 py-2 text-gray-500">{t.admin?.noCitiesFound || 'Nu s-au găsit orașe'}</div>;
+                                          <div className="relative" style={{ position: 'relative', zIndex: 50 }}>
+                                            {(() => {
+                                              const searchTerm = citySearchQuery.toLowerCase();
+                                              const filteredCities = availableCities
+                                                .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
+                                                .sort((a: any, b: any) => a.name.localeCompare(b.name));
+                                              
+                                              const handleKeyDown = (e: React.KeyboardEvent) => {
+                                                if (!showCityDropdown || filteredCities.length === 0) return;
+                                                
+                                                if (e.key === 'ArrowDown') {
+                                                  e.preventDefault();
+                                                  setHighlightedCityIndex(prev => 
+                                                    prev < filteredCities.length - 1 ? prev + 1 : 0
+                                                  );
+                                                } else if (e.key === 'ArrowUp') {
+                                                  e.preventDefault();
+                                                  setHighlightedCityIndex(prev => 
+                                                    prev > 0 ? prev - 1 : filteredCities.length - 1
+                                                  );
+                                                } else if (e.key === 'Enter' && highlightedCityIndex >= 0) {
+                                                  e.preventDefault();
+                                                  const selectedCity = filteredCities[highlightedCityIndex];
+                                                  if (selectedCity) {
+                                                    setEditedLocation(selectedCity.name);
+                                                    setCitySearchQuery(selectedCity.name);
+                                                    setShowCityDropdown(false);
+                                                    setHighlightedCityIndex(-1);
                                                   }
-                                                  
-                                                  return filtered.map((city: any) => (
-                                                    <button
-                                                      key={city.geonameId}
-                                                      type="button"
-                                                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-                                                      onMouseDown={(e) => {
-                                                        e.preventDefault();
-                                                        setEditedLocation(city.name);
-                                                        setCitySearchQuery(city.name);
+                                                } else if (e.key === 'Escape') {
+                                                  setShowCityDropdown(false);
+                                                  setHighlightedCityIndex(-1);
+                                                }
+                                              };
+                                              
+                                              return (
+                                                <>
+                                                  <Input
+                                                    value={citySearchQuery}
+                                                    onChange={(e) => {
+                                                      setCitySearchQuery(e.target.value);
+                                                      setEditedLocation(e.target.value);
+                                                      setShowCityDropdown(true);
+                                                      setHighlightedCityIndex(-1);
+                                                    }}
+                                                    onFocus={() => {
+                                                      setShowCityDropdown(true);
+                                                      setHighlightedCityIndex(-1);
+                                                    }}
+                                                    onBlur={() => {
+                                                      setTimeout(() => {
                                                         setShowCityDropdown(false);
-                                                      }}
+                                                        setHighlightedCityIndex(-1);
+                                                      }, 150);
+                                                    }}
+                                                    onKeyDown={handleKeyDown}
+                                                    placeholder={citiesLoading ? (t.admin?.loading || 'Se încarcă...') : (t.admin?.searchCity || 'Caută oraș...')}
+                                                    disabled={citiesLoading}
+                                                  />
+                                                  {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
+                                                    <div 
+                                                      className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-md max-h-60 overflow-auto"
+                                                      style={{ zIndex: 999999, position: 'absolute' }}
                                                     >
-                                                      {city.name}
-                                                    </button>
-                                                  ));
-                                                })()}
-                                              </div>
-                                            )}
+                                                      {filteredCities.length === 0 ? (
+                                                        <div className="px-3 py-2 text-gray-500">{t.admin?.noCitiesFound || 'Nu s-au găsit orașe'}</div>
+                                                      ) : (
+                                                        filteredCities.map((city: any, index: number) => (
+                                                          <button
+                                                            key={city.geonameId}
+                                                            type="button"
+                                                            className={`w-full text-left px-3 py-2 text-gray-900 dark:text-white ${
+                                                              index === highlightedCityIndex 
+                                                                ? 'bg-blue-100 dark:bg-blue-900' 
+                                                                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                            }`}
+                                                            onMouseDown={(e) => {
+                                                              e.preventDefault();
+                                                              setEditedLocation(city.name);
+                                                              setCitySearchQuery(city.name);
+                                                              setShowCityDropdown(false);
+                                                              setHighlightedCityIndex(-1);
+                                                            }}
+                                                            onMouseEnter={() => setHighlightedCityIndex(index)}
+                                                          >
+                                                            {city.name}
+                                                          </button>
+                                                        ))
+                                                      )}
+                                                    </div>
+                                                  )}
+                                                </>
+                                              );
+                                            })()}
                                           </div>
                                         ) : (
                                           <p className="text-gray-900 dark:text-white">{selectedRestaurant?.location}</p>
