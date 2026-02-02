@@ -63,10 +63,11 @@ export function WalletCard({
         {!isGuest && (
           <button
             onClick={() => setShowLoyaltyCard(true)}
-            className="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
+            className="absolute top-3 right-3 flex flex-col items-center gap-1 bg-white/30 hover:bg-white/40 rounded-2xl px-3 py-2 transition-colors shadow-lg"
             title="View Loyalty Card"
           >
-            <Crown className="w-5 h-5 text-white" />
+            <Crown className="w-6 h-6 text-white drop-shadow-md" />
+            <span className="text-[10px] font-semibold text-white drop-shadow-md">Member card</span>
           </button>
         )}
 
@@ -121,11 +122,12 @@ export function WalletCard({
         </div>
       </div>
 
-      {/* Loyalty Card Overlay */}
+      {/* Loyalty Card Overlay - centered in viewport */}
       {showLoyaltyCard && (
         <div 
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6"
+          className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4"
           onClick={() => setShowLoyaltyCard(false)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         >
           <div 
             className={cn(
@@ -137,7 +139,7 @@ export function WalletCard({
             {/* Close button */}
             <button
               onClick={() => setShowLoyaltyCard(false)}
-              className="absolute top-3 right-3 w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+              className="absolute top-3 right-3 w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors z-10"
             >
               <X className={cn("w-4 h-4", tierTextColors[loyaltyTier])} />
             </button>
@@ -145,8 +147,12 @@ export function WalletCard({
             {/* Card chip decoration */}
             <div className="absolute top-6 left-6 w-10 h-8 rounded bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 shadow-inner" />
 
-            {/* EatOff Logo */}
-            <div className="absolute top-6 right-14">
+            {/* EatOff Logo - SVG with fork icon */}
+            <div className="absolute top-5 right-14 flex items-center gap-1.5">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className={tierTextColors[loyaltyTier]}>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
+                <path d="M9 7v10M15 7v4c0 1.1-.9 2-2 2h-1M12 13v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
               <span className={cn("text-lg font-bold tracking-wide", tierTextColors[loyaltyTier])}>
                 EatOff
               </span>
@@ -161,23 +167,23 @@ export function WalletCard({
             </div>
 
             {/* QR Code */}
-            <div className="absolute bottom-6 left-6 bg-white p-2 rounded-lg shadow-lg">
+            <div className="absolute bottom-6 left-4 bg-white p-2 rounded-lg shadow-lg">
               <QRCodeSVG 
                 value={displayCode} 
-                size={60}
+                size={56}
                 level="M"
               />
             </div>
 
-            {/* Customer Code */}
-            <div className="absolute bottom-6 left-24 right-6">
-              <p className={cn("text-xs opacity-70 mb-1", tierTextColors[loyaltyTier])}>
+            {/* Customer Code - positioned further right to avoid QR overlap */}
+            <div className="absolute bottom-4 left-[100px] right-4">
+              <p className={cn("text-[10px] opacity-70 mb-0.5", tierTextColors[loyaltyTier])}>
                 Card Number
               </p>
-              <p className={cn("text-lg font-mono font-bold tracking-widest", tierTextColors[loyaltyTier])}>
+              <p className={cn("text-sm font-mono font-bold tracking-wider", tierTextColors[loyaltyTier])}>
                 {displayCode}
               </p>
-              <p className={cn("text-sm font-medium mt-2 truncate", tierTextColors[loyaltyTier])}>
+              <p className={cn("text-xs font-medium mt-1 truncate", tierTextColors[loyaltyTier])}>
                 {displayName}
               </p>
             </div>
