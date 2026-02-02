@@ -3169,10 +3169,19 @@ export default function AdminDashboard() {
       } : null);
       
       // Update restaurantDetails cache optimistically
+      const selectedMarketplace = marketplacesList?.find((m: any) => m.id === editedMarketplaceId);
       queryClient.setQueryData(
         ['/api/admin/restaurants', selectedRestaurant.id, 'details'],
         (oldData: any) => oldData ? {
           ...oldData,
+          marketplace: selectedMarketplace ? {
+            id: selectedMarketplace.id,
+            name: selectedMarketplace.name,
+            country: selectedMarketplace.country,
+            countryCode: selectedMarketplace.countryCode,
+            currencyCode: selectedMarketplace.currencyCode,
+            currencySymbol: selectedMarketplace.currencySymbol
+          } : oldData.marketplace,
           owner: oldData.owner ? {
             ...oldData.owner,
             companyName: editedOwnerCompanyName,
