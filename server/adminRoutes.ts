@@ -1700,10 +1700,10 @@ export function registerAdminRoutes(app: Express) {
         return res.status(400).json({ error: "Cities array required" });
       }
       
-      // Check current count
+      // Check current count - allow up to 200k cities
       const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(geonamesCities);
       
-      if (Number(count) > 100000) {
+      if (Number(count) > 200000) {
         return res.json({ message: "Cities already seeded", count: Number(count) });
       }
       
