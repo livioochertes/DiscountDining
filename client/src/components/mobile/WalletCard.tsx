@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Gift, Brain, Store, X, Crown, Utensils } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Gift, Brain, Store, X, Crown } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
+import eatoffLogo from '@assets/eatoff_bun_1770069548389.png';
 
 interface WalletCardProps {
   balance: number;
@@ -63,12 +64,17 @@ export function WalletCard({
         {/* Loyalty Card Button - top right */}
         {!isGuest && (
           <button
-            onClick={() => setShowLoyaltyCard(true)}
-            className="absolute top-3 right-3 flex flex-col items-center gap-1 bg-white/30 hover:bg-white/40 rounded-2xl px-3 py-2 transition-colors shadow-lg"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowLoyaltyCard(true);
+            }}
+            className="absolute top-3 right-3 flex flex-col items-center gap-1 bg-white/30 hover:bg-white/40 rounded-2xl px-3 py-2 transition-colors shadow-lg z-20 cursor-pointer"
             title="View Loyalty Card"
+            type="button"
           >
-            <Crown className="w-6 h-6 text-white drop-shadow-md" />
-            <span className="text-[10px] font-semibold text-white drop-shadow-md">Member card</span>
+            <Crown className="w-6 h-6 text-white drop-shadow-md pointer-events-none" />
+            <span className="text-[10px] font-semibold text-white drop-shadow-md pointer-events-none">Member card</span>
           </button>
         )}
 
@@ -147,14 +153,13 @@ export function WalletCard({
             {/* Card chip decoration */}
             <div className="absolute top-6 left-6 w-12 h-9 rounded bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 shadow-inner" />
 
-            {/* EatOff Logo - Utensils icon + styled text */}
-            <div className="absolute top-5 right-14 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Utensils className={cn("w-4 h-4", tierTextColors[loyaltyTier])} />
-              </div>
-              <span className={cn("text-xl font-bold italic tracking-tight", tierTextColors[loyaltyTier])}>
-                EatOff
-              </span>
+            {/* EatOff Logo */}
+            <div className="absolute top-4 right-12">
+              <img 
+                src={eatoffLogo} 
+                alt="EatOff" 
+                className="h-12 w-auto object-contain"
+              />
             </div>
 
             {/* Member tier badge */}
@@ -175,7 +180,7 @@ export function WalletCard({
             </div>
 
             {/* Customer Code - positioned further right, larger text */}
-            <div className="absolute bottom-5 left-[120px] right-4">
+            <div className="absolute bottom-5 left-[140px] right-4">
               <p className={cn("text-xs opacity-70 mb-1", tierTextColors[loyaltyTier])}>
                 Card Number
               </p>
