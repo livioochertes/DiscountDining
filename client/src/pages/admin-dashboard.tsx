@@ -35,7 +35,9 @@ import {
   ChefHat,
   Star,
   Trash2,
-  Eye
+  Eye,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { SectionNavigation } from "@/components/SectionNavigation";
 import { useToast } from "@/hooks/use-toast";
@@ -2482,7 +2484,7 @@ export default function AdminDashboard() {
   const [isAddPartnerModalOpen, setIsAddPartnerModalOpen] = useState(false);
   const [isEditPartnerModalOpen, setIsEditPartnerModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<any>(null);
-  const [isRestaurantManagementModalOpen, setIsRestaurantManagementModalOpen] = useState(false);
+  const [expandedRestaurantId, setExpandedRestaurantId] = useState<number | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [managementTab, setManagementTab] = useState<'details' | 'menu' | 'vouchers'>('details');
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -2494,7 +2496,6 @@ export default function AdminDashboard() {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
-  const restaurantModalRef = useRef<HTMLDivElement>(null);
   
   // Restaurant filtering and grouping
   const [restaurantFilter, setRestaurantFilter] = useState({
@@ -3005,10 +3006,20 @@ export default function AdminDashboard() {
 
 
 
-  // Open restaurant management modal
-  const openRestaurantManagementModal = (restaurant: Restaurant) => {
-    setSelectedRestaurant(restaurant);
-    setIsRestaurantManagementModalOpen(true);
+  // Toggle restaurant inline expansion
+  const toggleRestaurantExpansion = (restaurant: Restaurant) => {
+    if (expandedRestaurantId === restaurant.id) {
+      // Collapse if already expanded
+      setExpandedRestaurantId(null);
+      setSelectedRestaurant(null);
+      setIsEditingDetails(false);
+    } else {
+      // Expand this restaurant
+      setExpandedRestaurantId(restaurant.id);
+      setSelectedRestaurant(restaurant);
+      setManagementTab('details');
+      setIsEditingDetails(false);
+    }
   };
 
   // Restaurant details query
@@ -3080,15 +3091,15 @@ export default function AdminDashboard() {
     prevCountryRef.current = citiesCountryCode;
   }, [isEditingDetails, citiesCountryCode, refetchCities]);
 
-  // Focus modal once when opening
+  // Scroll to expanded restaurant when opened
   useEffect(() => {
-    if (isRestaurantManagementModalOpen) {
+    if (expandedRestaurantId) {
       requestAnimationFrame(() => {
-        restaurantModalRef.current?.focus();
-        restaurantModalRef.current?.scrollIntoView({ block: 'center' });
+        const element = document.getElementById(`restaurant-expanded-${expandedRestaurantId}`);
+        element?.scrollIntoView({ block: 'start', behavior: 'smooth' });
       });
     }
-  }, [isRestaurantManagementModalOpen]);
+  }, [expandedRestaurantId]);
 
   // Start editing restaurant details
   const startEditingDetails = () => {
@@ -4003,22 +4014,35 @@ export default function AdminDashboard() {
                             </div>
                             <div className="divide-y">
                               {groupRestaurants.map((restaurant) => (
-                                <div key={restaurant.id} className="flex items-center justify-between p-4">
-                                  <div className="flex-1">
-                                    <h4 className="font-medium">{restaurant.name}</h4>
-                                    <p className="text-sm text-muted-foreground">{restaurant.email} • {restaurant.location}</p>
-                                    <div className="flex space-x-2 mt-2">
-                                      <Badge variant="default" className="bg-green-600">Approved</Badge>
-                                      <Badge variant={restaurant.isActive ? "default" : "destructive"}>
-                                        {restaurant.isActive ? "Active" : "Suspended"}
-                                      </Badge>
+                                <div key={restaurant.id}>
+                                  <div className="flex items-center justify-between p-4">
+                                    <div className="flex-1">
+                                      <h4 className="font-medium">{restaurant.name}</h4>
+                                      <p className="text-sm text-muted-foreground">{restaurant.email} • {restaurant.location}</p>
+                                      <div className="flex space-x-2 mt-2">
+                                        <Badge variant="default" className="bg-green-600">Approved</Badge>
+                                        <Badge variant={restaurant.isActive ? "default" : "destructive"}>
+                                          {restaurant.isActive ? "Active" : "Suspended"}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                      <Button 
+                                        size="sm" 
+                                        variant={expandedRestaurantId === restaurant.id ? "default" : "outline"}
+                                        onClick={() => toggleRestaurantExpansion(restaurant)}
+                                      >
+                                        {expandedRestaurantId === restaurant.id ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
+                                        {expandedRestaurantId === restaurant.id ? 'Închide' : 'Manage'}
+                                      </Button>
                                     </div>
                                   </div>
-                                  <div className="flex space-x-2">
-                                    <Button size="sm" variant="outline" onClick={() => openRestaurantManagementModal(restaurant)}>
-                                      <Settings className="h-4 w-4 mr-1" /> Manage
-                                    </Button>
-                                  </div>
+                                  {/* Inline expandable content for grouped view */}
+                                  {expandedRestaurantId === restaurant.id && selectedRestaurant && (
+                                    <div className="border-t bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-600 dark:text-gray-300">
+                                      Pentru editare detaliată, accesați Flat View.
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -4041,129 +4065,488 @@ export default function AdminDashboard() {
                     }
                     return filtered;
                   })().map((restaurant) => (
-                    <div key={restaurant.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{restaurant.name}</h4>
-                        <p className="text-sm text-muted-foreground">{restaurant.email}</p>
-                        <div className="flex space-x-2 mt-2">
-                          <Badge variant="default" className="bg-green-600">Approved</Badge>
-                          <Badge variant={restaurant.isActive ? "default" : "destructive"}>
-                            {restaurant.isActive ? "Active" : "Suspended"}
-                          </Badge>
+                    <div key={restaurant.id} className="border rounded-lg overflow-hidden">
+                      <div className="flex items-center justify-between p-4">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{restaurant.name}</h4>
+                          <p className="text-sm text-muted-foreground">{restaurant.email}</p>
+                          <div className="flex space-x-2 mt-2">
+                            <Badge variant="default" className="bg-green-600">Approved</Badge>
+                            <Badge variant={restaurant.isActive ? "default" : "destructive"}>
+                              {restaurant.isActive ? "Active" : "Suspended"}
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 mr-4">
-                        <div className="flex flex-col items-center">
-                          <label className="text-xs text-gray-500 mb-1">Priority</label>
-                          <select
-                            value={(restaurant as any).priority ?? 3}
-                            onChange={async (e) => {
-                              const priority = parseInt(e.target.value);
-                              try {
-                                const token = localStorage.getItem('adminToken');
-                                await fetch(`/api/admin/restaurants/${restaurant.id}/priority`, {
-                                  method: 'PATCH',
-                                  headers: {
-                                    'Authorization': `Bearer ${token}`,
-                                    'Content-Type': 'application/json'
-                                  },
-                                  body: JSON.stringify({ priority })
-                                });
-                                await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
-                                await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
-                                toast({ title: "Priority updated" });
-                              } catch (error) {
-                                toast({ title: "Error updating priority", variant: "destructive" });
-                              }
-                            }}
-                            className="w-16 p-1 text-sm border rounded"
-                          >
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                          </select>
+                        <div className="flex items-center gap-2 mr-4">
+                          <div className="flex flex-col items-center">
+                            <label className="text-xs text-gray-500 mb-1">Priority</label>
+                            <select
+                              value={(restaurant as any).priority ?? 3}
+                              onChange={async (e) => {
+                                const priority = parseInt(e.target.value);
+                                try {
+                                  const token = localStorage.getItem('adminToken');
+                                  await fetch(`/api/admin/restaurants/${restaurant.id}/priority`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                      'Authorization': `Bearer ${token}`,
+                                      'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ priority })
+                                  });
+                                  await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
+                                  await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+                                  toast({ title: "Priority updated" });
+                                } catch (error) {
+                                  toast({ title: "Error updating priority", variant: "destructive" });
+                                }
+                              }}
+                              className="w-16 p-1 text-sm border rounded"
+                            >
+                              <option value="1">1</option>
+                              <option value="2">2</option>
+                              <option value="3">3</option>
+                              <option value="4">4</option>
+                              <option value="5">5</option>
+                            </select>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <label className="text-xs text-gray-500 mb-1">Position</label>
+                            <input
+                              type="number"
+                              value={(restaurant as any).position ?? 0}
+                              min="0"
+                              onChange={async (e) => {
+                                const position = parseInt(e.target.value) || 0;
+                                try {
+                                  const token = localStorage.getItem('adminToken');
+                                  await fetch(`/api/admin/restaurants/${restaurant.id}/priority`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                      'Authorization': `Bearer ${token}`,
+                                      'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ position })
+                                  });
+                                  await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
+                                  await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
+                                  toast({ title: "Position updated" });
+                                } catch (error) {
+                                  toast({ title: "Error updating position", variant: "destructive" });
+                                }
+                              }}
+                              className="w-16 p-1 text-sm border rounded"
+                            />
+                          </div>
                         </div>
-                        <div className="flex flex-col items-center">
-                          <label className="text-xs text-gray-500 mb-1">Position</label>
-                          <input
-                            type="number"
-                            value={(restaurant as any).position ?? 0}
-                            min="0"
-                            onChange={async (e) => {
-                              const position = parseInt(e.target.value) || 0;
-                              try {
-                                const token = localStorage.getItem('adminToken');
-                                await fetch(`/api/admin/restaurants/${restaurant.id}/priority`, {
-                                  method: 'PATCH',
-                                  headers: {
-                                    'Authorization': `Bearer ${token}`,
-                                    'Content-Type': 'application/json'
-                                  },
-                                  body: JSON.stringify({ position })
-                                });
-                                await queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants'] });
-                                await queryClient.invalidateQueries({ queryKey: ['/api/restaurants'] });
-                                toast({ title: "Position updated" });
-                              } catch (error) {
-                                toast({ title: "Error updating position", variant: "destructive" });
-                              }
-                            }}
-                            className="w-16 p-1 text-sm border rounded"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        {!restaurant.isApproved && (
+                        <div className="flex space-x-2">
+                          {!restaurant.isApproved && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  onClick={() => approveRestaurant(restaurant.id)}
+                                >
+                                  Approve
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Approve this restaurant to join EatOff</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 size="sm"
-                                onClick={() => approveRestaurant(restaurant.id)}
+                                variant={expandedRestaurantId === restaurant.id ? "default" : "outline"}
+                                onClick={() => toggleRestaurantExpansion(restaurant)}
+                                disabled={loadingRestaurantId === restaurant.id}
                               >
-                                Approve
+                                {expandedRestaurantId === restaurant.id ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
+                                {expandedRestaurantId === restaurant.id ? 'Închide' : 'Manage'}
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Approve this restaurant to join EatOff</p>
+                              <p>Manage restaurant menu and voucher packages</p>
                             </TooltipContent>
                           </Tooltip>
-                        )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openRestaurantManagementModal(restaurant)}
-                              disabled={loadingRestaurantId === restaurant.id}
-                            >
-                              <Settings className="h-4 w-4 mr-1" />
-                              Manage
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Manage restaurant menu and voucher packages</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant={restaurant.isActive ? "destructive" : "default"}
-                              onClick={() => restaurant.isActive ? suspendRestaurant(restaurant.id) : approveRestaurant(restaurant.id)}
-                              disabled={loadingRestaurantId === restaurant.id}
-                            >
-                              {loadingRestaurantId === restaurant.id 
-                                ? (restaurant.isActive ? "Suspending..." : "Reactivating...") 
-                                : (restaurant.isActive ? "Suspend" : "Reactivate")}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{restaurant.isActive ? "Suspend restaurant from platform" : "Reactivate suspended restaurant"}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant={restaurant.isActive ? "destructive" : "default"}
+                                onClick={() => restaurant.isActive ? suspendRestaurant(restaurant.id) : approveRestaurant(restaurant.id)}
+                                disabled={loadingRestaurantId === restaurant.id}
+                              >
+                                {loadingRestaurantId === restaurant.id 
+                                  ? (restaurant.isActive ? "Suspending..." : "Reactivating...") 
+                                  : (restaurant.isActive ? "Suspend" : "Reactivate")}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{restaurant.isActive ? "Suspend restaurant from platform" : "Reactivate suspended restaurant"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                       </div>
+                      
+                      {/* Inline Expandable Section */}
+                      {expandedRestaurantId === restaurant.id && selectedRestaurant && (
+                        <div id={`restaurant-expanded-${restaurant.id}`} className="border-t bg-gray-50 dark:bg-gray-900 p-6">
+                          {/* Tab Navigation */}
+                          <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+                            <div className="flex space-x-8">
+                              <button
+                                type="button"
+                                onClick={() => setManagementTab('details')}
+                                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                  managementTab === 'details'
+                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                                }`}
+                              >
+                                Detalii
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setManagementTab('menu')}
+                                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                  managementTab === 'menu'
+                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                                }`}
+                              >
+                                Meniu ({restaurantDetails?.menuItems?.length || 0})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setManagementTab('vouchers')}
+                                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                  managementTab === 'vouchers'
+                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                                }`}
+                              >
+                                Vouchere ({restaurantDetails?.voucherPackages?.length || 0})
+                              </button>
+                            </div>
+                          </div>
+
+                          {restaurantDetailsLoading ? (
+                            <div className="space-y-4">
+                              <div className="animate-pulse">
+                                <div className="h-4 bg-gray-300 rounded w-1/4 mb-4"></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="h-24 bg-gray-300 rounded-lg"></div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Details Tab - Inline Editable */}
+                              {managementTab === 'details' && (
+                                <div className="space-y-6">
+                                  <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                      <CardTitle className="text-lg flex items-center gap-2">
+                                        <Store className="h-5 w-5" />
+                                        Informații Restaurant
+                                      </CardTitle>
+                                      {!isEditingDetails ? (
+                                        <Button size="sm" variant="outline" onClick={startEditingDetails}>
+                                          <Edit className="h-4 w-4 mr-1" /> Editează
+                                        </Button>
+                                      ) : (
+                                        <div className="flex gap-2">
+                                          <Button size="sm" variant="outline" onClick={() => setIsEditingDetails(false)}>
+                                            Anulează
+                                          </Button>
+                                          <Button size="sm" onClick={saveRestaurantDetails} disabled={savingDetails}>
+                                            {savingDetails ? 'Se salvează...' : 'Salvează'}
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </CardHeader>
+                                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Nume</label>
+                                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.name}</p>
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Cod Restaurant</label>
+                                        <p className="text-gray-900 dark:text-white font-mono">{selectedRestaurant?.restaurantCode || 'N/A'}</p>
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Bucătărie</label>
+                                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.cuisine}</p>
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Interval Prețuri</label>
+                                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.priceRange}</p>
+                                      </div>
+                                      <div className="md:col-span-2">
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Descriere</label>
+                                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.description}</p>
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Adresă</label>
+                                        {isEditingDetails ? (
+                                          <Input 
+                                            value={editedAddress}
+                                            onChange={(e) => setEditedAddress(e.target.value)}
+                                            placeholder="Adresa restaurantului"
+                                          />
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.address}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Oraș</label>
+                                        {isEditingDetails ? (
+                                          <div className="relative">
+                                            <Input
+                                              value={citySearchQuery}
+                                              onChange={(e) => {
+                                                setCitySearchQuery(e.target.value);
+                                                setEditedLocation(e.target.value);
+                                                setShowCityDropdown(true);
+                                              }}
+                                              onFocus={() => setShowCityDropdown(true)}
+                                              onBlur={() => {
+                                                setTimeout(() => setShowCityDropdown(false), 120);
+                                              }}
+                                              placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
+                                              disabled={citiesLoading}
+                                            />
+                                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
+                                              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-md max-h-60 overflow-auto z-[100000]">
+                                                {(() => {
+                                                  const searchTerm = citySearchQuery.toLowerCase();
+                                                  const filtered = availableCities
+                                                    .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
+                                                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
+                                                  
+                                                  if (filtered.length === 0) {
+                                                    return <div className="px-3 py-2 text-gray-500">Nu s-au găsit orașe</div>;
+                                                  }
+                                                  
+                                                  return filtered.map((city: any) => (
+                                                    <button
+                                                      key={city.geonameId}
+                                                      type="button"
+                                                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                                                      onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        setEditedLocation(city.name);
+                                                        setCitySearchQuery(city.name);
+                                                        setShowCityDropdown(false);
+                                                      }}
+                                                    >
+                                                      {city.name}
+                                                    </button>
+                                                  ));
+                                                })()}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.location}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Telefon</label>
+                                        {isEditingDetails ? (
+                                          <Input 
+                                            value={editedPhone}
+                                            onChange={(e) => setEditedPhone(e.target.value)}
+                                            placeholder="Telefon"
+                                          />
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.phone || 'N/A'}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
+                                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.email || 'N/A'}</p>
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Website</label>
+                                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.website || 'N/A'}</p>
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
+                                        <div className="flex gap-2 mt-1">
+                                          <Badge className={selectedRestaurant?.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                                            {selectedRestaurant?.isApproved ? 'Aprobat' : 'În așteptare'}
+                                          </Badge>
+                                          <Badge className={selectedRestaurant?.isActive ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}>
+                                            {selectedRestaurant?.isActive ? 'Activ' : 'Suspendat'}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Marketplace</label>
+                                        {isEditingDetails ? (
+                                          <select
+                                            value={editedMarketplaceId?.toString() || ''}
+                                            onChange={(e) => {
+                                              const val = e.target.value;
+                                              setEditedMarketplaceId(val ? parseInt(val) : null);
+                                              setEditedLocation('');
+                                              setCitySearchQuery('');
+                                            }}
+                                            className="w-full h-10 px-3 border rounded-md dark:bg-gray-800 dark:border-gray-600"
+                                          >
+                                            <option value="">Selectează Marketplace</option>
+                                            {marketplacesList?.map((mp: any) => (
+                                              <option key={mp.id} value={mp.id.toString()}>
+                                                {mp.name} ({mp.country} - {mp.currencySymbol})
+                                              </option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">
+                                            {restaurantDetails?.marketplace ? 
+                                              `${restaurantDetails.marketplace.name} (${restaurantDetails.marketplace.country})` : 
+                                              <span className="text-orange-500">Nu este setat</span>
+                                            }
+                                          </p>
+                                        )}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+
+                                  {/* Owner/Company Info */}
+                                  {restaurantDetails?.owner && (
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                          <Building2 className="h-5 w-5" />
+                                          Informații Companie
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Nume Companie</label>
+                                          <p className="text-gray-900 dark:text-white font-semibold">{restaurantDetails.owner.companyName}</p>
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">CUI</label>
+                                          <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.taxId || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Nr. Înregistrare</label>
+                                          <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.businessRegistrationNumber || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email Companie</label>
+                                          <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.email}</p>
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Telefon Companie</label>
+                                          <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyPhone}</p>
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Persoană Contact</label>
+                                          <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonName}</p>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Menu Tab */}
+                              {managementTab === 'menu' && (
+                                <div className="space-y-4">
+                                  <div className="flex justify-between items-center">
+                                    <h3 className="text-lg font-semibold">Articole Meniu</h3>
+                                    <Button onClick={() => setIsAddMenuItemModalOpen(true)} className="bg-green-600 hover:bg-green-700">
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Adaugă Articol
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {restaurantDetails?.menuItems?.map((item) => (
+                                      <Card key={item.id} className="hover:shadow-md transition-shadow">
+                                        <CardContent className="p-4">
+                                          <div className="flex justify-between items-start mb-2">
+                                            <h4 className="font-semibold text-gray-900 dark:text-white truncate">{item.name}</h4>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setEditingMenuItem(item);
+                                                setIsEditMenuItemModalOpen(true);
+                                              }}
+                                            >
+                                              <Edit className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                          <p className="text-sm text-gray-500">{item.category}</p>
+                                          <p className="text-sm font-medium mt-1">{item.price} {restaurantDetails?.marketplace?.currencySymbol || 'RON'}</p>
+                                        </CardContent>
+                                      </Card>
+                                    ))}
+                                    {(!restaurantDetails?.menuItems || restaurantDetails.menuItems.length === 0) && (
+                                      <div className="col-span-full text-center py-8 text-gray-500">
+                                        Nu există articole în meniu. Adaugă primul articol!
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Vouchers Tab */}
+                              {managementTab === 'vouchers' && (
+                                <div className="space-y-4">
+                                  <div className="flex justify-between items-center">
+                                    <h3 className="text-lg font-semibold">Pachete Voucher</h3>
+                                    <Button onClick={() => setIsAddVoucherPackageModalOpen(true)} className="bg-green-600 hover:bg-green-700">
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Adaugă Pachet
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {restaurantDetails?.voucherPackages?.map((pkg) => (
+                                      <Card key={pkg.id} className="hover:shadow-md transition-shadow">
+                                        <CardContent className="p-4">
+                                          <div className="flex justify-between items-start mb-2">
+                                            <h4 className="font-semibold text-gray-900 dark:text-white">{pkg.name}</h4>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setEditingVoucherPackage(pkg);
+                                                setIsEditVoucherPackageModalOpen(true);
+                                              }}
+                                            >
+                                              <Edit className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                          <p className="text-sm text-gray-500">{pkg.description}</p>
+                                          <div className="flex justify-between mt-2">
+                                            <span className="text-sm">Valoare: {pkg.value} {restaurantDetails?.marketplace?.currencySymbol || 'RON'}</span>
+                                            <span className="text-sm font-medium text-green-600">Preț: {pkg.price} {restaurantDetails?.marketplace?.currencySymbol || 'RON'}</span>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
+                                    ))}
+                                    {(!restaurantDetails?.voucherPackages || restaurantDetails.voucherPackages.length === 0) && (
+                                      <div className="col-span-full text-center py-8 text-gray-500">
+                                        Nu există pachete voucher. Adaugă primul pachet!
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                     </div>
@@ -5593,643 +5976,6 @@ export default function AdminDashboard() {
               </div>
             </form>
           </Form>
-        </div>
-      </div>
-    )}
-
-    {/* Restaurant Management Modal - Viewport Centered */}
-    {isRestaurantManagementModalOpen && selectedRestaurant && (
-      <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999
-        }}
-        onMouseDown={(e) => {
-          if (e.target === e.currentTarget) {
-            setIsRestaurantManagementModalOpen(false);
-            setSelectedRestaurant(null);
-          }
-        }}
-      >
-        <div 
-          ref={restaurantModalRef}
-          tabIndex={-1}
-          className="dark:bg-gray-800 dark:border-gray-700"
-          style={{
-            position: 'relative',
-            width: 'min(90vw, 1152px)',
-            maxHeight: '85vh',
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '0.5rem',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            overflowY: 'auto',
-            padding: '24px',
-            outline: 'none',
-            margin: 'auto'
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Store className="h-6 w-6" />
-                Restaurant Management
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                {selectedRestaurant.name} - Menu Items & Voucher Packages
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsRestaurantManagementModalOpen(false);
-                setSelectedRestaurant(null);
-              }}
-            >
-              Close
-            </Button>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-            <div className="flex space-x-8">
-              <button
-                onClick={() => setManagementTab('details')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  managementTab === 'details'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                Details
-              </button>
-              <button
-                onClick={() => setManagementTab('menu')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  managementTab === 'menu'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                Menu Items ({restaurantDetails?.menuItems?.length || 0})
-              </button>
-              <button
-                onClick={() => setManagementTab('vouchers')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  managementTab === 'vouchers'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                Voucher Packages ({restaurantDetails?.voucherPackages?.length || 0})
-              </button>
-            </div>
-          </div>
-
-          {restaurantDetailsLoading ? (
-            <div className="space-y-4">
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-300 rounded w-1/4 mb-4"></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="h-48 bg-gray-300 rounded-lg"></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Details Tab */}
-              {managementTab === 'details' && (
-                <div className="space-y-6">
-                  {/* Restaurant Information */}
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle className="flex items-center gap-2">
-                        <Store className="h-5 w-5" />
-                        Restaurant Information
-                      </CardTitle>
-                      {!isEditingDetails ? (
-                        <Button size="sm" variant="outline" onClick={startEditingDetails}>
-                          <Edit className="h-4 w-4 mr-1" /> Editează
-                        </Button>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => setIsEditingDetails(false)}>
-                            Anulează
-                          </Button>
-                          <Button size="sm" onClick={saveRestaurantDetails} disabled={savingDetails}>
-                            {savingDetails ? 'Se salvează...' : 'Salvează'}
-                          </Button>
-                        </div>
-                      )}
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.name}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Restaurant Code</label>
-                        <p className="text-gray-900 dark:text-white font-mono">{selectedRestaurant?.restaurantCode || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Cuisine</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.cuisine}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Price Range</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.priceRange}</p>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.description}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Address</label>
-                        {isEditingDetails ? (
-                          <Input 
-                            value={editedAddress}
-                            onChange={(e) => setEditedAddress(e.target.value)}
-                            placeholder="Adresa restaurantului"
-                          />
-                        ) : (
-                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.address}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Location/City</label>
-                        {isEditingDetails ? (
-                          <div className="relative">
-                            <Input
-                              value={citySearchQuery}
-                              onChange={(e) => {
-                                setCitySearchQuery(e.target.value);
-                                setEditedLocation(e.target.value);
-                                setShowCityDropdown(true);
-                              }}
-                              onFocus={() => setShowCityDropdown(true)}
-                              onBlur={() => {
-                                setTimeout(() => setShowCityDropdown(false), 120);
-                              }}
-                              placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
-                              disabled={citiesLoading}
-                            />
-                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
-                              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-md max-h-60 overflow-auto z-[100000]">
-                                {(() => {
-                                  const searchTerm = citySearchQuery.toLowerCase();
-                                  const filtered = availableCities
-                                    .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
-                                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
-                                  
-                                  if (filtered.length === 0) {
-                                    return <div className="px-3 py-2 text-gray-500">Nu s-au găsit orașe</div>;
-                                  }
-                                  
-                                  return filtered.map((city: any) => (
-                                    <button
-                                      key={city.geonameId}
-                                      type="button"
-                                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        setEditedLocation(city.name);
-                                        setCitySearchQuery(city.name);
-                                        setShowCityDropdown(false);
-                                      }}
-                                    >
-                                      {city.name}
-                                    </button>
-                                  ));
-                                })()}
-                              </div>
-                            )}
-                            {citiesLoading && (
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                <div className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full"></div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.location}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
-                        {isEditingDetails ? (
-                          <Input 
-                            value={editedPhone}
-                            onChange={(e) => setEditedPhone(e.target.value)}
-                            placeholder="Telefon"
-                          />
-                        ) : (
-                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.phone || 'N/A'}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.email || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Website</label>
-                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.website || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
-                        <div className="flex gap-2 mt-1">
-                          <Badge className={selectedRestaurant?.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                            {selectedRestaurant?.isApproved ? 'Approved' : 'Pending'}
-                          </Badge>
-                          <Badge className={selectedRestaurant?.isActive ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}>
-                            {selectedRestaurant?.isActive ? 'Active' : 'Suspended'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Marketplace</label>
-                        {isEditingDetails ? (
-                          <select
-                            value={editedMarketplaceId?.toString() || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setEditedMarketplaceId(val ? parseInt(val) : null);
-                              // Reset location when marketplace changes
-                              setEditedLocation('');
-                            }}
-                            className="w-full h-10 px-3 border rounded-md dark:bg-gray-800 dark:border-gray-600"
-                          >
-                            <option value="">Selectează Marketplace</option>
-                            {marketplacesList?.map((mp: any) => (
-                              <option key={mp.id} value={mp.id.toString()}>
-                                {mp.name} ({mp.country} - {mp.currencySymbol})
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <p className="text-gray-900 dark:text-white">
-                            {restaurantDetails?.marketplace ? 
-                              `${restaurantDetails.marketplace.name} (${restaurantDetails.marketplace.country})` : 
-                              <span className="text-orange-500">Nu este setat</span>
-                            }
-                          </p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Marketplace Details - Show only when marketplace is set and not editing */}
-                  {restaurantDetails?.marketplace && !isEditingDetails && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Building2 className="h-5 w-5" />
-                          Marketplace Details
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Marketplace Name</label>
-                          <p className="text-gray-900 dark:text-white">{restaurantDetails.marketplace.name}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Country</label>
-                          <p className="text-gray-900 dark:text-white">{restaurantDetails.marketplace.country} ({restaurantDetails.marketplace.countryCode})</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Currency</label>
-                          <p className="text-gray-900 dark:text-white">{restaurantDetails.marketplace.currencySymbol} ({restaurantDetails.marketplace.currencyCode})</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Company/Owner Information */}
-                  {restaurantDetails?.owner && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Building2 className="h-5 w-5" />
-                          Company Information
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Name</label>
-                            <p className="text-gray-900 dark:text-white font-semibold">{restaurantDetails.owner.companyName}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">CUI / Tax ID</label>
-                            <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.taxId || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Registration Number</label>
-                            <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.businessRegistrationNumber || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Email</label>
-                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.email}</p>
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Address</label>
-                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyAddress}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Phone</label>
-                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyPhone}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Website</label>
-                            <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyWebsite || 'N/A'}</p>
-                          </div>
-                        </div>
-
-                        <div className="border-t pt-4">
-                          <h4 className="font-medium text-gray-900 dark:text-white mb-3">Contact Person</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
-                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonName}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Title</label>
-                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonTitle}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
-                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonPhone}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
-                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonEmail}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="border-t pt-4">
-                          <h4 className="font-medium text-gray-900 dark:text-white mb-3">Banking Information</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Bank Name</label>
-                              <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.bankName || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">IBAN</label>
-                              <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.iban || 'N/A'}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-2">
-                          <Badge className={restaurantDetails.owner.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                            {restaurantDetails.owner.isVerified ? 'Verified Company' : 'Pending Verification'}
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-
-              {/* Menu Items Tab */}
-              {managementTab === 'menu' && (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Menu Items
-                    </h3>
-                    <Button
-                      onClick={() => setIsAddMenuItemModalOpen(true)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Menu Item
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {restaurantDetails?.menuItems?.map((item) => (
-                      <Card key={item.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                              {item.name}
-                            </h4>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setEditingMenuItem(item);
-                                setIsEditMenuItemModalOpen(true);
-                              }}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-                            {item.description}
-                          </p>
-                          <div className="flex justify-between items-center mb-2">
-                            <Badge variant="secondary">{item.category}</Badge>
-                            <span className="font-bold text-green-600">${item.price}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {item.dietaryTags?.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {item.dietaryTags?.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{item.dietaryTags.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              item.isAvailable 
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                            }`}>
-                              {item.isAvailable ? 'Available' : 'Unavailable'}
-                            </span>
-                            {item.isPopular && (
-                              <Badge variant="default" className="bg-orange-500">
-                                Popular
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  {(!restaurantDetails?.menuItems || restaurantDetails.menuItems.length === 0) && (
-                    <div className="text-center py-12">
-                      <div className="text-gray-400 mb-4">
-                        <Store className="h-12 w-12 mx-auto" />
-                      </div>
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                        No menu items yet
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        Start building the restaurant menu by adding the first item.
-                      </p>
-                      <Button
-                        onClick={() => setIsAddMenuItemModalOpen(true)}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add First Menu Item
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Voucher Packages Tab */}
-              {managementTab === 'vouchers' && (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Voucher Packages
-                    </h3>
-                    {restaurantDetails?.voucherPackages && restaurantDetails.voucherPackages.length > 0 && (
-                      <Button
-                        onClick={() => setIsAddVoucherPackageModalOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Voucher Package
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {restaurantDetails?.voucherPackages?.map((pkg) => (
-                      <Card key={pkg.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                              {pkg.name}
-                            </h4>
-                            <div className="flex space-x-1">
-                              {!pkg.isActive && (
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => handleActivateVoucherPackage(pkg)}
-                                  disabled={false}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  <CheckCircle className="h-3 w-3" />
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingVoucherPackage(pkg);
-                                  setIsEditVoucherPackageModalOpen(true);
-                                }}
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => {
-                                  if (confirm('Are you sure you want to delete this voucher package?')) {
-                                    handleDeleteVoucherPackage(pkg.id);
-                                  }
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                            {pkg.description}
-                          </p>
-                          <div className="space-y-2 mb-3">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Meals:</span>
-                              <span className="font-medium">{pkg.mealCount}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Price per meal:</span>
-                              <span className="font-medium">${pkg.pricePerMeal}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Discount:</span>
-                              <span className="font-medium text-green-600">{pkg.discountPercentage}%</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">Validity:</span>
-                              <span className="font-medium">{pkg.validityMonths} months</span>
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              pkg.isActive 
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                            }`}>
-                              {pkg.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                            <span className="text-sm font-bold text-blue-600">
-                              Total: ${(parseFloat(pkg.pricePerMeal) * pkg.mealCount).toFixed(2)}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  {(!restaurantDetails?.voucherPackages || restaurantDetails.voucherPackages.length === 0) && (
-                    <div className="text-center py-12">
-                      <div className="text-gray-400 mb-4">
-                        <CreditCard className="h-12 w-12 mx-auto" />
-                      </div>
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                        No voucher packages yet
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        Create voucher packages to offer discounted meal deals to customers.
-                      </p>
-                      <Button
-                        onClick={() => {
-                          console.log('Add First Voucher Package clicked', { selectedRestaurant });
-                          console.log('Before setting modal state:', { isAddVoucherPackageModalOpen });
-                          setIsAddVoucherPackageModalOpen(true);
-                          console.log('After setting modal state to true');
-                          // Force re-render check
-                          setTimeout(() => {
-                            console.log('Modal state after timeout:', { isAddVoucherPackageModalOpen: true });
-                          }, 100);
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add First Voucher Package
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
         </div>
       </div>
     )}
