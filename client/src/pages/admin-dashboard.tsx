@@ -2492,8 +2492,6 @@ export default function AdminDashboard() {
   const [editedMarketplaceId, setEditedMarketplaceId] = useState<number | null>(null);
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
-  const [cityDropdownRect, setCityDropdownRect] = useState<DOMRect | null>(null);
-  const cityInputRef = useRef<HTMLDivElement>(null);
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
   const restaurantModalRef = useRef<HTMLDivElement>(null);
@@ -5772,7 +5770,7 @@ export default function AdminDashboard() {
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Location/City</label>
                         {isEditingDetails ? (
-                          <div className="relative" ref={cityInputRef}>
+                          <div className="relative">
                             <Input
                               value={citySearchQuery}
                               onChange={(e) => {
@@ -5780,74 +5778,43 @@ export default function AdminDashboard() {
                                 setEditedLocation(e.target.value);
                                 setShowCityDropdown(true);
                               }}
-                              onFocus={() => {
-                                if (cityInputRef.current) {
-                                  setCityDropdownRect(cityInputRef.current.getBoundingClientRect());
-                                }
-                                setShowCityDropdown(true);
-                              }}
+                              onFocus={() => setShowCityDropdown(true)}
                               onBlur={() => {
                                 setTimeout(() => setShowCityDropdown(false), 120);
                               }}
                               placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
                               disabled={citiesLoading}
                             />
-                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && cityDropdownRect && (() => {
-                              const searchTerm = citySearchQuery.toLowerCase();
-                              const filtered = availableCities
-                                .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
-                                .sort((a: any, b: any) => a.name.localeCompare(b.name));
-                              
-                              return createPortal(
-                                <div 
-                                  style={{
-                                    position: 'fixed',
-                                    top: cityDropdownRect.bottom + 4,
-                                    left: cityDropdownRect.left,
-                                    width: cityDropdownRect.width,
-                                    maxHeight: 240,
-                                    overflowY: 'auto',
-                                    backgroundColor: '#ffffff',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: 6,
-                                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-                                    zIndex: 999999
-                                  }}
-                                >
-                                  {filtered.length === 0 ? (
-                                    <div style={{ padding: '8px 12px', color: '#6b7280' }}>Nu s-au găsit orașe</div>
-                                  ) : (
-                                    filtered.map((city: any) => (
-                                      <button
-                                        key={city.geonameId}
-                                        type="button"
-                                        style={{
-                                          display: 'block',
-                                          width: '100%',
-                                          textAlign: 'left',
-                                          padding: '8px 12px',
-                                          backgroundColor: '#ffffff',
-                                          color: '#111827',
-                                          border: 'none',
-                                          cursor: 'pointer'
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          setEditedLocation(city.name);
-                                          setCitySearchQuery(city.name);
-                                          setShowCityDropdown(false);
-                                        }}
-                                      >
-                                        {city.name}
-                                      </button>
-                                    ))
-                                  )}
-                                </div>,
-                                document.body
-                              );
-                            })()}
+                            {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
+                              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-md max-h-60 overflow-auto z-[100000]">
+                                {(() => {
+                                  const searchTerm = citySearchQuery.toLowerCase();
+                                  const filtered = availableCities
+                                    .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
+                                    .sort((a: any, b: any) => a.name.localeCompare(b.name));
+                                  
+                                  if (filtered.length === 0) {
+                                    return <div className="px-3 py-2 text-gray-500">Nu s-au găsit orașe</div>;
+                                  }
+                                  
+                                  return filtered.map((city: any) => (
+                                    <button
+                                      key={city.geonameId}
+                                      type="button"
+                                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setEditedLocation(city.name);
+                                        setCitySearchQuery(city.name);
+                                        setShowCityDropdown(false);
+                                      }}
+                                    >
+                                      {city.name}
+                                    </button>
+                                  ));
+                                })()}
+                              </div>
+                            )}
                             {citiesLoading && (
                               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                 <div className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full"></div>
