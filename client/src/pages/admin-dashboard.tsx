@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -2475,6 +2476,7 @@ function HelpdeskTab() {
 }
 
 export default function AdminDashboard() {
+  const { t } = useLanguage();
   const [selectedTab, setSelectedTab] = useState("overview");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(true);
@@ -4290,58 +4292,58 @@ export default function AdminDashboard() {
                                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                                       <CardTitle className="text-lg flex items-center gap-2">
                                         <Store className="h-5 w-5" />
-                                        Informații Restaurant
+                                        {t.admin?.restaurantInfo || 'Informații Restaurant'}
                                       </CardTitle>
                                       {!isEditingDetails ? (
                                         <Button size="sm" variant="outline" onClick={startEditingDetails}>
-                                          <Edit className="h-4 w-4 mr-1" /> Editează
+                                          <Edit className="h-4 w-4 mr-1" /> {t.admin?.edit || 'Editează'}
                                         </Button>
                                       ) : (
                                         <div className="flex gap-2">
                                           <Button size="sm" variant="outline" onClick={() => setIsEditingDetails(false)}>
-                                            Anulează
+                                            {t.admin?.cancel || 'Anulează'}
                                           </Button>
                                           <Button size="sm" onClick={saveRestaurantDetails} disabled={savingDetails}>
-                                            {savingDetails ? 'Se salvează...' : 'Salvează'}
+                                            {savingDetails ? (t.admin?.saving || 'Se salvează...') : (t.admin?.save || 'Salvează')}
                                           </Button>
                                         </div>
                                       )}
                                     </CardHeader>
                                     <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                       <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Nume</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.name || 'Nume'}</label>
                                         <p className="text-gray-900 dark:text-white">{selectedRestaurant?.name}</p>
                                       </div>
                                       <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Cod Restaurant</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.restaurantCode || 'Cod Restaurant'}</label>
                                         <p className="text-gray-900 dark:text-white font-mono">{selectedRestaurant?.restaurantCode || 'N/A'}</p>
                                       </div>
                                       <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Bucătărie</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.cuisine || 'Bucătărie'}</label>
                                         <p className="text-gray-900 dark:text-white">{selectedRestaurant?.cuisine}</p>
                                       </div>
                                       <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Interval Prețuri</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.priceRange || 'Interval Prețuri'}</label>
                                         <p className="text-gray-900 dark:text-white">{selectedRestaurant?.priceRange}</p>
                                       </div>
                                       <div className="md:col-span-2">
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Descriere</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.description || 'Descriere'}</label>
                                         <p className="text-gray-900 dark:text-white">{selectedRestaurant?.description}</p>
                                       </div>
                                       <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Adresă</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.address || 'Adresă'}</label>
                                         {isEditingDetails ? (
                                           <Input 
                                             value={editedAddress}
                                             onChange={(e) => setEditedAddress(e.target.value)}
-                                            placeholder="Adresa restaurantului"
+                                            placeholder={t.admin?.address || 'Adresa restaurantului'}
                                           />
                                         ) : (
                                           <p className="text-gray-900 dark:text-white">{selectedRestaurant?.address}</p>
                                         )}
                                       </div>
                                       <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Oraș</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.city || 'Oraș'}</label>
                                         {isEditingDetails ? (
                                           <div className="relative">
                                             <Input
@@ -4355,11 +4357,11 @@ export default function AdminDashboard() {
                                               onBlur={() => {
                                                 setTimeout(() => setShowCityDropdown(false), 120);
                                               }}
-                                              placeholder={citiesLoading ? 'Se încarcă...' : 'Caută oraș...'}
+                                              placeholder={citiesLoading ? (t.admin?.loading || 'Se încarcă...') : (t.admin?.searchCity || 'Caută oraș...')}
                                               disabled={citiesLoading}
                                             />
                                             {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
-                                              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-md max-h-60 overflow-auto z-[100000]">
+                                              <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-md max-h-60 overflow-auto z-[100000]" style={{ isolation: 'isolate' }}>
                                                 {(() => {
                                                   const searchTerm = citySearchQuery.toLowerCase();
                                                   const filtered = availableCities
@@ -4367,7 +4369,7 @@ export default function AdminDashboard() {
                                                     .sort((a: any, b: any) => a.name.localeCompare(b.name));
                                                   
                                                   if (filtered.length === 0) {
-                                                    return <div className="px-3 py-2 text-gray-500">Nu s-au găsit orașe</div>;
+                                                    return <div className="px-3 py-2 text-gray-500">{t.admin?.noCitiesFound || 'Nu s-au găsit orașe'}</div>;
                                                   }
                                                   
                                                   return filtered.map((city: any) => (
@@ -4462,78 +4464,78 @@ export default function AdminDashboard() {
                                       <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
                                           <Building2 className="h-5 w-5" />
-                                          Informații Companie
+                                          {t.admin?.companyInfo || 'Informații Companie'}
                                         </CardTitle>
                                       </CardHeader>
                                       <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         <div>
-                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Nume Companie</label>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.companyName || 'Nume Companie'}</label>
                                           {isEditingDetails ? (
                                             <Input 
                                               value={editedOwnerCompanyName}
                                               onChange={(e) => setEditedOwnerCompanyName(e.target.value)}
-                                              placeholder="Nume companie"
+                                              placeholder={t.admin?.companyName || 'Nume companie'}
                                             />
                                           ) : (
                                             <p className="text-gray-900 dark:text-white font-semibold">{restaurantDetails.owner.companyName}</p>
                                           )}
                                         </div>
                                         <div>
-                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">CUI</label>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.taxId || 'CUI'}</label>
                                           {isEditingDetails ? (
                                             <Input 
                                               value={editedOwnerTaxId}
                                               onChange={(e) => setEditedOwnerTaxId(e.target.value)}
-                                              placeholder="CUI"
+                                              placeholder={t.admin?.taxId || 'CUI'}
                                             />
                                           ) : (
                                             <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.taxId || 'N/A'}</p>
                                           )}
                                         </div>
                                         <div>
-                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Nr. Înregistrare</label>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.registrationNumber || 'Nr. Înregistrare'}</label>
                                           {isEditingDetails ? (
                                             <Input 
                                               value={editedOwnerBusinessRegistration}
                                               onChange={(e) => setEditedOwnerBusinessRegistration(e.target.value)}
-                                              placeholder="Nr. înregistrare"
+                                              placeholder={t.admin?.registrationNumber || 'Nr. înregistrare'}
                                             />
                                           ) : (
                                             <p className="text-gray-900 dark:text-white font-mono">{restaurantDetails.owner.businessRegistrationNumber || 'N/A'}</p>
                                           )}
                                         </div>
                                         <div>
-                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email Companie</label>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.companyEmail || 'Email Companie'}</label>
                                           {isEditingDetails ? (
                                             <Input 
                                               type="email"
                                               value={editedOwnerEmail}
                                               onChange={(e) => setEditedOwnerEmail(e.target.value)}
-                                              placeholder="Email companie"
+                                              placeholder={t.admin?.companyEmail || 'Email companie'}
                                             />
                                           ) : (
                                             <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.email}</p>
                                           )}
                                         </div>
                                         <div>
-                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Telefon Companie</label>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.companyPhone || 'Telefon Companie'}</label>
                                           {isEditingDetails ? (
                                             <Input 
                                               value={editedOwnerPhone}
                                               onChange={(e) => setEditedOwnerPhone(e.target.value)}
-                                              placeholder="Telefon companie"
+                                              placeholder={t.admin?.companyPhone || 'Telefon companie'}
                                             />
                                           ) : (
                                             <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.companyPhone}</p>
                                           )}
                                         </div>
                                         <div>
-                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Persoană Contact</label>
+                                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.contactPerson || 'Persoană Contact'}</label>
                                           {isEditingDetails ? (
                                             <Input 
                                               value={editedOwnerContactPerson}
                                               onChange={(e) => setEditedOwnerContactPerson(e.target.value)}
-                                              placeholder="Persoană contact"
+                                              placeholder={t.admin?.contactPerson || 'Persoană contact'}
                                             />
                                           ) : (
                                             <p className="text-gray-900 dark:text-white">{restaurantDetails.owner.contactPersonName}</p>
@@ -4549,10 +4551,10 @@ export default function AdminDashboard() {
                               {managementTab === 'menu' && (
                                 <div className="space-y-4">
                                   <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold">Articole Meniu</h3>
+                                    <h3 className="text-lg font-semibold">{t.admin?.menuItems || 'Articole Meniu'}</h3>
                                     <Button onClick={() => setIsAddMenuItemModalOpen(true)} className="bg-green-600 hover:bg-green-700">
                                       <Plus className="h-4 w-4 mr-2" />
-                                      Adaugă Articol
+                                      {t.admin?.addItem || 'Adaugă Articol'}
                                     </Button>
                                   </div>
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -4579,7 +4581,7 @@ export default function AdminDashboard() {
                                     ))}
                                     {(!restaurantDetails?.menuItems || restaurantDetails.menuItems.length === 0) && (
                                       <div className="col-span-full text-center py-8 text-gray-500">
-                                        Nu există articole în meniu. Adaugă primul articol!
+                                        {t.admin?.noMenuItems || 'Nu există articole în meniu. Adaugă primul articol!'}
                                       </div>
                                     )}
                                   </div>
@@ -4590,10 +4592,10 @@ export default function AdminDashboard() {
                               {managementTab === 'vouchers' && (
                                 <div className="space-y-4">
                                   <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-semibold">Pachete Voucher</h3>
+                                    <h3 className="text-lg font-semibold">{t.admin?.voucherPackages || 'Pachete Voucher'}</h3>
                                     <Button onClick={() => setIsAddVoucherPackageModalOpen(true)} className="bg-green-600 hover:bg-green-700">
                                       <Plus className="h-4 w-4 mr-2" />
-                                      Adaugă Pachet
+                                      {t.admin?.addPackage || 'Adaugă Pachet'}
                                     </Button>
                                   </div>
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
