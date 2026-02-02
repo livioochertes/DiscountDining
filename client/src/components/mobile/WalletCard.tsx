@@ -47,6 +47,10 @@ export function WalletCard({
   loyaltyTier = 'Bronze'
 }: WalletCardProps) {
   const [showLoyaltyCard, setShowLoyaltyCard] = useState(false);
+  
+  // Generate a display code if none exists
+  const displayCode = customerCode || 'CLI-000000';
+  const displayName = userName || 'Member';
 
   return (
     <>
@@ -56,7 +60,7 @@ export function WalletCard({
         className
       )}>
         {/* Loyalty Card Button - top right */}
-        {!isGuest && customerCode && (
+        {!isGuest && (
           <button
             onClick={() => setShowLoyaltyCard(true)}
             className="absolute top-4 right-4 w-10 h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
@@ -159,7 +163,7 @@ export function WalletCard({
             {/* QR Code */}
             <div className="absolute bottom-6 left-6 bg-white p-2 rounded-lg shadow-lg">
               <QRCodeSVG 
-                value={customerCode} 
+                value={displayCode} 
                 size={60}
                 level="M"
               />
@@ -171,10 +175,10 @@ export function WalletCard({
                 Card Number
               </p>
               <p className={cn("text-lg font-mono font-bold tracking-widest", tierTextColors[loyaltyTier])}>
-                {customerCode}
+                {displayCode}
               </p>
               <p className={cn("text-sm font-medium mt-2 truncate", tierTextColors[loyaltyTier])}>
-                {userName}
+                {displayName}
               </p>
             </div>
           </div>
