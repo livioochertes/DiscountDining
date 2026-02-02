@@ -4409,20 +4409,25 @@ export default function AdminDashboard() {
                                                   />
                                                   {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
                                                     <div 
-                                                      className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-md max-h-60 overflow-auto"
-                                                      style={{ zIndex: 999999, position: 'absolute' }}
+                                                      className="absolute left-0 right-0 mt-1 border-2 border-gray-300 dark:border-gray-600 rounded-md max-h-60 overflow-auto bg-white dark:bg-gray-800"
+                                                      style={{ 
+                                                        zIndex: 999999, 
+                                                        position: 'absolute',
+                                                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                                                        isolation: 'isolate'
+                                                      }}
                                                     >
                                                       {filteredCities.length === 0 ? (
-                                                        <div className="px-3 py-2 text-gray-500">{t.admin?.noCitiesFound || 'Nu s-au găsit orașe'}</div>
+                                                        <div className="px-3 py-2 text-gray-500 bg-white dark:bg-gray-800">{t.admin?.noCitiesFound || 'Nu s-au găsit orașe'}</div>
                                                       ) : (
                                                         filteredCities.map((city: any, index: number) => (
                                                           <button
                                                             key={city.geonameId}
                                                             type="button"
-                                                            className={`w-full text-left px-3 py-2 text-gray-900 dark:text-white ${
+                                                            className={`w-full text-left px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-800 ${
                                                               index === highlightedCityIndex 
-                                                                ? 'bg-blue-100 dark:bg-blue-900' 
-                                                                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                                ? '!bg-blue-100 dark:!bg-blue-900' 
+                                                                : 'hover:!bg-gray-100 dark:hover:!bg-gray-700'
                                                             }`}
                                                             onMouseDown={(e) => {
                                                               e.preventDefault();
