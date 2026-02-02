@@ -631,7 +631,7 @@ export default function MobileHome() {
               <h2 className="text-lg font-bold text-gray-900">{t.availableVouchers}</h2>
               <button 
                 onClick={() => setLocation('/m/explore?tab=vouchers')}
-                className="text-primary text-sm font-medium flex items-center gap-1"
+                className="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-1 hover:bg-primary/90 transition-colors"
               >
                 {t.seeAll}
                 <ChevronRight className="w-4 h-4" />
