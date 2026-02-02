@@ -2498,6 +2498,8 @@ export default function AdminDashboard() {
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [highlightedCityIndex, setHighlightedCityIndex] = useState(-1);
+  const [cityDropdownPosition, setCityDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const cityInputRef = useRef<HTMLInputElement>(null);
   const [savingDetails, setSavingDetails] = useState(false);
   const [partnerLoading, setPartnerLoading] = useState(false);
   const [editedOwnerCompanyName, setEditedOwnerCompanyName] = useState('');
@@ -4348,12 +4350,23 @@ export default function AdminDashboard() {
                                       <div>
                                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.city || 'Oraș'}</label>
                                         {isEditingDetails ? (
-                                          <div className="relative" style={{ position: 'relative', zIndex: 50 }}>
+                                          <div className="relative">
                                             {(() => {
                                               const searchTerm = citySearchQuery.toLowerCase();
                                               const filteredCities = availableCities
                                                 .filter((city: any) => city.name.toLowerCase().includes(searchTerm))
                                                 .sort((a: any, b: any) => a.name.localeCompare(b.name));
+                                              
+                                              const updateDropdownPosition = () => {
+                                                if (cityInputRef.current) {
+                                                  const rect = cityInputRef.current.getBoundingClientRect();
+                                                  setCityDropdownPosition({
+                                                    top: rect.bottom + window.scrollY + 4,
+                                                    left: rect.left + window.scrollX,
+                                                    width: rect.width
+                                                  });
+                                                }
+                                              };
                                               
                                               const handleKeyDown = (e: React.KeyboardEvent) => {
                                                 if (!showCityDropdown || filteredCities.length === 0) return;
@@ -4386,48 +4399,53 @@ export default function AdminDashboard() {
                                               return (
                                                 <>
                                                   <Input
+                                                    ref={cityInputRef}
                                                     value={citySearchQuery}
                                                     onChange={(e) => {
                                                       setCitySearchQuery(e.target.value);
                                                       setEditedLocation(e.target.value);
                                                       setShowCityDropdown(true);
                                                       setHighlightedCityIndex(-1);
+                                                      updateDropdownPosition();
                                                     }}
                                                     onFocus={() => {
                                                       setShowCityDropdown(true);
                                                       setHighlightedCityIndex(-1);
+                                                      updateDropdownPosition();
                                                     }}
                                                     onBlur={() => {
                                                       setTimeout(() => {
                                                         setShowCityDropdown(false);
                                                         setHighlightedCityIndex(-1);
-                                                      }, 150);
+                                                      }, 200);
                                                     }}
                                                     onKeyDown={handleKeyDown}
                                                     placeholder={citiesLoading ? (t.admin?.loading || 'Se încarcă...') : (t.admin?.searchCity || 'Caută oraș...')}
                                                     disabled={citiesLoading}
                                                   />
-                                                  {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
+                                                  {showCityDropdown && !citiesLoading && availableCities.length > 0 && createPortal(
                                                     <div 
-                                                      className="absolute left-0 right-0 mt-1 border-2 border-gray-300 dark:border-gray-600 rounded-md max-h-60 overflow-auto bg-white dark:bg-gray-800"
+                                                      className="border-2 border-gray-300 rounded-md max-h-60 overflow-auto bg-white"
                                                       style={{ 
-                                                        zIndex: 999999, 
-                                                        position: 'absolute',
-                                                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-                                                        isolation: 'isolate'
+                                                        position: 'fixed',
+                                                        top: cityDropdownPosition.top,
+                                                        left: cityDropdownPosition.left,
+                                                        width: cityDropdownPosition.width,
+                                                        zIndex: 999999,
+                                                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
                                                       }}
                                                     >
                                                       {filteredCities.length === 0 ? (
-                                                        <div className="px-3 py-2 text-gray-500 bg-white dark:bg-gray-800">{t.admin?.noCitiesFound || 'Nu s-au găsit orașe'}</div>
+                                                        <div className="px-3 py-2 text-gray-500 bg-white">{t.admin?.noCitiesFound || 'Nu s-au găsit orașe'}</div>
                                                       ) : (
                                                         filteredCities.map((city: any, index: number) => (
                                                           <button
                                                             key={city.geonameId}
                                                             type="button"
-                                                            className={`w-full text-left px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-800 ${
+                                                            className={`w-full text-left px-3 py-2 text-gray-900 ${
                                                               index === highlightedCityIndex 
-                                                                ? '!bg-blue-100 dark:!bg-blue-900' 
-                                                                : 'hover:!bg-gray-100 dark:hover:!bg-gray-700'
+                                                                ? 'bg-blue-100' 
+                                                                : 'bg-white hover:bg-gray-100'
                                                             }`}
                                                             onMouseDown={(e) => {
                                                               e.preventDefault();
@@ -4442,7 +4460,8 @@ export default function AdminDashboard() {
                                                           </button>
                                                         ))
                                                       )}
-                                                    </div>
+                                                    </div>,
+                                                    document.body
                                                   )}
                                                 </>
                                               );
