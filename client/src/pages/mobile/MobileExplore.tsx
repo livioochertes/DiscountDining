@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X, Star, Loader2 } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Navigation, ChevronDown, Ticket, Store, X, Star, Loader2, Brain, Info, ChevronRight, Flame, Leaf, AlertTriangle } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
@@ -9,6 +9,7 @@ import { RestaurantCard } from '@/components/mobile/RestaurantCard';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUserLocation, AVAILABLE_CITIES } from '@/hooks/useUserLocation';
+import { useAuth } from '@/hooks/useAuth';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
@@ -238,6 +239,222 @@ function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
   );
 }
 
+// Diet filters for AI Menu
+const dietFilters = [
+  { id: 'low-cal', name: 'Low Calorie', icon: Flame, color: 'text-orange-500 bg-orange-50' },
+  { id: 'vegetarian', name: 'Vegetarian', icon: Leaf, color: 'text-green-500 bg-green-50' },
+  { id: 'gluten-free', name: 'Gluten Free', icon: AlertTriangle, color: 'text-amber-500 bg-amber-50' },
+];
+
+// Mock recommendations for AI Menu
+const mockRecommendations = [
+  {
+    id: 1,
+    name: 'Grilled Salmon Bowl',
+    restaurant: 'Healthy Bites',
+    calories: 450,
+    price: 12.99,
+    matchScore: 95,
+    reason: 'High protein, low carb - matches your fitness goals',
+    tags: ['High Protein', 'Omega-3', 'Low Carb'],
+  },
+  {
+    id: 2,
+    name: 'Mediterranean Salad',
+    restaurant: 'Fresh Garden',
+    calories: 320,
+    price: 9.99,
+    matchScore: 92,
+    reason: 'Rich in vegetables, low sugar - fits your dietary preferences',
+    tags: ['Vegetarian', 'Low Sugar', 'Fiber Rich'],
+  },
+  {
+    id: 3,
+    name: 'Chicken Quinoa Power Bowl',
+    restaurant: 'Fit Kitchen',
+    calories: 520,
+    price: 14.50,
+    matchScore: 88,
+    reason: 'Balanced macros, gluten-free option available',
+    tags: ['Gluten Free', 'High Protein', 'Complex Carbs'],
+  },
+  {
+    id: 4,
+    name: 'Veggie Buddha Bowl',
+    restaurant: 'Green Leaf',
+    calories: 380,
+    price: 11.00,
+    matchScore: 85,
+    reason: 'Plant-based protein, vitamin-rich ingredients',
+    tags: ['Vegan', 'Antioxidants', 'Fiber Rich'],
+  },
+];
+
+interface AIMenuContentProps {
+  selectedFilters: string[];
+  setSelectedFilters: (filters: string[]) => void;
+  expandedItem: number | null;
+  setExpandedItem: (id: number | null) => void;
+  onNavigate: (path: string) => void;
+}
+
+function AIMenuContent({ selectedFilters, setSelectedFilters, expandedItem, setExpandedItem, onNavigate }: AIMenuContentProps) {
+  const { t } = useLanguage();
+  const { user } = useAuth();
+  
+  const toggleFilter = (id: string) => {
+    setSelectedFilters(
+      selectedFilters.includes(id) 
+        ? selectedFilters.filter(f => f !== id) 
+        : [...selectedFilters, id]
+    );
+  };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+        <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-6">
+          <Brain className="w-10 h-10 text-purple-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          AI-Powered Recommendations
+        </h2>
+        <p className="text-gray-500 mb-4 max-w-sm">
+          Get personalized meal suggestions based on your dietary preferences, health goals, and taste profile.
+        </p>
+        <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mb-8 max-w-sm">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-purple-700 text-left">
+              Create an account to unlock personalized AI recommendations tailored just for you!
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => onNavigate('/m/signin')}
+          className="w-full max-w-xs bg-primary text-white font-semibold py-4 px-6 rounded-2xl mb-3 hover:bg-primary/90 transition-colors"
+        >
+          {t.signIn}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Profile Summary */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-900">Your Diet Profile</h3>
+          <button className="text-primary text-sm font-medium flex items-center gap-1">
+            Edit <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="bg-white px-3 py-1 rounded-full text-sm text-gray-700">
+            🎯 2000 kcal/day
+          </span>
+          <span className="bg-white px-3 py-1 rounded-full text-sm text-gray-700">
+            🥗 Balanced
+          </span>
+        </div>
+      </div>
+
+      {/* Quick Filters */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+        {dietFilters.map((filter) => {
+          const Icon = filter.icon;
+          const isSelected = selectedFilters.includes(filter.id);
+          return (
+            <button
+              key={filter.id}
+              onClick={() => toggleFilter(filter.id)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-full whitespace-nowrap transition-all border",
+                isSelected
+                  ? "bg-primary text-white border-primary"
+                  : `${filter.color} border-transparent`
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              <span className="text-sm font-medium">{filter.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Recommendations */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-bold text-gray-900">Recommended for You</h2>
+
+        {mockRecommendations.map((item) => (
+          <div
+            key={item.id}
+            className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm"
+          >
+            <button
+              onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
+              className="w-full p-4 text-left"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                  <p className="text-sm text-gray-500">{item.restaurant}</p>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-1 text-green-600">
+                    <span className="text-lg font-bold">{item.matchScore}%</span>
+                    <span className="text-xs">match</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <span>{item.calories} kcal</span>
+                  <span>€{item.price.toFixed(2)}</span>
+                </div>
+                <div className="flex gap-1">
+                  {item.tags.slice(0, 2).map((tag) => (
+                    <span
+                      key={tag}
+                      className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </button>
+
+            {expandedItem === item.id && (
+              <div className="px-4 pb-4 pt-0 border-t border-gray-100">
+                <div className="flex items-start gap-2 mt-3 p-3 bg-blue-50 rounded-xl">
+                  <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-700">{item.reason}</p>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  {item.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <button className="w-full mt-4 bg-primary text-white py-3 rounded-xl font-semibold">
+                  Order Now
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 export default function MobileExplore() {
   const [location, setLocation] = useLocation();
   const { t } = useLanguage();
@@ -270,9 +487,12 @@ export default function MobileExplore() {
   } = useUserLocation();
   
   const urlParams = new URLSearchParams(window.location.search);
-  const tabFromUrl = urlParams.get('tab') === 'vouchers' ? 'vouchers' : 'restaurants';
+  const tabParam = urlParams.get('tab');
+  const tabFromUrl = tabParam === 'vouchers' ? 'vouchers' : tabParam === 'ai-menu' ? 'ai-menu' : 'restaurants';
   
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers'>(tabFromUrl);
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers' | 'ai-menu'>(tabFromUrl);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [expandedItem, setExpandedItem] = useState<number | null>(null);
   const [selectedCity, setSelectedCity] = useState<string>(() => gpsCity || 'All locations');
   const [showCityPicker, setShowCityPicker] = useState(false);
   
@@ -288,6 +508,8 @@ export default function MobileExplore() {
     const tab = params.get('tab');
     if (tab === 'vouchers') {
       setActiveTab('vouchers');
+    } else if (tab === 'ai-menu') {
+      setActiveTab('ai-menu');
     } else if (tab === 'restaurants') {
       setActiveTab('restaurants');
     }
@@ -526,12 +748,12 @@ export default function MobileExplore() {
           </button>
         </div>
 
-        {/* Tabs: Restaurants / Vouchers */}
+        {/* Tabs: Restaurants / AI Menu / Vouchers */}
         <div className="flex bg-gray-100 rounded-2xl p-1">
           <button
             onClick={() => setActiveTab('restaurants')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all",
+              "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all",
               activeTab === 'restaurants' 
                 ? "bg-white text-primary shadow-sm" 
                 : "text-gray-500"
@@ -541,9 +763,21 @@ export default function MobileExplore() {
             Restaurante
           </button>
           <button
+            onClick={() => setActiveTab('ai-menu')}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all",
+              activeTab === 'ai-menu' 
+                ? "bg-white text-primary shadow-sm" 
+                : "text-gray-500"
+            )}
+          >
+            <Brain className="w-4 h-4" />
+            AI Menu
+          </button>
+          <button
             onClick={() => setActiveTab('vouchers')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all",
+              "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all",
               activeTab === 'vouchers' 
                 ? "bg-white text-primary shadow-sm" 
                 : "text-gray-500"
@@ -554,23 +788,25 @@ export default function MobileExplore() {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeTab === 'restaurants' ? t.searchRestaurantsPlaceholder : t.searchVouchersPlaceholder}
-              className="w-full pl-12 pr-4 py-3.5 bg-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
+        {/* Search - hidden for AI Menu */}
+        {activeTab !== 'ai-menu' && (
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={activeTab === 'restaurants' ? t.searchRestaurantsPlaceholder : t.searchVouchersPlaceholder}
+                className="w-full pl-12 pr-4 py-3.5 bg-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <button className="p-3.5 bg-gray-100 rounded-2xl">
+              <SlidersHorizontal className="w-5 h-5 text-gray-600" />
+            </button>
           </div>
-          <button className="p-3.5 bg-gray-100 rounded-2xl">
-            <SlidersHorizontal className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
+        )}
 
         {/* Categories (only for restaurants) */}
         {activeTab === 'restaurants' && (
@@ -580,21 +816,23 @@ export default function MobileExplore() {
           />
         )}
 
-        {/* Results count */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            {activeTab === 'restaurants' 
-              ? `${filteredRestaurants.length} ${t.restaurantsFound}`
-              : `${restaurantsWithVouchers.length} ${t.restaurantsWithVouchers}`
-            }
-          </p>
-          <button className="text-sm text-primary font-medium">
-            {t.sortBy}: {activeTab === 'restaurants' ? t.bestRated : t.value}
-          </button>
-        </div>
+        {/* Results count - hidden for AI Menu */}
+        {activeTab !== 'ai-menu' && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              {activeTab === 'restaurants' 
+                ? `${filteredRestaurants.length} ${t.restaurantsFound}`
+                : `${restaurantsWithVouchers.length} ${t.restaurantsWithVouchers}`
+              }
+            </p>
+            <button className="text-sm text-primary font-medium">
+              {t.sortBy}: {activeTab === 'restaurants' ? t.bestRated : t.value}
+            </button>
+          </div>
+        )}
 
         {/* Content */}
-        {isLoading ? (
+        {isLoading && activeTab !== 'ai-menu' ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-gray-100 rounded-3xl h-48 animate-pulse" />
@@ -634,6 +872,14 @@ export default function MobileExplore() {
               </div>
             )}
           </div>
+        ) : activeTab === 'ai-menu' ? (
+          <AIMenuContent 
+            selectedFilters={selectedFilters}
+            setSelectedFilters={setSelectedFilters}
+            expandedItem={expandedItem}
+            setExpandedItem={setExpandedItem}
+            onNavigate={setLocation}
+          />
         ) : (
           <div className="space-y-4">
             {restaurantsWithVouchers.map((item) => (
