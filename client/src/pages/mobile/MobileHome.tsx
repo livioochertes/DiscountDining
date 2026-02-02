@@ -526,7 +526,7 @@ export default function MobileHome() {
             type="text"
             placeholder={t.searchRestaurants}
             className="w-full pl-12 pr-4 py-3.5 bg-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-            onFocus={() => setLocation('/m/explore')}
+            onFocus={() => setLocation('/m/explore?focus=search')}
           />
         </div>
 
