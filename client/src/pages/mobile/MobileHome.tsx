@@ -543,9 +543,10 @@ export default function MobileHome() {
               <h2 className="text-lg font-bold text-gray-900">Your favorites</h2>
               <button 
                 onClick={() => setLocation('/m/explore')}
-                className="text-primary text-sm font-medium"
+                className="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-1 hover:bg-primary/90 transition-colors"
               >
-                See all
+                {t.seeAll}
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
             <div className="overflow-x-auto scrollbar-hide">
@@ -571,9 +572,10 @@ export default function MobileHome() {
             <h2 className="text-lg font-bold text-gray-900">Recommended for you</h2>
             <button 
               onClick={() => setLocation('/m/explore?tab=restaurants')}
-              className="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors"
+              className="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-1 hover:bg-primary/90 transition-colors"
             >
-              See all
+              {t.seeAll}
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
           <div className="overflow-x-auto scrollbar-hide">
