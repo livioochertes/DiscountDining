@@ -432,12 +432,7 @@ export function registerAdminRoutes(app: Express) {
   app.put("/api/admin/restaurants/:id/update-details", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const { location, address, phone, marketplaceId } = req.body;
-
-      // Validate that at least one field is provided
-      if (!location && !address && !phone && marketplaceId === undefined) {
-        return res.status(400).json({ message: "At least one field (location, address, phone, or marketplaceId) is required" });
-      }
+      const { location, address, phone, marketplaceId, ownerCompanyName, ownerTaxId, ownerBusinessRegistration, ownerEmail, ownerPhone, ownerContactPerson } = req.body;
 
       const [oldRestaurant] = await db
         .select()
@@ -452,7 +447,6 @@ export function registerAdminRoutes(app: Express) {
       if (location && typeof location === 'string' && location.trim()) updateData.location = location.trim();
       if (address && typeof address === 'string') updateData.address = address.trim();
       if (phone && typeof phone === 'string') updateData.phone = phone.trim();
-      // Handle marketplaceId - can be null to unset, or a number to set
       if (marketplaceId !== undefined) {
         if (marketplaceId === null || marketplaceId === '') {
           updateData.marketplaceId = null;
@@ -464,14 +458,30 @@ export function registerAdminRoutes(app: Express) {
         }
       }
 
-      if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ message: "No valid fields to update" });
+      if (Object.keys(updateData).length > 0) {
+        await db
+          .update(restaurants)
+          .set(updateData)
+          .where(eq(restaurants.id, parseInt(id)));
       }
 
-      await db
-        .update(restaurants)
-        .set(updateData)
-        .where(eq(restaurants.id, parseInt(id)));
+      // Update owner info if provided
+      if (oldRestaurant.ownerId && (ownerCompanyName || ownerTaxId || ownerBusinessRegistration || ownerEmail || ownerPhone || ownerContactPerson)) {
+        const ownerUpdateData: any = {};
+        if (ownerCompanyName && typeof ownerCompanyName === 'string') ownerUpdateData.companyName = ownerCompanyName.trim();
+        if (ownerTaxId !== undefined) ownerUpdateData.taxId = ownerTaxId?.trim() || null;
+        if (ownerBusinessRegistration !== undefined) ownerUpdateData.businessRegistrationNumber = ownerBusinessRegistration?.trim() || null;
+        if (ownerEmail && typeof ownerEmail === 'string') ownerUpdateData.email = ownerEmail.trim();
+        if (ownerPhone !== undefined) ownerUpdateData.companyPhone = ownerPhone?.trim() || null;
+        if (ownerContactPerson !== undefined) ownerUpdateData.contactPersonName = ownerContactPerson?.trim() || null;
+
+        if (Object.keys(ownerUpdateData).length > 0) {
+          await db
+            .update(restaurantOwners)
+            .set(ownerUpdateData)
+            .where(eq(restaurantOwners.id, oldRestaurant.ownerId));
+        }
+      }
 
       await logAdminAction(
         req.adminId!,
@@ -479,7 +489,7 @@ export function registerAdminRoutes(app: Express) {
         "restaurant",
         id,
         { location: oldRestaurant.location, address: oldRestaurant.address, phone: oldRestaurant.phone, marketplaceId: oldRestaurant.marketplaceId },
-        updateData,
+        { ...updateData, ownerCompanyName, ownerTaxId, ownerBusinessRegistration, ownerEmail, ownerPhone, ownerContactPerson },
         req
       );
 
