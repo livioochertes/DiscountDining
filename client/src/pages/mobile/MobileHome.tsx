@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Search, Bell, Store, ChevronRight, Star, MapPin, Loader2 } from 'lucide-react';
@@ -200,14 +200,37 @@ export default function MobileHome() {
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showGreeting, setShowGreeting] = useState(true);
+  const greetingRef = useRef<HTMLParagraphElement>(null);
+  const hasScrolledPast = useRef(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
   
-  // Hide greeting after 15 seconds
+  // Hide greeting when it scrolls out of viewport
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowGreeting(false);
-    }, 15000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!showGreeting || hasScrolledPast.current) return;
+    
+    const setupObserver = () => {
+      if (!greetingRef.current) return;
+      
+      observerRef.current = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting && !hasScrolledPast.current) {
+            hasScrolledPast.current = true;
+            setShowGreeting(false);
+          }
+        },
+        { threshold: 0 }
+      );
+      
+      observerRef.current.observe(greetingRef.current);
+    };
+    
+    const timeoutId = setTimeout(setupObserver, 50);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      observerRef.current?.disconnect();
+    };
+  }, [showGreeting]);
   
   // Get greeting based on current hour
   const getGreeting = () => {
@@ -439,7 +462,7 @@ export default function MobileHome() {
         <div className="flex items-center justify-between">
           <div>
             {showGreeting && (
-              <p className="text-gray-500 text-sm transition-opacity duration-500">{getGreeting()} 👋</p>
+              <p ref={greetingRef} className="text-gray-500 text-sm transition-opacity duration-500">{getGreeting()} 👋</p>
             )}
             <h1 className="text-xl font-bold text-gray-900">
               {user?.name || t.guest}
