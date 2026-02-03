@@ -392,9 +392,8 @@ export default function Marketplace() {
     return [...restaurants].sort((a, b) => {
       switch (sortBy) {
         case 'highest-discount':
-          // For now, sort by restaurant ID as placeholder since packages load individually
-          // Real discount sorting would require loading all packages first
-          return a.id - b.id;
+          // Sort by maxDiscount field if available
+          return (b.maxDiscount || 0) - (a.maxDiscount || 0);
         case 'lowest-price':
           // Sort by price range as rough approximation until packages load
           const priceOrder = { '€': 1, '€€': 2, '€€€': 3 };
@@ -402,6 +401,13 @@ export default function Marketplace() {
                  (priceOrder[b.priceRange as keyof typeof priceOrder] || 0);
         case 'best-rating':
           return parseFloat(b.rating) - parseFloat(a.rating);
+        case 'expiring-soon':
+          // For vouchers: prioritize restaurants with vouchers (maxDiscount > 0)
+          // then by highest discount as a proxy for "active vouchers"
+          const aHasVouchers = (a.maxDiscount || 0) > 0 ? 1 : 0;
+          const bHasVouchers = (b.maxDiscount || 0) > 0 ? 1 : 0;
+          if (bHasVouchers !== aHasVouchers) return bHasVouchers - aHasVouchers;
+          return (b.maxDiscount || 0) - (a.maxDiscount || 0);
         default:
           return 0; // Keep original order for "featured"
       }
