@@ -1456,18 +1456,29 @@ export default function Marketplace() {
       {/* Location Selection Modal - No backdrop, fixed viewport center */}
       {showLocationModal && createPortal(
         <div 
-          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200"
           style={{ 
             position: 'fixed', 
-            top: '50%', 
-            left: '50%', 
-            transform: 'translate(-50%, -50%)',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             zIndex: 9999,
-            maxWidth: '400px',
-            margin: '0 16px'
+            pointerEvents: 'none'
           }}
-          onClick={(e) => e.stopPropagation()}
         >
+          <div 
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 animate-in fade-in zoom-in-95 duration-200"
+            style={{ 
+              width: '100%',
+              maxWidth: '400px',
+              margin: '0 16px',
+              pointerEvents: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -1566,6 +1577,7 @@ export default function Marketplace() {
 
             {/* Hidden div for PlacesService */}
             <div ref={placesContainerRef} style={{ display: 'none' }} />
+          </div>
         </div>,
         document.body
       )}
