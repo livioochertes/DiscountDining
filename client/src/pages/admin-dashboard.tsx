@@ -480,11 +480,26 @@ function MobileFiltersManagement() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Icon (Emoji)</label>
-                <Input
-                  placeholder="🍕"
-                  value={filterIcon}
-                  onChange={(e) => setFilterIcon(e.target.value)}
-                />
+                <div className="flex gap-2 items-center">
+                  <Input
+                    placeholder="Click an emoji or type here"
+                    value={filterIcon}
+                    onChange={(e) => setFilterIcon(e.target.value)}
+                    className="flex-1"
+                  />
+                  <div className="flex gap-1 flex-wrap">
+                    {["🍕", "🍔", "🥗", "☕", "🍜", "🏷️", "🍣", "🌮", "🍰", "🍺"].map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => setFilterIcon(emoji)}
+                        className={`w-8 h-8 text-lg rounded border hover:bg-gray-100 transition-colors ${filterIcon === emoji ? 'border-primary bg-primary/10' : 'border-gray-200'}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Filter Type</label>
