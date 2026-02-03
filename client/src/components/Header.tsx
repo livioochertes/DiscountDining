@@ -116,43 +116,15 @@ export function Header() {
                 <img 
                   src={eatOffLogo} 
                   alt="EatOff" 
-                  className="h-12 w-auto"
-                  style={{ height: '52px' }}
+                  className="h-14 w-auto"
+                  style={{ height: '56px' }}
                 />
               </button>
             </div>
-            <nav className="hidden md:ml-6 lg:ml-8 md:flex md:space-x-4 lg:space-x-6">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setLocation("/")}
-                    className={`px-3 py-2 text-xl font-medium transition-colors whitespace-nowrap ${
-                      isActive("/") ? "text-primary" : "text-gray-500 hover:text-primary"
-                    }`}
-                  >
-                    {t.marketplace}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t.tooltipMarketplace}</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setLocation("/my-vouchers")}
-                    className={`px-3 py-2 text-xl font-medium transition-colors whitespace-nowrap ${
-                      isActive("/my-vouchers") ? "text-primary" : "text-gray-500 hover:text-primary"
-                    }`}
-                  >
-                    {t.myVouchers}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t.tooltipMyVouchers}</p>
-                </TooltipContent>
-              </Tooltip>
-            </nav>
+            <div className="hidden md:flex md:flex-col md:ml-4">
+              <span className="text-lg font-bold text-gray-900">EatOff – Restaurant Vouchers & More</span>
+              <span className="text-sm text-gray-500">Discover, Save, and Dine with Flexible Meal Packages</span>
+            </div>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
             <LanguageSelector variant="header" />
