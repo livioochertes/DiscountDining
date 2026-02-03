@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, SimpleDialogContent } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -2816,7 +2816,7 @@ export default function RestaurantPortal() {
 
       {/* Manage Restaurant Modal */}
       <Dialog open={isManageRestaurantModalOpen} onOpenChange={setIsManageRestaurantModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <SimpleDialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5" />
@@ -2844,7 +2844,7 @@ export default function RestaurantPortal() {
               }}
             />
           )}
-        </DialogContent>
+        </SimpleDialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
@@ -2900,7 +2900,7 @@ export default function RestaurantPortal() {
       {/* Edit Restaurant Modal */}
       {isEditRestaurantOpen && selectedRestaurant && (
         <Dialog open={isEditRestaurantOpen} onOpenChange={setIsEditRestaurantOpen}>
-          <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+          <SimpleDialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Restaurant</DialogTitle>
               <DialogDescription>
@@ -2923,7 +2923,7 @@ export default function RestaurantPortal() {
                 setSelectedRestaurant(null);
               }}
             />
-          </DialogContent>
+          </SimpleDialogContent>
         </Dialog>
       )}
 
