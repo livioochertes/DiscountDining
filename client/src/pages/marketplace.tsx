@@ -146,8 +146,7 @@ export default function Marketplace() {
     staleTime: 2 * 60 * 60 * 1000, // 2 hours cache
   });
 
-  // Check if we should expand the filter box for AI recommendations
-  const shouldShowAIRecommendations = isAuthenticated && aiRecommendations?.recommendations?.length > 0;
+  // AI recommendations data for the AI Menu tab
   const allRecommendations = aiRecommendations?.recommendations || [];
   
   // State for recommendation type filter
@@ -173,12 +172,9 @@ export default function Marketplace() {
     return rec.type === recommendationType;
   });
   
-  const firstThreeRecommendations = filteredRecommendations.slice(0, 3);
-
   console.log('AI recommendations data:', { 
     allRecommendations: allRecommendations.length, 
     filteredRecommendations: filteredRecommendations.length,
-    firstThreeRecommendations: firstThreeRecommendations.length,
     showRecommendationModal 
   });
 
@@ -225,9 +221,6 @@ export default function Marketplace() {
     };
   };
 
-  // Enhanced recommendations for sidebar (first 3)
-  const enhancedRecommendations = firstThreeRecommendations.map(enhanceRecommendation);
-  
   // Enhanced recommendations for AI Menu tab (all)
   const allEnhancedRecommendations = filteredRecommendations.map(enhanceRecommendation);
 
@@ -435,11 +428,7 @@ export default function Marketplace() {
           
           {/* Filter Sidebar */}
           <aside className="w-full lg:w-64 mb-6 lg:mb-0" data-tour="filters">
-            <Card className={`lg:sticky lg:top-14 border-2 border-primary/20 shadow-lg lg:overflow-visible lg:flex lg:flex-col ${
-              shouldShowAIRecommendations 
-                ? 'lg:min-h-[calc(100vh-2rem)]' // Expanded height to show first 3 AI recommendations with full details
-                : 'lg:min-h-[calc(100vh-6rem)]' // Increased height to fit all filter elements without scrolling
-            }`}>
+            <Card className="lg:sticky lg:top-14 border-2 border-primary/20 shadow-lg lg:overflow-visible lg:flex lg:flex-col">
               <CardContent className="p-6 bg-gradient-to-b from-primary/5 to-transparent lg:overflow-visible lg:flex-1 lg:min-h-[calc(100vh-8rem)]">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-primary flex items-center">
@@ -583,174 +572,6 @@ export default function Marketplace() {
                   </div>
                 </div>
                 
-                {/* AI Recommendations - Show first 3 directly when logged in */}
-                {shouldShowAIRecommendations ? (
-                  <div className="mt-6">
-                    <h4 className="text-sm font-semibold text-primary mb-3 flex items-center">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      {t.aiRecommendations}
-                    </h4>
-                    
-                    {/* Toggle buttons for recommendation types */}
-                    <div className="flex gap-1 mb-3">
-                      <button
-                        onClick={() => setRecommendationType('all')}
-                        className={`px-2 py-1 text-xs rounded transition-colors ${
-                          recommendationType === 'all'
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        All ({allRecommendations.length})
-                      </button>
-                      <button
-                        onClick={() => setRecommendationType('restaurant')}
-                        className={`px-2 py-1 text-xs rounded transition-colors ${
-                          recommendationType === 'restaurant'
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        Restaurant ({allRecommendations.filter((r: any) => r.type === 'restaurant').length})
-                      </button>
-                      <button
-                        onClick={() => setRecommendationType('menu_item')}
-                        className={`px-2 py-1 text-xs rounded transition-colors ${
-                          recommendationType === 'menu_item'
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        Product ({allRecommendations.filter((r: any) => r.type === 'menu_item').length})
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      {enhancedRecommendations.map((recommendation: any, index: number) => (
-                        <div 
-                          key={recommendation.id}
-                          className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-primary/20 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.nativeEvent.stopImmediatePropagation();
-                            console.log('Recommendation clicked:', recommendation);
-                            
-                            // Capture current scroll position immediately
-                            const currentScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-                            scrollPositionRef.current = currentScroll;
-                            console.log('Opening modal - current scroll position:', currentScroll);
-                            
-                            // Open modal with recommendation details
-                            setSelectedRecommendation(recommendation);
-                            setTimeout(() => {
-                              setShowRecommendationModal(true);
-                              console.log('Modal state set to true');
-                            }, 50);
-                          }}
-                        >
-                          {/* Header - Different display for restaurant vs product recommendations */}
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1 min-w-0">
-                              {recommendation.type === 'menu_item' ? (
-                                // For product recommendations: Product name prominent, restaurant name secondary
-                                <>
-                                  <h5 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                                    {recommendation.recommendationText?.split('.')[0] || recommendation.menuItem?.name || recommendation.menuItemName || 'Recommended Product'}
-                                  </h5>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    from {recommendation.restaurant.name} • {recommendation.restaurant.cuisine}
-                                  </p>
-                                </>
-                              ) : (
-                                // For restaurant recommendations: Restaurant name prominent
-                                <>
-                                  <h5 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                                    {recommendation.restaurant.name}
-                                  </h5>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {recommendation.restaurant.cuisine} • {recommendation.restaurant.location}
-                                  </p>
-                                </>
-                              )}
-                            </div>
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium ml-2">
-                              #{index + 1}
-                            </span>
-                          </div>
-
-                          {/* Additional details - only show for restaurant recommendations */}
-                          {recommendation.type !== 'menu_item' && recommendation.menuItem && (
-                            <div className="mb-2">
-                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                {recommendation.menuItem.name}
-                              </p>
-                              {recommendation.menuItem.description && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  {recommendation.menuItem.description.slice(0, 60)}...
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Nutritional highlights */}
-                          {recommendation.nutritionalHighlights?.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {recommendation.nutritionalHighlights.slice(0, 3).map((highlight: string, i: number) => (
-                                <span key={i} className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
-                                  {highlight}
-                                </span>
-                              ))}
-                              {recommendation.nutritionalHighlights.length > 3 && (
-                                <span className="text-xs text-gray-500">+{recommendation.nutritionalHighlights.length - 3} more</span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* AI reasoning */}
-                          {recommendation.reasoning && (
-                            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                              {recommendation.reasoning.slice(0, 100)}...
-                            </p>
-                          )}
-
-                          {/* Score indicator */}
-                          {recommendation.recommendationScore && (
-                            <div className="mt-2 flex items-center">
-                              <div className="flex items-center">
-                                <span className="text-xs text-gray-500 mr-1">Match:</span>
-                                <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-primary rounded-full transition-all duration-300"
-                                    style={{ width: `${Math.min(100, (recommendation.recommendationScore || 0) * 100)}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-gray-500 ml-1">
-                                  {Math.round((recommendation.recommendationScore || 0) * 100)}%
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 text-center">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-xs w-full"
-                        onClick={() => setLocation('/dietary-recommendations')}
-                      >
-                        View All {aiRecommendations?.recommendations?.length || 0} {t.recommendations}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-6">
-                    <AIRecommendations />
-                  </div>
-                )}
               </CardContent>
             </Card>
           </aside>
