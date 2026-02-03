@@ -1,0 +1,42 @@
+AI recommendations data: {allRecommendations: 10, filteredRecommendations: 10, showRecommendationModal: false}
+installHook.js:1 You’re calling a legacy API, which is not enabled for your project. To get newer features and more functionality, switch to the Places API (New) or Routes API. Learn more: https://developers.google.com/maps/legacy#LegacyApiNotActivatedMapError
+overrideMethod @ installHook.js:1
+_.Fm @ js?key=AIzaSyA9uYea1lHF8WuAv8CfHza2-qCYqOAZd3I&libraries=places:1248
+(anonymous) @ places_impl.js:17
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictionsJson?1sBucuresti%20%2C%20ca&4sen-US&7scountry%3Aro&7scountry%3Aes&7scountry%3Afr&7scountry%3Ade&7scountry%3Ait&9sgeocode&15e3&21m1&2e1&r_url=https%3A%2F%2Featoff.app%2F&callback=_xdc_._tnr69d&key=AIzaSyA9uYea1lHF8WuAv8CfHza2-qCYqOAZd3I&token=79433:1
+PendingScript
+zka @ common.js:54
+(anonymous) @ common.js:110
+(anonymous) @ common.js:110
+_.Gz @ common.js:111
+(anonymous) @ places_impl.js:7
+(anonymous) @ util.js:12
+(anonymous) @ common.js:43
+_.zI @ util.js:12
+l$ @ places_impl.js:7
+m$ @ places_impl.js:7
+Jwb @ places_impl.js:17
+(anonymous) @ places_impl.js:57
+getPlacePredictions @ places_impl.js:57
+(anonymous) @ js?key=AIzaSyA9uYea1lHF8WuAv8CfHza2-qCYqOAZd3I&libraries=places:580
+Promise.then
+ID.getPlacePredictions @ js?key=AIzaSyA9uYea1lHF8WuAv8CfHza2-qCYqOAZd3I&libraries=places:580
+(anonymous) @ index-Ce_D8JA-.js:665
+setTimeout
+(anonymous) @ index-Ce_D8JA-.js:665
+ib @ index-Ce_D8JA-.js:40
+em @ index-Ce_D8JA-.js:40
+zX @ index-Ce_D8JA-.js:40
+Qc @ index-Ce_D8JA-.js:40
+VE @ index-Ce_D8JA-.js:40
+kc @ index-Ce_D8JA-.js:38
+Od @ index-Ce_D8JA-.js:40
+KF @ index-Ce_D8JA-.js:37
+aw @ index-Ce_D8JA-.js:37
+i2 @ index-Ce_D8JA-.js:37
+SY @ index-Ce_D8JA-.js:37Understand this error
+index-Ce_D8JA-.js:665 Places API response: {status: 'REQUEST_DENIED', predictionsCount: undefined}
+index-Ce_D8JA-.js:665 No predictions or error status: REQUEST_DENIED
+index-Ce_D8JA-.js:665 AI recommendations data: {allRecommendations: 10, filteredRecommendations: 10, showRecommendationModal: false}
