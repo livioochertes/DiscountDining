@@ -175,9 +175,27 @@ export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRest
   };
 
   const cuisineOptions = [
-    "Italian", "Chinese", "Japanese", "Indian", "Mexican", "French", "Thai", "Greek", 
-    "American", "Mediterranean", "Korean", "Vietnamese", "Turkish", "Lebanese", 
-    "Spanish", "German", "Brazilian", "Ethiopian", "Moroccan", "Peruvian", "Other"
+    "Italian", "Romanian", "French", "Greek", "Spanish", "German", "Polish", "Portuguese", "Turkish",
+    "Chinese", "Japanese", "Thai", "Vietnamese", "Indian", "Korean",
+    "Mexican", "American", "Brazilian", "Peruvian", "Argentinian",
+    "Lebanese", "Moroccan", "Ethiopian", "Israeli",
+    "Mediterranean", "International", "Other"
+  ];
+
+  const mainProductOptions = [
+    "Meat", "Fish & Seafood", "Pasta", "Pizza", "Sushi", "Burgers", "Salads", "Soups", "Desserts", "Beverages", "Mixed"
+  ];
+
+  const dietCategoryOptions = [
+    "Regular", "Vegetarian", "Vegan", "Gluten-Free", "Halal", "Kosher", "Organic", "Low-Carb"
+  ];
+
+  const conceptTypeOptions = [
+    "Fine Dining", "Casual Dining", "Fast Casual", "Fast Food", "Bistro", "Brasserie", "Trattoria", "Taverna", "Family Restaurant"
+  ];
+
+  const experienceTypeOptions = [
+    "Romantic", "Business", "Family Friendly", "Party & Events", "Relaxed"
   ];
 
   const priceRanges = ["$", "$$", "$$$", "$$$$"];
@@ -245,6 +263,78 @@ export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRest
               {form.formState.errors.cuisine && (
                 <p className="text-sm text-red-500 mt-1">{form.formState.errors.cuisine.message}</p>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="mainProduct">Main Product</Label>
+              <Select
+                value={form.watch("mainProduct") || ""}
+                onValueChange={(value) => form.setValue("mainProduct", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select main product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mainProductOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="dietCategory">Diet</Label>
+              <Select
+                value={form.watch("dietCategory") || ""}
+                onValueChange={(value) => form.setValue("dietCategory", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select diet category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dietCategoryOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="conceptType">Concept</Label>
+              <Select
+                value={form.watch("conceptType") || ""}
+                onValueChange={(value) => form.setValue("conceptType", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select concept type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {conceptTypeOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="experienceType">Experience</Label>
+              <Select
+                value={form.watch("experienceType") || ""}
+                onValueChange={(value) => form.setValue("experienceType", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select experience type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {experienceTypeOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
