@@ -31,7 +31,7 @@ function DietaryProfileCard({ userId }: { userId?: string }) {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Heart className="h-5 w-5 mr-2 text-primary" />
-            Dietary Profile & AI Recommendations
+            Dietary Profile
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -47,7 +47,7 @@ function DietaryProfileCard({ userId }: { userId?: string }) {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Heart className="h-5 w-5 mr-2 text-primary" />
-            Dietary Profile & AI Recommendations
+            Dietary Profile
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -62,7 +62,7 @@ function DietaryProfileCard({ userId }: { userId?: string }) {
       <CardHeader>
         <CardTitle className="flex items-center">
           <Heart className="h-5 w-5 mr-2 text-primary" />
-          Dietary Profile & AI Recommendations
+          Dietary Profile
         </CardTitle>
       </CardHeader>
       <CardContent>
