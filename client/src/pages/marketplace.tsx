@@ -258,6 +258,11 @@ export default function Marketplace() {
     }
   }, [handleFilterChange]);
 
+  // Fetch cuisine values from API (independent of current filters)
+  const { data: availableCuisines = [], isLoading: cuisinesLoading } = useQuery<string[]>({
+    queryKey: ['/api/cuisine-values'],
+  });
+
   const sortedRestaurants = useMemo(() => {
     return [...restaurants].sort((a, b) => {
       switch (sortBy) {
@@ -384,8 +389,10 @@ export default function Marketplace() {
                   {/* Cuisine Type */}
                   <div>
                     <Label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t.cuisineType}</Label>
-                    <div className="space-y-2">
-                      {['Italian', 'Asian', 'Mediterranean', 'French'].map((cuisine) => (
+                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
+                      {cuisinesLoading ? (
+                        <p className="text-sm text-gray-500">Loading cuisines...</p>
+                      ) : availableCuisines.length > 0 ? availableCuisines.map((cuisine) => (
                         <div key={cuisine} className="flex items-center space-x-2 p-2 rounded-md hover:bg-primary/10 transition-colors">
                           <Checkbox 
                             id={cuisine}
@@ -397,7 +404,9 @@ export default function Marketplace() {
                             {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
                           </Label>
                         </div>
-                      ))}
+                      )) : (
+                        <p className="text-sm text-gray-500">No cuisines available</p>
+                      )}
                     </div>
                   </div>
                   

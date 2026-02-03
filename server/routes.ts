@@ -965,6 +965,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint for cuisine values (for web marketplace filter)
+  app.get("/api/cuisine-values", async (req, res) => {
+    try {
+      const restaurants = await storage.getAllRestaurants();
+      const activeRestaurants = restaurants.filter(r => r.isActive !== false);
+      const cuisineSet = new Set<string>();
+      activeRestaurants.forEach(r => {
+        if (r.cuisine && typeof r.cuisine === 'string' && r.cuisine.trim()) {
+          cuisineSet.add(r.cuisine.trim());
+        }
+      });
+      const cuisines = Array.from(cuisineSet).sort();
+      res.json(cuisines);
+    } catch (error) {
+      console.error("Error fetching cuisine values:", error);
+      res.status(500).json({ message: "Failed to fetch cuisine values" });
+    }
+  });
+
   app.get("/api/restaurants", async (req, res) => {
     try {
       const { location, cuisine, priceRange, minDiscount, marketplaceId } = req.query;
