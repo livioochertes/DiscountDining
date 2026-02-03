@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TrendingUp, ChefHat, Star, ArrowRight } from "lucide-react";
+import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import RestaurantCard from "@/components/restaurant-card";
@@ -125,6 +125,9 @@ export default function Marketplace() {
   const [sortBy, setSortBy] = useState("featured");
   const [displayCount, setDisplayCount] = useState(6);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  // Tab state for Restaurants / AI Menu / Vouchers
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'ai-menu' | 'vouchers'>('restaurants');
 
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
@@ -747,7 +750,7 @@ export default function Marketplace() {
             </Card>
           </aside>
           
-          {/* Restaurant Grid */}
+          {/* Main Content Area */}
           <div className="flex-1">
             {/* Header */}
             <div className="text-center mb-8">
@@ -755,11 +758,53 @@ export default function Marketplace() {
               <p className="text-xl text-muted-foreground">{t.discover_save_dine}</p>
             </div>
             
-            {/* Featured Chefs Section */}
-            <FeaturedChefsSection />
-            
-            <div className="restaurant-header flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-primary">{t.availableRestaurants}</h2>
+            {/* Tab Navigation: Restaurants / AI Menu / Vouchers */}
+            <div className="flex justify-center mb-8">
+              <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1.5 gap-1">
+                <button
+                  onClick={() => setActiveTab('restaurants')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all ${
+                    activeTab === 'restaurants'
+                      ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <Store className="w-4 h-4" />
+                  Restaurants
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai-menu')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all ${
+                    activeTab === 'ai-menu'
+                      ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <Brain className="w-4 h-4" />
+                  AI Menu
+                </button>
+                <button
+                  onClick={() => setActiveTab('vouchers')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all ${
+                    activeTab === 'vouchers'
+                      ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <Ticket className="w-4 h-4" />
+                  Vouchers
+                </button>
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'restaurants' && (
+              <>
+                {/* Featured Chefs Section */}
+                <FeaturedChefsSection />
+                
+                <div className="restaurant-header flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-primary">{t.availableRestaurants}</h2>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-500">
                   {t.showingRestaurants.replace('{current}', displayedRestaurants.length.toString()).replace('{total}', sortedRestaurants.length.toString())}
@@ -819,6 +864,167 @@ export default function Marketplace() {
                   </div>
                 )}
               </>
+            )}
+              </>
+            )}
+
+            {/* AI Menu Tab Content */}
+            {activeTab === 'ai-menu' && (
+              <div className="py-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-primary mb-2 flex items-center justify-center gap-2">
+                    <Brain className="w-6 h-6" />
+                    AI Menu Recommendations
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Personalized restaurant and menu recommendations based on your preferences
+                  </p>
+                </div>
+                
+                {!isAuthenticated ? (
+                  <Card className="p-8 text-center">
+                    <Brain className="w-12 h-12 text-primary mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Sign in for AI Recommendations</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Log in to get personalized restaurant and menu recommendations based on your dietary preferences
+                    </p>
+                    <Button onClick={() => setLocation('/login')}>
+                      Sign In
+                    </Button>
+                  </Card>
+                ) : allRecommendations.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <Brain className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Recommendations Yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Set up your dietary preferences to receive personalized AI recommendations
+                    </p>
+                    <Button onClick={() => setLocation('/dashboard')}>
+                      Set Preferences
+                    </Button>
+                  </Card>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Recommendation Type Filter */}
+                    <div className="flex justify-center gap-2 mb-6">
+                      <Button
+                        variant={recommendationType === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setRecommendationType('all')}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        variant={recommendationType === 'restaurant' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setRecommendationType('restaurant')}
+                      >
+                        Restaurants
+                      </Button>
+                      <Button
+                        variant={recommendationType === 'menu_item' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setRecommendationType('menu_item')}
+                      >
+                        Menu Items
+                      </Button>
+                    </div>
+                    
+                    {/* Recommendations Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredRecommendations.map((rec: any, index: number) => (
+                        <Card 
+                          key={index} 
+                          className="cursor-pointer hover:shadow-lg transition-shadow"
+                          onClick={() => {
+                            setSelectedRecommendation(enhancedRecommendations.find((r: any) => r.restaurantId === rec.restaurantId) || rec);
+                            setShowRecommendationModal(true);
+                          }}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                {rec.type === 'menu_item' ? (
+                                  <ChefHat className="w-5 h-5 text-primary" />
+                                ) : (
+                                  <Store className="w-5 h-5 text-primary" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm line-clamp-2">
+                                  {rec.recommendationText?.split('.')[0] || 'Recommended'}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Match: {Math.round(rec.matchScore * 100)}%
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Vouchers Tab Content */}
+            {activeTab === 'vouchers' && (
+              <div className="py-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-primary mb-2 flex items-center justify-center gap-2">
+                    <Ticket className="w-6 h-6" />
+                    Available Vouchers
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Browse all available restaurant vouchers and meal packages
+                  </p>
+                </div>
+                
+                {isLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+                    <p className="mt-4 text-gray-500">Loading vouchers...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {sortedRestaurants.filter((r: any) => r.maxDiscount > 0).map((restaurant: any) => (
+                      <Card 
+                        key={restaurant.id} 
+                        className="cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
+                        onClick={() => openRestaurantModal(restaurant)}
+                      >
+                        <div className="relative h-32">
+                          {restaurant.imageUrl ? (
+                            <img 
+                              src={restaurant.imageUrl} 
+                              alt={restaurant.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
+                              <Store className="w-12 h-12 text-primary/60" />
+                            </div>
+                          )}
+                          <div className="absolute top-2 right-2">
+                            <Badge className="bg-green-500 text-white">
+                              -{restaurant.maxDiscount}% OFF
+                            </Badge>
+                          </div>
+                        </div>
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold truncate">{restaurant.name}</h3>
+                          <p className="text-sm text-muted-foreground truncate">{restaurant.cuisine}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Ticket className="w-4 h-4 text-primary" />
+                            <span className="text-sm text-primary font-medium">View Vouchers</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
