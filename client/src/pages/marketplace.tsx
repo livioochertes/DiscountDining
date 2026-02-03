@@ -9,8 +9,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket, MapPin, Filter, User, Clock, Percent, X } from "lucide-react";
+import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket, MapPin, Filter, User, Clock, Percent, X, Navigation, Search, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import RestaurantCard from "@/components/restaurant-card";
@@ -178,6 +179,48 @@ export default function Marketplace() {
   const [showRecommendationModal, setShowRecommendationModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
+  
+  // State for location modal with Google Places
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<string>('');
+  const [addressSearchQuery, setAddressSearchQuery] = useState('');
+  const [placeSuggestions, setPlaceSuggestions] = useState<any[]>([]);
+  const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
+  const autocompleteServiceRef = useRef<any>(null);
+  const placesServiceRef = useRef<any>(null);
+  const placesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Load Google Maps script dynamically
+  useEffect(() => {
+    const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!googleMapsApiKey) return;
+    
+    // Check if already loaded
+    if ((window as any).google?.maps?.places) {
+      setGoogleMapsLoaded(true);
+      return;
+    }
+
+    // Check if script is already being loaded
+    if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+      const checkLoaded = setInterval(() => {
+        if ((window as any).google?.maps?.places) {
+          setGoogleMapsLoaded(true);
+          clearInterval(checkLoaded);
+        }
+      }, 100);
+      return () => clearInterval(checkLoaded);
+    }
+
+    // Load script
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setGoogleMapsLoaded(true);
+    document.head.appendChild(script);
+  }, []);
 
   // Simple modal close - no scroll manipulation
   const handleCloseModal = useCallback(() => {
@@ -186,6 +229,109 @@ export default function Marketplace() {
     setSelectedRecommendation(null);
   }, []);
 
+  // Initialize Google Places API
+  useEffect(() => {
+    if (googleMapsLoaded && (window as any).google?.maps?.places) {
+      autocompleteServiceRef.current = new (window as any).google.maps.places.AutocompleteService();
+      if (placesContainerRef.current) {
+        placesServiceRef.current = new (window as any).google.maps.places.PlacesService(placesContainerRef.current);
+      }
+    }
+  }, [showLocationModal, googleMapsLoaded]);
+
+  // Search places with debounce
+  useEffect(() => {
+    if (!addressSearchQuery || addressSearchQuery.length < 3 || !autocompleteServiceRef.current || !googleMapsLoaded) {
+      setPlaceSuggestions([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setIsSearchingPlaces(true);
+      autocompleteServiceRef.current?.getPlacePredictions(
+        {
+          input: addressSearchQuery,
+          types: ['address'],
+          componentRestrictions: { country: ['ro', 'es', 'fr', 'de', 'it', 'gb'] },
+        },
+        (predictions: any, status: any) => {
+          setIsSearchingPlaces(false);
+          if (status === (window as any).google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setPlaceSuggestions(predictions);
+          } else {
+            setPlaceSuggestions([]);
+          }
+        }
+      );
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [addressSearchQuery, googleMapsLoaded]);
+
+  // Filter change handler - defined early for use in location callbacks
+  const handleFilterChange = useCallback((key: keyof RestaurantFilters, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  }, []);
+
+  // Handle place selection
+  const handleSelectPlace = useCallback((place: any) => {
+    const address = place.description;
+    const city = address.split(',')[0].trim();
+    setSelectedAddress(address);
+    setAddressSearchQuery('');
+    setPlaceSuggestions([]);
+    setShowLocationModal(false);
+    setDetectedLocation(city);
+    setAutoDetectLocation(false);
+    // Update location filter to the city for restaurant filtering
+    handleFilterChange('location', city);
+  }, [handleFilterChange]);
+
+  // Handle GPS location detection
+  const handleGPSDetect = useCallback(() => {
+    if (!navigator.geolocation) {
+      return;
+    }
+    setIsDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        // Use Google Geocoder to get address from coordinates
+        if (googleMapsLoaded && (window as any).google?.maps?.Geocoder) {
+          const geocoder = new (window as any).google.maps.Geocoder();
+          geocoder.geocode(
+            { location: { lat: latitude, lng: longitude } },
+            (results: any, status: any) => {
+              setIsDetectingLocation(false);
+              if (status === 'OK' && results && results[0]) {
+                const address = results[0].formatted_address;
+                // Extract city from address components
+                const cityComponent = results[0].address_components?.find(
+                  (c: any) => c.types?.includes('locality') || c.types?.includes('administrative_area_level_1')
+                );
+                const city = cityComponent?.long_name || address.split(',')[0].trim();
+                setSelectedAddress(address);
+                setDetectedLocation(city);
+                setShowLocationModal(false);
+                setAutoDetectLocation(true);
+                // Update location filter
+                handleFilterChange('location', city);
+              }
+            }
+          );
+        } else {
+          setIsDetectingLocation(false);
+        }
+      },
+      () => {
+        setIsDetectingLocation(false);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  }, [googleMapsLoaded, handleFilterChange]);
   
   // Filter recommendations based on selected type and manual filters
   const filteredRecommendations = allRecommendations.filter((rec: any) => {
@@ -280,15 +426,6 @@ export default function Marketplace() {
       ]);
     }
   }, [restaurants, displayCount]);
-
-
-
-  const handleFilterChange = useCallback((key: keyof RestaurantFilters, value: any) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  }, []);
 
   const handleCuisineChange = useCallback((cuisine: string, checked: boolean) => {
     // For simplicity, we'll only support one cuisine filter at a time
@@ -496,8 +633,9 @@ export default function Marketplace() {
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <section className="mb-12">
-        {/* Tab Navigation: Restaurants / AI Menu / Vouchers */}
-        <div className="flex justify-center mb-6">
+        {/* Tab Navigation + Location: Restaurants / AI Menu / Vouchers + Location Button */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+          {/* Tabs */}
           <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1.5 gap-1">
             <button
               onClick={() => setActiveTab('restaurants')}
@@ -533,6 +671,29 @@ export default function Marketplace() {
               Vouchers
             </button>
           </div>
+
+          {/* Global Location Button */}
+          <button
+            onClick={() => setShowLocationModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-all text-sm"
+          >
+            <MapPin className="w-4 h-4 text-primary" />
+            <span className="text-gray-700 dark:text-gray-300 max-w-[200px] truncate">
+              {selectedAddress || detectedLocation || t.setLocation || 'Set location'}
+            </span>
+            {(selectedAddress || detectedLocation) && (
+              <X 
+                className="w-3.5 h-3.5 text-gray-400 hover:text-red-500 cursor-pointer" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedAddress('');
+                  setDetectedLocation(null);
+                  setAutoDetectLocation(false);
+                  handleFilterChange('location', undefined);
+                }}
+              />
+            )}
+          </button>
         </div>
 
         {/* Horizontal Filter Bar */}
@@ -580,54 +741,6 @@ export default function Marketplace() {
                   <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
                 </SelectContent>
               </Select>
-
-              {/* Location Dropdown */}
-              <Select 
-                value={filters.location || "all"} 
-                onValueChange={(value) => {
-                  handleFilterChange('location', value === 'all' ? undefined : value);
-                  if (value !== 'all') {
-                    setAutoDetectLocation(false);
-                  }
-                }}
-              >
-                <SelectTrigger className="w-[150px] h-9 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <SelectValue placeholder={t.location} />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.allLocations}</SelectItem>
-                  {locationsLoading ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
-                  ) : availableLocations.map((loc) => (
-                    <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Near Me Toggle */}
-              <button
-                onClick={() => {
-                  if (autoDetectLocation) {
-                    setAutoDetectLocation(false);
-                    handleFilterChange('location', undefined);
-                    setDetectedLocation(null);
-                  } else {
-                    setAutoDetectLocation(true);
-                    setAutoDetectAttempt(prev => prev + 1);
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  autoDetectLocation
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                {isDetectingLocation ? 'Detecting...' : 'Near Me'}
-              </button>
 
               {/* Rating Toggle */}
               <button
@@ -1339,6 +1452,99 @@ export default function Marketplace() {
         </div>,
         document.body
       )}
+
+      {/* Location Selection Modal with Google Places */}
+      <Dialog open={showLocationModal} onOpenChange={setShowLocationModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-primary" />
+              {t.setLocation || 'Set Your Location'}
+            </DialogTitle>
+            <DialogDescription>
+              {t.locationDescription || 'Enter your address for delivery or browse nearby restaurants'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-4">
+            {/* GPS Detection Button */}
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 py-6"
+              onClick={handleGPSDetect}
+              disabled={isDetectingLocation}
+            >
+              {isDetectingLocation ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {t.detectingLocation || 'Detecting location...'}
+                </>
+              ) : (
+                <>
+                  <Navigation className="w-5 h-5 text-primary" />
+                  {t.useMyLocation || 'Use My Location'}
+                </>
+              )}
+            </Button>
+
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+              <span className="flex-shrink mx-4 text-gray-400 text-sm">{t.or || 'or'}</span>
+              <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+            </div>
+
+            {/* Address Search Input */}
+            <div className="relative">
+              <div className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <Search className="w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder={t.enterAddress || 'Enter your address...'}
+                  value={addressSearchQuery}
+                  onChange={(e) => setAddressSearchQuery(e.target.value)}
+                  className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                {isSearchingPlaces && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+              </div>
+
+              {/* Place Suggestions Dropdown */}
+              {placeSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {placeSuggestions.map((place: any) => (
+                    <button
+                      key={place.place_id}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-start gap-3 transition-colors"
+                      onClick={() => handleSelectPlace(place)}
+                    >
+                      <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                          {place.structured_formatting?.main_text || place.description.split(',')[0]}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {place.structured_formatting?.secondary_text || place.description.split(',').slice(1).join(',')}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Current Selection Display */}
+            {(selectedAddress || detectedLocation) && (
+              <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                  {selectedAddress || detectedLocation}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Hidden div for PlacesService */}
+          <div ref={placesContainerRef} style={{ display: 'none' }} />
+        </DialogContent>
+      </Dialog>
 
       <AIAssistant 
         context={{
