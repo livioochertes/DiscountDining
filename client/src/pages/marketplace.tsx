@@ -591,10 +591,10 @@ export default function Marketplace() {
               <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1.5 gap-1">
                 <button
                   onClick={() => setActiveTab('restaurants')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
                     activeTab === 'restaurants'
-                      ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                      ? 'bg-primary text-white shadow-lg scale-105 transform'
+                      : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
                   }`}
                 >
                   <Store className="w-4 h-4" />
@@ -602,10 +602,10 @@ export default function Marketplace() {
                 </button>
                 <button
                   onClick={() => setActiveTab('ai-menu')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
                     activeTab === 'ai-menu'
-                      ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                      ? 'bg-primary text-white shadow-lg scale-105 transform'
+                      : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
                   }`}
                 >
                   <Brain className="w-4 h-4" />
@@ -613,10 +613,10 @@ export default function Marketplace() {
                 </button>
                 <button
                   onClick={() => setActiveTab('vouchers')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
                     activeTab === 'vouchers'
-                      ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                      ? 'bg-primary text-white shadow-lg scale-105 transform'
+                      : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
                   }`}
                 >
                   <Ticket className="w-4 h-4" />
