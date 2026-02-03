@@ -904,66 +904,11 @@ export default function Marketplace() {
                     </Button>
                   </Card>
                 ) : (
-                  <div className="space-y-6">
-                    {/* Recommendation Type Filter */}
-                    <div className="flex justify-center gap-2 mb-6">
-                      <Button
-                        variant={recommendationType === 'all' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setRecommendationType('all')}
-                      >
-                        All
-                      </Button>
-                      <Button
-                        variant={recommendationType === 'restaurant' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setRecommendationType('restaurant')}
-                      >
-                        Restaurants
-                      </Button>
-                      <Button
-                        variant={recommendationType === 'menu_item' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setRecommendationType('menu_item')}
-                      >
-                        Menu Items
-                      </Button>
-                    </div>
-                    
-                    {/* Recommendations Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {filteredRecommendations.map((rec: any, index: number) => (
-                        <Card 
-                          key={index} 
-                          className="cursor-pointer hover:shadow-lg transition-shadow"
-                          onClick={() => {
-                            setSelectedRecommendation(enhancedRecommendations.find((r: any) => r.restaurantId === rec.restaurantId) || rec);
-                            setShowRecommendationModal(true);
-                          }}
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                {rec.type === 'menu_item' ? (
-                                  <ChefHat className="w-5 h-5 text-primary" />
-                                ) : (
-                                  <Store className="w-5 h-5 text-primary" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm line-clamp-2">
-                                  {rec.recommendationText?.split('.')[0] || 'Recommended'}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Match: {Math.round(rec.matchScore * 100)}%
-                                </p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
+                  <AIRecommendations 
+                    recommendations={enhancedRecommendations}
+                    showFilters={true}
+                    className="border-0 shadow-none"
+                  />
                 )}
               </div>
             )}
