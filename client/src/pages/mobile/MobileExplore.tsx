@@ -459,7 +459,6 @@ export default function MobileExplore() {
   const [location, setLocation] = useLocation();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Auto-focus search input only when coming from search bar (focus=search param)
@@ -871,35 +870,30 @@ export default function MobileExplore() {
           </div>
         )}
 
-        {/* Categories (only for restaurants) */}
+        {/* Categories/Filters (only for restaurants) */}
         {activeTab === 'restaurants' && (
           <CategoryChips
-            selected={selectedCategory}
-            onSelect={setSelectedCategory}
-          />
-        )}
-
-        {/* Active filter indicator */}
-        {activeUrlFilter && activeTab === 'restaurants' && (
-          <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-xl">
-            <span className="text-sm text-primary font-medium">
-              Filtering by: {urlFilterId || activeUrlFilter.filterType}
-            </span>
-            <button 
-              onClick={() => {
-                // Remove filter params from URL and update via router
+            selected={activeUrlFilter?.filterId || 'all'}
+            onSelect={(id, filter) => {
+              if (id === 'all') {
                 const newParams = new URLSearchParams(window.location.search);
                 newParams.delete('filterType');
                 newParams.delete('filterValues');
                 newParams.delete('filterId');
+                setActiveUrlFilter(null);
                 const newUrl = newParams.toString() ? `/m/explore?${newParams.toString()}` : '/m/explore';
                 setLocation(newUrl);
-              }}
-              className="ml-auto p-1 hover:bg-primary/20 rounded-full"
-            >
-              <X className="w-4 h-4 text-primary" />
-            </button>
-          </div>
+              } else if (filter?.filterType && filter?.filterValues) {
+                const newParams = new URLSearchParams(window.location.search);
+                newParams.set('filterId', id);
+                newParams.set('filterType', filter.filterType);
+                newParams.set('filterValues', filter.filterValues.join(','));
+                setActiveUrlFilter({ filterId: id, filterType: filter.filterType, filterValues: filter.filterValues });
+                setLocation(`/m/explore?${newParams.toString()}`);
+              }
+            }}
+            useDynamicFilters={true}
+          />
         )}
 
         {/* Results count - hidden for AI Menu */}
@@ -949,7 +943,13 @@ export default function MobileExplore() {
                 <button 
                   onClick={() => {
                     setSearchQuery('');
-                    setSelectedCategory('all');
+                    setActiveUrlFilter(null);
+                    const newParams = new URLSearchParams(window.location.search);
+                    newParams.delete('filterType');
+                    newParams.delete('filterValues');
+                    newParams.delete('filterId');
+                    const newUrl = newParams.toString() ? `/m/explore?${newParams.toString()}` : '/m/explore';
+                    setLocation(newUrl);
                   }}
                   className="mt-2 text-primary font-medium"
                 >

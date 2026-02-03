@@ -657,7 +657,7 @@ export default function MobileHome() {
           </div>
           <div className="overflow-x-auto scrollbar-hide">
             <div className="flex gap-3">
-              {filteredRestaurants.slice(0, 5).map((restaurant: any) => (
+              {filteredRestaurants.map((restaurant: any) => (
                 <RestaurantCardSmall
                   key={restaurant.id}
                   name={restaurant.name}
