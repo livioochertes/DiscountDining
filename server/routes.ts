@@ -968,7 +968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public endpoint for cuisine values (for web marketplace filter)
   app.get("/api/cuisine-values", async (req, res) => {
     try {
-      const restaurants = await storage.getAllRestaurants();
+      const restaurants = await storage.getRestaurants();
       const activeRestaurants = restaurants.filter(r => r.isActive !== false);
       const cuisineSet = new Set<string>();
       activeRestaurants.forEach(r => {
