@@ -5286,24 +5286,17 @@ export default function AdminDashboard() {
                     name="cuisine"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cuisine Type</FormLabel>
+                        <FormLabel>Cuisine</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select cuisine type" />
+                              <SelectValue placeholder="Selectează..." />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Italian">Italian</SelectItem>
-                            <SelectItem value="Asian">Asian</SelectItem>
-                            <SelectItem value="Mexican">Mexican</SelectItem>
-                            <SelectItem value="Mediterranean">Mediterranean</SelectItem>
-                            <SelectItem value="American">American</SelectItem>
-                            <SelectItem value="French">French</SelectItem>
-                            <SelectItem value="Indian">Indian</SelectItem>
-                            <SelectItem value="Chinese">Chinese</SelectItem>
-                            <SelectItem value="Japanese">Japanese</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
+                            {CUISINE_OPTIONS.map(opt => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
