@@ -189,7 +189,7 @@ function DietaryProfileCard({ userId }: { userId?: string }) {
           </Button>
           <Button 
             variant="outline"
-            onClick={() => window.location.href = "/dietary-recommendations"}
+            onClick={() => window.location.href = "/?tab=ai-menu"}
           >
             View AI Recommendations
           </Button>
