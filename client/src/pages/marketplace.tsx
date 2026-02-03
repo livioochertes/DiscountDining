@@ -196,8 +196,8 @@ export default function Marketplace() {
     }
   }, [showRecommendationModal]);
 
-  // Enhance recommendations with restaurant data from the restaurants list
-  const enhancedRecommendations = firstThreeRecommendations.map((rec: any) => {
+  // Helper function to enhance recommendation with restaurant data
+  const enhanceRecommendation = (rec: any) => {
     let restaurantId: number;
     let restaurantData: Restaurant | undefined;
     
@@ -205,7 +205,6 @@ export default function Marketplace() {
       restaurantId = rec.restaurantId || rec.targetId;
       restaurantData = restaurants.find((r: Restaurant) => r.id === restaurantId);
     } else if (rec.type === 'menu_item') {
-      // Menu item recommendations should be linked to Wing Stop for now
       restaurantId = 101; // Wing Stop ID
       restaurantData = restaurants.find((r: Restaurant) => r.id === 101);
     } else {
@@ -224,7 +223,13 @@ export default function Marketplace() {
         rating: rec.restaurant?.rating || restaurantData?.rating || 0
       }
     };
-  });
+  };
+
+  // Enhanced recommendations for sidebar (first 3)
+  const enhancedRecommendations = firstThreeRecommendations.map(enhanceRecommendation);
+  
+  // Enhanced recommendations for AI Menu tab (all)
+  const allEnhancedRecommendations = filteredRecommendations.map(enhanceRecommendation);
 
   // Ultra-aggressive batch preloading for visible restaurants
   useEffect(() => {
@@ -905,7 +910,7 @@ export default function Marketplace() {
                   </Card>
                 ) : (
                   <AIRecommendations 
-                    recommendations={enhancedRecommendations}
+                    recommendations={allEnhancedRecommendations}
                     showFilters={true}
                     className="border-0 shadow-none"
                   />
