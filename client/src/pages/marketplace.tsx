@@ -568,7 +568,7 @@ export default function Marketplace() {
                       <SelectTrigger>
                         <SelectValue placeholder="Any Discount" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent position="popper" sideOffset={4}>
                         <SelectItem value="0">Any Discount</SelectItem>
                         <SelectItem value="5">5% or more</SelectItem>
                         <SelectItem value="10">10% or more</SelectItem>
