@@ -363,10 +363,7 @@ html {
   scroll-behavior: auto;
 }
 
-* {
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-}
+/* Note: Removed global * { transform: translateZ(0); } as it breaks position: fixed modals */
 
 /* Optimize scrolling performance for the main page */
 .transform-gpu {
