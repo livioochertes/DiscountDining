@@ -561,21 +561,17 @@ export default function Marketplace() {
                   
                   <div>
                     <Label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t.minDiscount}</Label>
-                    <Select 
-                      value={filters.minDiscount?.toString() || "0"} 
-                      onValueChange={(value) => handleFilterChange('minDiscount', value === '0' ? undefined : parseInt(value))}
+                    <select
+                      value={filters.minDiscount?.toString() || "0"}
+                      onChange={(e) => handleFilterChange('minDiscount', e.target.value === '0' ? undefined : parseInt(e.target.value))}
+                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any Discount" />
-                      </SelectTrigger>
-                      <SelectContent position="popper" sideOffset={4}>
-                        <SelectItem value="0">Any Discount</SelectItem>
-                        <SelectItem value="5">5% or more</SelectItem>
-                        <SelectItem value="10">10% or more</SelectItem>
-                        <SelectItem value="15">15% or more</SelectItem>
-                        <SelectItem value="20">20% or more</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <option value="0">Any Discount</option>
+                      <option value="5">5% or more</option>
+                      <option value="10">10% or more</option>
+                      <option value="15">15% or more</option>
+                      <option value="20">20% or more</option>
+                    </select>
                   </div>
                 </div>
                 
