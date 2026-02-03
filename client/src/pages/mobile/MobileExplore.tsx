@@ -647,26 +647,35 @@ export default function MobileExplore() {
     if (activeUrlFilter) {
       const { filterType, filterValues } = activeUrlFilter;
       
+      // Helper function to check if any filter value matches in text fields
+      const matchesInText = (filterVal: string) => {
+        const lowerVal = filterVal.toLowerCase();
+        const name = r.name?.toLowerCase() || '';
+        const description = r.description?.toLowerCase() || '';
+        const cuisine = r.cuisine?.toLowerCase() || '';
+        return name.includes(lowerVal) || description.includes(lowerVal) || cuisine.includes(lowerVal);
+      };
+      
       switch (filterType) {
         case 'cuisine':
           return filterValues.some(val => 
-            r.cuisine?.toLowerCase().includes(val.toLowerCase())
+            r.cuisine?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
           );
         case 'mainProduct':
           return filterValues.some(val => 
-            r.mainProduct?.toLowerCase().includes(val.toLowerCase())
+            r.mainProduct?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
           );
         case 'dietCategory':
           return filterValues.some(val => 
-            r.dietCategory?.toLowerCase().includes(val.toLowerCase())
+            r.dietCategory?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
           );
         case 'conceptType':
           return filterValues.some(val => 
-            r.conceptType?.toLowerCase().includes(val.toLowerCase())
+            r.conceptType?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
           );
         case 'experienceType':
           return filterValues.some(val => 
-            r.experienceType?.toLowerCase().includes(val.toLowerCase())
+            r.experienceType?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
           );
         case 'deals':
           // For deals, check if restaurant has active vouchers

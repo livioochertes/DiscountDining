@@ -424,36 +424,64 @@ export default function MobileHome() {
         const { filterType, filterValues } = activeFilter;
         if (!filterType || !filterValues || filterValues.length === 0) return true;
         
+        // Helper function to check if any filter value matches in text fields
+        const matchesInText = (filterVal: string) => {
+          const lowerVal = filterVal.toLowerCase();
+          const name = restaurant.name?.toLowerCase() || '';
+          const description = restaurant.description?.toLowerCase() || '';
+          const cuisine = restaurant.cuisine?.toLowerCase() || '';
+          return name.includes(lowerVal) || description.includes(lowerVal) || cuisine.includes(lowerVal);
+        };
+        
+        console.log('[MobileHome Filter] Checking restaurant:', restaurant.name, 'filterType:', filterType, 'filterValues:', filterValues);
+        
         switch (filterType) {
-          case 'cuisine':
-            return filterValues.some(v => 
-              restaurant.cuisine?.toLowerCase().includes(v.toLowerCase())
-            );
-          case 'mainProduct':
-            return filterValues.some(v => 
-              restaurant.mainProduct?.toLowerCase().includes(v.toLowerCase()) ||
-              restaurant.cuisine?.toLowerCase().includes(v.toLowerCase())
-            );
-          case 'dietCategory':
-            return filterValues.some(v => 
-              restaurant.dietCategory?.toLowerCase().includes(v.toLowerCase())
-            );
-          case 'conceptType':
-            return filterValues.some(v => 
-              restaurant.conceptType?.toLowerCase().includes(v.toLowerCase())
-            );
-          case 'experienceType':
-            return filterValues.some(v => 
-              restaurant.experienceType?.toLowerCase().includes(v.toLowerCase())
-            );
-          case 'deals':
-            // Show restaurants that have active vouchers/deals
-            return activeVouchers.some(v => v.restaurantId === restaurant.id);
+          case 'cuisine': {
+            const cuisineMatch = filterValues.some(v => {
+              const lowerVal = v.toLowerCase();
+              return restaurant.cuisine?.toLowerCase().includes(lowerVal) || matchesInText(v);
+            });
+            return cuisineMatch;
+          }
+          case 'mainProduct': {
+            const productMatch = filterValues.some(v => {
+              const lowerVal = v.toLowerCase();
+              return restaurant.mainProduct?.toLowerCase().includes(lowerVal) || matchesInText(v);
+            });
+            return productMatch;
+          }
+          case 'dietCategory': {
+            const dietMatch = filterValues.some(v => {
+              const lowerVal = v.toLowerCase();
+              return restaurant.dietCategory?.toLowerCase().includes(lowerVal) || matchesInText(v);
+            });
+            return dietMatch;
+          }
+          case 'conceptType': {
+            const conceptMatch = filterValues.some(v => {
+              const lowerVal = v.toLowerCase();
+              return restaurant.conceptType?.toLowerCase().includes(lowerVal) || matchesInText(v);
+            });
+            return conceptMatch;
+          }
+          case 'experienceType': {
+            const expMatch = filterValues.some(v => {
+              const lowerVal = v.toLowerCase();
+              return restaurant.experienceType?.toLowerCase().includes(lowerVal) || matchesInText(v);
+            });
+            return expMatch;
+          }
+          case 'deals': {
+            const dealsMatch = activeVouchers.some(v => v.restaurantId === restaurant.id);
+            return dealsMatch;
+          }
           default:
             return true;
         }
       })
     : sortedRestaurants;
+  
+  console.log('[MobileHome Filter] Active filter:', activeFilter, 'Filtered count:', filteredRestaurants.length, 'of', sortedRestaurants.length);
   
   const restaurantsWithVouchers: RestaurantWithVouchers[] = filteredRestaurants
     .slice(0, 4)
