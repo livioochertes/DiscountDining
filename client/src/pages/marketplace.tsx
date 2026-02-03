@@ -232,10 +232,14 @@ export default function Marketplace() {
   // Initialize Google Places API
   useEffect(() => {
     if (googleMapsLoaded && (window as any).google?.maps?.places) {
+      console.log('Initializing AutocompleteService...');
       autocompleteServiceRef.current = new (window as any).google.maps.places.AutocompleteService();
+      console.log('AutocompleteService initialized:', !!autocompleteServiceRef.current);
       if (placesContainerRef.current) {
         placesServiceRef.current = new (window as any).google.maps.places.PlacesService(placesContainerRef.current);
       }
+    } else {
+      console.log('Cannot init Places API:', { googleMapsLoaded, hasPlaces: !!(window as any).google?.maps?.places });
     }
   }, [showLocationModal, googleMapsLoaded]);
 
@@ -248,17 +252,21 @@ export default function Marketplace() {
 
     const timeoutId = setTimeout(() => {
       setIsSearchingPlaces(true);
+      console.log('Searching places for:', addressSearchQuery);
       autocompleteServiceRef.current?.getPlacePredictions(
         {
           input: addressSearchQuery,
-          types: ['address'],
+          types: ['geocode'],
           componentRestrictions: { country: ['ro', 'es', 'fr', 'de', 'it', 'gb'] },
         },
         (predictions: any, status: any) => {
           setIsSearchingPlaces(false);
+          console.log('Places API response:', { status, predictionsCount: predictions?.length });
           if (status === (window as any).google.maps.places.PlacesServiceStatus.OK && predictions) {
+            console.log('Setting suggestions:', predictions.length);
             setPlaceSuggestions(predictions);
           } else {
+            console.log('No predictions or error status:', status);
             setPlaceSuggestions([]);
           }
         }
