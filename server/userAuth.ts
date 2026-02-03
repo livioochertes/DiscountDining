@@ -191,18 +191,25 @@ export function registerUserAuthRoutes(app: Express) {
       if (type === 'email') {
         newCode = generateVerificationCode();
         verificationData.emailCode = newCode;
-        await sendEmailVerification(email, newCode, verificationData.userData.firstName);
+        await sendEmailVerification(email, newCode, verificationData.userData.firstName || 'User');
       } else if (type === 'sms') {
+        // Only allow SMS resend if phone was provided during registration
+        if (!verificationData.smsCode || !verificationData.userData.phone) {
+          return res.status(400).json({ message: 'SMS verification not available for this account' });
+        }
         newCode = generateVerificationCode();
         verificationData.smsCode = newCode;
-        await sendSMSVerification(phone, newCode);
+        await sendSMSVerification(verificationData.userData.phone, newCode);
       } else {
         return res.status(400).json({ message: 'Invalid type. Must be "email" or "sms"' });
       }
 
-      // Update expiration time
+      // Update expiration time - use the actual stored key for updating
+      const actualKey = verificationData.userData.phone 
+        ? `${verificationData.userData.email}_${verificationData.userData.phone}` 
+        : `email_${verificationData.userData.email}`;
       verificationData.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      verificationCodes.set(verificationKey, verificationData);
+      verificationCodes.set(actualKey, verificationData);
 
       res.json({ message: `${type} verification code resent successfully` });
     } catch (error) {
@@ -270,8 +277,11 @@ export function registerUserAuthRoutes(app: Express) {
         healthConditions: []
       });
 
-      // Clean up verification data
-      verificationCodes.delete(verificationKey);
+      // Clean up verification data - use the actual stored key for deletion
+      const actualKey = verificationData.userData.phone 
+        ? `${verificationData.userData.email}_${verificationData.userData.phone}` 
+        : `email_${verificationData.userData.email}`;
+      verificationCodes.delete(actualKey);
 
       // Create session (simple session management for demo)
       if (req.session) {
