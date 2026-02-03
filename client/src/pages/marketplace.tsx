@@ -164,6 +164,9 @@ export default function Marketplace() {
   // State for "Use My Dietary Profile" toggle in AI Menu
   const [useDietaryProfile, setUseDietaryProfile] = useState(true);
   
+  // State for manual AI Menu filters (when dietary profile toggle is off)
+  const [manualDietType, setManualDietType] = useState<string>('all');
+  
   // Fetch user's dietary profile
   const { data: userDietaryProfile } = useQuery<any>({
     queryKey: ['/api/dietary/profile'],
@@ -184,10 +187,29 @@ export default function Marketplace() {
   }, []);
 
   
-  // Filter recommendations based on selected type
+  // Filter recommendations based on selected type and manual filters
   const filteredRecommendations = allRecommendations.filter((rec: any) => {
-    if (recommendationType === 'all') return true;
-    return rec.type === recommendationType;
+    // Filter by recommendation type
+    if (recommendationType !== 'all' && rec.type !== recommendationType) {
+      return false;
+    }
+    
+    // When not using dietary profile, apply manual filters
+    if (!useDietaryProfile || !isAuthenticated) {
+      // Filter by cuisine if set
+      if (filters.cuisine && rec.restaurant?.cuisine !== filters.cuisine) {
+        return false;
+      }
+      // Filter by diet type if set
+      if (manualDietType !== 'all') {
+        const dietaryTags = rec.dietaryTags || rec.restaurant?.dietaryTags || [];
+        if (!dietaryTags.some((tag: string) => tag.toLowerCase().includes(manualDietType.toLowerCase()))) {
+          return false;
+        }
+      }
+    }
+    
+    return true;
   });
   
   console.log('AI recommendations data:', { 
@@ -444,10 +466,26 @@ export default function Marketplace() {
     setFilters({});
     setAutoDetectLocation(false);
     setDetectedLocation(null);
+    setSortBy('featured');
+    // Reset AI Menu specific filters
+    setManualDietType('all');
+    setUseDietaryProfile(true);
   }, []);
 
-  // Check if any filters are active
-  const hasActiveFilters = filters.cuisine || filters.priceRange || filters.location || filters.minDiscount;
+  // Check if any filters are active based on current tab
+  const hasActiveFilters = useMemo(() => {
+    const baseFilters = filters.cuisine || filters.priceRange || filters.location || filters.minDiscount;
+    if (activeTab === 'restaurants') {
+      return baseFilters || autoDetectLocation || sortBy !== 'featured';
+    }
+    if (activeTab === 'ai-menu') {
+      return baseFilters || manualDietType !== 'all' || !useDietaryProfile;
+    }
+    if (activeTab === 'vouchers') {
+      return baseFilters || sortBy === 'expiring-soon';
+    }
+    return baseFilters;
+  }, [filters, activeTab, autoDetectLocation, sortBy, manualDietType, useDietaryProfile]);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -699,7 +737,7 @@ export default function Marketplace() {
                   </Select>
 
                   {/* Diet Type Dropdown */}
-                  <Select defaultValue="all">
+                  <Select value={manualDietType} onValueChange={setManualDietType}>
                     <SelectTrigger className="w-[140px] h-9 text-sm">
                       <SelectValue placeholder="Diet Type" />
                     </SelectTrigger>
@@ -730,6 +768,17 @@ export default function Marketplace() {
                     </Badge>
                   )}
                 </div>
+              )}
+
+              {/* Clear Filters for AI Menu */}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors ml-auto"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear
+                </button>
               )}
             </div>
           )}
