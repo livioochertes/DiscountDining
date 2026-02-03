@@ -122,7 +122,7 @@ export function Header() {
               </button>
             </div>
             <div className="hidden md:flex md:flex-col md:ml-4">
-              <span className="text-lg font-bold text-gray-900">EatOff – Restaurant Vouchers & More</span>
+              <span className="text-lg font-bold text-gray-900">Restaurant Vouchers & More</span>
               <span className="text-sm text-gray-500">Discover, Save, and Dine with Flexible Meal Packages</span>
             </div>
           </div>
