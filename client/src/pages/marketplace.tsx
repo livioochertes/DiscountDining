@@ -586,12 +586,6 @@ export default function Marketplace() {
           
           {/* Main Content Area */}
           <div className="flex-1">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-primary mb-2">{t.restaurant_vouchers}</h1>
-              <p className="text-xl text-muted-foreground">{t.discover_save_dine}</p>
-            </div>
-            
             {/* Tab Navigation: Restaurants / AI Menu / Vouchers */}
             <div className="flex justify-center mb-8">
               <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1.5 gap-1">
