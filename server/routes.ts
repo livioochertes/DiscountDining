@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user already exists
-      const existingUser = await storage.getCustomerByEmail(email);
+      const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(409).json({ error: "Email already registered" });
       }
@@ -231,13 +231,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create user
       const userId = nanoid();
-      const user = await storage.createCustomer({
+      const user = await storage.createUserWithPassword({
         id: userId,
         email,
         passwordHash,
         firstName: firstName || null,
         lastName: lastName || null,
-        profileImageUrl: null,
       });
       
       // Generate session token for mobile
@@ -274,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Find user by email
-      const user = await storage.getCustomerByEmail(email);
+      const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
