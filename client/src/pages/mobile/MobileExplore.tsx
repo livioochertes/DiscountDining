@@ -647,42 +647,35 @@ export default function MobileExplore() {
     if (activeUrlFilter) {
       const { filterType, filterValues } = activeUrlFilter;
       
-      // Helper function to check if any filter value matches in text fields
+      // Helper function for bidirectional partial matching
+      // "Pizza" matches "Pizzeria" and "Pizzeria" matches "Pizza"
+      const partialMatch = (fieldValue: string | null | undefined, filterVal: string) => {
+        if (!fieldValue) return false;
+        const field = fieldValue.toLowerCase();
+        const filter = filterVal.toLowerCase();
+        return field.includes(filter) || filter.includes(field);
+      };
+      
+      // Helper function to check if any filter value matches in text fields (bidirectional)
       const matchesInText = (filterVal: string) => {
-        const lowerVal = filterVal.toLowerCase();
-        const name = r.name?.toLowerCase() || '';
-        const description = r.description?.toLowerCase() || '';
-        const cuisine = r.cuisine?.toLowerCase() || '';
-        return name.includes(lowerVal) || description.includes(lowerVal) || cuisine.includes(lowerVal);
+        return partialMatch(r.name, filterVal) || partialMatch(r.description, filterVal) || partialMatch(r.cuisine, filterVal);
       };
       
       switch (filterType) {
         case 'cuisine':
-          return filterValues.some(val => 
-            r.cuisine?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
-          );
+          return filterValues.some(val => partialMatch(r.cuisine, val) || matchesInText(val));
         case 'mainProduct':
-          return filterValues.some(val => 
-            r.mainProduct?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
-          );
+          return filterValues.some(val => partialMatch(r.mainProduct, val) || matchesInText(val));
         case 'dietCategory':
-          return filterValues.some(val => 
-            r.dietCategory?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
-          );
+          return filterValues.some(val => partialMatch(r.dietCategory, val) || matchesInText(val));
         case 'conceptType':
-          return filterValues.some(val => 
-            r.conceptType?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
-          );
+          return filterValues.some(val => partialMatch(r.conceptType, val) || matchesInText(val));
         case 'experienceType':
-          return filterValues.some(val => 
-            r.experienceType?.toLowerCase().includes(val.toLowerCase()) || matchesInText(val)
-          );
-        case 'deals':
-          // For deals, check if restaurant has active vouchers
-          const hasActiveVouchers = vouchers.some(v => 
-            v.restaurantId === r.id && v.isActive
-          );
+          return filterValues.some(val => partialMatch(r.experienceType, val) || matchesInText(val));
+        case 'deals': {
+          const hasActiveVouchers = vouchers.some(v => v.restaurantId === r.id && v.isActive);
           return hasActiveVouchers;
+        }
         default:
           return true;
       }
