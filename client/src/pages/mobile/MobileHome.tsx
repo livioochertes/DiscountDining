@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Search, Bell, Store, ChevronRight, Star, MapPin, Loader2 } from 'lucide-react';
+import { Search, Bell, Store, ChevronRight, Star, MapPin, Loader2, Navigation, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { WalletCard, ActionRow } from '@/components/mobile/WalletCard';
@@ -205,6 +207,16 @@ export default function MobileHome() {
   const hasScrolledPast = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   
+  // Location modal state
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [addressSearchQuery, setAddressSearchQuery] = useState('');
+  const [placeSuggestions, setPlaceSuggestions] = useState<any[]>([]);
+  const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState('');
+  const [manualCity, setManualCity] = useState('');
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
+  const autocompleteServiceRef = useRef<any>(null);
+  
   // Hide greeting when it scrolls out of viewport
   useEffect(() => {
     if (!showGreeting || hasScrolledPast.current) return;
@@ -248,15 +260,100 @@ export default function MobileHome() {
     error: gpsError,
     requestGpsLocation
   } = useUserLocation();
+
+  // Current location to display (manual or GPS)
+  const displayCity = manualCity || gpsCity;
+
+  // Load Google Maps script
+  useEffect(() => {
+    if ((window as any).google?.maps) {
+      setGoogleMapsLoaded(true);
+      return;
+    }
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return;
+
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      const checkLoaded = setInterval(() => {
+        if ((window as any).google?.maps) {
+          setGoogleMapsLoaded(true);
+          clearInterval(checkLoaded);
+        }
+      }, 100);
+      return () => clearInterval(checkLoaded);
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.onload = () => setGoogleMapsLoaded(true);
+    document.head.appendChild(script);
+  }, []);
+
+  // Initialize Google Places API
+  useEffect(() => {
+    if (googleMapsLoaded && (window as any).google?.maps?.places) {
+      autocompleteServiceRef.current = new (window as any).google.maps.places.AutocompleteService();
+    }
+  }, [showLocationModal, googleMapsLoaded]);
+
+  // Search places with debounce
+  useEffect(() => {
+    if (!addressSearchQuery || addressSearchQuery.length < 3 || !autocompleteServiceRef.current || !googleMapsLoaded) {
+      setPlaceSuggestions([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setIsSearchingPlaces(true);
+      autocompleteServiceRef.current?.getPlacePredictions(
+        {
+          input: addressSearchQuery,
+          types: ['geocode'],
+          componentRestrictions: { country: ['ro', 'es', 'fr', 'de', 'it', 'gb'] },
+        },
+        (predictions: any, status: any) => {
+          setIsSearchingPlaces(false);
+          if (status === (window as any).google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setPlaceSuggestions(predictions);
+          } else {
+            setPlaceSuggestions([]);
+          }
+        }
+      );
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [addressSearchQuery, googleMapsLoaded]);
+
+  // Handle GPS detection from modal
+  const handleModalGPSDetect = useCallback(() => {
+    requestGpsLocation();
+    setManualCity('');
+    setSelectedAddress('');
+    setShowLocationModal(false);
+  }, [requestGpsLocation]);
+
+  // Handle place selection
+  const handleSelectPlace = useCallback((place: any) => {
+    const address = place.description;
+    const city = address.split(',')[0].trim();
+    setSelectedAddress(address);
+    setManualCity(city);
+    setAddressSearchQuery('');
+    setPlaceSuggestions([]);
+    setShowLocationModal(false);
+  }, []);
   
   // Marketplace for filtering restaurants
   const { marketplace, detectedCountry } = useMarketplace();
 
   const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
-    queryKey: ['/api/restaurants', gpsCity, marketplace?.id],
+    queryKey: ['/api/restaurants', displayCity, marketplace?.id],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (gpsCity) params.append('location', gpsCity);
+      if (displayCity) params.append('location', displayCity);
       if (marketplace?.id) params.append('marketplaceId', marketplace.id.toString());
       
       const url = params.toString() 
@@ -520,15 +617,16 @@ export default function MobileHome() {
             <h1 className="text-xl font-bold text-gray-900">
               {user?.name || t.guest}
             </h1>
-            {/* Location indicator */}
+            {/* Location indicator - opens location modal */}
             <button 
-              onClick={() => setLocation('/m/explore')}
+              onClick={() => setShowLocationModal(true)}
               className="flex items-center gap-1 mt-1 text-xs text-primary"
             >
-              {gpsCity ? (
+              {displayCity ? (
                 <>
                   <MapPin className="w-3 h-3" />
-                  <span>{gpsCity}</span>
+                  <span>{displayCity}</span>
+                  <ChevronRight className="w-3 h-3" />
                 </>
               ) : isDetectingLocation && !gpsError ? (
                 <>
@@ -539,6 +637,7 @@ export default function MobileHome() {
                 <>
                   <MapPin className="w-3 h-3" />
                   <span>{t.allLocations}</span>
+                  <ChevronRight className="w-3 h-3" />
                 </>
               )}
             </button>
@@ -737,6 +836,114 @@ export default function MobileHome() {
           </section>
         )}
       </div>
+
+      {/* Location Selection Modal */}
+      {showLocationModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div 
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-5 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t.setLocation || 'Set Your Location'}
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowLocationModal(false)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">
+              {t.locationDescription || 'Enter your address for delivery or browse nearby restaurants'}
+            </p>
+
+            <div className="space-y-4">
+              {/* GPS Detection Button */}
+              <Button
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 py-6"
+                onClick={handleModalGPSDetect}
+                disabled={isDetectingLocation}
+              >
+                {isDetectingLocation ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {t.detectingLocation || 'Detecting location...'}
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="w-5 h-5 text-primary" />
+                    {t.useMyLocation || 'Use My Location'}
+                  </>
+                )}
+              </Button>
+
+              <div className="relative flex items-center">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="flex-shrink mx-4 text-gray-400 text-sm">{t.or || 'or'}</span>
+                <div className="flex-grow border-t border-gray-200"></div>
+              </div>
+
+              {/* Address Search Input */}
+              <div className="relative">
+                <div className="flex items-center gap-2 p-3 border border-gray-200 rounded-xl bg-gray-50">
+                  <Search className="w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={t.enterAddress || 'Enter your address...'}
+                    value={addressSearchQuery}
+                    onChange={(e) => setAddressSearchQuery(e.target.value)}
+                    className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-800 placeholder:text-gray-400"
+                  />
+                  {isSearchingPlaces && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+                </div>
+
+                {/* Place Suggestions Dropdown */}
+                {placeSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                    {placeSuggestions.map((place: any) => (
+                      <button
+                        key={place.place_id}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                        onClick={() => handleSelectPlace(place)}
+                      >
+                        <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">
+                            {place.structured_formatting?.main_text || place.description.split(',')[0]}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {place.structured_formatting?.secondary_text || place.description.split(',').slice(1).join(',')}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Current Selection Display */}
+              {(selectedAddress || displayCity) && (
+                <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                  <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-sm text-gray-700 truncate">
+                    {selectedAddress || displayCity}
+                  </span>
+                </div>
+              )}
+            </div>
+
+                      </div>
+        </div>,
+        document.body
+      )}
     </MobileLayout>
   );
 }
