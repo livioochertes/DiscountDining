@@ -87,7 +87,9 @@ import { eq, and, gte, desc, sql, ne } from "drizzle-orm";
 export interface IStorage {
   // User operations for Replit Auth
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  createUserWithPassword(user: { id: string; email: string; passwordHash: string; firstName?: string | null; lastName?: string | null }): Promise<User>;
 
   // Restaurant Owner operations
   getRestaurantOwnerByEmail(email: string): Promise<RestaurantOwner | undefined>;
@@ -425,6 +427,25 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     this.users.set(userData.id, user);
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.email === email);
+  }
+
+  async createUserWithPassword(userData: { id: string; email: string; passwordHash: string; firstName?: string | null; lastName?: string | null }): Promise<User> {
+    const user: User = {
+      id: userData.id,
+      email: userData.email,
+      passwordHash: userData.passwordHash,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(user.id, user);
     return user;
   }
 
@@ -2160,6 +2181,23 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUserWithPassword(userData: { id: string; email: string; passwordHash: string; firstName?: string | null; lastName?: string | null }): Promise<User> {
+    const [user] = await db.insert(users).values({
+      id: userData.id,
+      email: userData.email,
+      passwordHash: userData.passwordHash,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: null,
+    }).returning();
     return user;
   }
 
