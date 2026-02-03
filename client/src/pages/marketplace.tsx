@@ -1453,98 +1453,118 @@ export default function Marketplace() {
         document.body
       )}
 
-      {/* Location Selection Modal with Google Places */}
-      <Dialog open={showLocationModal} onOpenChange={setShowLocationModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              {t.setLocation || 'Set Your Location'}
-            </DialogTitle>
-            <DialogDescription>
-              {t.locationDescription || 'Enter your address for delivery or browse nearby restaurants'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 pt-4">
-            {/* GPS Detection Button */}
-            <Button
-              variant="outline"
-              className="w-full flex items-center justify-center gap-2 py-6"
-              onClick={handleGPSDetect}
-              disabled={isDetectingLocation}
-            >
-              {isDetectingLocation ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  {t.detectingLocation || 'Detecting location...'}
-                </>
-              ) : (
-                <>
-                  <Navigation className="w-5 h-5 text-primary" />
-                  {t.useMyLocation || 'Use My Location'}
-                </>
-              )}
-            </Button>
-
-            <div className="relative flex items-center">
-              <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-              <span className="flex-shrink mx-4 text-gray-400 text-sm">{t.or || 'or'}</span>
-              <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+      {/* Location Selection Modal - No backdrop, fixed viewport center */}
+      {showLocationModal && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+        >
+          <div 
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md mx-4 p-6 pointer-events-auto animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t.setLocation || 'Set Your Location'}
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowLocationModal(false)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
             </div>
 
-            {/* Address Search Input */}
-            <div className="relative">
-              <div className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <Search className="w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder={t.enterAddress || 'Enter your address...'}
-                  value={addressSearchQuery}
-                  onChange={(e) => setAddressSearchQuery(e.target.value)}
-                  className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                {isSearchingPlaces && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              {t.locationDescription || 'Enter your address for delivery or browse nearby restaurants'}
+            </p>
+
+            <div className="space-y-4">
+              {/* GPS Detection Button */}
+              <Button
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 py-6"
+                onClick={handleGPSDetect}
+                disabled={isDetectingLocation}
+              >
+                {isDetectingLocation ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {t.detectingLocation || 'Detecting location...'}
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="w-5 h-5 text-primary" />
+                    {t.useMyLocation || 'Use My Location'}
+                  </>
+                )}
+              </Button>
+
+              <div className="relative flex items-center">
+                <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+                <span className="flex-shrink mx-4 text-gray-400 text-sm">{t.or || 'or'}</span>
+                <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
               </div>
 
-              {/* Place Suggestions Dropdown */}
-              {placeSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                  {placeSuggestions.map((place: any) => (
-                    <button
-                      key={place.place_id}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-start gap-3 transition-colors"
-                      onClick={() => handleSelectPlace(place)}
-                    >
-                      <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                          {place.structured_formatting?.main_text || place.description.split(',')[0]}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {place.structured_formatting?.secondary_text || place.description.split(',').slice(1).join(',')}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
+              {/* Address Search Input */}
+              <div className="relative">
+                <div className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <Search className="w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={t.enterAddress || 'Enter your address...'}
+                    value={addressSearchQuery}
+                    onChange={(e) => setAddressSearchQuery(e.target.value)}
+                    className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-400"
+                  />
+                  {isSearchingPlaces && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+                </div>
+
+                {/* Place Suggestions Dropdown */}
+                {placeSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {placeSuggestions.map((place: any) => (
+                      <button
+                        key={place.place_id}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-start gap-3 transition-colors"
+                        onClick={() => handleSelectPlace(place)}
+                      >
+                        <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                            {place.structured_formatting?.main_text || place.description.split(',')[0]}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {place.structured_formatting?.secondary_text || place.description.split(',').slice(1).join(',')}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Current Selection Display */}
+              {(selectedAddress || detectedLocation) && (
+                <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                  <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                    {selectedAddress || detectedLocation}
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Current Selection Display */}
-            {(selectedAddress || detectedLocation) && (
-              <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                  {selectedAddress || detectedLocation}
-                </span>
-              </div>
-            )}
+            {/* Hidden div for PlacesService */}
+            <div ref={placesContainerRef} style={{ display: 'none' }} />
           </div>
-
-          {/* Hidden div for PlacesService */}
-          <div ref={placesContainerRef} style={{ display: 'none' }} />
-        </DialogContent>
-      </Dialog>
+        </div>,
+        document.body
+      )}
 
       <AIAssistant 
         context={{
