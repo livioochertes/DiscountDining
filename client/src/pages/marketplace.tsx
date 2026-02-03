@@ -6,10 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket } from "lucide-react";
+import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket, MapPin, Filter, User, Clock, Percent, X } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import RestaurantCard from "@/components/restaurant-card";
@@ -159,6 +160,15 @@ export default function Marketplace() {
   
   // State for recommendation type filter
   const [recommendationType, setRecommendationType] = useState<'all' | 'restaurant' | 'menu_item'>('all');
+  
+  // State for "Use My Dietary Profile" toggle in AI Menu
+  const [useDietaryProfile, setUseDietaryProfile] = useState(true);
+  
+  // Fetch user's dietary profile
+  const { data: userDietaryProfile } = useQuery<any>({
+    queryKey: ['/api/dietary/profile'],
+    enabled: isAuthenticated,
+  });
   
   // State for recommendation modal
   const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
@@ -429,201 +439,394 @@ export default function Marketplace() {
 
 
 
+  // Helper function to clear all filters
+  const clearAllFilters = useCallback(() => {
+    setFilters({});
+    setAutoDetectLocation(false);
+    setDetectedLocation(null);
+  }, []);
+
+  // Check if any filters are active
+  const hasActiveFilters = filters.cuisine || filters.priceRange || filters.location || filters.minDiscount;
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <section className="mb-12">
-        <div className="flex flex-col lg:flex-row lg:space-x-8">
-          
-          {/* Filter Sidebar */}
-          <aside className="w-full lg:w-64 mb-6 lg:mb-0" data-tour="filters">
-            <Card className="lg:sticky lg:top-14 border-2 border-primary/20 shadow-lg lg:overflow-visible lg:flex lg:flex-col">
-              <CardContent className="p-6 bg-gradient-to-b from-primary/5 to-transparent lg:overflow-visible lg:flex-1 lg:min-h-[calc(100vh-8rem)]">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-primary flex items-center">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                    </svg>
-                    {t.filters}
-                  </h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLocation("/heat-map")}
-                    className="flex items-center gap-1 text-xs bg-gradient-to-r from-orange-50 to-red-50 border-orange-200 hover:from-orange-100 hover:to-red-100 transition-all"
-                  >
-                    <TrendingUp className="h-3 w-3 text-orange-600" />
-                    <span className="text-orange-700 font-medium">Heat Map</span>
-                  </Button>
-                </div>
-                
-                <div className="space-y-6">
-                  <div>
-                    <Label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t.location}</Label>
-                    <Select 
-                      value={filters.location || "all"} 
-                      onValueChange={(value) => {
-                        handleFilterChange('location', value === 'all' ? undefined : value);
-                        if (value !== 'all') {
-                          setAutoDetectLocation(false);
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={isDetectingLocation ? "Detecting..." : t.allLocations} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t.allLocations}</SelectItem>
-                        {locationsLoading ? (
-                          <SelectItem value="loading" disabled>Loading...</SelectItem>
-                        ) : availableLocations.length === 0 ? (
-                          <SelectItem value="none" disabled>No locations available</SelectItem>
-                        ) : availableLocations.map((loc) => (
-                          <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center space-x-2 mt-2">
-                      <Checkbox 
-                        id="auto-detect-location"
-                        checked={autoDetectLocation}
-                        disabled={availableLocations.length === 0 && !locationsLoading}
-                        onCheckedChange={(checked) => {
-                          const isChecked = !!checked;
-                          setAutoDetectLocation(isChecked);
-                          setLocationError(null);
-                          if (isChecked) {
-                            setDetectedLocation(null);
-                            setAutoDetectAttempt(prev => prev + 1); // Trigger new detection
-                          } else {
-                            handleFilterChange('location', undefined);
-                            setDetectedLocation(null);
-                          }
-                        }}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                      <Label htmlFor="auto-detect-location" className="text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
-                        {isDetectingLocation ? "Detecting your location..." : "Auto-detect my location"}
-                      </Label>
-                    </div>
-                    {detectedLocation && autoDetectLocation && (
-                      <p className="text-xs text-primary mt-1">📍 Detected: {detectedLocation}</p>
-                    )}
-                    {locationError && (
-                      <p className="text-xs text-orange-500 mt-1">⚠️ {locationError}</p>
-                    )}
-                  </div>
-                  
-                  {/* Cuisine Type */}
-                  <div>
-                    <Label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t.cuisineType}</Label>
-                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
-                      {cuisinesLoading ? (
-                        <p className="text-sm text-gray-500">Loading cuisines...</p>
-                      ) : availableCuisines.length > 0 ? availableCuisines.map((cuisine) => (
-                        <div key={cuisine} className="flex items-center space-x-2 p-2 rounded-md hover:bg-primary/10 transition-colors">
-                          <Checkbox 
-                            id={cuisine}
-                            checked={filters.cuisine === cuisine}
-                            onCheckedChange={(checked) => handleCuisineChange(cuisine, !!checked)}
-                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                          />
-                          <Label htmlFor={cuisine} className="text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer truncate">
-                            {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
-                          </Label>
-                        </div>
-                      )) : (
-                        <p className="text-sm text-gray-500">No cuisines available</p>
-                      )}
-                    </div>
-                    {!cuisinesLoading && availableCuisines.length > 4 && (
-                      <p className="text-xs text-gray-400 mt-1 flex items-center gap-1 pl-2">
-                        <span>↓</span> Scroll for more
-                      </p>
-                    )}
-                  </div>
-                  
-                  {/* Price Range */}
-                  <div>
-                    <Label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t.priceRange}</Label>
-                    <RadioGroup 
-                      value={filters.priceRange || ""} 
-                      onValueChange={(value) => handleFilterChange('priceRange', value)}
-                    >
-                      <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-primary/10 transition-colors">
-                        <RadioGroupItem value="€" id="budget" className="text-primary" />
-                        <Label htmlFor="budget" className="text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer truncate">€ - {t.budget}</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-primary/10 transition-colors">
-                        <RadioGroupItem value="€€" id="mid-range" className="text-primary" />
-                        <Label htmlFor="mid-range" className="text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer truncate">€€ - {t.moderate}</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-primary/10 transition-colors">
-                        <RadioGroupItem value="€€€" id="fine-dining" className="text-primary" />
-                        <Label htmlFor="fine-dining" className="text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer truncate">€€€ - {t.upscale}</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  
-                  <div>
-                    <Label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t.minDiscount}</Label>
-                    <select
-                      value={filters.minDiscount?.toString() || "0"}
-                      onChange={(e) => handleFilterChange('minDiscount', e.target.value === '0' ? undefined : parseInt(e.target.value))}
-                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                    >
-                      <option value="0">Any Discount</option>
-                      <option value="5">5% or more</option>
-                      <option value="10">10% or more</option>
-                      <option value="15">15% or more</option>
-                      <option value="20">20% or more</option>
-                    </select>
-                  </div>
-                </div>
-                
-              </CardContent>
-            </Card>
-          </aside>
-          
-          {/* Main Content Area */}
-          <div className="flex-1">
-            {/* Tab Navigation: Restaurants / AI Menu / Vouchers */}
-            <div className="flex justify-center mb-8">
-              <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1.5 gap-1">
-                <button
-                  onClick={() => setActiveTab('restaurants')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
-                    activeTab === 'restaurants'
-                      ? 'bg-primary text-white shadow-lg scale-105 transform'
-                      : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Store className="w-4 h-4" />
-                  Restaurants
-                </button>
-                <button
-                  onClick={() => setActiveTab('ai-menu')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
-                    activeTab === 'ai-menu'
-                      ? 'bg-primary text-white shadow-lg scale-105 transform'
-                      : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Brain className="w-4 h-4" />
-                  AI Menu
-                </button>
-                <button
-                  onClick={() => setActiveTab('vouchers')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
-                    activeTab === 'vouchers'
-                      ? 'bg-primary text-white shadow-lg scale-105 transform'
-                      : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Ticket className="w-4 h-4" />
-                  Vouchers
-                </button>
+        {/* Tab Navigation: Restaurants / AI Menu / Vouchers */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1.5 gap-1">
+            <button
+              onClick={() => setActiveTab('restaurants')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
+                activeTab === 'restaurants'
+                  ? 'bg-primary text-white shadow-lg scale-105 transform'
+                  : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <Store className="w-4 h-4" />
+              Restaurants
+            </button>
+            <button
+              onClick={() => setActiveTab('ai-menu')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
+                activeTab === 'ai-menu'
+                  ? 'bg-primary text-white shadow-lg scale-105 transform'
+                  : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <Brain className="w-4 h-4" />
+              AI Menu
+            </button>
+            <button
+              onClick={() => setActiveTab('vouchers')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out ${
+                activeTab === 'vouchers'
+                  ? 'bg-primary text-white shadow-lg scale-105 transform'
+                  : 'bg-white/50 dark:bg-gray-700/50 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:scale-[1.02] hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <Ticket className="w-4 h-4" />
+              Vouchers
+            </button>
+          </div>
+        </div>
+
+        {/* Horizontal Filter Bar */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6" data-tour="filters">
+          {/* Restaurants Filters */}
+          {activeTab === 'restaurants' && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+                <Filter className="w-4 h-4" />
+                <span>{t.filters}:</span>
               </div>
+              
+              {/* Cuisine Type Dropdown */}
+              <Select 
+                value={filters.cuisine || "all"} 
+                onValueChange={(value) => handleFilterChange('cuisine', value === 'all' ? undefined : value)}
+              >
+                <SelectTrigger className="w-[140px] h-9 text-sm">
+                  <SelectValue placeholder={t.cuisineType} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allCuisines || 'All Cuisines'}</SelectItem>
+                  {cuisinesLoading ? (
+                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                  ) : availableCuisines.map((cuisine) => (
+                    <SelectItem key={cuisine} value={cuisine}>
+                      {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Price Range Dropdown */}
+              <Select 
+                value={filters.priceRange || "all"} 
+                onValueChange={(value) => handleFilterChange('priceRange', value === 'all' ? undefined : value)}
+              >
+                <SelectTrigger className="w-[130px] h-9 text-sm">
+                  <SelectValue placeholder={t.priceRange} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allPrices || 'All Prices'}</SelectItem>
+                  <SelectItem value="€">€ - {t.budget}</SelectItem>
+                  <SelectItem value="€€">€€ - {t.moderate}</SelectItem>
+                  <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Location Dropdown */}
+              <Select 
+                value={filters.location || "all"} 
+                onValueChange={(value) => {
+                  handleFilterChange('location', value === 'all' ? undefined : value);
+                  if (value !== 'all') {
+                    setAutoDetectLocation(false);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-[150px] h-9 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <SelectValue placeholder={t.location} />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allLocations}</SelectItem>
+                  {locationsLoading ? (
+                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                  ) : availableLocations.map((loc) => (
+                    <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Near Me Toggle */}
+              <button
+                onClick={() => {
+                  if (autoDetectLocation) {
+                    setAutoDetectLocation(false);
+                    handleFilterChange('location', undefined);
+                    setDetectedLocation(null);
+                  } else {
+                    setAutoDetectLocation(true);
+                    setAutoDetectAttempt(prev => prev + 1);
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  autoDetectLocation
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                {isDetectingLocation ? 'Detecting...' : 'Near Me'}
+              </button>
+
+              {/* Rating Toggle */}
+              <button
+                onClick={() => setSortBy(sortBy === 'best-rating' ? 'featured' : 'best-rating')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  sortBy === 'best-rating'
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Star className="w-3.5 h-3.5" />
+                Top Rated
+              </button>
+
+              {/* Popular Toggle */}
+              <button
+                onClick={() => setSortBy(sortBy === 'featured' ? 'highest-discount' : 'featured')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  sortBy === 'featured'
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                Popular
+              </button>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear
+                </button>
+              )}
+
+              {/* Heat Map Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/heat-map")}
+                className="ml-auto flex items-center gap-1 text-xs bg-gradient-to-r from-orange-50 to-red-50 border-orange-200 hover:from-orange-100 hover:to-red-100"
+              >
+                <TrendingUp className="h-3 w-3 text-orange-600" />
+                <span className="text-orange-700 font-medium">Heat Map</span>
+              </Button>
             </div>
+          )}
+
+          {/* AI Menu Filters */}
+          {activeTab === 'ai-menu' && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+                <Filter className="w-4 h-4" />
+                <span>{t.filters}:</span>
+              </div>
+
+              {/* Use My Dietary Profile Toggle - only show when authenticated */}
+              {isAuthenticated && userDietaryProfile && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
+                  <User className="w-4 h-4 text-primary" />
+                  <Label htmlFor="use-dietary-profile" className="text-sm font-medium text-primary cursor-pointer">
+                    Use My Dietary Profile
+                  </Label>
+                  <Switch
+                    id="use-dietary-profile"
+                    checked={useDietaryProfile}
+                    onCheckedChange={setUseDietaryProfile}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                </div>
+              )}
+
+              {/* Show manual filters when toggle is off or user is not logged in */}
+              {(!isAuthenticated || !useDietaryProfile) && (
+                <>
+                  {/* Cuisine Type Dropdown */}
+                  <Select 
+                    value={filters.cuisine || "all"} 
+                    onValueChange={(value) => handleFilterChange('cuisine', value === 'all' ? undefined : value)}
+                  >
+                    <SelectTrigger className="w-[140px] h-9 text-sm">
+                      <SelectValue placeholder={t.cuisineType} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.allCuisines || 'All Cuisines'}</SelectItem>
+                      {cuisinesLoading ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : availableCuisines.map((cuisine) => (
+                        <SelectItem key={cuisine} value={cuisine}>
+                          {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Price Range Dropdown */}
+                  <Select 
+                    value={filters.priceRange || "all"} 
+                    onValueChange={(value) => handleFilterChange('priceRange', value === 'all' ? undefined : value)}
+                  >
+                    <SelectTrigger className="w-[130px] h-9 text-sm">
+                      <SelectValue placeholder={t.priceRange} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.allPrices || 'All Prices'}</SelectItem>
+                      <SelectItem value="€">€ - {t.budget}</SelectItem>
+                      <SelectItem value="€€">€€ - {t.moderate}</SelectItem>
+                      <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Diet Type Dropdown */}
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-[140px] h-9 text-sm">
+                      <SelectValue placeholder="Diet Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Diets</SelectItem>
+                      <SelectItem value="vegetarian">Vegetarian</SelectItem>
+                      <SelectItem value="vegan">Vegan</SelectItem>
+                      <SelectItem value="gluten-free">Gluten-Free</SelectItem>
+                      <SelectItem value="keto">Keto</SelectItem>
+                      <SelectItem value="paleo">Paleo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
+
+              {/* Show dietary profile summary when toggle is on */}
+              {isAuthenticated && useDietaryProfile && userDietaryProfile && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                  <span className="text-gray-400">Preferences:</span>
+                  {userDietaryProfile.dietaryPreferences?.slice(0, 3).map((pref: string, index: number) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {pref}
+                    </Badge>
+                  ))}
+                  {userDietaryProfile.dietaryPreferences?.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{userDietaryProfile.dietaryPreferences.length - 3} more
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Vouchers Filters */}
+          {activeTab === 'vouchers' && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+                <Filter className="w-4 h-4" />
+                <span>{t.filters}:</span>
+              </div>
+
+              {/* Cuisine Type Dropdown */}
+              <Select 
+                value={filters.cuisine || "all"} 
+                onValueChange={(value) => handleFilterChange('cuisine', value === 'all' ? undefined : value)}
+              >
+                <SelectTrigger className="w-[140px] h-9 text-sm">
+                  <SelectValue placeholder={t.cuisineType} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allCuisines || 'All Cuisines'}</SelectItem>
+                  {cuisinesLoading ? (
+                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                  ) : availableCuisines.map((cuisine) => (
+                    <SelectItem key={cuisine} value={cuisine}>
+                      {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Price Range Dropdown */}
+              <Select 
+                value={filters.priceRange || "all"} 
+                onValueChange={(value) => handleFilterChange('priceRange', value === 'all' ? undefined : value)}
+              >
+                <SelectTrigger className="w-[130px] h-9 text-sm">
+                  <SelectValue placeholder={t.priceRange} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allPrices || 'All Prices'}</SelectItem>
+                  <SelectItem value="€">€ - {t.budget}</SelectItem>
+                  <SelectItem value="€€">€€ - {t.moderate}</SelectItem>
+                  <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Discount Range Dropdown */}
+              <Select 
+                value={filters.minDiscount?.toString() || "0"} 
+                onValueChange={(value) => handleFilterChange('minDiscount', value === '0' ? undefined : parseInt(value))}
+              >
+                <SelectTrigger className="w-[140px] h-9 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <Percent className="w-3.5 h-3.5" />
+                    <SelectValue placeholder="Discount" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Any Discount</SelectItem>
+                  <SelectItem value="10">10%+ off</SelectItem>
+                  <SelectItem value="15">15%+ off</SelectItem>
+                  <SelectItem value="20">20%+ off</SelectItem>
+                  <SelectItem value="25">25%+ off</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Expiring Soon Toggle */}
+              <button
+                onClick={() => setSortBy(sortBy === 'expiring-soon' ? 'featured' : 'expiring-soon')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  sortBy === 'expiring-soon'
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Expiring Soon
+              </button>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Main Content Area */}
+        <div>
 
             {/* Tab Content */}
             {activeTab === 'restaurants' && (
@@ -800,7 +1003,6 @@ export default function Marketplace() {
               </div>
             )}
           </div>
-        </div>
       </section>
 
       <RestaurantModal
