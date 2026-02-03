@@ -2008,17 +2008,23 @@ export function registerAdminRoutes(app: Express) {
     try {
       const { name, icon, filterType, filterValues, isActive, sortOrder } = req.body;
       
-      if (!name || !icon || !filterType || !filterValues || !Array.isArray(filterValues)) {
-        return res.status(400).json({ message: "Name, icon, filterType, and filterValues are required" });
+      console.log("[Mobile Filters] Create request:", { name, icon, filterType, filterValues, isActive, sortOrder });
+      
+      if (!name || !filterType) {
+        console.log("[Mobile Filters] Validation failed - missing name or filterType");
+        return res.status(400).json({ message: "Name and filterType are required" });
       }
+      
+      // Ensure filterValues is an array
+      const valuesArray = Array.isArray(filterValues) ? filterValues : [];
 
       const [newFilter] = await db
         .insert(mobileFilters)
         .values({
           name,
-          icon,
+          icon: icon || "🏷️",
           filterType,
-          filterValues,
+          filterValues: valuesArray,
           isActive: isActive !== undefined ? isActive : true,
           sortOrder: sortOrder || 0,
         })
