@@ -984,6 +984,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint for location values (for web marketplace filter)
+  app.get("/api/location-values", async (req, res) => {
+    try {
+      const restaurants = await storage.getRestaurants();
+      const activeRestaurants = restaurants.filter(r => r.isActive !== false);
+      const locationSet = new Set<string>();
+      activeRestaurants.forEach(r => {
+        if (r.location && typeof r.location === 'string' && r.location.trim()) {
+          locationSet.add(r.location.trim());
+        }
+      });
+      const locations = Array.from(locationSet).sort();
+      res.json(locations);
+    } catch (error) {
+      console.error("Error fetching location values:", error);
+      res.status(500).json({ message: "Failed to fetch location values" });
+    }
+  });
+
   app.get("/api/restaurants", async (req, res) => {
     try {
       const { location, cuisine, priceRange, minDiscount, marketplaceId } = req.query;

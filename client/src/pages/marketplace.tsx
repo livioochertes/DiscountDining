@@ -263,6 +263,90 @@ export default function Marketplace() {
     queryKey: ['/api/cuisine-values'],
   });
 
+  // Fetch location values from API (independent of current filters)
+  const { data: availableLocations = [], isLoading: locationsLoading } = useQuery<string[]>({
+    queryKey: ['/api/location-values'],
+  });
+
+  // Auto-detect location state
+  const [autoDetectLocation, setAutoDetectLocation] = useState(true);
+  const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [autoDetectAttempt, setAutoDetectAttempt] = useState(0);
+
+  // Auto-detect location using browser geolocation
+  useEffect(() => {
+    if (!autoDetectLocation || availableLocations.length === 0 || isDetectingLocation) return;
+    if (detectedLocation) return; // Already detected
+    
+    if (!navigator.geolocation) {
+      setLocationError("Location not supported by browser");
+      setAutoDetectLocation(false);
+      return;
+    }
+
+    setIsDetectingLocation(true);
+    setLocationError(null);
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`
+          );
+          
+          if (!response.ok) {
+            throw new Error("Geocoding service unavailable");
+          }
+          
+          const data = await response.json();
+          const city = data.address?.city || data.address?.town || data.address?.municipality || data.address?.village;
+          
+          if (city) {
+            const matchedLocation = availableLocations.find(loc => 
+              loc.toLowerCase().includes(city.toLowerCase()) || 
+              city.toLowerCase().includes(loc.toLowerCase())
+            );
+            
+            if (matchedLocation) {
+              setDetectedLocation(matchedLocation);
+              handleFilterChange('location', matchedLocation);
+            } else {
+              setLocationError(`No restaurants in ${city}`);
+              handleFilterChange('location', undefined);
+            }
+          } else {
+            setLocationError("Could not determine city");
+            handleFilterChange('location', undefined);
+          }
+        } catch (error) {
+          console.error("Error detecting location:", error);
+          setLocationError("Location detection failed");
+          handleFilterChange('location', undefined);
+        } finally {
+          setIsDetectingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        setIsDetectingLocation(false);
+        handleFilterChange('location', undefined);
+        setDetectedLocation(null);
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationError("Location access denied");
+        } else if (error.code === error.TIMEOUT) {
+          setLocationError("Location request timed out");
+        } else {
+          setLocationError("Could not get location");
+        }
+        setAutoDetectLocation(false);
+      },
+      { timeout: 10000, enableHighAccuracy: false }
+    );
+  }, [autoDetectLocation, availableLocations, autoDetectAttempt, detectedLocation, handleFilterChange, isDetectingLocation]);
+
   const sortedRestaurants = useMemo(() => {
     return [...restaurants].sort((a, b) => {
       switch (sortBy) {
@@ -372,18 +456,56 @@ export default function Marketplace() {
                     <Label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{t.location}</Label>
                     <Select 
                       value={filters.location || "all"} 
-                      onValueChange={(value) => handleFilterChange('location', value === 'all' ? undefined : value)}
+                      onValueChange={(value) => {
+                        handleFilterChange('location', value === 'all' ? undefined : value);
+                        if (value !== 'all') {
+                          setAutoDetectLocation(false);
+                        }
+                      }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={t.allLocations} />
+                        <SelectValue placeholder={isDetectingLocation ? "Detecting..." : t.allLocations} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">{t.allLocations}</SelectItem>
-                        <SelectItem value="Downtown">{t.downtown}</SelectItem>
-                        <SelectItem value="City Center">{t.cityCenter}</SelectItem>
-                        <SelectItem value="Suburbs">{t.suburbs}</SelectItem>
+                        {locationsLoading ? (
+                          <SelectItem value="loading" disabled>Loading...</SelectItem>
+                        ) : availableLocations.length === 0 ? (
+                          <SelectItem value="none" disabled>No locations available</SelectItem>
+                        ) : availableLocations.map((loc) => (
+                          <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Checkbox 
+                        id="auto-detect-location"
+                        checked={autoDetectLocation}
+                        disabled={availableLocations.length === 0 && !locationsLoading}
+                        onCheckedChange={(checked) => {
+                          const isChecked = !!checked;
+                          setAutoDetectLocation(isChecked);
+                          setLocationError(null);
+                          if (isChecked) {
+                            setDetectedLocation(null);
+                            setAutoDetectAttempt(prev => prev + 1); // Trigger new detection
+                          } else {
+                            handleFilterChange('location', undefined);
+                            setDetectedLocation(null);
+                          }
+                        }}
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor="auto-detect-location" className="text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+                        {isDetectingLocation ? "Detecting your location..." : "Auto-detect my location"}
+                      </Label>
+                    </div>
+                    {detectedLocation && autoDetectLocation && (
+                      <p className="text-xs text-primary mt-1">📍 Detected: {detectedLocation}</p>
+                    )}
+                    {locationError && (
+                      <p className="text-xs text-orange-500 mt-1">⚠️ {locationError}</p>
+                    )}
                   </div>
                   
                   {/* Cuisine Type */}
