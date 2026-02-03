@@ -127,7 +127,15 @@ export default function Marketplace() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Tab state for Restaurants / AI Menu / Vouchers
-  const [activeTab, setActiveTab] = useState<'restaurants' | 'ai-menu' | 'vouchers'>('restaurants');
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'ai-menu' | 'vouchers'>(() => {
+    // Read initial tab from URL parameter
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'ai-menu' || tabParam === 'vouchers' || tabParam === 'restaurants') {
+      return tabParam;
+    }
+    return 'restaurants';
+  });
 
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
