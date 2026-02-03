@@ -1455,28 +1455,9 @@ export default function Marketplace() {
 
       {/* Location Selection Modal - No backdrop, fixed viewport center */}
       {showLocationModal && createPortal(
-        <div 
-          style={{ 
-            position: 'fixed', 
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            pointerEvents: 'none'
-          }}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div 
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 animate-in fade-in zoom-in-95 duration-200"
-            style={{ 
-              width: '100%',
-              maxWidth: '400px',
-              margin: '0 16px',
-              pointerEvents: 'auto'
-            }}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md mx-4 p-6 animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
