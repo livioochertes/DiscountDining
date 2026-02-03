@@ -409,7 +409,7 @@ export default function Marketplace() {
                       )}
                     </div>
                     {!cuisinesLoading && availableCuisines.length > 4 && (
-                      <p className="text-xs text-gray-400 text-center mt-1 flex items-center justify-center gap-1">
+                      <p className="text-xs text-gray-400 mt-1 flex items-center gap-1 pl-2">
                         <span>↓</span> Scroll for more
                       </p>
                     )}
