@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Truck, MapPin, DollarSign, Loader2, ChevronDown } from "lucide-react";
+import { Clock, Truck, MapPin, DollarSign, Loader2 } from "lucide-react";
 
 // Operating hours schema
 const operatingHoursSchema = z.object({
@@ -90,11 +90,6 @@ interface EditRestaurantFormProps {
 
 export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRestaurantFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [citySearch, setCitySearch] = useState("");
-  const [showCityDropdown, setShowCityDropdown] = useState(false);
-  const [highlightedCityIndex, setHighlightedCityIndex] = useState(0);
-  const cityInputRef = useRef<HTMLInputElement>(null);
-  const cityDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Get marketplace for country code
@@ -103,13 +98,13 @@ export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRest
   });
 
   // Determine country code from restaurant's marketplace
-  const countryCode = useMemo(() => {
+  const countryCode = (() => {
     if (restaurant.marketplaceId && marketplaces.length > 0) {
       const marketplace = marketplaces.find((m: any) => m.id === restaurant.marketplaceId);
       return marketplace?.countryCode || 'RO';
     }
     return 'RO'; // Default to Romania
-  }, [restaurant.marketplaceId, marketplaces]);
+  })();
 
   // Fetch cities based on country code
   const { data: availableCities = [], isLoading: citiesLoading } = useQuery<any[]>({
@@ -121,29 +116,6 @@ export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRest
     },
     enabled: !!countryCode,
   });
-
-  // Filter cities based on search
-  const filteredCities = useMemo(() => {
-    if (!citySearch.trim()) return availableCities.slice(0, 50);
-    const searchLower = citySearch.toLowerCase();
-    return availableCities
-      .filter((city: any) => city.name?.toLowerCase().includes(searchLower))
-      .slice(0, 50);
-  }, [availableCities, citySearch]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        cityInputRef.current && !cityInputRef.current.contains(event.target as Node) &&
-        cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowCityDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Parse existing operating hours
   const parseOperatingHours = (hoursString: string | null) => {
@@ -401,92 +373,32 @@ export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRest
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
+            <div>
               <Label htmlFor="location">Location/City *</Label>
-              <div className="relative">
-                <Input
-                  ref={cityInputRef}
-                  id="location"
-                  value={citySearch !== "" ? citySearch : (form.watch("location") || "")}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setCitySearch(value);
-                    form.setValue("location", value, { shouldValidate: true });
-                    setShowCityDropdown(true);
-                    setHighlightedCityIndex(0);
-                  }}
-                  onFocus={() => {
-                    setShowCityDropdown(true);
-                    setCitySearch(form.watch("location") || "");
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      if (citySearch.trim()) {
-                        form.setValue("location", citySearch.trim(), { shouldValidate: true });
-                      }
-                      setCitySearch("");
-                    }, 200);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown' && showCityDropdown && filteredCities.length > 0) {
-                      e.preventDefault();
-                      setHighlightedCityIndex(prev => 
-                        prev < filteredCities.length - 1 ? prev + 1 : 0
-                      );
-                    } else if (e.key === 'ArrowUp' && showCityDropdown && filteredCities.length > 0) {
-                      e.preventDefault();
-                      setHighlightedCityIndex(prev => 
-                        prev > 0 ? prev - 1 : filteredCities.length - 1
-                      );
-                    } else if (e.key === 'Enter' && showCityDropdown && filteredCities.length > 0) {
-                      e.preventDefault();
-                      const selectedCity = filteredCities[highlightedCityIndex];
-                      if (selectedCity) {
-                        form.setValue("location", selectedCity.name, { shouldValidate: true });
-                        setCitySearch("");
-                        setShowCityDropdown(false);
-                      }
-                    } else if (e.key === 'Escape') {
-                      setShowCityDropdown(false);
-                    }
-                  }}
-                  placeholder={citiesLoading ? "Loading cities..." : "Search city..."}
-                  disabled={citiesLoading}
-                />
-                {citiesLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-                )}
-                {!citiesLoading && (
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                )}
-              </div>
-              {showCityDropdown && !citiesLoading && availableCities.length > 0 && (
-                <div 
-                  ref={cityDropdownRef}
-                  className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto"
-                >
-                  {filteredCities.length === 0 ? (
-                    <div className="px-3 py-2 text-gray-500">No cities found</div>
+              <Select
+                value={form.watch("location") || ""}
+                onValueChange={(value) => form.setValue("location", value, { shouldValidate: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={citiesLoading ? "Loading cities..." : "Select city"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {citiesLoading ? (
+                    <div className="px-3 py-2 text-gray-500 flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading...
+                    </div>
+                  ) : availableCities.length === 0 ? (
+                    <div className="px-3 py-2 text-gray-500">No cities available</div>
                   ) : (
-                    filteredCities.map((city: any, index: number) => (
-                      <div
-                        key={city.geonameId || city.name}
-                        className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${
-                          index === highlightedCityIndex ? 'bg-blue-50' : ''
-                        }`}
-                        onClick={() => {
-                          form.setValue("location", city.name, { shouldValidate: true });
-                          setCitySearch("");
-                          setShowCityDropdown(false);
-                        }}
-                      >
-                        {city.name}
-                        {city.adminName1 && <span className="text-gray-400 text-sm ml-1">({city.adminName1})</span>}
-                      </div>
+                    availableCities.map((city: any) => (
+                      <SelectItem key={city.geonameId || city.name} value={city.name}>
+                        {city.name}{city.adminName1 ? ` (${city.adminName1})` : ''}
+                      </SelectItem>
                     ))
                   )}
-                </div>
-              )}
+                </SelectContent>
+              </Select>
               {form.formState.errors.location && (
                 <p className="text-sm text-red-500 mt-1">{form.formState.errors.location.message}</p>
               )}
