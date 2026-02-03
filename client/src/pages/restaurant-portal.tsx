@@ -2480,6 +2480,10 @@ export default function RestaurantPortal() {
             const restaurantData = {
               name: formData.get('name'),
               cuisine: formData.get('cuisine'),
+              mainProduct: formData.get('mainProduct') || null,
+              dietCategory: formData.get('dietCategory') || null,
+              conceptType: formData.get('conceptType') || null,
+              experienceType: formData.get('experienceType') || null,
               location: formData.get('location'),
               address: formData.get('address'),
               phone: formData.get('phone'),
@@ -2551,7 +2555,54 @@ export default function RestaurantPortal() {
                 </div>
                 <div>
                   <Label htmlFor="cuisine">Cuisine Type *</Label>
-                  <Input id="cuisine" name="cuisine" required placeholder="e.g., Italian, Chinese, Mexican" />
+                  <select id="cuisine" name="cuisine" required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="">Select cuisine...</option>
+                    {["Italian", "Romanian", "French", "Greek", "Spanish", "German", "Polish", "Portuguese", "Turkish", "Chinese", "Japanese", "Thai", "Vietnamese", "Indian", "Korean", "Mexican", "American", "Brazilian", "Peruvian", "Argentinian", "Lebanese", "Moroccan", "Ethiopian", "Israeli", "Mediterranean", "International", "Other"].map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="mainProduct">Main Product</Label>
+                  <select id="mainProduct" name="mainProduct" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="">Select main product...</option>
+                    {["Meat", "Fish & Seafood", "Pasta", "Pizza", "Sushi", "Burgers", "Salads", "Soups", "Desserts", "Beverages", "Mixed"].map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="dietCategory">Diet</Label>
+                  <select id="dietCategory" name="dietCategory" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="">Select diet category...</option>
+                    {["Regular", "Vegetarian", "Vegan", "Gluten-Free", "Halal", "Kosher", "Organic", "Low-Carb"].map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="conceptType">Concept</Label>
+                  <select id="conceptType" name="conceptType" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="">Select concept...</option>
+                    {["Fine Dining", "Casual Dining", "Fast Casual", "Fast Food", "Bistro", "Brasserie", "Trattoria", "Taverna", "Family Restaurant"].map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="experienceType">Experience</Label>
+                  <select id="experienceType" name="experienceType" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="">Select experience...</option>
+                    {["Romantic", "Business", "Family Friendly", "Party & Events", "Relaxed"].map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               
