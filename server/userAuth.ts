@@ -40,9 +40,9 @@ export function registerUserAuthRoutes(app: Express) {
     try {
       const { firstName, lastName, email, phone, password } = req.body;
 
-      // Validate required fields
-      if (!firstName || !lastName || !email || !phone || !password) {
-        return res.status(400).json({ message: 'All fields are required' });
+      // Validate required fields (phone is optional)
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
       }
 
       // Validate email format
@@ -51,15 +51,17 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(400).json({ message: 'Invalid email format' });
       }
 
-      // Validate phone format
-      const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
-      if (!phoneRegex.test(phone)) {
-        return res.status(400).json({ message: 'Invalid phone number format' });
+      // Validate phone format (if provided)
+      if (phone) {
+        const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+        if (!phoneRegex.test(phone)) {
+          return res.status(400).json({ message: 'Invalid phone number format' });
+        }
       }
 
       // Validate password strength
-      if (password.length < 8) {
-        return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters long' });
       }
 
       // Check if user already exists by email
@@ -80,9 +82,9 @@ export function registerUserAuthRoutes(app: Express) {
       if (isDevelopment) {
         // Create customer account directly
         const customer = await storage.createCustomer({
-          name: `${firstName} ${lastName}`,
+          name: firstName || lastName ? `${firstName || ''} ${lastName || ''}`.trim() : email.split('@')[0],
           email,
-          phone,
+          phone: phone || null,
           passwordHash,
           balance: "0.00",
           loyaltyPoints: 0,
@@ -122,10 +124,10 @@ export function registerUserAuthRoutes(app: Express) {
 
       // Production: Generate and send verification codes
       const emailCode = generateVerificationCode();
-      const smsCode = generateVerificationCode();
+      const smsCode = phone ? generateVerificationCode() : null;
 
-      // Store verification data temporarily
-      const verificationKey = `${email}_${phone}`;
+      // Store verification data temporarily (use email as key when phone not provided)
+      const verificationKey = phone ? `${email}_${phone}` : `email_${email}`;
       verificationCodes.set(verificationKey, {
         emailCode,
         smsCode,
@@ -133,17 +135,18 @@ export function registerUserAuthRoutes(app: Express) {
           firstName,
           lastName,
           email,
-          phone,
+          phone: phone || null,
           passwordHash
         },
         expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
       });
 
-      // Send verification codes
-      await Promise.all([
-        sendEmailVerification(email, emailCode, firstName),
-        sendSMSVerification(phone, smsCode)
-      ]);
+      // Send verification codes (only send SMS if phone provided)
+      const sendPromises = [sendEmailVerification(email, emailCode, firstName || 'User')];
+      if (phone && smsCode) {
+        sendPromises.push(sendSMSVerification(phone, smsCode));
+      }
+      await Promise.all(sendPromises);
 
       res.json({ 
         message: 'Verification codes sent successfully',
@@ -162,12 +165,17 @@ export function registerUserAuthRoutes(app: Express) {
     try {
       const { email, phone, type } = req.body;
 
-      if (!email || !phone || !type) {
-        return res.status(400).json({ message: 'Email, phone, and type are required' });
+      if (!email || !type) {
+        return res.status(400).json({ message: 'Email and type are required' });
       }
 
-      const verificationKey = `${email}_${phone}`;
-      const verificationData = verificationCodes.get(verificationKey);
+      // Try to find verification with phone first, then email-only key
+      const verificationKey = phone ? `${email}_${phone}` : `email_${email}`;
+      let verificationData = verificationCodes.get(verificationKey);
+      
+      if (!verificationData && phone) {
+        verificationData = verificationCodes.get(`email_${email}`);
+      }
 
       if (!verificationData) {
         return res.status(404).json({ message: 'No pending verification found' });
@@ -208,12 +216,19 @@ export function registerUserAuthRoutes(app: Express) {
     try {
       const { email, phone, emailCode, smsCode } = req.body;
 
-      if (!email || !phone || !emailCode || !smsCode) {
-        return res.status(400).json({ message: 'All verification codes are required' });
+      // Email code is always required; SMS code only required if phone was provided
+      if (!email || !emailCode) {
+        return res.status(400).json({ message: 'Email and email verification code are required' });
       }
 
-      const verificationKey = `${email}_${phone}`;
-      const verificationData = verificationCodes.get(verificationKey);
+      // Try to find verification with phone first, then email-only key
+      const verificationKey = phone ? `${email}_${phone}` : `email_${email}`;
+      let verificationData = verificationCodes.get(verificationKey);
+      
+      // Also try the email-only key if phone key didn't work
+      if (!verificationData && phone) {
+        verificationData = verificationCodes.get(`email_${email}`);
+      }
 
       if (!verificationData) {
         return res.status(404).json({ message: 'No pending verification found' });
@@ -224,14 +239,19 @@ export function registerUserAuthRoutes(app: Express) {
         return res.status(410).json({ message: 'Verification codes expired. Please register again.' });
       }
 
-      // Verify codes
-      if (verificationData.emailCode !== emailCode || verificationData.smsCode !== smsCode) {
-        return res.status(400).json({ message: 'Invalid verification codes' });
+      // Verify codes - SMS code only required if it was set during registration
+      if (verificationData.emailCode !== emailCode) {
+        return res.status(400).json({ message: 'Invalid email verification code' });
+      }
+      if (verificationData.smsCode && verificationData.smsCode !== smsCode) {
+        return res.status(400).json({ message: 'Invalid SMS verification code' });
       }
 
       // Create customer account with password hash
+      const firstName = verificationData.userData.firstName;
+      const lastName = verificationData.userData.lastName;
       const customer = await storage.createCustomer({
-        name: `${verificationData.userData.firstName} ${verificationData.userData.lastName}`,
+        name: firstName || lastName ? `${firstName || ''} ${lastName || ''}`.trim() : verificationData.userData.email.split('@')[0],
         email: verificationData.userData.email,
         phone: verificationData.userData.phone,
         passwordHash: verificationData.userData.passwordHash,
