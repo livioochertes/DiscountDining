@@ -109,6 +109,10 @@ const restaurantEnrollmentSchema = z.object({
   // Restaurant details
   name: z.string().min(1, "Restaurant name is required"),
   cuisine: z.string().min(1, "Cuisine type is required"),
+  mainProduct: z.string().optional(),
+  dietCategory: z.string().optional(),
+  conceptType: z.string().optional(),
+  experienceType: z.string().optional(),
   location: z.string().min(1, "Location is required"),
   address: z.string().min(1, "Address is required"),
   phone: z.string().min(1, "Phone number is required"),
@@ -5295,6 +5299,98 @@ export default function AdminDashboard() {
                           </FormControl>
                           <SelectContent>
                             {CUISINE_OPTIONS.map(opt => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={enrollmentForm.control}
+                    name="mainProduct"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Main Product</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selectează..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {MAIN_PRODUCT_OPTIONS.map(opt => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={enrollmentForm.control}
+                    name="dietCategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Diet</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selectează..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {DIET_CATEGORY_OPTIONS.map(opt => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={enrollmentForm.control}
+                    name="conceptType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Concept</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selectează..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {CONCEPT_TYPE_OPTIONS.map(opt => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={enrollmentForm.control}
+                    name="experienceType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Experience</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selectează..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {EXPERIENCE_TYPE_OPTIONS.map(opt => (
                               <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                             ))}
                           </SelectContent>

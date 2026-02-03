@@ -552,6 +552,10 @@ export function registerAdminRoutes(app: Express) {
       const {
         name,
         cuisine,
+        mainProduct,
+        dietCategory,
+        conceptType,
+        experienceType,
         location,
         address,
         phone,
@@ -617,6 +621,10 @@ export function registerAdminRoutes(app: Express) {
         .values({
           name,
           cuisine,
+          mainProduct: mainProduct || null,
+          dietCategory: dietCategory || null,
+          conceptType: conceptType || null,
+          experienceType: experienceType || null,
           location,
           address,
           phone,
