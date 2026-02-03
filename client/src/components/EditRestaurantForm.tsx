@@ -57,6 +57,10 @@ const operatingHoursSchema = z.object({
 const editRestaurantSchema = z.object({
   name: z.string().min(1, "Restaurant name is required"),
   cuisine: z.string().min(1, "Cuisine type is required"),
+  mainProduct: z.string().optional(),
+  dietCategory: z.string().optional(),
+  conceptType: z.string().optional(),
+  experienceType: z.string().optional(),
   location: z.string().min(1, "Location is required"),
   address: z.string().min(1, "Address is required"),
   phone: z.string().optional(),
@@ -121,6 +125,10 @@ export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRest
     defaultValues: {
       name: restaurant.name || "",
       cuisine: restaurant.cuisine || "",
+      mainProduct: restaurant.mainProduct || "",
+      dietCategory: restaurant.dietCategory || "",
+      conceptType: restaurant.conceptType || "",
+      experienceType: restaurant.experienceType || "",
       location: restaurant.location || "",
       address: restaurant.address || "",
       phone: restaurant.phone || "",
