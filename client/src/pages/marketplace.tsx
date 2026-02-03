@@ -408,6 +408,11 @@ export default function Marketplace() {
                         <p className="text-sm text-gray-500">No cuisines available</p>
                       )}
                     </div>
+                    {!cuisinesLoading && availableCuisines.length > 4 && (
+                      <p className="text-xs text-gray-400 text-center mt-1 flex items-center justify-center gap-1">
+                        <span>↓</span> Scroll for more
+                      </p>
+                    )}
                   </div>
                   
                   {/* Price Range */}
