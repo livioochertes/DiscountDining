@@ -157,6 +157,10 @@ export const restaurants = pgTable("restaurants", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   cuisine: text("cuisine").notNull(),
+  mainProduct: text("main_product"), // EU Standard: Pizzeria, Burger, Steakhouse, etc.
+  dietCategory: text("diet_category"), // EU Standard: Vegetarian, Vegan, Halal, Kosher, etc.
+  conceptType: text("concept_type"), // EU Standard: Fine Dining, Casual Dining, Fast Food, etc.
+  experienceType: text("experience_type"), // EU Standard: Wine Bar, Cocktail Bar, Cafe, etc.
   location: text("location").notNull(),
   address: text("address").notNull(),
   phone: text("phone"),

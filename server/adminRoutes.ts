@@ -432,7 +432,7 @@ export function registerAdminRoutes(app: Express) {
   app.put("/api/admin/restaurants/:id/update-details", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const { location, address, phone, marketplaceId, ownerCompanyName, ownerTaxId, ownerBusinessRegistration, ownerEmail, ownerPhone, ownerContactPerson } = req.body;
+      const { location, address, phone, marketplaceId, ownerCompanyName, ownerTaxId, ownerBusinessRegistration, ownerEmail, ownerPhone, ownerContactPerson, cuisine, mainProduct, dietCategory, conceptType, experienceType } = req.body;
 
       const [oldRestaurant] = await db
         .select()
@@ -457,6 +457,11 @@ export function registerAdminRoutes(app: Express) {
           }
         }
       }
+      if (cuisine !== undefined) updateData.cuisine = cuisine?.trim() || null;
+      if (mainProduct !== undefined) updateData.mainProduct = mainProduct?.trim() || null;
+      if (dietCategory !== undefined) updateData.dietCategory = dietCategory?.trim() || null;
+      if (conceptType !== undefined) updateData.conceptType = conceptType?.trim() || null;
+      if (experienceType !== undefined) updateData.experienceType = experienceType?.trim() || null;
 
       if (Object.keys(updateData).length > 0) {
         await db

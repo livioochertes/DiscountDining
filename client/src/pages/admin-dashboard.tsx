@@ -47,6 +47,34 @@ import PackageForm from "@/components/package-form";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import LanguageSelector from "@/components/LanguageSelector";
 
+// EU Standard restaurant category options
+const CUISINE_OPTIONS = [
+  "Italian", "French", "Spanish", "Greek", "German", "Romanian", "Nordic", 
+  "Asian", "Japanese", "Chinese", "Indian", "Mexican", "American", 
+  "Lebanese", "Turkish", "Syrian", "Israeli", "Persian / Iranian", 
+  "Arabian Gulf", "Egyptian", "Moroccan", "Tunisian", "Algerian", 
+  "Palestinian", "Jordanian"
+];
+
+const MAIN_PRODUCT_OPTIONS = [
+  "Pizzeria", "Burger", "Steakhouse", "Seafood", "Kebab", "Bakery", 
+  "Desserts", "Kebab House", "Doner", "Pide", "Baklava & Sweets"
+];
+
+const DIET_CATEGORY_OPTIONS = [
+  "Vegetarian", "Vegan", "Plant-Based", "Gluten-Free", "Healthy", 
+  "Organic", "Halal", "Kosher"
+];
+
+const CONCEPT_TYPE_OPTIONS = [
+  "Classic", "Fine Dining", "Casual Dining", "Fast Casual", 
+  "Fast Food", "Street Food", "Buffet", "Food Court", "Ghost Kitchen"
+];
+
+const EXPERIENCE_TYPE_OPTIONS = [
+  "Wine Bar", "Cocktail Bar", "Cafe", "Live Music", "Themed"
+];
+
 // Admin login schema
 const adminLoginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -2508,6 +2536,11 @@ export default function AdminDashboard() {
   const [editedOwnerEmail, setEditedOwnerEmail] = useState('');
   const [editedOwnerPhone, setEditedOwnerPhone] = useState('');
   const [editedOwnerContactPerson, setEditedOwnerContactPerson] = useState('');
+  const [editedCuisine, setEditedCuisine] = useState('');
+  const [editedMainProduct, setEditedMainProduct] = useState('');
+  const [editedDietCategory, setEditedDietCategory] = useState('');
+  const [editedConceptType, setEditedConceptType] = useState('');
+  const [editedExperienceType, setEditedExperienceType] = useState('');
   
   // Restaurant filtering and grouping
   const [restaurantFilter, setRestaurantFilter] = useState({
@@ -3127,6 +3160,11 @@ export default function AdminDashboard() {
     setEditedOwnerEmail(restaurantDetails?.owner?.email || '');
     setEditedOwnerPhone(restaurantDetails?.owner?.companyPhone || '');
     setEditedOwnerContactPerson(restaurantDetails?.owner?.contactPersonName || '');
+    setEditedCuisine(selectedRestaurant?.cuisine || '');
+    setEditedMainProduct((selectedRestaurant as any)?.mainProduct || '');
+    setEditedDietCategory((selectedRestaurant as any)?.dietCategory || '');
+    setEditedConceptType((selectedRestaurant as any)?.conceptType || '');
+    setEditedExperienceType((selectedRestaurant as any)?.experienceType || '');
     setIsEditingDetails(true);
   };
 
@@ -3153,7 +3191,12 @@ export default function AdminDashboard() {
           ownerBusinessRegistration: editedOwnerBusinessRegistration,
           ownerEmail: editedOwnerEmail,
           ownerPhone: editedOwnerPhone,
-          ownerContactPerson: editedOwnerContactPerson
+          ownerContactPerson: editedOwnerContactPerson,
+          cuisine: editedCuisine,
+          mainProduct: editedMainProduct,
+          dietCategory: editedDietCategory,
+          conceptType: editedConceptType,
+          experienceType: editedExperienceType
         })
       });
 
@@ -3165,8 +3208,13 @@ export default function AdminDashboard() {
         location: editedLocation,
         address: editedAddress,
         phone: editedPhone,
-        marketplaceId: editedMarketplaceId
-      } : null);
+        marketplaceId: editedMarketplaceId,
+        cuisine: editedCuisine,
+        mainProduct: editedMainProduct,
+        dietCategory: editedDietCategory,
+        conceptType: editedConceptType,
+        experienceType: editedExperienceType
+      } as any : null);
       
       // Update restaurantDetails cache optimistically
       const selectedMarketplace = marketplacesList?.find((m: any) => m.id === editedMarketplaceId);
@@ -4334,7 +4382,88 @@ export default function AdminDashboard() {
                                       </div>
                                       <div>
                                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.cuisine || 'Bucătărie'}</label>
-                                        <p className="text-gray-900 dark:text-white">{selectedRestaurant?.cuisine}</p>
+                                        {isEditingDetails ? (
+                                          <select
+                                            value={editedCuisine}
+                                            onChange={(e) => setEditedCuisine(e.target.value)}
+                                            className="w-full h-10 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          >
+                                            <option value="">Selectează...</option>
+                                            {CUISINE_OPTIONS.map(opt => (
+                                              <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">{selectedRestaurant?.cuisine}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Main Product</label>
+                                        {isEditingDetails ? (
+                                          <select
+                                            value={editedMainProduct}
+                                            onChange={(e) => setEditedMainProduct(e.target.value)}
+                                            className="w-full h-10 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          >
+                                            <option value="">Selectează...</option>
+                                            {MAIN_PRODUCT_OPTIONS.map(opt => (
+                                              <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.mainProduct || '-'}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Diet</label>
+                                        {isEditingDetails ? (
+                                          <select
+                                            value={editedDietCategory}
+                                            onChange={(e) => setEditedDietCategory(e.target.value)}
+                                            className="w-full h-10 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          >
+                                            <option value="">Selectează...</option>
+                                            {DIET_CATEGORY_OPTIONS.map(opt => (
+                                              <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.dietCategory || '-'}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Concept</label>
+                                        {isEditingDetails ? (
+                                          <select
+                                            value={editedConceptType}
+                                            onChange={(e) => setEditedConceptType(e.target.value)}
+                                            className="w-full h-10 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          >
+                                            <option value="">Selectează...</option>
+                                            {CONCEPT_TYPE_OPTIONS.map(opt => (
+                                              <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.conceptType || '-'}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Experience</label>
+                                        {isEditingDetails ? (
+                                          <select
+                                            value={editedExperienceType}
+                                            onChange={(e) => setEditedExperienceType(e.target.value)}
+                                            className="w-full h-10 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                          >
+                                            <option value="">Selectează...</option>
+                                            {EXPERIENCE_TYPE_OPTIONS.map(opt => (
+                                              <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <p className="text-gray-900 dark:text-white">{(selectedRestaurant as any)?.experienceType || '-'}</p>
+                                        )}
                                       </div>
                                       <div>
                                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.admin?.priceRange || 'Interval Prețuri'}</label>
