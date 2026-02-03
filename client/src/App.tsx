@@ -1,5 +1,5 @@
-import { Switch, Route } from "wouter";
-import { useState, startTransition } from "react";
+import { Switch, Route, Redirect } from "wouter";
+import { useState, startTransition, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -204,6 +204,25 @@ function Footer() {
 function Router() {
   const { isRestaurantAuthenticated, isLoading } = useRestaurantAuth();
   const [location, setLocation] = useLocation();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  // Handle redirect to restaurant portal using useEffect to avoid setState during render
+  useEffect(() => {
+    if (isRestaurantAuthenticated && !isLoading) {
+      const isAllowedRoute = location.startsWith('/restaurant-portal') || 
+                             location.startsWith('/privacy-policy') || 
+                             location.startsWith('/terms-of-service') ||
+                             location.startsWith('/cookie-policy') ||
+                             location === '/restaurant-login';
+      
+      if (!isAllowedRoute) {
+        setShouldRedirect(true);
+        setLocation('/restaurant-portal');
+      } else {
+        setShouldRedirect(false);
+      }
+    }
+  }, [location, isRestaurantAuthenticated, isLoading, setLocation]);
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -216,13 +235,13 @@ function Router() {
 
   // If logged in as restaurant owner, restrict to restaurant-only routes
   if (isRestaurantAuthenticated) {
-    // Redirect to restaurant portal if accessing non-restaurant routes
-    if (!location.startsWith('/restaurant-portal') && 
-        !location.startsWith('/privacy-policy') && 
-        !location.startsWith('/terms-of-service') &&
-        location !== '/restaurant-login') {
-      setLocation('/restaurant-portal');
-      return null;
+    // Show loading while redirecting
+    if (shouldRedirect) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      );
     }
 
     return (
@@ -235,10 +254,7 @@ function Router() {
           <Route path="/cookie-policy" component={CookiePolicy} />
           {/* Default redirect for any unmatched restaurant routes */}
           <Route>
-            {() => {
-              setLocation('/restaurant-portal');
-              return null;
-            }}
+            <Redirect to="/restaurant-portal" />
           </Route>
         </Switch>
         <CookieConsent />
