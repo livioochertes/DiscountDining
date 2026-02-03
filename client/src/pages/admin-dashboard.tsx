@@ -310,6 +310,54 @@ function MobileFiltersManagement() {
     }
   });
 
+  // Fetch available filter values from database
+  const { data: availableFilterValues } = useQuery<{
+    cuisine: string[];
+    mainProduct: string[];
+    dietCategory: string[];
+    conceptType: string[];
+    experienceType: string[];
+  }>({
+    queryKey: ['/api/admin/filter-values'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/filter-values', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch filter values');
+      return response.json();
+    }
+  });
+
+  // Get available options based on selected filter type
+  const getAvailableOptions = (): string[] => {
+    if (!availableFilterValues || !filterType) return [];
+    switch (filterType) {
+      case 'cuisine': return availableFilterValues.cuisine || [];
+      case 'mainProduct': return availableFilterValues.mainProduct || [];
+      case 'dietCategory': return availableFilterValues.dietCategory || [];
+      case 'conceptType': return availableFilterValues.conceptType || [];
+      case 'experienceType': return availableFilterValues.experienceType || [];
+      default: return [];
+    }
+  };
+
+  // Toggle a value in the filter values list
+  const toggleFilterValue = (value: string) => {
+    const currentValues = filterValues.split(",").map(v => v.trim()).filter(v => v);
+    if (currentValues.includes(value)) {
+      setFilterValues(currentValues.filter(v => v !== value).join(", "));
+    } else {
+      setFilterValues([...currentValues, value].join(", "));
+    }
+  };
+
+  // Check if a value is selected
+  const isValueSelected = (value: string): boolean => {
+    const currentValues = filterValues.split(",").map(v => v.trim()).filter(v => v);
+    return currentValues.includes(value);
+  };
+
   const resetForm = () => {
     setFilterName("");
     setFilterIcon("");
@@ -503,7 +551,7 @@ function MobileFiltersManagement() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Filter Type</label>
-                <Select value={filterType} onValueChange={setFilterType}>
+                <Select value={filterType} onValueChange={(val) => { setFilterType(val); setFilterValues(""); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select filter type" />
                   </SelectTrigger>
@@ -524,15 +572,51 @@ function MobileFiltersManagement() {
                 />
               </div>
               <div className="md:col-span-2 space-y-2">
-                <label className="text-sm font-medium">Filter Values (comma-separated)</label>
-                <Input
-                  placeholder="Italian, French, Asian"
-                  value={filterValues}
-                  onChange={(e) => setFilterValues(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter values separated by commas. These will be matched against restaurant data.
-                </p>
+                <label className="text-sm font-medium">Filter Values</label>
+                {filterType === 'deals' ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    This filter shows restaurants with active vouchers/deals. No additional values needed.
+                  </p>
+                ) : getAvailableOptions().length > 0 ? (
+                  <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <div className="flex flex-wrap gap-2">
+                      {getAvailableOptions().map((option) => (
+                        <label
+                          key={option}
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                            isValueSelected(option)
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white hover:bg-gray-50 border-gray-200'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={isValueSelected(option)}
+                            onChange={() => toggleFilterValue(option)}
+                          />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Italian, French, Asian"
+                      value={filterValues}
+                      onChange={(e) => setFilterValues(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {filterType ? 'No values found in database. Enter values manually (comma-separated).' : 'Select a filter type first, then choose values.'}
+                    </p>
+                  </div>
+                )}
+                {filterValues && (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: {filterValues}
+                  </p>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Switch

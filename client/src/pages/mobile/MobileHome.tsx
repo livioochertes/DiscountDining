@@ -424,56 +424,43 @@ export default function MobileHome() {
         const { filterType, filterValues } = activeFilter;
         if (!filterType || !filterValues || filterValues.length === 0) return true;
         
-        // Helper function to check if any filter value matches in text fields
+        // Helper function for bidirectional partial matching
+        // "Pizza" matches "Pizzeria" and "Pizzeria" matches "Pizza"
+        const partialMatch = (fieldValue: string | null | undefined, filterVal: string) => {
+          if (!fieldValue) return false;
+          const field = fieldValue.toLowerCase();
+          const filter = filterVal.toLowerCase();
+          return field.includes(filter) || filter.includes(field);
+        };
+        
+        // Helper function to check if any filter value matches in text fields (bidirectional)
         const matchesInText = (filterVal: string) => {
-          const lowerVal = filterVal.toLowerCase();
-          const name = restaurant.name?.toLowerCase() || '';
-          const description = restaurant.description?.toLowerCase() || '';
-          const cuisine = restaurant.cuisine?.toLowerCase() || '';
-          return name.includes(lowerVal) || description.includes(lowerVal) || cuisine.includes(lowerVal);
+          const name = restaurant.name || '';
+          const description = restaurant.description || '';
+          const cuisine = restaurant.cuisine || '';
+          return partialMatch(name, filterVal) || partialMatch(description, filterVal) || partialMatch(cuisine, filterVal);
         };
         
         console.log('[MobileHome Filter] Checking restaurant:', restaurant.name, 'filterType:', filterType, 'filterValues:', filterValues);
         
         switch (filterType) {
           case 'cuisine': {
-            const cuisineMatch = filterValues.some(v => {
-              const lowerVal = v.toLowerCase();
-              return restaurant.cuisine?.toLowerCase().includes(lowerVal) || matchesInText(v);
-            });
-            return cuisineMatch;
+            return filterValues.some(v => partialMatch(restaurant.cuisine, v) || matchesInText(v));
           }
           case 'mainProduct': {
-            const productMatch = filterValues.some(v => {
-              const lowerVal = v.toLowerCase();
-              return restaurant.mainProduct?.toLowerCase().includes(lowerVal) || matchesInText(v);
-            });
-            return productMatch;
+            return filterValues.some(v => partialMatch(restaurant.mainProduct, v) || matchesInText(v));
           }
           case 'dietCategory': {
-            const dietMatch = filterValues.some(v => {
-              const lowerVal = v.toLowerCase();
-              return restaurant.dietCategory?.toLowerCase().includes(lowerVal) || matchesInText(v);
-            });
-            return dietMatch;
+            return filterValues.some(v => partialMatch(restaurant.dietCategory, v) || matchesInText(v));
           }
           case 'conceptType': {
-            const conceptMatch = filterValues.some(v => {
-              const lowerVal = v.toLowerCase();
-              return restaurant.conceptType?.toLowerCase().includes(lowerVal) || matchesInText(v);
-            });
-            return conceptMatch;
+            return filterValues.some(v => partialMatch(restaurant.conceptType, v) || matchesInText(v));
           }
           case 'experienceType': {
-            const expMatch = filterValues.some(v => {
-              const lowerVal = v.toLowerCase();
-              return restaurant.experienceType?.toLowerCase().includes(lowerVal) || matchesInText(v);
-            });
-            return expMatch;
+            return filterValues.some(v => partialMatch(restaurant.experienceType, v) || matchesInText(v));
           }
           case 'deals': {
-            const dealsMatch = activeVouchers.some(v => v.restaurantId === restaurant.id);
-            return dealsMatch;
+            return activeVouchers.some(v => v.restaurantId === restaurant.id);
           }
           default:
             return true;

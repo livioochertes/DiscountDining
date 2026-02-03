@@ -2092,6 +2092,36 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // Get unique filter values from restaurants
+  app.get("/api/admin/filter-values", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const allRestaurants = await db
+        .select({
+          cuisine: restaurants.cuisine,
+          mainProduct: restaurants.mainProduct,
+          dietCategory: restaurants.dietCategory,
+          conceptType: restaurants.conceptType,
+          experienceType: restaurants.experienceType,
+        })
+        .from(restaurants)
+        .where(eq(restaurants.isActive, true));
+
+      // Extract unique non-null values for each field
+      const uniqueValues = {
+        cuisine: Array.from(new Set(allRestaurants.map(r => r.cuisine).filter(Boolean) as string[])).sort(),
+        mainProduct: Array.from(new Set(allRestaurants.map(r => r.mainProduct).filter(Boolean) as string[])).sort(),
+        dietCategory: Array.from(new Set(allRestaurants.map(r => r.dietCategory).filter(Boolean) as string[])).sort(),
+        conceptType: Array.from(new Set(allRestaurants.map(r => r.conceptType).filter(Boolean) as string[])).sort(),
+        experienceType: Array.from(new Set(allRestaurants.map(r => r.experienceType).filter(Boolean) as string[])).sort(),
+      };
+
+      res.json(uniqueValues);
+    } catch (error) {
+      console.error("Error fetching filter values:", error);
+      res.status(500).json({ message: "Failed to fetch filter values" });
+    }
+  });
+
   // Reorder mobile filters
   app.post("/api/admin/mobile-filters/reorder", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
