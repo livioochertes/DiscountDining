@@ -490,10 +490,18 @@ export default function MobileExplore() {
   const tabParam = urlParams.get('tab');
   const tabFromUrl = tabParam === 'vouchers' ? 'vouchers' : tabParam === 'ai-menu' ? 'ai-menu' : 'restaurants';
   
+  // Read filter params from URL
+  const urlFilterType = urlParams.get('filterType');
+  const urlFilterValues = urlParams.get('filterValues')?.split(',').filter(Boolean) || [];
+  const urlFilterId = urlParams.get('filterId');
+  
   const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers' | 'ai-menu'>(tabFromUrl);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
   const [selectedCity, setSelectedCity] = useState<string>(() => gpsCity || 'All locations');
+  const [activeUrlFilter, setActiveUrlFilter] = useState<{ filterType: string; filterValues: string[] } | null>(
+    urlFilterType && urlFilterValues.length > 0 ? { filterType: urlFilterType, filterValues: urlFilterValues } : null
+  );
   const [showCityPicker, setShowCityPicker] = useState(false);
   
   // Sync selected city with GPS detected city
@@ -613,11 +621,47 @@ export default function MobileExplore() {
   });
 
   const filteredRestaurants = restaurants.filter((r: any) => {
+    // First apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return r.name?.toLowerCase().includes(query) || 
+      const matchesSearch = r.name?.toLowerCase().includes(query) || 
              r.cuisine?.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
     }
+    
+    // Apply URL filter if present
+    if (activeUrlFilter) {
+      const { filterType, filterValues } = activeUrlFilter;
+      
+      switch (filterType) {
+        case 'cuisine':
+          return filterValues.some(val => 
+            r.cuisine?.toLowerCase().includes(val.toLowerCase())
+          );
+        case 'mainProduct':
+          return filterValues.some(val => 
+            r.mainProduct?.toLowerCase().includes(val.toLowerCase())
+          );
+        case 'dietCategory':
+          return filterValues.some(val => 
+            r.dietCategory?.toLowerCase().includes(val.toLowerCase())
+          );
+        case 'conceptType':
+          return filterValues.some(val => 
+            r.conceptType?.toLowerCase().includes(val.toLowerCase())
+          );
+        case 'experienceType':
+          return filterValues.some(val => 
+            r.experienceType?.toLowerCase().includes(val.toLowerCase())
+          );
+        case 'deals':
+          // For deals, we would check if restaurant has active vouchers
+          return true; // For now, show all - can be enhanced later
+        default:
+          return true;
+      }
+    }
+    
     return true;
   });
 
@@ -814,6 +858,29 @@ export default function MobileExplore() {
             selected={selectedCategory}
             onSelect={setSelectedCategory}
           />
+        )}
+
+        {/* Active filter indicator */}
+        {activeUrlFilter && activeTab === 'restaurants' && (
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-xl">
+            <span className="text-sm text-primary font-medium">
+              Filtering by: {urlFilterId || activeUrlFilter.filterType}
+            </span>
+            <button 
+              onClick={() => {
+                setActiveUrlFilter(null);
+                // Remove filter params from URL
+                const newParams = new URLSearchParams(window.location.search);
+                newParams.delete('filterType');
+                newParams.delete('filterValues');
+                newParams.delete('filterId');
+                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+              }}
+              className="ml-auto p-1 hover:bg-primary/20 rounded-full"
+            >
+              <X className="w-4 h-4 text-primary" />
+            </button>
+          </div>
         )}
 
         {/* Results count - hidden for AI Menu */}

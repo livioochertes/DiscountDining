@@ -199,6 +199,7 @@ export default function MobileHome() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeFilter, setActiveFilter] = useState<{ filterType?: string; filterValues?: string[] } | null>(null);
   const [showGreeting, setShowGreeting] = useState(true);
   const greetingRef = useRef<HTMLParagraphElement>(null);
   const hasScrolledPast = useRef(false);
@@ -416,8 +417,45 @@ export default function MobileHome() {
     if (!aHasOwn && bHasOwn) return 1;
     return 0;
   });
+
+  // Apply filter based on selected category
+  const filteredRestaurants = activeFilter 
+    ? sortedRestaurants.filter((restaurant: any) => {
+        const { filterType, filterValues } = activeFilter;
+        if (!filterType || !filterValues || filterValues.length === 0) return true;
+        
+        switch (filterType) {
+          case 'cuisine':
+            return filterValues.some(v => 
+              restaurant.cuisine?.toLowerCase().includes(v.toLowerCase())
+            );
+          case 'mainProduct':
+            return filterValues.some(v => 
+              restaurant.mainProduct?.toLowerCase().includes(v.toLowerCase()) ||
+              restaurant.cuisine?.toLowerCase().includes(v.toLowerCase())
+            );
+          case 'dietCategory':
+            return filterValues.some(v => 
+              restaurant.dietCategory?.toLowerCase().includes(v.toLowerCase())
+            );
+          case 'conceptType':
+            return filterValues.some(v => 
+              restaurant.conceptType?.toLowerCase().includes(v.toLowerCase())
+            );
+          case 'experienceType':
+            return filterValues.some(v => 
+              restaurant.experienceType?.toLowerCase().includes(v.toLowerCase())
+            );
+          case 'deals':
+            // Show restaurants that have active vouchers/deals
+            return activeVouchers.some(v => v.restaurantId === restaurant.id);
+          default:
+            return true;
+        }
+      })
+    : sortedRestaurants;
   
-  const restaurantsWithVouchers: RestaurantWithVouchers[] = sortedRestaurants
+  const restaurantsWithVouchers: RestaurantWithVouchers[] = filteredRestaurants
     .slice(0, 4)
     .map((restaurant: any) => ({
       restaurant,
@@ -533,10 +571,21 @@ export default function MobileHome() {
           />
         </div>
 
-        {/* Categories */}
+        {/* Categories - Dynamic filters from API */}
         <CategoryChips
           selected={selectedCategory}
-          onSelect={setSelectedCategory}
+          onSelect={(id, filter) => {
+            setSelectedCategory(id);
+            if (id === 'all') {
+              setActiveFilter(null);
+            } else if (filter) {
+              setActiveFilter({
+                filterType: filter.filterType,
+                filterValues: filter.filterValues
+              });
+            }
+          }}
+          useDynamicFilters={true}
         />
 
         {/* Your Favorites - only shown when logged in and has favorites from purchases */}
@@ -572,9 +621,19 @@ export default function MobileHome() {
         {/* Recommended for you */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900">Recommended for you</h2>
+            <h2 className="text-lg font-bold text-gray-900">
+              {activeFilter ? `${selectedCategory !== 'all' ? '' : ''}Recommended for you` : 'Recommended for you'}
+            </h2>
             <button 
-              onClick={() => setLocation('/m/explore?tab=restaurants')}
+              onClick={() => {
+                const params = new URLSearchParams({ tab: 'restaurants' });
+                if (activeFilter && selectedCategory !== 'all') {
+                  params.set('filterId', selectedCategory);
+                  params.set('filterType', activeFilter.filterType || '');
+                  params.set('filterValues', activeFilter.filterValues?.join(',') || '');
+                }
+                setLocation(`/m/explore?${params.toString()}`);
+              }}
               className="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-1 hover:bg-primary/90 transition-colors"
             >
               {t.seeAll}
@@ -583,7 +642,7 @@ export default function MobileHome() {
           </div>
           <div className="overflow-x-auto scrollbar-hide">
             <div className="flex gap-3">
-              {restaurants.slice(0, 5).map((restaurant: any) => (
+              {filteredRestaurants.slice(0, 5).map((restaurant: any) => (
                 <RestaurantCardSmall
                   key={restaurant.id}
                   name={restaurant.name}
