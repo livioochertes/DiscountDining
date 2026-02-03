@@ -15,7 +15,8 @@ import { loyaltyRoutes } from "./loyaltyRoutes";
 import { registerSupportRoutes } from "./supportRoutes";
 import { registerRecipeRoutes } from "./recipeRoutes";
 import { registerChefProfileRoutes } from "./chefProfileRoutes";
-import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments } from "@shared/schema";
+import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments, mobileFilters } from "@shared/schema";
+import { asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { setupMultiAuth, isAuthenticated, consumeMobileAuthToken, validateMobileSessionToken, invalidateMobileSessionToken } from "./multiAuth";
 import { getAIAssistantResponse, getRestaurantRecommendations, explainVoucherPackage } from "./aiAssistant";
@@ -946,6 +947,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating restaurant:", error);
       res.status(500).json({ message: "Error creating restaurant: " + error.message });
+    }
+  });
+
+  // Public endpoint for mobile filters
+  app.get("/api/mobile-filters", async (req, res) => {
+    try {
+      const filters = await db
+        .select()
+        .from(mobileFilters)
+        .where(eq(mobileFilters.isActive, true))
+        .orderBy(asc(mobileFilters.sortOrder));
+      res.json(filters);
+    } catch (error) {
+      console.error("Error fetching mobile filters:", error);
+      res.status(500).json({ message: "Failed to fetch mobile filters" });
     }
   });
 

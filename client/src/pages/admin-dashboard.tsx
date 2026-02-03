@@ -43,6 +43,7 @@ import {
 import { SectionNavigation } from "@/components/SectionNavigation";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import PackageForm from "@/components/package-form";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import LanguageSelector from "@/components/LanguageSelector";
@@ -259,6 +260,359 @@ interface RestaurantDetails {
   restaurant: Restaurant;
   menuItems: MenuItem[];
   voucherPackages: VoucherPackage[];
+}
+
+interface MobileFilter {
+  id: number;
+  name: string;
+  icon: string;
+  filterType: string;
+  filterValues: string[];
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const FILTER_TYPE_OPTIONS = [
+  { value: "cuisine", label: "Cuisine" },
+  { value: "mainProduct", label: "Main Product" },
+  { value: "dietCategory", label: "Diet Category" },
+  { value: "conceptType", label: "Concept Type" },
+  { value: "experienceType", label: "Experience Type" },
+  { value: "deals", label: "Deals" },
+];
+
+// Mobile Filters Management Component
+function MobileFiltersManagement() {
+  const [isAddingFilter, setIsAddingFilter] = useState(false);
+  const [editingFilter, setEditingFilter] = useState<MobileFilter | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [filterName, setFilterName] = useState("");
+  const [filterIcon, setFilterIcon] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterValues, setFilterValues] = useState("");
+  const [filterIsActive, setFilterIsActive] = useState(true);
+  const [filterSortOrder, setFilterSortOrder] = useState(0);
+
+  const { data: mobileFilters = [], isLoading: filtersLoading } = useQuery<MobileFilter[]>({
+    queryKey: ['/api/admin/mobile-filters'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/mobile-filters', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch mobile filters');
+      return response.json();
+    }
+  });
+
+  const resetForm = () => {
+    setFilterName("");
+    setFilterIcon("");
+    setFilterType("");
+    setFilterValues("");
+    setFilterIsActive(true);
+    setFilterSortOrder(0);
+    setIsAddingFilter(false);
+    setEditingFilter(null);
+  };
+
+  const openEditForm = (filter: MobileFilter) => {
+    setEditingFilter(filter);
+    setFilterName(filter.name);
+    setFilterIcon(filter.icon);
+    setFilterType(filter.filterType);
+    setFilterValues(filter.filterValues.join(", "));
+    setFilterIsActive(filter.isActive);
+    setFilterSortOrder(filter.sortOrder);
+    setIsAddingFilter(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!filterName.trim() || !filterType) {
+      toast({
+        title: "Error",
+        description: "Name and filter type are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const valuesArray = filterValues.split(",").map(v => v.trim()).filter(v => v);
+      
+      const body = {
+        name: filterName,
+        icon: filterIcon,
+        filterType,
+        filterValues: valuesArray,
+        isActive: filterIsActive,
+        sortOrder: filterSortOrder,
+      };
+
+      const url = editingFilter 
+        ? `/api/admin/mobile-filters/${editingFilter.id}`
+        : '/api/admin/mobile-filters';
+      
+      const response = await fetch(url, {
+        method: editingFilter ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save filter');
+      }
+
+      toast({
+        title: editingFilter ? "Filter Updated" : "Filter Created",
+        description: `Mobile filter has been ${editingFilter ? 'updated' : 'created'} successfully.`,
+      });
+
+      resetForm();
+      await queryClient.invalidateQueries({ queryKey: ['/api/admin/mobile-filters'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save filter",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (filter: MobileFilter) => {
+    if (!confirm(`Are you sure you want to delete "${filter.name}"?`)) return;
+    
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/mobile-filters/${filter.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete filter');
+
+      toast({
+        title: "Filter Deleted",
+        description: "Mobile filter has been deleted successfully.",
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/admin/mobile-filters'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete filter",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (filter: MobileFilter) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/mobile-filters/${filter.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isActive: !filter.isActive })
+      });
+
+      if (!response.ok) throw new Error('Failed to update filter');
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/admin/mobile-filters'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update filter status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Mobile Filters</span>
+          {!isAddingFilter && !editingFilter && (
+            <Button 
+              onClick={() => setIsAddingFilter(true)}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Filter
+            </Button>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Manage filter chips displayed in the mobile app for restaurant filtering
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {(isAddingFilter || editingFilter) && (
+          <div className="mb-6 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 space-y-4">
+            <h4 className="font-medium">{editingFilter ? "Edit Filter" : "Add New Filter"}</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Name</label>
+                <Input
+                  placeholder="Filter name (e.g., Pizza)"
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Icon (Emoji)</label>
+                <Input
+                  placeholder="🍕"
+                  value={filterIcon}
+                  onChange={(e) => setFilterIcon(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Filter Type</label>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select filter type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FILTER_TYPE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sort Order</label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={filterSortOrder}
+                  onChange={(e) => setFilterSortOrder(parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-sm font-medium">Filter Values (comma-separated)</label>
+                <Input
+                  placeholder="Italian, French, Asian"
+                  value={filterValues}
+                  onChange={(e) => setFilterValues(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter values separated by commas. These will be matched against restaurant data.
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={filterIsActive}
+                  onCheckedChange={setFilterIsActive}
+                />
+                <label className="text-sm font-medium">Active</label>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={resetForm} disabled={loading}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? "Saving..." : editingFilter ? "Update Filter" : "Create Filter"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {filtersLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading mobile filters...</p>
+          </div>
+        ) : mobileFilters.length > 0 ? (
+          <div className="space-y-3">
+            {mobileFilters.map((filter) => (
+              <div key={filter.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{filter.icon}</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{filter.name}</h4>
+                      <Badge variant="outline" className="text-xs">
+                        {FILTER_TYPE_OPTIONS.find(o => o.value === filter.filterType)?.label || filter.filterType}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {filter.filterValues.slice(0, 5).map((val, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {val}
+                        </Badge>
+                      ))}
+                      {filter.filterValues.length > 5 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{filter.filterValues.length - 5} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={filter.isActive}
+                      onCheckedChange={() => handleToggleActive(filter)}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {filter.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openEditForm(filter)}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(filter)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No mobile filters configured yet.</p>
+            <Button 
+              className="mt-4" 
+              onClick={() => setIsAddingFilter(true)}
+            >
+              Add Your First Filter
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 // EatOff Voucher Management Component
@@ -5207,6 +5561,8 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+            
+            <MobileFiltersManagement />
             </div>
           )}
         </div>

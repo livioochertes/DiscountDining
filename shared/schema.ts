@@ -2221,3 +2221,28 @@ export type InsertLoyaltyGroup = z.infer<typeof insertLoyaltyGroupSchema>;
 
 export type CustomerLoyaltyEnrollment = typeof customerLoyaltyEnrollments.$inferSelect;
 export type InsertCustomerLoyaltyEnrollment = z.infer<typeof insertCustomerLoyaltyEnrollmentSchema>;
+
+// ============================================
+// MOBILE FILTERS (Dynamic filters for mobile home)
+// ============================================
+
+export const mobileFilters = pgTable("mobile_filters", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // Display name (e.g., "Pizza", "Burger")
+  icon: varchar("icon", { length: 50 }).notNull(), // Emoji or lucide icon name
+  filterType: varchar("filter_type", { length: 50 }).notNull(), // cuisine, mainProduct, dietCategory, conceptType, experienceType, deals
+  filterValues: text("filter_values").array().notNull(), // Array of values to match
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMobileFilterSchema = createInsertSchema(mobileFilters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type MobileFilter = typeof mobileFilters.$inferSelect;
+export type InsertMobileFilter = z.infer<typeof insertMobileFilterSchema>;

@@ -16,7 +16,9 @@ import {
   walletTransactions,
   paymentTransactions,
   geonamesCities,
-  chefProfiles
+  chefProfiles,
+  mobileFilters,
+  insertMobileFilterSchema
 } from "@shared/schema";
 import { eq, and, gte, desc, sql, ilike, asc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -1980,6 +1982,132 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error updating menu item signature chef:", error);
       res.status(500).json({ message: "Failed to update menu item" });
+    }
+  });
+
+  // ============================================
+  // MOBILE FILTERS MANAGEMENT
+  // ============================================
+
+  // Get all mobile filters (admin)
+  app.get("/api/admin/mobile-filters", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const filters = await db
+        .select()
+        .from(mobileFilters)
+        .orderBy(asc(mobileFilters.sortOrder));
+      res.json(filters);
+    } catch (error) {
+      console.error("Error fetching mobile filters:", error);
+      res.status(500).json({ message: "Failed to fetch mobile filters" });
+    }
+  });
+
+  // Create mobile filter
+  app.post("/api/admin/mobile-filters", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { name, icon, filterType, filterValues, isActive, sortOrder } = req.body;
+      
+      if (!name || !icon || !filterType || !filterValues || !Array.isArray(filterValues)) {
+        return res.status(400).json({ message: "Name, icon, filterType, and filterValues are required" });
+      }
+
+      const [newFilter] = await db
+        .insert(mobileFilters)
+        .values({
+          name,
+          icon,
+          filterType,
+          filterValues,
+          isActive: isActive !== undefined ? isActive : true,
+          sortOrder: sortOrder || 0,
+        })
+        .returning();
+
+      await logAdminAction(req.adminId!, 'create_mobile_filter', 'mobile_filter', String(newFilter.id), null, newFilter, req);
+      res.status(201).json(newFilter);
+    } catch (error) {
+      console.error("Error creating mobile filter:", error);
+      res.status(500).json({ message: "Failed to create mobile filter" });
+    }
+  });
+
+  // Update mobile filter
+  app.patch("/api/admin/mobile-filters/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const filterId = parseInt(req.params.id);
+      const { name, icon, filterType, filterValues, isActive, sortOrder } = req.body;
+
+      const updateData: any = { updatedAt: new Date() };
+      if (name !== undefined) updateData.name = name;
+      if (icon !== undefined) updateData.icon = icon;
+      if (filterType !== undefined) updateData.filterType = filterType;
+      if (filterValues !== undefined) updateData.filterValues = filterValues;
+      if (isActive !== undefined) updateData.isActive = isActive;
+      if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+
+      const [updated] = await db
+        .update(mobileFilters)
+        .set(updateData)
+        .where(eq(mobileFilters.id, filterId))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: "Mobile filter not found" });
+      }
+
+      await logAdminAction(req.adminId!, 'update_mobile_filter', 'mobile_filter', String(filterId), null, updateData, req);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating mobile filter:", error);
+      res.status(500).json({ message: "Failed to update mobile filter" });
+    }
+  });
+
+  // Delete mobile filter
+  app.delete("/api/admin/mobile-filters/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const filterId = parseInt(req.params.id);
+
+      const [deleted] = await db
+        .delete(mobileFilters)
+        .where(eq(mobileFilters.id, filterId))
+        .returning();
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Mobile filter not found" });
+      }
+
+      await logAdminAction(req.adminId!, 'delete_mobile_filter', 'mobile_filter', String(filterId), deleted, null, req);
+      res.json({ message: "Mobile filter deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting mobile filter:", error);
+      res.status(500).json({ message: "Failed to delete mobile filter" });
+    }
+  });
+
+  // Reorder mobile filters
+  app.post("/api/admin/mobile-filters/reorder", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { filterIds } = req.body; // Array of filter IDs in new order
+
+      if (!filterIds || !Array.isArray(filterIds)) {
+        return res.status(400).json({ message: "filterIds array is required" });
+      }
+
+      // Update sort order for each filter
+      for (let i = 0; i < filterIds.length; i++) {
+        await db
+          .update(mobileFilters)
+          .set({ sortOrder: i, updatedAt: new Date() })
+          .where(eq(mobileFilters.id, filterIds[i]));
+      }
+
+      await logAdminAction(req.adminId!, 'reorder_mobile_filters', 'mobile_filter', 'bulk', null, { filterIds }, req);
+      res.json({ message: "Filters reordered successfully" });
+    } catch (error) {
+      console.error("Error reordering mobile filters:", error);
+      res.status(500).json({ message: "Failed to reorder mobile filters" });
     }
   });
 }
