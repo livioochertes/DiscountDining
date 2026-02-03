@@ -30,6 +30,7 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import jwksClient from "jwks-rsa";
+import bcrypt from "bcryptjs";
 
 // Initialize Stripe only if the secret key is available
 let stripe: Stripe | null = null;
@@ -203,6 +204,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Mobile Exchange] Error:', error);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Email/Password Registration
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      if (password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getCustomerByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ error: "Email already registered" });
+      }
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Create user
+      const userId = nanoid();
+      const user = await storage.createCustomer({
+        id: userId,
+        email,
+        passwordHash,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        profileImageUrl: null,
+      });
+      
+      // Generate session token for mobile
+      const { generateMobileSessionToken } = await import('./multiAuth');
+      const sessionToken = await generateMobileSessionToken(user);
+      
+      // Set session for web
+      (req.session as any).ownerId = user.id;
+      
+      return res.json({
+        success: true,
+        sessionToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl
+        }
+      });
+    } catch (error) {
+      console.error('[Register] Error:', error);
+      return res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  // Email/Password Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      // Find user by email
+      const user = await storage.getCustomerByEmail(email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Check if user has a password (might be OAuth-only user)
+      if (!user.passwordHash) {
+        return res.status(401).json({ error: "Please use Google or Apple sign-in for this account" });
+      }
+      
+      // Verify password
+      const isValid = await bcrypt.compare(password, user.passwordHash);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Generate session token for mobile
+      const { generateMobileSessionToken } = await import('./multiAuth');
+      const sessionToken = await generateMobileSessionToken(user);
+      
+      // Set session for web
+      (req.session as any).ownerId = user.id;
+      
+      return res.json({
+        success: true,
+        sessionToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl
+        }
+      });
+    } catch (error) {
+      console.error('[Login] Error:', error);
+      return res.status(500).json({ error: "Login failed" });
     }
   });
 
