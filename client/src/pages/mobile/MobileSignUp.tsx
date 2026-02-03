@@ -323,8 +323,7 @@ export default function MobileSignUp() {
       console.log('[Apple Sign-In] Opening external browser:', appleAuthUrl);
       
       if (isNative) {
-        // Use Capacitor Browser for native apps
-        const { Browser } = await import('@capacitor/browser');
+        // Use Capacitor Browser for native apps (already imported statically)
         await Browser.open({ 
           url: appleAuthUrl,
           presentationStyle: 'popover'
