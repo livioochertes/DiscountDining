@@ -499,10 +499,24 @@ export default function MobileExplore() {
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
   const [selectedCity, setSelectedCity] = useState<string>(() => gpsCity || 'All locations');
-  const [activeUrlFilter, setActiveUrlFilter] = useState<{ filterType: string; filterValues: string[] } | null>(
-    urlFilterType && urlFilterValues.length > 0 ? { filterType: urlFilterType, filterValues: urlFilterValues } : null
+  const [activeUrlFilter, setActiveUrlFilter] = useState<{ filterType: string; filterValues: string[]; filterId: string } | null>(
+    urlFilterType && urlFilterValues.length > 0 ? { filterType: urlFilterType, filterValues: urlFilterValues, filterId: urlFilterId || '' } : null
   );
   const [showCityPicker, setShowCityPicker] = useState(false);
+  
+  // Sync activeUrlFilter with URL params when location changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const filterType = params.get('filterType');
+    const filterValues = params.get('filterValues')?.split(',').filter(Boolean) || [];
+    const filterId = params.get('filterId') || '';
+    
+    if (filterType && filterValues.length > 0) {
+      setActiveUrlFilter({ filterType, filterValues, filterId });
+    } else {
+      setActiveUrlFilter(null);
+    }
+  }, [location]);
   
   // Sync selected city with GPS detected city
   useEffect(() => {
@@ -655,8 +669,11 @@ export default function MobileExplore() {
             r.experienceType?.toLowerCase().includes(val.toLowerCase())
           );
         case 'deals':
-          // For deals, we would check if restaurant has active vouchers
-          return true; // For now, show all - can be enhanced later
+          // For deals, check if restaurant has active vouchers
+          const hasActiveVouchers = vouchers.some(v => 
+            v.restaurantId === r.id && v.isActive
+          );
+          return hasActiveVouchers;
         default:
           return true;
       }
@@ -868,13 +885,13 @@ export default function MobileExplore() {
             </span>
             <button 
               onClick={() => {
-                setActiveUrlFilter(null);
-                // Remove filter params from URL
+                // Remove filter params from URL and update via router
                 const newParams = new URLSearchParams(window.location.search);
                 newParams.delete('filterType');
                 newParams.delete('filterValues');
                 newParams.delete('filterId');
-                window.history.replaceState({}, '', `${window.location.pathname}?${newParams.toString()}`);
+                const newUrl = newParams.toString() ? `/m/explore?${newParams.toString()}` : '/m/explore';
+                setLocation(newUrl);
               }}
               className="ml-auto p-1 hover:bg-primary/20 rounded-full"
             >
