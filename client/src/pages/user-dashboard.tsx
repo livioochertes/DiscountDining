@@ -718,12 +718,12 @@ export default function UserDashboard() {
               </CardContent>
             </Card>
 
-            {/* Dietary Profile & AI Recommendations */}
+            {/* Dietary Profile */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Heart className="h-5 w-5 mr-2 text-primary" />
-{t.dietaryProfileAI || 'Dietary Profile & AI Recommendations'}
+                  {t.dietaryProfile || 'Dietary Profile'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -850,7 +850,7 @@ export default function UserDashboard() {
                   </Button>
                   <Button 
                     variant="outline"
-                    onClick={() => setLocation("/dietary-recommendations")}
+                    onClick={() => setLocation("/?tab=ai-menu")}
                   >
                     View AI Recommendations
                   </Button>
