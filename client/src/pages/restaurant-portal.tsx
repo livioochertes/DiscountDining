@@ -524,6 +524,16 @@ export default function RestaurantPortal() {
     }
   });
 
+  // Fetch cities for Add Restaurant form (default to Romania)
+  const { data: availableCities = [], isLoading: citiesLoading } = useQuery<any[]>({
+    queryKey: ['/api/cities', 'add-restaurant', 'RO'],
+    queryFn: async () => {
+      const response = await fetch('/api/cities?country=RO&limit=500');
+      if (!response.ok) throw new Error('Failed to fetch cities');
+      return response.json();
+    }
+  });
+
   // Fetch reservations for the restaurant
   const { data: reservations = [], isLoading: isLoadingReservations } = useQuery<any[]>({
     queryKey: ["/api/restaurant-portal/reservations"],
@@ -2609,11 +2619,24 @@ export default function RestaurantPortal() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="location">City *</Label>
-                  <Input id="location" name="location" required placeholder="e.g., Berlin, Munich" />
+                  <select id="location" name="location" required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="">{citiesLoading ? "Loading cities..." : "Select city..."}</option>
+                    {availableCities.map((city: any) => (
+                      <option key={city.geonameId || city.name} value={city.name}>
+                        {city.name}{city.adminName1 ? ` (${city.adminName1})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <Label htmlFor="priceRange">Price Range *</Label>
-                  <Input id="priceRange" name="priceRange" required placeholder="€ or €€ or €€€" />
+                  <select id="priceRange" name="priceRange" required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="">Select price range...</option>
+                    <option value="€">€ - Budget</option>
+                    <option value="€€">€€ - Moderate</option>
+                    <option value="€€€">€€€ - Upscale</option>
+                    <option value="€€€€">€€€€ - Fine Dining</option>
+                  </select>
                 </div>
               </div>
 
