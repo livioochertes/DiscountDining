@@ -137,7 +137,7 @@ export function RestaurantCard({
         )}
         
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[70%]">
           {acceptsVoucher && (
             <span className="bg-primary text-white text-xs font-medium px-2 py-1 rounded-full">
               Voucher ✓
@@ -146,15 +146,12 @@ export function RestaurantCard({
           {cashbackPercent && cashbackPercent > 0 && (
             <span className="bg-green-500 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
               <Percent className="w-3 h-3" />
-              {cashbackPercent}% cashback
+              {cashbackPercent}%
             </span>
           )}
-        </div>
-        {/* Reservations badge */}
-        <div className="absolute bottom-3 left-3">
-          <span className="bg-primary/90 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-md">
+          <span className="bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
             <Calendar className="w-3 h-3" />
-            Reservations
+            Rezervări
           </span>
         </div>
         
