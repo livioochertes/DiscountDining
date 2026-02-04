@@ -111,7 +111,7 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
           </div>
         </div>
         
-        <div className="flex items-center text-gray-500 text-[10px] mb-1.5">
+        <div className="flex items-center justify-end text-gray-500 text-[10px] mb-1.5">
           <span>{restaurant.cuisine}</span>
           <span className="mx-1">•</span>
           <MapPin className="h-2.5 w-2.5 mr-0.5 flex-shrink-0" />
