@@ -258,11 +258,16 @@ export default function MobileHome() {
     error: gpsError,
     requestGpsLocation,
     manualCity,
-    setManualCity
+    manualAddress,
+    setManualCity,
+    setManualAddress
   } = useUserLocation();
 
   // Current location to display (manual takes priority over GPS)
   const displayCity = manualCity || gpsCity;
+  
+  // Display address for the location bar - show formatted address if available, otherwise city
+  const displayAddress = manualAddress?.formattedAddress || manualCity || gpsCity;
 
   // No need to load Google Maps script - using server-side proxy for Capacitor compatibility
 
@@ -315,24 +320,58 @@ export default function MobileHome() {
   const handleModalGPSDetect = useCallback(() => {
     console.log('[MobileHome] GPS detection requested, clearing manual location');
     // Clear manual location to allow GPS to work
-    setManualCity(null);
+    setManualAddress(null, null);
     setSelectedAddress('');
     requestGpsLocation();
     setShowLocationModal(false);
-  }, [requestGpsLocation, setManualCity]);
+  }, [requestGpsLocation, setManualAddress]);
 
-  // Handle place selection
-  const handleSelectPlace = useCallback((place: any) => {
-    const address = place.description;
-    const city = address.split(',')[0].trim();
-    console.log('[MobileHome] Manual location selected:', city);
-    setSelectedAddress(address);
-    // Persist to hook (saves to localStorage and prevents GPS override)
-    setManualCity(city);
+  // Handle place selection - fetches detailed address components from Google
+  const handleSelectPlace = useCallback(async (place: any) => {
+    console.log('[MobileHome] Place selected:', place.description, 'place_id:', place.place_id);
+    
+    // Immediately update UI with description
+    setSelectedAddress(place.description);
     setAddressSearchQuery('');
     setPlaceSuggestions([]);
     setShowLocationModal(false);
-  }, [setManualCity]);
+    
+    // Fetch structured address components
+    if (place.place_id) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/places/details?place_id=${encodeURIComponent(place.place_id)}`);
+        if (response.ok) {
+          const details = await response.json();
+          console.log('[MobileHome] Place details:', details);
+          
+          // Save structured address - city will be extracted automatically
+          setManualAddress(details, details.city || details.locality);
+          return;
+        }
+      } catch (error) {
+        console.error('[MobileHome] Failed to fetch place details:', error);
+      }
+    }
+    
+    // Fallback: try to extract city from structured_formatting or terms
+    let city = null;
+    if (place.structured_formatting?.secondary_text) {
+      // Secondary text usually contains "City, Region, Country"
+      const parts = place.structured_formatting.secondary_text.split(',');
+      city = parts[0]?.trim() || null;
+    } else if (place.terms && place.terms.length >= 2) {
+      // Terms array: [street, city, region, country]
+      // Usually city is at index 1 or 2
+      city = place.terms[1]?.value || place.terms[0]?.value || null;
+    } else {
+      // Last resort: split description
+      const parts = place.description.split(',');
+      city = parts.length > 1 ? parts[1]?.trim() : parts[0]?.trim();
+    }
+    
+    console.log('[MobileHome] Fallback city extracted:', city);
+    setManualCity(city);
+  }, [setManualAddress, setManualCity]);
   
   // Marketplace for filtering restaurants
   const { marketplace, detectedCountry } = useMarketplace();

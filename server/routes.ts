@@ -1045,6 +1045,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Place Details Proxy - gets structured address components from Google
+  app.get("/api/places/details", async (req, res) => {
+    try {
+      const { place_id } = req.query;
+      
+      if (!place_id || typeof place_id !== 'string') {
+        return res.status(400).json({ error: 'place_id is required' });
+      }
+
+      const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        console.error('[Places Details] No API key configured');
+        return res.status(500).json({ error: 'Places API not configured' });
+      }
+
+      const url = new URL('https://maps.googleapis.com/maps/api/place/details/json');
+      url.searchParams.set('place_id', place_id);
+      url.searchParams.set('key', apiKey);
+      url.searchParams.set('fields', 'address_components,formatted_address,geometry');
+
+      console.log('[Places Details] Fetching details for:', place_id);
+      
+      const response = await fetch(url.toString());
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.result) {
+        const result = data.result;
+        const components = result.address_components || [];
+        
+        // Extract structured address info with correct priority for Romania and other countries
+        const getComponent = (types: string[]) => {
+          for (const type of types) {
+            const comp = components.find((c: any) => c.types.includes(type));
+            if (comp) return comp.long_name;
+          }
+          return null;
+        };
+        
+        // For city, prioritize: locality > postal_town > sublocality_level_1 > administrative_area_level_2
+        // This handles cities (locality), towns (postal_town), neighborhoods (sublocality), and counties (level_2)
+        const city = getComponent(['locality', 'postal_town', 'sublocality_level_1', 'administrative_area_level_2']);
+        
+        // For region/county in Romania: administrative_area_level_1 is the county (e.g., "Cluj County")
+        const county = getComponent(['administrative_area_level_1']);
+        
+        const structuredAddress = {
+          streetNumber: getComponent(['street_number']),
+          street: getComponent(['route']),
+          neighborhood: getComponent(['neighborhood', 'sublocality_level_1', 'sublocality']),
+          locality: getComponent(['locality']),
+          city: city,
+          county: county,
+          country: getComponent(['country']),
+          countryCode: components.find((c: any) => c.types.includes('country'))?.short_name || null,
+          postalCode: getComponent(['postal_code']),
+          formattedAddress: result.formatted_address,
+          location: result.geometry?.location
+        };
+        
+        console.log('[Places Details] Extracted city:', city, 'county:', county, 'from components:', 
+          components.map((c: any) => `${c.long_name} (${c.types.join(',')})`).join(' | '));
+        res.json(structuredAddress);
+      } else {
+        console.error('[Places Details] Error:', data.status, data.error_message);
+        res.status(500).json({ error: data.error_message || 'Place details error' });
+      }
+    } catch (error: any) {
+      console.error('[Places Details] Server error:', error);
+      res.status(500).json({ error: 'Failed to fetch place details' });
+    }
+  });
+
   // Reverse Geocoding Proxy - converts GPS coordinates to address using Nominatim (free, no API key)
   app.get("/api/reverse-geocode", async (req, res) => {
     try {
