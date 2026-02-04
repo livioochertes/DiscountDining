@@ -621,9 +621,12 @@ export default function Marketplace() {
     setIsLoadingMore(false);
   }, [displayCount, restaurants.length]);
 
+  // Ref for infinite scroll sentinel
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
   // Reset pagination when filters or sorting change
   useEffect(() => {
-    setDisplayCount(6);
+    setDisplayCount(20);
   }, [filters, sortBy]);
 
   // Slice restaurants based on display count - optimized with useMemo
@@ -636,6 +639,24 @@ export default function Marketplace() {
     sortedRestaurants.length > displayCount, 
     [sortedRestaurants.length, displayCount]
   );
+
+  // Infinite scroll - auto load more when sentinel is visible
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreRestaurants && !isLoadingMore) {
+          loadMoreRestaurants();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMoreRestaurants, isLoadingMore, loadMoreRestaurants]);
 
 
 
@@ -1086,17 +1107,11 @@ export default function Marketplace() {
                   ))}
                 </div>
                 
-                {hasMoreRestaurants && (
-                  <div className="mt-8 flex justify-center">
-                    <Button 
-                      variant="outline" 
-                      onClick={loadMoreRestaurants}
-                      disabled={isLoadingMore}
-                      className="border-primary text-primary hover:bg-primary hover:text-white px-8 py-3 text-lg font-semibold min-h-[48px] focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                      aria-label={`${t.loadMoreRestaurants} - Currently showing ${displayedRestaurants.length} of ${sortedRestaurants.length} restaurants`}
-                    >
-                      {isLoadingMore ? 'Loading...' : t.loadMoreRestaurants}
-                    </Button>
+                {/* Infinite scroll sentinel */}
+                <div ref={loadMoreRef} className="h-4" />
+                {isLoadingMore && (
+                  <div className="mt-4 flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
                 )}
               </>
