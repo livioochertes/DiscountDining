@@ -237,6 +237,34 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+
+  // Generates a signed URL for uploading a file to public storage
+  async getSignedUploadUrl(fileName: string, contentType: string): Promise<{ uploadUrl: string; objectPath: string }> {
+    const publicPaths = this.getPublicObjectSearchPaths();
+    if (publicPaths.length === 0) {
+      throw new Error("No public object search paths configured");
+    }
+
+    const publicPath = publicPaths[0];
+    const { bucketName } = parseObjectPath(publicPath);
+    
+    // Generate unique filename
+    const ext = fileName.split('.').pop() || 'jpg';
+    const uniqueName = `${randomUUID()}.${ext}`;
+    const objectName = `public/restaurants/${uniqueName}`;
+    
+    const uploadUrl = await signObjectURL({
+      bucketName,
+      objectName,
+      method: "PUT",
+      ttlSec: 3600, // 1 hour
+    });
+
+    // Return the public URL path that can be used to access the file
+    const objectPath = `/objects/restaurants/${uniqueName}`;
+    
+    return { uploadUrl, objectPath };
+  }
 }
 
 function parseObjectPath(path: string): {
