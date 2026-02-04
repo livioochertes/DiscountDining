@@ -2303,13 +2303,36 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
-  // 3. GET /api/admin/loyalty-tiers - List all EatOff loyalty tiers
+  // 3. GET /api/admin/loyalty-tiers - List loyalty tiers (optionally filtered by marketplace)
   app.get("/api/admin/loyalty-tiers", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
-      const tiers = await db
-        .select()
+      const { marketplaceId } = req.query;
+      
+      let query = db
+        .select({
+          tier: eatoffLoyaltyTiers,
+          marketplace: {
+            id: marketplaces.id,
+            name: marketplaces.name,
+            currencyCode: marketplaces.currencyCode,
+            currencySymbol: marketplaces.currencySymbol,
+          }
+        })
         .from(eatoffLoyaltyTiers)
-        .orderBy(asc(eatoffLoyaltyTiers.tierLevel));
+        .leftJoin(marketplaces, eq(eatoffLoyaltyTiers.marketplaceId, marketplaces.id))
+        .orderBy(asc(eatoffLoyaltyTiers.marketplaceId), asc(eatoffLoyaltyTiers.tierLevel));
+
+      if (marketplaceId) {
+        const mpId = parseInt(marketplaceId as string);
+        query = query.where(eq(eatoffLoyaltyTiers.marketplaceId, mpId)) as any;
+      }
+
+      const results = await query;
+      
+      const tiers = results.map(r => ({
+        ...r.tier,
+        marketplace: r.marketplace?.id ? r.marketplace : null,
+      }));
 
       res.json(tiers);
     } catch (error) {
@@ -2367,21 +2390,27 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
-  // 4b. POST /api/admin/loyalty-tiers - Create new loyalty tier
+  // 4b. POST /api/admin/loyalty-tiers - Create new loyalty tier for a marketplace
   app.post("/api/admin/loyalty-tiers", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
-      const { name, displayName, cashbackPercentage, minTransactionVolume, maxTransactionVolume, color, icon, tierLevel, benefits } = req.body;
+      const { marketplaceId, name, displayName, cashbackPercentage, minTransactionVolume, maxTransactionVolume, color, icon, tierLevel, benefits } = req.body;
 
-      if (!name || !displayName || cashbackPercentage === undefined || minTransactionVolume === undefined || tierLevel === undefined) {
-        return res.status(400).json({ message: "Name, displayName, cashbackPercentage, minTransactionVolume, and tierLevel are required" });
+      if (!marketplaceId || !name || !displayName || cashbackPercentage === undefined || minTransactionVolume === undefined || tierLevel === undefined) {
+        return res.status(400).json({ message: "marketplaceId, name, displayName, cashbackPercentage, minTransactionVolume, and tierLevel are required" });
       }
 
-      const existingTier = await db.select().from(eatoffLoyaltyTiers).where(eq(eatoffLoyaltyTiers.name, name.toLowerCase())).limit(1);
+      const existingTier = await db.select().from(eatoffLoyaltyTiers)
+        .where(and(
+          eq(eatoffLoyaltyTiers.marketplaceId, marketplaceId),
+          eq(eatoffLoyaltyTiers.name, name.toLowerCase())
+        ))
+        .limit(1);
       if (existingTier.length > 0) {
-        return res.status(400).json({ message: "A tier with this name already exists" });
+        return res.status(400).json({ message: "A tier with this name already exists for this marketplace" });
       }
 
       const [newTier] = await db.insert(eatoffLoyaltyTiers).values({
+        marketplaceId,
         name: name.toLowerCase(),
         displayName,
         cashbackPercentage: cashbackPercentage.toString(),
@@ -2421,25 +2450,38 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
-  // 4d. POST /api/admin/loyalty-tiers/seed - Seed default loyalty tiers
+  // 4d. POST /api/admin/loyalty-tiers/seed - Seed default loyalty tiers for a marketplace
   app.post("/api/admin/loyalty-tiers/seed", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
-      const existingTiers = await db.select().from(eatoffLoyaltyTiers);
-      if (existingTiers.length > 0) {
-        return res.status(400).json({ message: "Loyalty tiers already exist. Delete them first if you want to reseed." });
+      const { marketplaceId } = req.body;
+      
+      if (!marketplaceId) {
+        return res.status(400).json({ message: "marketplaceId is required" });
       }
 
+      const marketplace = await db.select().from(marketplaces).where(eq(marketplaces.id, marketplaceId)).limit(1);
+      if (marketplace.length === 0) {
+        return res.status(404).json({ message: "Marketplace not found" });
+      }
+
+      const existingTiers = await db.select().from(eatoffLoyaltyTiers)
+        .where(eq(eatoffLoyaltyTiers.marketplaceId, marketplaceId));
+      if (existingTiers.length > 0) {
+        return res.status(400).json({ message: "Loyalty tiers already exist for this marketplace. Delete them first if you want to reseed." });
+      }
+
+      const currencySymbol = marketplace[0].currencySymbol || '€';
       const defaultTiers = [
-        { name: 'bronze', displayName: 'Bronze', cashbackPercentage: '1.00', minTransactionVolume: '0.00', maxTransactionVolume: '500.00', color: '#CD7F32', icon: '🥉', tierLevel: 1, benefits: ['1% cashback on all purchases'] },
-        { name: 'silver', displayName: 'Silver', cashbackPercentage: '2.00', minTransactionVolume: '500.01', maxTransactionVolume: '2000.00', color: '#C0C0C0', icon: '🥈', tierLevel: 2, benefits: ['2% cashback on all purchases', 'Early access to deals'] },
-        { name: 'gold', displayName: 'Gold', cashbackPercentage: '3.00', minTransactionVolume: '2000.01', maxTransactionVolume: '5000.00', color: '#FFD700', icon: '🥇', tierLevel: 3, benefits: ['3% cashback on all purchases', 'Priority support', 'Exclusive offers'] },
-        { name: 'platinum', displayName: 'Platinum', cashbackPercentage: '4.00', minTransactionVolume: '5000.01', maxTransactionVolume: '15000.00', color: '#E5E4E2', icon: '💎', tierLevel: 4, benefits: ['4% cashback on all purchases', 'VIP support', 'Special events access'] },
-        { name: 'black', displayName: 'Black', cashbackPercentage: '5.00', minTransactionVolume: '15000.01', maxTransactionVolume: null, color: '#1C1C1C', icon: '⭐', tierLevel: 5, benefits: ['5% cashback on all purchases', 'Concierge service', 'All benefits included'] },
+        { marketplaceId, name: 'bronze', displayName: 'Bronze', cashbackPercentage: '1.00', minTransactionVolume: '0.00', maxTransactionVolume: '500.00', color: '#CD7F32', icon: '🥉', tierLevel: 1, benefits: [`1% cashback on all purchases`] },
+        { marketplaceId, name: 'silver', displayName: 'Silver', cashbackPercentage: '2.00', minTransactionVolume: '500.01', maxTransactionVolume: '2000.00', color: '#C0C0C0', icon: '🥈', tierLevel: 2, benefits: ['2% cashback on all purchases', 'Early access to deals'] },
+        { marketplaceId, name: 'gold', displayName: 'Gold', cashbackPercentage: '3.00', minTransactionVolume: '2000.01', maxTransactionVolume: '5000.00', color: '#FFD700', icon: '🥇', tierLevel: 3, benefits: ['3% cashback on all purchases', 'Priority support', 'Exclusive offers'] },
+        { marketplaceId, name: 'platinum', displayName: 'Platinum', cashbackPercentage: '4.00', minTransactionVolume: '5000.01', maxTransactionVolume: '15000.00', color: '#E5E4E2', icon: '💎', tierLevel: 4, benefits: ['4% cashback on all purchases', 'VIP support', 'Special events access'] },
+        { marketplaceId, name: 'black', displayName: 'Black', cashbackPercentage: '5.00', minTransactionVolume: '15000.01', maxTransactionVolume: null, color: '#1C1C1C', icon: '⭐', tierLevel: 5, benefits: ['5% cashback on all purchases', 'Concierge service', 'All benefits included'] },
       ];
 
       const inserted = await db.insert(eatoffLoyaltyTiers).values(defaultTiers).returning();
-      await logAdminAction(req.adminId!, 'seed_loyalty_tiers', 'loyalty_tier', 'all', null, { count: inserted.length }, req);
-      res.status(201).json({ message: `Successfully seeded ${inserted.length} loyalty tiers`, tiers: inserted });
+      await logAdminAction(req.adminId!, 'seed_loyalty_tiers', 'loyalty_tier', `marketplace_${marketplaceId}`, null, { count: inserted.length, marketplaceId }, req);
+      res.status(201).json({ message: `Successfully seeded ${inserted.length} loyalty tiers for ${marketplace[0].name}`, tiers: inserted });
     } catch (error) {
       console.error("Error seeding loyalty tiers:", error);
       res.status(500).json({ message: "Failed to seed loyalty tiers" });
