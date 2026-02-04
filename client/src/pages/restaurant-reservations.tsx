@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,10 @@ export default function RestaurantReservationsPage() {
   const [customerPhone, setCustomerPhone] = useState(user?.phone || "");
   const [customerEmail, setCustomerEmail] = useState(user?.email || "");
   const [specialRequests, setSpecialRequests] = useState("");
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const { data: restaurantData, isLoading } = useQuery({
     queryKey: ['/api/restaurants', restaurantId, 'full'],

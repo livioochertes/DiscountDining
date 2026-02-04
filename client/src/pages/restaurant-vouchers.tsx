@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,10 @@ export default function RestaurantVouchersPage() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
   const { user } = useAuth();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const { data: restaurantData, isLoading } = useQuery({
     queryKey: ['/api/restaurants', restaurantId, 'full'],
@@ -155,7 +159,7 @@ export default function RestaurantVouchersPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold text-primary">
-                        €{parseFloat(pkg.pricePerMeal).toFixed(2)}/masă
+                        €{pkg.pricePerMeal ? parseFloat(pkg.pricePerMeal).toFixed(2) : '0.00'}/masă
                       </span>
                     </div>
                     <Button 
