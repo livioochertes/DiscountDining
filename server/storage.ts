@@ -2408,7 +2408,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
-    const [newCustomer] = await db.insert(customers).values(customer).returning();
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'EO';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    const existing = await this.getCustomerByCode(code);
+    if (existing) {
+      return this.createCustomer(customer);
+    }
+    
+    const [newCustomer] = await db.insert(customers).values({
+      ...customer,
+      customerCode: code,
+    }).returning();
     return newCustomer;
   }
 
@@ -3224,21 +3238,19 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  // Customer code generation
+  // Customer code generation - EO + 8 alphanumeric chars = 1.2 trillion unique codes
   async generateCustomerCode(customerId: number): Promise<string> {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = 'CLI-';
-    for (let i = 0; i < 6; i++) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'EO';
+    for (let i = 0; i < 8; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     
-    // Ensure unique
     const existing = await this.getCustomerByCode(code);
     if (existing) {
-      return this.generateCustomerCode(customerId); // Retry if collision
+      return this.generateCustomerCode(customerId);
     }
     
-    // Update customer with the code
     await db.update(customers)
       .set({ 
         customerCode: code,
