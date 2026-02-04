@@ -58,13 +58,28 @@ function findClosestCity(lat: number, lng: number): string | null {
   return closestCity;
 }
 
+export interface StructuredAddress {
+  streetNumber?: string | null;
+  street?: string | null;
+  neighborhood?: string | null;
+  locality?: string | null;
+  city?: string | null;
+  county?: string | null;
+  country?: string | null;
+  countryCode?: string | null;
+  postalCode?: string | null;
+  formattedAddress?: string | null;
+}
+
 export interface UseUserLocationResult {
   city: string | null;
   isLoading: boolean;
   error: string | null;
   isGpsEnabled: boolean;
   manualCity: string | null;
+  manualAddress: StructuredAddress | null;
   setManualCity: (city: string | null) => void;
+  setManualAddress: (address: StructuredAddress | null, city: string | null) => void;
   requestGpsLocation: () => void;
   clearLocation: () => void;
 }
@@ -100,6 +115,19 @@ export function useUserLocation(): UseUserLocationResult {
     return null;
   });
   
+  const [manualAddress, setManualAddressState] = useState<StructuredAddress | null>(() => {
+    const stored = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return parsed.isManual && parsed.address ? parsed.address : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGpsEnabled, setIsGpsEnabled] = useState(false);
@@ -113,11 +141,12 @@ export function useUserLocation(): UseUserLocationResult {
   }, []);
 
   // Save location to localStorage
-  const saveLocation = useCallback((cityName: string | null, isManual: boolean) => {
+  const saveLocation = useCallback((cityName: string | null, isManual: boolean, address?: StructuredAddress | null) => {
     if (cityName) {
       localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({
         city: cityName,
         isManual,
+        address: address || null,
         timestamp: Date.now()
       }));
     } else {
@@ -135,8 +164,29 @@ export function useUserLocation(): UseUserLocationResult {
     }
     
     setManualCityState(cityName);
+    setManualAddressState(null);
     setCity(cityName);
     saveLocation(cityName, true);
+    setError(null);
+  }, [saveLocation]);
+
+  // Set manual address with structured data - extracts city and saves full address
+  const setManualAddress = useCallback((address: StructuredAddress | null, cityOverride: string | null) => {
+    // Cancel any pending auto-GPS timer to prevent race condition
+    if (autoGpsTimerRef.current) {
+      console.log('[Location] Cancelling pending auto-GPS timer due to manual address selection');
+      clearTimeout(autoGpsTimerRef.current);
+      autoGpsTimerRef.current = null;
+    }
+    
+    // Use city from address or the override
+    const cityName = cityOverride || address?.city || address?.locality || null;
+    console.log('[Location] Setting manual address, city:', cityName, 'address:', address?.formattedAddress);
+    
+    setManualCityState(cityName);
+    setManualAddressState(address);
+    setCity(cityName);
+    saveLocation(cityName, true, address);
     setError(null);
   }, [saveLocation]);
 
@@ -315,7 +365,9 @@ export function useUserLocation(): UseUserLocationResult {
     error,
     isGpsEnabled,
     manualCity,
+    manualAddress,
     setManualCity,
+    setManualAddress,
     requestGpsLocation,
     clearLocation
   };
