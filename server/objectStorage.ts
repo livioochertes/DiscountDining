@@ -166,6 +166,20 @@ export class ObjectStorageService {
     }
 
     const entityId = parts.slice(1).join("/");
+    
+    // First try public directory
+    const publicPaths = this.getPublicObjectSearchPaths();
+    for (const publicPath of publicPaths) {
+      const { bucketName } = parseObjectPath(publicPath);
+      const bucket = objectStorageClient.bucket(bucketName);
+      const objectFile = bucket.file(`public/${entityId}`);
+      const [exists] = await objectFile.exists();
+      if (exists) {
+        return objectFile;
+      }
+    }
+    
+    // Fallback to private directory
     let entityDir = this.getPrivateObjectDir();
     if (!entityDir.endsWith("/")) {
       entityDir = `${entityDir}/`;
