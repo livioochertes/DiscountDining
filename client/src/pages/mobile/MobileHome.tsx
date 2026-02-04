@@ -9,6 +9,7 @@ import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { WalletCard, ActionRow } from '@/components/mobile/WalletCard';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCardSmall } from '@/components/mobile/RestaurantCard';
+import { preloadImages } from '@/components/ui/cached-image';
 import { DealBanner, SmallDealCard } from '@/components/mobile/DealBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -593,6 +594,16 @@ export default function MobileHome() {
     : sortedRestaurants;
   
   console.log('[MobileHome Filter] Active filter:', activeFilter, 'Filtered count:', filteredRestaurants.length, 'of', sortedRestaurants.length);
+  
+  useEffect(() => {
+    const imagesToPreload = filteredRestaurants
+      .slice(0, 10)
+      .map((r: any) => r.imageUrl)
+      .filter(Boolean);
+    if (imagesToPreload.length > 0) {
+      preloadImages(imagesToPreload);
+    }
+  }, [filteredRestaurants]);
   
   const restaurantsWithVouchers: RestaurantWithVouchers[] = filteredRestaurants
     .slice(0, 4)

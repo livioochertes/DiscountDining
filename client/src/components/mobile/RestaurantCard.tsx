@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Capacitor } from '@capacitor/core';
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
+import { CachedImage } from '@/components/ui/cached-image';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
@@ -118,10 +119,16 @@ export function RestaurantCard({
       {/* Image */}
       <div className="relative h-36 bg-gray-100">
         {image ? (
-          <img
+          <CachedImage
             src={image}
             alt={name}
             className="w-full h-full object-cover"
+            placeholderClassName="w-full h-full"
+            fallback={
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                <span className="text-4xl">🍽️</span>
+              </div>
+            }
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
@@ -216,7 +223,17 @@ export function RestaurantCardSmall({
     >
       <div className="relative h-24 bg-gray-100 rounded-2xl overflow-hidden mb-2">
         {image ? (
-          <img src={image} alt={name} className="w-full h-full object-cover" />
+          <CachedImage
+            src={image}
+            alt={name}
+            className="w-full h-full object-cover"
+            placeholderClassName="w-full h-full"
+            fallback={
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                <span className="text-2xl">🍽️</span>
+              </div>
+            }
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
             <span className="text-2xl">🍽️</span>
