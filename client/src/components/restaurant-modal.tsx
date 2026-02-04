@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, MapPin, Phone, Mail, Globe, X, Clock, ArrowLeft } from "lucide-react";
+import { Star, MapPin, Phone, Mail, Globe, X, Clock, ArrowLeft, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useLocation } from "wouter";
@@ -240,6 +240,7 @@ export default function RestaurantModal({ restaurant, isOpen, onClose }: Restaur
   const [, setLocation] = useLocation();
   const { t, language } = useLanguage();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   
   // Check if image is already cached - safely handle null restaurant
   const imageUrl = restaurant?.imageUrl || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=400&fit=crop&fm=webp&q=80";
@@ -394,7 +395,13 @@ export default function RestaurantModal({ restaurant, isOpen, onClose }: Restaur
                   </div>
                 </div>
               </div>
-
+              <Button
+                onClick={() => setIsReservationModalOpen(true)}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                {t.makeReservation || 'Make Reservation'}
+              </Button>
             </div>
           </DialogHeader>
           
@@ -498,6 +505,17 @@ export default function RestaurantModal({ restaurant, isOpen, onClose }: Restaur
 
         </div>
       </DialogContent>
+
+      {/* Reservation Modal */}
+      <ReservationModal
+        open={isReservationModalOpen}
+        onOpenChange={setIsReservationModalOpen}
+        restaurant={{
+          id: restaurant.id,
+          name: restaurant.name,
+          address: restaurant.address,
+        }}
+      />
     </Dialog>
   );
 }
