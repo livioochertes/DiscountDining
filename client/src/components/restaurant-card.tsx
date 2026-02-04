@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Star, MapPin } from "lucide-react";
+import { Star, MapPin, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import type { Restaurant } from "@shared/schema";
@@ -80,23 +80,32 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
     >
-      {hasIntersected ? (
-        <img 
-          src={imageUrl} 
-          alt={`${restaurant.name} interior`}
-          className="w-full h-48 object-cover rounded-t-lg"
-          loading="lazy"
-          decoding="async"
-          onError={(e) => {
-            // Fallback to optimized placeholder if image fails to load
-            e.currentTarget.src = generateFallbackSvg(restaurant.name);
-          }}
-        />
-      ) : (
-        <div className="w-full h-48 bg-gray-200 rounded-t-lg animate-pulse flex items-center justify-center">
-          <span className="text-gray-400 text-sm">Loading...</span>
+      <div className="relative">
+        {hasIntersected ? (
+          <img 
+            src={imageUrl} 
+            alt={`${restaurant.name} interior`}
+            className="w-full h-48 object-cover rounded-t-lg"
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              // Fallback to optimized placeholder if image fails to load
+              e.currentTarget.src = generateFallbackSvg(restaurant.name);
+            }}
+          />
+        ) : (
+          <div className="w-full h-48 bg-gray-200 rounded-t-lg animate-pulse flex items-center justify-center">
+            <span className="text-gray-400 text-sm">Loading...</span>
+          </div>
+        )}
+        {/* Reservation badge */}
+        <div className="absolute top-2 right-2">
+          <Badge className="bg-primary/90 text-white text-xs flex items-center gap-1 shadow-md">
+            <Calendar className="h-3 w-3" />
+            {t.reservations || 'Reservations'}
+          </Badge>
         </div>
-      )}
+      </div>
       
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-2">

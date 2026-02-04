@@ -1,4 +1,4 @@
-import { Star, Clock, Percent, Heart } from 'lucide-react';
+import { Star, Clock, Percent, Heart, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Capacitor } from '@capacitor/core';
@@ -149,6 +149,13 @@ export function RestaurantCard({
               {cashbackPercent}% cashback
             </span>
           )}
+        </div>
+        {/* Reservations badge */}
+        <div className="absolute bottom-3 left-3">
+          <span className="bg-primary/90 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-md">
+            <Calendar className="w-3 h-3" />
+            Reservations
+          </span>
         </div>
         
         {/* Heart Icon */}
