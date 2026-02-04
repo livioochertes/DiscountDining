@@ -213,7 +213,6 @@ export default function MobileHome() {
   const [placeSuggestions, setPlaceSuggestions] = useState<any[]>([]);
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState('');
-  const [manualCity, setManualCity] = useState('');
   const addressInputRef = useRef<HTMLInputElement>(null);
   
   // Hide greeting when it scrolls out of viewport
@@ -252,15 +251,17 @@ export default function MobileHome() {
     return t.goodEvening;
   };
   
-  // GPS location hook
+  // GPS location hook - single source of truth for location
   const { 
     city: gpsCity, 
     isLoading: isDetectingLocation,
     error: gpsError,
-    requestGpsLocation
+    requestGpsLocation,
+    manualCity,
+    setManualCity
   } = useUserLocation();
 
-  // Current location to display (manual or GPS)
+  // Current location to display (manual takes priority over GPS)
   const displayCity = manualCity || gpsCity;
 
   // No need to load Google Maps script - using server-side proxy for Capacitor compatibility
@@ -312,22 +313,26 @@ export default function MobileHome() {
 
   // Handle GPS detection from modal
   const handleModalGPSDetect = useCallback(() => {
-    requestGpsLocation();
-    setManualCity('');
+    console.log('[MobileHome] GPS detection requested, clearing manual location');
+    // Clear manual location to allow GPS to work
+    setManualCity(null);
     setSelectedAddress('');
+    requestGpsLocation();
     setShowLocationModal(false);
-  }, [requestGpsLocation]);
+  }, [requestGpsLocation, setManualCity]);
 
   // Handle place selection
   const handleSelectPlace = useCallback((place: any) => {
     const address = place.description;
     const city = address.split(',')[0].trim();
+    console.log('[MobileHome] Manual location selected:', city);
     setSelectedAddress(address);
+    // Persist to hook (saves to localStorage and prevents GPS override)
     setManualCity(city);
     setAddressSearchQuery('');
     setPlaceSuggestions([]);
     setShowLocationModal(false);
-  }, []);
+  }, [setManualCity]);
   
   // Marketplace for filtering restaurants
   const { marketplace, detectedCountry } = useMarketplace();
