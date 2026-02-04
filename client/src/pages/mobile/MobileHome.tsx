@@ -923,7 +923,15 @@ export default function MobileHome() {
                       setAddressSearchQuery(e.target.value);
                     }}
                     autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    data-form-type="other"
+                    data-lpignore="true"
+                    inputMode="text"
+                    enterKeyHint="search"
                     className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-800 placeholder:text-gray-400"
+                    style={{ WebkitUserSelect: 'text' } as React.CSSProperties}
                   />
                   {isSearchingPlaces && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
                 </div>

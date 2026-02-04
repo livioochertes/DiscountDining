@@ -585,3 +585,24 @@ select option {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+/* iOS WebView/Capacitor - Disable native autocomplete behavior */
+input[data-form-type="other"] {
+  -webkit-text-fill-color: inherit;
+  -webkit-appearance: none;
+}
+
+/* Prevent iOS from showing native autocomplete suggestions */
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Fix for iOS input focus - prevents zoom on focus */
+@supports (-webkit-touch-callout: none) {
+  input[data-form-type="other"]:focus {
+    font-size: 16px;
+  }
+}
