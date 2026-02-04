@@ -715,7 +715,7 @@ function UsersFinancialTab() {
                                         <div>
                                           <span className="font-medium">{tx.transactionType}</span>
                                           <span className="text-muted-foreground ml-2">{tx.description}</span>
-                                          {tx.restaurant && (
+                                          {tx.restaurant?.name && (
                                             <span className="text-muted-foreground ml-2">@ {tx.restaurant.name}</span>
                                           )}
                                         </div>
