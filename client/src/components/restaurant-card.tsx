@@ -135,7 +135,7 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-orange-200 text-orange-800 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-orange-300 hover:text-orange-900 transition-colors flex items-center justify-center gap-1 border border-orange-300"
+                  className="bg-orange-100 text-orange-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-orange-400 hover:text-white transition-colors flex items-center justify-center gap-1 border border-orange-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     onClick();
@@ -152,7 +152,7 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-emerald-200 text-emerald-800 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-emerald-300 hover:text-emerald-900 transition-all duration-200 flex items-center justify-center gap-1 border border-emerald-300"
+                  className="bg-emerald-100 text-emerald-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-emerald-500 hover:text-white transition-all duration-200 flex items-center justify-center gap-1 border border-emerald-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     onMenuClick();
@@ -169,7 +169,7 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-blue-200 text-blue-800 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-blue-300 hover:text-blue-900 transition-all duration-200 flex items-center justify-center gap-1 border border-blue-300"
+                  className="bg-blue-100 text-blue-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-blue-500 hover:text-white transition-all duration-200 flex items-center justify-center gap-1 border border-blue-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     // Will trigger reservation modal - for now just open restaurant modal
