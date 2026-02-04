@@ -96,8 +96,6 @@ export function registerChefProfileRoutes(app: Express) {
 
   app.get("/api/chef-profiles/featured", async (req: Request, res: Response) => {
     try {
-      const { limit = "20" } = req.query;
-
       const profiles = await db
         .select({
           profile: chefProfiles,
@@ -113,8 +111,7 @@ export function registerChefProfileRoutes(app: Express) {
           eq(chefProfiles.isPublic, true),
           eq(chefProfiles.isFeatured, true)
         ))
-        .orderBy(desc(chefProfiles.followersCount))
-        .limit(parseInt(limit as string));
+        .orderBy(desc(chefProfiles.followersCount));
 
       res.json(profiles);
     } catch (error) {
