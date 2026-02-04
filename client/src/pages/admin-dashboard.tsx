@@ -505,6 +505,60 @@ function UsersFinancialTab() {
     },
   });
 
+  const tierSeedMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/loyalty-tiers/seed', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to seed tiers');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Default loyalty tiers created successfully' });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/loyalty-tiers'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const tierDeleteMutation = useMutation({
+    mutationFn: async (tierId: number) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/loyalty-tiers/${tierId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete tier');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Loyalty tier deleted successfully' });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/loyalty-tiers'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleDeleteTier = (tier: LoyaltyTier) => {
+    if (!confirm(`Are you sure you want to delete the "${tier.displayName}" tier?`)) return;
+    tierDeleteMutation.mutate(tier.id);
+  };
+
+  const handleSeedTiers = () => {
+    if (!confirm('This will create the 5 default loyalty tiers (Bronze, Silver, Gold, Platinum, Black). Continue?')) return;
+    tierSeedMutation.mutate();
+  };
+
   const handleExportCSV = () => {
     if (!usersData?.users?.length) return;
     
@@ -561,9 +615,20 @@ function UsersFinancialTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5" />
-            Loyalty Tiers Configuration
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Coins className="h-5 w-5" />
+              Loyalty Tiers Configuration
+            </span>
+            {loyaltyTiers.length === 0 && (
+              <Button 
+                size="sm" 
+                onClick={handleSeedTiers} 
+                disabled={tierSeedMutation.isPending}
+              >
+                {tierSeedMutation.isPending ? 'Creating...' : 'Seed Default Tiers'}
+              </Button>
+            )}
           </CardTitle>
           <CardDescription>Manage cashback percentages and tier thresholds</CardDescription>
         </CardHeader>
@@ -589,9 +654,20 @@ function UsersFinancialTab() {
                     >
                       {tier.icon} {tier.displayName}
                     </Badge>
-                    <Button size="sm" variant="ghost" onClick={() => openTierEditDialog(tier)}>
-                      <Edit className="h-3 w-3" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => openTierEditDialog(tier)}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="text-red-600 hover:text-red-700" 
+                        onClick={() => handleDeleteTier(tier)}
+                        disabled={tierDeleteMutation.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-1 text-sm">
                     <p><span className="text-muted-foreground">Cashback:</span> {tier.cashbackPercentage}%</p>

@@ -2367,6 +2367,85 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
+  // 4b. POST /api/admin/loyalty-tiers - Create new loyalty tier
+  app.post("/api/admin/loyalty-tiers", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { name, displayName, cashbackPercentage, minTransactionVolume, maxTransactionVolume, color, icon, tierLevel, benefits } = req.body;
+
+      if (!name || !displayName || cashbackPercentage === undefined || minTransactionVolume === undefined || tierLevel === undefined) {
+        return res.status(400).json({ message: "Name, displayName, cashbackPercentage, minTransactionVolume, and tierLevel are required" });
+      }
+
+      const existingTier = await db.select().from(eatoffLoyaltyTiers).where(eq(eatoffLoyaltyTiers.name, name.toLowerCase())).limit(1);
+      if (existingTier.length > 0) {
+        return res.status(400).json({ message: "A tier with this name already exists" });
+      }
+
+      const [newTier] = await db.insert(eatoffLoyaltyTiers).values({
+        name: name.toLowerCase(),
+        displayName,
+        cashbackPercentage: cashbackPercentage.toString(),
+        minTransactionVolume: minTransactionVolume.toString(),
+        maxTransactionVolume: maxTransactionVolume?.toString() || null,
+        color: color || '#808080',
+        icon: icon || '🏅',
+        tierLevel,
+        benefits: benefits || [],
+        isActive: true,
+      }).returning();
+
+      await logAdminAction(req.adminId!, 'create_loyalty_tier', 'loyalty_tier', newTier.id.toString(), null, newTier, req);
+      res.status(201).json(newTier);
+    } catch (error) {
+      console.error("Error creating loyalty tier:", error);
+      res.status(500).json({ message: "Failed to create loyalty tier" });
+    }
+  });
+
+  // 4c. DELETE /api/admin/loyalty-tiers/:id - Delete loyalty tier
+  app.delete("/api/admin/loyalty-tiers/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const tierId = parseInt(req.params.id);
+
+      const existingTier = await db.select().from(eatoffLoyaltyTiers).where(eq(eatoffLoyaltyTiers.id, tierId)).limit(1);
+      if (existingTier.length === 0) {
+        return res.status(404).json({ message: "Loyalty tier not found" });
+      }
+
+      await db.delete(eatoffLoyaltyTiers).where(eq(eatoffLoyaltyTiers.id, tierId));
+      await logAdminAction(req.adminId!, 'delete_loyalty_tier', 'loyalty_tier', tierId.toString(), existingTier[0], null, req);
+      res.json({ message: "Loyalty tier deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting loyalty tier:", error);
+      res.status(500).json({ message: "Failed to delete loyalty tier" });
+    }
+  });
+
+  // 4d. POST /api/admin/loyalty-tiers/seed - Seed default loyalty tiers
+  app.post("/api/admin/loyalty-tiers/seed", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const existingTiers = await db.select().from(eatoffLoyaltyTiers);
+      if (existingTiers.length > 0) {
+        return res.status(400).json({ message: "Loyalty tiers already exist. Delete them first if you want to reseed." });
+      }
+
+      const defaultTiers = [
+        { name: 'bronze', displayName: 'Bronze', cashbackPercentage: '1.00', minTransactionVolume: '0.00', maxTransactionVolume: '500.00', color: '#CD7F32', icon: '🥉', tierLevel: 1, benefits: ['1% cashback on all purchases'] },
+        { name: 'silver', displayName: 'Silver', cashbackPercentage: '2.00', minTransactionVolume: '500.01', maxTransactionVolume: '2000.00', color: '#C0C0C0', icon: '🥈', tierLevel: 2, benefits: ['2% cashback on all purchases', 'Early access to deals'] },
+        { name: 'gold', displayName: 'Gold', cashbackPercentage: '3.00', minTransactionVolume: '2000.01', maxTransactionVolume: '5000.00', color: '#FFD700', icon: '🥇', tierLevel: 3, benefits: ['3% cashback on all purchases', 'Priority support', 'Exclusive offers'] },
+        { name: 'platinum', displayName: 'Platinum', cashbackPercentage: '4.00', minTransactionVolume: '5000.01', maxTransactionVolume: '15000.00', color: '#E5E4E2', icon: '💎', tierLevel: 4, benefits: ['4% cashback on all purchases', 'VIP support', 'Special events access'] },
+        { name: 'black', displayName: 'Black', cashbackPercentage: '5.00', minTransactionVolume: '15000.01', maxTransactionVolume: null, color: '#1C1C1C', icon: '⭐', tierLevel: 5, benefits: ['5% cashback on all purchases', 'Concierge service', 'All benefits included'] },
+      ];
+
+      const inserted = await db.insert(eatoffLoyaltyTiers).values(defaultTiers).returning();
+      await logAdminAction(req.adminId!, 'seed_loyalty_tiers', 'loyalty_tier', 'all', null, { count: inserted.length }, req);
+      res.status(201).json({ message: `Successfully seeded ${inserted.length} loyalty tiers`, tiers: inserted });
+    } catch (error) {
+      console.error("Error seeding loyalty tiers:", error);
+      res.status(500).json({ message: "Failed to seed loyalty tiers" });
+    }
+  });
+
   // 5a. GET /api/admin/settlements/metrics - Get settlement metrics for dashboard
   app.get("/api/admin/settlements/metrics", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
