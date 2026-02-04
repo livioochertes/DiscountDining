@@ -98,13 +98,6 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
             <span className="text-gray-400 text-sm">Loading...</span>
           </div>
         )}
-        {/* Reservation badge */}
-        <div className="absolute top-2 right-2">
-          <Badge className="bg-primary/90 text-white text-xs flex items-center gap-1 shadow-md">
-            <Calendar className="h-3 w-3" />
-            {t.reservations || 'Reservations'}
-          </Badge>
-        </div>
       </div>
       
       <CardContent className="p-6">
@@ -138,17 +131,17 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
         </div>
         
         <div className="border-t pt-4">
-          <div className="grid grid-cols-2 gap-3" data-tour="voucher-card">
+          <div className="grid grid-cols-3 gap-2" data-tour="voucher-card">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-primary text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-primary/90 transition-colors shadow-md flex items-center justify-center gap-2"
+                  className="bg-primary text-white px-3 py-3 rounded-lg font-semibold text-xs hover:bg-primary/90 transition-colors shadow-md flex items-center justify-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     onClick();
                   }}
                 >
-                  <span className="text-3xl">🎫</span> 
+                  <span className="text-2xl">🎫</span> 
                   <span>{t.vouchers}</span>
                 </button>
               </TooltipTrigger>
@@ -159,18 +152,36 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg transform hover:scale-105 border-2 border-green-500 flex items-center justify-center gap-2"
+                  className="bg-gradient-to-r from-green-600 to-green-700 text-white px-3 py-3 rounded-lg font-semibold text-xs hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg transform hover:scale-105 border-2 border-green-500 flex items-center justify-center gap-1"
                   onClick={(e) => {
                     e.stopPropagation();
                     onMenuClick();
                   }}
                 >
-                  <span className="text-3xl">🍽️</span> 
+                  <span className="text-2xl">🍽️</span> 
                   <span>{t.viewMenu}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>{t.tooltipViewMenu}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-3 rounded-lg font-semibold text-xs hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg transform hover:scale-105 border-2 border-blue-500 flex items-center justify-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Will trigger reservation modal - for now just open restaurant modal
+                    onClick();
+                  }}
+                >
+                  <Calendar className="h-5 w-5" />
+                  <span>{t.reservations || 'Reserve'}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t.tooltipReservation || 'Make a reservation at this restaurant'}</p>
               </TooltipContent>
             </Tooltip>
           </div>

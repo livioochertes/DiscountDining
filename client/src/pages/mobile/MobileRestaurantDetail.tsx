@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useRoute } from 'wouter';
-import { ArrowLeft, Star, MapPin, Clock, Ticket, ShoppingBag, Heart, Share2, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Star, MapPin, Clock, Ticket, ShoppingBag, Heart, Share2, ChevronRight, Calendar } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
+import ReservationModal from '@/components/ReservationModal';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -134,6 +135,7 @@ export default function MobileRestaurantDetail() {
   
   const [activeTab, setActiveTab] = useState<'menu' | 'vouchers'>(initialTab);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   const voucherRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const { data: restaurantData, isLoading } = useQuery({
@@ -298,6 +300,17 @@ export default function MobileRestaurantDetail() {
           )}
         </div>
 
+        {/* Reservation Button */}
+        <div className="px-4 py-3 bg-white border-b border-gray-100">
+          <button
+            onClick={() => setIsReservationModalOpen(true)}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all"
+          >
+            <Calendar className="w-5 h-5" />
+            Fă o rezervare
+          </button>
+        </div>
+
         {/* Tabs */}
         <div className="px-4 py-3 bg-white sticky top-0 z-10">
           <div className="flex bg-gray-100 rounded-xl p-1">
@@ -379,6 +392,19 @@ export default function MobileRestaurantDetail() {
           )}
         </div>
       </div>
+
+      {/* Reservation Modal */}
+      {restaurant && (
+        <ReservationModal
+          open={isReservationModalOpen}
+          onOpenChange={setIsReservationModalOpen}
+          restaurant={{
+            id: restaurant.id,
+            name: restaurant.name,
+            address: restaurant.address || restaurant.location,
+          }}
+        />
+      )}
     </MobileLayout>
   );
 }
