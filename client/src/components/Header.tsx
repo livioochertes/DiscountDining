@@ -31,7 +31,7 @@ export function Header() {
           overflow: 'visible'
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 h-full flex items-center">
           <div className="flex justify-between items-center w-full">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -105,7 +105,7 @@ export function Header() {
         overflow: 'visible'
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 h-full flex items-center">
         <div className="flex justify-between items-center w-full">
           <div className="flex items-center">
             <div className="flex-shrink-0">
