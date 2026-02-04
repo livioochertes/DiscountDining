@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2 } from "lucide-react";
+import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import BankingInformationForm from "@/components/BankingInformationForm";
 import { EditRestaurantForm } from "@/components/EditRestaurantForm";
@@ -48,6 +48,8 @@ export default function RestaurantPortal() {
   const [isAddRestaurantModalOpen, setIsAddRestaurantModalOpen] = useState(false);
   const [isManageRestaurantModalOpen, setIsManageRestaurantModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isEditingAccountInfo, setIsEditingAccountInfo] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isManagingUsers, setIsManagingUsers] = useState(false);
@@ -2667,8 +2669,66 @@ export default function RestaurantPortal() {
                   <Input id="website" name="website" type="url" placeholder="https://your-restaurant.com" />
                 </div>
                 <div>
-                  <Label htmlFor="imageUrl">Image URL (optional)</Label>
-                  <Input id="imageUrl" name="imageUrl" type="url" placeholder="https://example.com/image.jpg" />
+                  <Label htmlFor="restaurantImage">Restaurant Image</Label>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      id="restaurantImage"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        setIsUploadingImage(true);
+                        try {
+                          // Get signed upload URL
+                          const response = await fetch('/api/uploads/restaurant-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ fileName: file.name, contentType: file.type })
+                          });
+                          const { uploadUrl, objectPath } = await response.json();
+                          
+                          // Upload file directly to storage
+                          await fetch(uploadUrl, {
+                            method: 'PUT',
+                            body: file,
+                            headers: { 'Content-Type': file.type }
+                          });
+                          
+                          setUploadedImageUrl(objectPath);
+                          toast({ title: "Image uploaded successfully" });
+                        } catch (error) {
+                          toast({ title: "Failed to upload image", variant: "destructive" });
+                        } finally {
+                          setIsUploadingImage(false);
+                        }
+                      }}
+                    />
+                    <div 
+                      className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => document.getElementById('restaurantImage')?.click()}
+                    >
+                      {isUploadingImage ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>Uploading...</span>
+                        </div>
+                      ) : uploadedImageUrl ? (
+                        <div className="flex items-center justify-center gap-2 text-green-600">
+                          <CheckCircle className="h-5 w-5" />
+                          <span>Image uploaded</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2 text-gray-500">
+                          <Upload className="h-5 w-5" />
+                          <span>Click to upload image</span>
+                        </div>
+                      )}
+                    </div>
+                    <input type="hidden" name="imageUrl" value={uploadedImageUrl} />
+                  </div>
                 </div>
               </div>
             </div>

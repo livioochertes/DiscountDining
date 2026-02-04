@@ -3019,6 +3019,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Note: restaurant portal routes are already registered at /api/restaurant-portal
   // The public /api/restaurants endpoint is defined above without requireAuth
 
+  // Object storage routes - upload URL generation
+  app.post("/api/uploads/restaurant-image", async (req, res) => {
+    try {
+      const { fileName, contentType } = req.body;
+      if (!fileName || !contentType) {
+        return res.status(400).json({ error: "fileName and contentType are required" });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      const { uploadUrl, objectPath } = await objectStorageService.getSignedUploadUrl(fileName, contentType);
+      
+      res.json({ uploadUrl, objectPath });
+    } catch (error) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
   // Object storage routes to serve uploaded files
   app.get("/objects/:objectPath(*)", async (req, res) => {
     const objectStorageService = new ObjectStorageService();
