@@ -293,13 +293,17 @@ export default function MobileHome() {
 
   // Initialize Google Places API
   useEffect(() => {
+    console.log('[MobileHome Places Init] Modal open:', showLocationModal, 'Maps loaded:', googleMapsLoaded, 'Places available:', !!(window as any).google?.maps?.places);
     if (googleMapsLoaded && (window as any).google?.maps?.places) {
       autocompleteServiceRef.current = new (window as any).google.maps.places.AutocompleteService();
+      console.log('[MobileHome Places Init] AutocompleteService created:', !!autocompleteServiceRef.current);
     }
   }, [showLocationModal, googleMapsLoaded]);
 
   // Search places with debounce
   useEffect(() => {
+    console.log('[MobileHome Places] Query:', addressSearchQuery, 'Service ready:', !!autocompleteServiceRef.current, 'Maps loaded:', googleMapsLoaded);
+    
     if (!addressSearchQuery || addressSearchQuery.length < 3 || !autocompleteServiceRef.current || !googleMapsLoaded) {
       setPlaceSuggestions([]);
       return;
@@ -307,6 +311,7 @@ export default function MobileHome() {
 
     const timeoutId = setTimeout(() => {
       setIsSearchingPlaces(true);
+      console.log('[MobileHome Places] Searching for:', addressSearchQuery);
       autocompleteServiceRef.current?.getPlacePredictions(
         {
           input: addressSearchQuery,
@@ -315,6 +320,7 @@ export default function MobileHome() {
         },
         (predictions: any, status: any) => {
           setIsSearchingPlaces(false);
+          console.log('[MobileHome Places] Results:', status, predictions?.length || 0, 'suggestions');
           if (status === (window as any).google.maps.places.PlacesServiceStatus.OK && predictions) {
             setPlaceSuggestions(predictions);
           } else {
@@ -620,13 +626,14 @@ export default function MobileHome() {
             {/* Location indicator - opens location modal */}
             <button 
               onClick={() => setShowLocationModal(true)}
-              className="flex items-center gap-1 mt-1 text-xs text-primary"
+              className="flex items-center gap-1.5 mt-1 text-xs bg-primary/10 hover:bg-primary/15 text-primary px-2 py-1 rounded-full transition-colors"
             >
               {displayCity ? (
                 <>
                   <MapPin className="w-3 h-3" />
                   <span>{displayCity}</span>
-                  <ChevronRight className="w-3 h-3" />
+                  <span className="text-[10px] opacity-70">•</span>
+                  <span className="text-[10px] font-medium">{t.change || 'Schimbă'}</span>
                 </>
               ) : isDetectingLocation && !gpsError ? (
                 <>
@@ -899,7 +906,12 @@ export default function MobileHome() {
                     type="text"
                     placeholder={t.enterAddress || 'Enter your address...'}
                     value={addressSearchQuery}
-                    onChange={(e) => setAddressSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      console.log('[MobileHome Places] Input changed:', e.target.value);
+                      setAddressSearchQuery(e.target.value);
+                    }}
+                    autoFocus
+                    autoComplete="off"
                     className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-800 placeholder:text-gray-400"
                   />
                   {isSearchingPlaces && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
