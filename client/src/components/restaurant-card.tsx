@@ -102,42 +102,32 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
         )}
       </div>
       
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-1">
-          <h3 className="text-base font-semibold text-gray-900 line-clamp-1">{restaurant.name}</h3>
+      <CardContent className="p-3">
+        <div className="flex justify-between items-start mb-0.5">
+          <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">{restaurant.name}</h3>
           <div className="flex items-center space-x-1">
-            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-            <span className="text-sm font-medium">{restaurant.rating}</span>
-            <span className="text-xs text-gray-500">({restaurant.reviewCount})</span>
+            <Star className="h-3 w-3 text-yellow-400 fill-current" />
+            <span className="text-xs font-medium">{restaurant.rating}</span>
+            {maxDiscount > 0 && (
+              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0">
+                -{maxDiscount}%
+              </Badge>
+            )}
           </div>
         </div>
         
-        <div className="flex items-center text-gray-600 text-xs mb-2 line-clamp-1">
+        <div className="flex items-center text-gray-500 text-[10px] mb-1.5">
           <span>{restaurant.cuisine}</span>
           <span className="mx-1">•</span>
-          <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+          <MapPin className="h-2.5 w-2.5 mr-0.5 flex-shrink-0" />
           <span className="truncate">{restaurant.location}</span>
         </div>
         
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2">
-            {maxDiscount > 0 && (
-              <Badge variant="secondary" className="bg-accent/10 text-accent hover:bg-accent/20">
-                {maxDiscount}% OFF
-              </Badge>
-            )}
-            {avgPrice > 0 && (
-              <span className="text-sm text-gray-500">Average €{avgPrice.toFixed(0)}/meal</span>
-            )}
-          </div>
-        </div>
-        
-        <div className="border-t pt-3">
-          <div className="grid grid-cols-3 gap-1.5" data-tour="voucher-card">
+        <div className="grid grid-cols-3 gap-1" data-tour="voucher-card">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-orange-100 text-orange-700 px-2 py-2 rounded-lg font-semibold text-xs hover:bg-orange-400 hover:text-white transition-colors flex flex-col items-center justify-center gap-0.5 border border-orange-200"
+                  className="bg-orange-100 text-orange-700 px-1.5 py-1 rounded font-medium text-[10px] hover:bg-orange-400 hover:text-white transition-colors flex items-center justify-center gap-1 border border-orange-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onVouchersClick) {
@@ -147,8 +137,8 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
                     }
                   }}
                 >
-                  <span className="text-lg">🎫</span> 
-                  <span className="text-[10px]">{t.vouchers}</span>
+                  <span>🎫</span> 
+                  <span>{t.vouchers}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -158,14 +148,14 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-emerald-100 text-emerald-700 px-2 py-2 rounded-lg font-semibold text-xs hover:bg-emerald-500 hover:text-white transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border border-emerald-200"
+                  className="bg-emerald-100 text-emerald-700 px-1.5 py-1 rounded font-medium text-[10px] hover:bg-emerald-500 hover:text-white transition-all duration-200 flex items-center justify-center gap-1 border border-emerald-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     onMenuClick();
                   }}
                 >
-                  <span className="text-lg">🍽️</span> 
-                  <span className="text-[10px]">{t.viewMenu}</span>
+                  <span>🍽️</span> 
+                  <span>{t.viewMenu}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -175,7 +165,7 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-blue-100 text-blue-700 px-2 py-2 rounded-lg font-semibold text-xs hover:bg-blue-500 hover:text-white transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border border-blue-200"
+                  className="bg-blue-100 text-blue-700 px-1.5 py-1 rounded font-medium text-[10px] hover:bg-blue-500 hover:text-white transition-all duration-200 flex items-center justify-center gap-1 border border-blue-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onReservationClick) {
@@ -185,8 +175,8 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
                     }
                   }}
                 >
-                  <Calendar className="h-4 w-4" />
-                  <span className="text-[10px]">{t.reservations || 'Reserve'}</span>
+                  <Calendar className="h-3 w-3" />
+                  <span>{t.reservations || 'Reserve'}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -194,7 +184,6 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
               </TooltipContent>
             </Tooltip>
           </div>
-        </div>
       </CardContent>
     </Card>
   );
