@@ -578,13 +578,13 @@ function UsersFinancialTab() {
                 <div
                   key={tier.id}
                   className="p-4 rounded-lg border-2"
-                  style={{ borderColor: tier.color || getTierColor(tier.name) }}
+                  style={{ borderColor: tier.color || getTierColor(tier.name || 'bronze') }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <Badge
                       style={{
-                        backgroundColor: tier.color || getTierColor(tier.name),
-                        color: tier.name.toLowerCase() === 'black' || tier.name.toLowerCase() === 'bronze' ? 'white' : 'black',
+                        backgroundColor: tier.color || getTierColor(tier.name || 'bronze'),
+                        color: (tier.name || 'bronze').toLowerCase() === 'black' || (tier.name || 'bronze').toLowerCase() === 'bronze' ? 'white' : 'black',
                       }}
                     >
                       {tier.icon} {tier.displayName}
