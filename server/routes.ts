@@ -1004,6 +1004,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Places Autocomplete Proxy - works in Capacitor WebViews (iOS/Android)
+  app.get("/api/places/autocomplete", async (req, res) => {
+    try {
+      const { input } = req.query;
+      
+      if (!input || typeof input !== 'string' || input.length < 2) {
+        return res.json({ predictions: [] });
+      }
+
+      const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        console.error('[Places API] No API key configured');
+        return res.status(500).json({ error: 'Places API not configured' });
+      }
+
+      // Use Google Places Autocomplete API (legacy but reliable)
+      const url = new URL('https://maps.googleapis.com/maps/api/place/autocomplete/json');
+      url.searchParams.set('input', input);
+      url.searchParams.set('key', apiKey);
+      url.searchParams.set('types', 'geocode');
+      url.searchParams.set('components', 'country:ro|country:es|country:fr|country:de|country:it|country:gb');
+
+      console.log('[Places API] Fetching suggestions for:', input);
+      
+      const response = await fetch(url.toString());
+      const data = await response.json();
+
+      if (data.status === 'OK' || data.status === 'ZERO_RESULTS') {
+        console.log('[Places API] Found', data.predictions?.length || 0, 'suggestions');
+        res.json({ predictions: data.predictions || [] });
+      } else {
+        console.error('[Places API] Error:', data.status, data.error_message);
+        res.status(500).json({ error: data.error_message || 'Places API error' });
+      }
+    } catch (error: any) {
+      console.error('[Places API] Server error:', error);
+      res.status(500).json({ error: 'Failed to fetch place suggestions' });
+    }
+  });
+
   app.get("/api/restaurants", async (req, res) => {
     try {
       const { location, cuisine, priceRange, minDiscount, marketplaceId } = req.query;

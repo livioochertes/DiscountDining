@@ -214,8 +214,6 @@ export default function MobileHome() {
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState('');
   const [manualCity, setManualCity] = useState('');
-  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
-  const autocompleteServiceRef = useRef<any>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
   
   // Hide greeting when it scrolls out of viewport
@@ -265,41 +263,7 @@ export default function MobileHome() {
   // Current location to display (manual or GPS)
   const displayCity = manualCity || gpsCity;
 
-  // Load Google Maps script
-  useEffect(() => {
-    if ((window as any).google?.maps?.places) {
-      setGoogleMapsLoaded(true);
-      return;
-    }
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return;
-
-    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-    if (existingScript) {
-      const checkLoaded = setInterval(() => {
-        if ((window as any).google?.maps?.places) {
-          setGoogleMapsLoaded(true);
-          clearInterval(checkLoaded);
-        }
-      }, 100);
-      return () => clearInterval(checkLoaded);
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.onload = () => setGoogleMapsLoaded(true);
-    document.head.appendChild(script);
-  }, []);
-
-  // Initialize Google Places API
-  useEffect(() => {
-    console.log('[MobileHome Places Init] Modal open:', showLocationModal, 'Maps loaded:', googleMapsLoaded, 'Places available:', !!(window as any).google?.maps?.places);
-    if (googleMapsLoaded && (window as any).google?.maps?.places) {
-      autocompleteServiceRef.current = new (window as any).google.maps.places.AutocompleteService();
-      console.log('[MobileHome Places Init] AutocompleteService created:', !!autocompleteServiceRef.current);
-    }
-  }, [showLocationModal, googleMapsLoaded]);
+  // No need to load Google Maps script - using server-side proxy for Capacitor compatibility
 
   // Focus input when modal opens
   useEffect(() => {
@@ -311,38 +275,40 @@ export default function MobileHome() {
     }
   }, [showLocationModal]);
 
-  // Search places with debounce
+  // Search places with debounce - using server-side proxy for Capacitor compatibility
   useEffect(() => {
-    console.log('[MobileHome Places] Query:', addressSearchQuery, 'Service ready:', !!autocompleteServiceRef.current, 'Maps loaded:', googleMapsLoaded);
+    console.log('[MobileHome Places] Query:', addressSearchQuery);
     
-    if (!addressSearchQuery || addressSearchQuery.length < 3 || !autocompleteServiceRef.current || !googleMapsLoaded) {
+    if (!addressSearchQuery || addressSearchQuery.length < 2) {
       setPlaceSuggestions([]);
       return;
     }
 
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       setIsSearchingPlaces(true);
-      console.log('[MobileHome Places] Searching for:', addressSearchQuery);
-      autocompleteServiceRef.current?.getPlacePredictions(
-        {
-          input: addressSearchQuery,
-          types: ['geocode'],
-          componentRestrictions: { country: ['ro', 'es', 'fr', 'de', 'it', 'gb'] },
-        },
-        (predictions: any, status: any) => {
-          setIsSearchingPlaces(false);
-          console.log('[MobileHome Places] Results:', status, predictions?.length || 0, 'suggestions');
-          if (status === (window as any).google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setPlaceSuggestions(predictions);
-          } else {
-            setPlaceSuggestions([]);
-          }
+      console.log('[MobileHome Places] Searching via server proxy for:', addressSearchQuery);
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/places/autocomplete?input=${encodeURIComponent(addressSearchQuery)}`);
+        const data = await response.json();
+        
+        setIsSearchingPlaces(false);
+        console.log('[MobileHome Places] Server results:', data.predictions?.length || 0, 'suggestions');
+        
+        if (data.predictions) {
+          setPlaceSuggestions(data.predictions);
+        } else {
+          setPlaceSuggestions([]);
         }
-      );
+      } catch (error) {
+        console.error('[MobileHome Places] Server error:', error);
+        setIsSearchingPlaces(false);
+        setPlaceSuggestions([]);
+      }
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [addressSearchQuery, googleMapsLoaded]);
+  }, [addressSearchQuery]);
 
   // Handle GPS detection from modal
   const handleModalGPSDetect = useCallback(() => {
