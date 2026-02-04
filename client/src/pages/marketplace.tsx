@@ -1071,7 +1071,7 @@ export default function Marketplace() {
             ) : (
               <>
                 <div 
-                  className="restaurant-grid grid grid-cols-1 md:grid-cols-2 gap-6" 
+                  className="restaurant-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" 
                   data-tour="restaurant-grid"
                 >
                   {displayedRestaurants.map((restaurant) => (
