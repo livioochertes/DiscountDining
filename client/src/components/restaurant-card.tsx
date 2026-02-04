@@ -17,9 +17,11 @@ interface RestaurantCardProps {
   restaurant: Restaurant;
   onClick: () => void;
   onMenuClick: () => void;
+  onVouchersClick?: () => void;
+  onReservationClick?: () => void;
 }
 
-export default function RestaurantCard({ restaurant, onClick, onMenuClick }: RestaurantCardProps) {
+export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVouchersClick, onReservationClick }: RestaurantCardProps) {
   // Only load packages when card is visible
   const { targetRef, hasIntersected } = useIntersectionObserver({
     threshold: 0.1,
@@ -138,7 +140,11 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
                   className="bg-orange-100 text-orange-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-orange-400 hover:text-white transition-colors flex items-center justify-center gap-1 border border-orange-200"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onClick();
+                    if (onVouchersClick) {
+                      onVouchersClick();
+                    } else {
+                      onClick();
+                    }
                   }}
                 >
                   <span className="text-2xl">🎫</span> 
@@ -172,8 +178,11 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
                   className="bg-blue-100 text-blue-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-blue-500 hover:text-white transition-all duration-200 flex items-center justify-center gap-1 border border-blue-200"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Will trigger reservation modal - for now just open restaurant modal
-                    onClick();
+                    if (onReservationClick) {
+                      onReservationClick();
+                    } else {
+                      onClick();
+                    }
                   }}
                 >
                   <Calendar className="h-5 w-5" />

@@ -592,6 +592,14 @@ export default function Marketplace() {
     setLocation(`/restaurant/${restaurant.id}/menu`);
   }, [setLocation]);
 
+  const openRestaurantVouchers = useCallback((restaurant: Restaurant) => {
+    setLocation(`/restaurant/${restaurant.id}/vouchers`);
+  }, [setLocation]);
+
+  const openRestaurantReservations = useCallback((restaurant: Restaurant) => {
+    setLocation(`/restaurant/${restaurant.id}/reservations`);
+  }, [setLocation]);
+
   const loadMoreRestaurants = useCallback(async () => {
     setIsLoadingMore(true);
     
@@ -1072,6 +1080,8 @@ export default function Marketplace() {
                       restaurant={restaurant}
                       onClick={() => openRestaurantModal(restaurant)}
                       onMenuClick={() => openRestaurantMenu(restaurant)}
+                      onVouchersClick={() => openRestaurantVouchers(restaurant)}
+                      onReservationClick={() => openRestaurantReservations(restaurant)}
                     />
                   ))}
                 </div>

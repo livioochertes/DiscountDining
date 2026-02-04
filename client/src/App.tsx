@@ -21,6 +21,8 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsOfService from "@/pages/terms-of-service";
 import CookiePolicy from "@/pages/cookie-policy";
 import RestaurantMenu from "@/pages/restaurant-menu";
+import RestaurantVouchers from "@/pages/restaurant-vouchers";
+import RestaurantReservations from "@/pages/restaurant-reservations";
 import Checkout from "@/pages/checkout";
 import MenuCheckout from "@/pages/menu-checkout";
 import Profile from "@/pages/profile";
@@ -303,6 +305,8 @@ function Router() {
       <Route path="/restaurant-portal" component={RestaurantPortal} />
       <Route path="/restaurant-scanner" component={RestaurantScanner} />
       <Route path="/restaurant/:restaurantId/menu" component={RestaurantMenu} />
+      <Route path="/restaurant/:restaurantId/vouchers" component={RestaurantVouchers} />
+      <Route path="/restaurant/:restaurantId/reservations" component={RestaurantReservations} />
       
       {/* Admin routes handled separately in App component */}
       <Route path="/commission-dashboard" component={CommissionDashboard} />
