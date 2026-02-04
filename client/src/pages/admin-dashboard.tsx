@@ -317,6 +317,23 @@ const loyaltyTierEditSchema = z.object({
 
 type LoyaltyTierEditFormData = z.infer<typeof loyaltyTierEditSchema>;
 
+// Loyalty tier create schema (full)
+const loyaltyTierCreateSchema = z.object({
+  marketplaceId: z.number().min(1, 'Marketplace is required'),
+  name: z.string().min(1, 'Name is required'),
+  displayName: z.string().min(1, 'Display name is required'),
+  cashbackPercentage: z.number().min(0, 'Cashback must be 0 or greater').max(100, 'Cashback cannot exceed 100%'),
+  minTransactionVolume: z.number().min(0, 'Min threshold must be 0 or greater'),
+  maxTransactionVolume: z.number().nullable(),
+  color: z.string().min(1, 'Color is required'),
+  icon: z.string().min(1, 'Icon is required'),
+  tierLevel: z.number().min(1, 'Tier level is required').max(10, 'Max tier level is 10'),
+  benefits: z.string(),
+  isActive: z.boolean(),
+});
+
+type LoyaltyTierCreateFormData = z.infer<typeof loyaltyTierCreateSchema>;
+
 interface FinancialUser {
   customer: {
     id: number;
@@ -368,6 +385,7 @@ function UsersFinancialTab() {
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [selectedUserForAdjustment, setSelectedUserForAdjustment] = useState<FinancialUser | null>(null);
   const [editTierDialogOpen, setEditTierDialogOpen] = useState(false);
+  const [addTierDialogOpen, setAddTierDialogOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<LoyaltyTier | null>(null);
   const [selectedMarketplaceId, setSelectedMarketplaceId] = useState<number | null>(null);
   const { toast } = useToast();
@@ -418,6 +436,23 @@ function UsersFinancialTab() {
       cashbackPercentage: 0,
       minTransactionVolume: 0,
       maxTransactionVolume: null,
+    },
+  });
+
+  const tierCreateForm = useForm<LoyaltyTierCreateFormData>({
+    resolver: zodResolver(loyaltyTierCreateSchema),
+    defaultValues: {
+      marketplaceId: 0,
+      name: '',
+      displayName: '',
+      cashbackPercentage: 1,
+      minTransactionVolume: 0,
+      maxTransactionVolume: null,
+      color: '#CD7F32',
+      icon: '🥉',
+      tierLevel: 1,
+      benefits: '',
+      isActive: true,
     },
   });
 
@@ -533,6 +568,37 @@ function UsersFinancialTab() {
     },
   });
 
+  const tierCreateMutation = useMutation({
+    mutationFn: async (data: LoyaltyTierCreateFormData) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/loyalty-tiers', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          benefits: data.benefits.split('\n').filter(b => b.trim()),
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create tier');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Loyalty tier created successfully' });
+      setAddTierDialogOpen(false);
+      tierCreateForm.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/loyalty-tiers'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const tierSeedMutation = useMutation({
     mutationFn: async (marketplaceId: number) => {
       const token = localStorage.getItem('adminToken');
@@ -641,6 +707,29 @@ function UsersFinancialTab() {
     tierUpdateMutation.mutate({ ...data, tierId: selectedTier.id });
   };
 
+  const handleTierCreateSubmit = (data: LoyaltyTierCreateFormData) => {
+    tierCreateMutation.mutate(data);
+  };
+
+  const openAddTierDialog = () => {
+    tierCreateForm.reset({
+      marketplaceId: selectedMarketplaceId || (marketplacesList[0]?.id || 0),
+      name: '',
+      displayName: '',
+      cashbackPercentage: 1,
+      minTransactionVolume: 0,
+      maxTransactionVolume: null,
+      color: '#CD7F32',
+      icon: '🥉',
+      tierLevel: 1,
+      benefits: '',
+      isActive: true,
+    });
+    setAddTierDialogOpen(true);
+  };
+
+  const selectedCreateMarketplace = marketplacesList.find(m => m.id === tierCreateForm.watch('marketplaceId'));
+
   const getTierColor = (tier: string) => TIER_COLORS[tier.toLowerCase()] || '#808080';
 
   return (
@@ -652,6 +741,10 @@ function UsersFinancialTab() {
               <Coins className="h-5 w-5" />
               Loyalty Tiers Configuration
             </span>
+            <Button onClick={openAddTierDialog} size="sm" disabled={marketplacesList.length === 0}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Tier
+            </Button>
           </CardTitle>
           <CardDescription>Manage cashback percentages and tier thresholds per marketplace</CardDescription>
         </CardHeader>
@@ -695,15 +788,6 @@ function UsersFinancialTab() {
                         {marketplace.name} 
                         <Badge variant="outline">{marketplace.currencyCode}</Badge>
                       </h3>
-                      {marketplaceTiers.length === 0 && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleSeedTiers(marketplace.id, marketplace.name)} 
-                          disabled={tierSeedMutation.isPending}
-                        >
-                          {tierSeedMutation.isPending ? 'Creating...' : `Seed Tiers for ${marketplace.name}`}
-                        </Button>
-                      )}
                     </div>
                     
                     {marketplaceTiers.length > 0 ? (
@@ -1098,6 +1182,229 @@ function UsersFinancialTab() {
                 </Button>
                 <Button type="submit" disabled={tierUpdateMutation.isPending}>
                   {tierUpdateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addTierDialogOpen} onOpenChange={setAddTierDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Loyalty Tier</DialogTitle>
+            <DialogDescription>
+              Create a new loyalty tier for a marketplace
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...tierCreateForm}>
+            <form onSubmit={tierCreateForm.handleSubmit(handleTierCreateSubmit)} className="space-y-4">
+              <FormField
+                control={tierCreateForm.control}
+                name="marketplaceId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marketplace</FormLabel>
+                    <Select 
+                      value={field.value?.toString() || ''} 
+                      onValueChange={(v) => field.onChange(parseInt(v))}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select marketplace" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {marketplacesList.map(mp => (
+                          <SelectItem key={mp.id} value={mp.id.toString()}>
+                            {mp.name} ({mp.currencySymbol})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={tierCreateForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Internal Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="bronze" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tierCreateForm.control}
+                  name="displayName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Bronze" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={tierCreateForm.control}
+                  name="cashbackPercentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cashback (%)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tierCreateForm.control}
+                  name="tierLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tier Level (1-10)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="10"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={tierCreateForm.control}
+                  name="minTransactionVolume"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Min Threshold ({selectedCreateMarketplace?.currencySymbol || '€'})</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tierCreateForm.control}
+                  name="maxTransactionVolume"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Threshold ({selectedCreateMarketplace?.currencySymbol || '€'})</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          placeholder="Unlimited"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={tierCreateForm.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color</FormLabel>
+                      <FormControl>
+                        <Input type="color" {...field} className="h-10 w-full" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tierCreateForm.control}
+                  name="icon"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Icon (emoji)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="🥉" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={tierCreateForm.control}
+                name="benefits"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Benefits (one per line)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Priority support&#10;Free delivery&#10;Exclusive offers"
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={tierCreateForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Active</FormLabel>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setAddTierDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={tierCreateMutation.isPending}>
+                  {tierCreateMutation.isPending ? 'Creating...' : 'Create Tier'}
                 </Button>
               </div>
             </form>
