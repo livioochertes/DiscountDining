@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 
@@ -103,6 +103,9 @@ export function useUserLocation(): UseUserLocationResult {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGpsEnabled, setIsGpsEnabled] = useState(false);
+  
+  // Ref to store auto-GPS timer ID so we can cancel it when manual location is set
+  const autoGpsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if GPS is available
   useEffect(() => {
@@ -122,8 +125,15 @@ export function useUserLocation(): UseUserLocationResult {
     }
   }, []);
 
-  // Set manual city
+  // Set manual city - also cancels any pending auto-GPS timer
   const setManualCity = useCallback((cityName: string | null) => {
+    // Cancel any pending auto-GPS timer to prevent race condition
+    if (autoGpsTimerRef.current) {
+      console.log('[Location] Cancelling pending auto-GPS timer due to manual selection');
+      clearTimeout(autoGpsTimerRef.current);
+      autoGpsTimerRef.current = null;
+    }
+    
     setManualCityState(cityName);
     setCity(cityName);
     saveLocation(cityName, true);
@@ -256,17 +266,48 @@ export function useUserLocation(): UseUserLocationResult {
     setError(null);
   }, []);
 
-  // Auto-request GPS on first load if no stored location
+  // Auto-request GPS on first load if no stored location and no manual location set
   useEffect(() => {
+    // If manual location is set (either in state or localStorage), never auto-request GPS
+    if (manualCity) {
+      console.log('[Location] Manual location in state, skipping auto GPS request');
+      // Also cancel any pending timer
+      if (autoGpsTimerRef.current) {
+        clearTimeout(autoGpsTimerRef.current);
+        autoGpsTimerRef.current = null;
+      }
+      return;
+    }
+    
     const stored = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.isManual) {
+          console.log('[Location] Manual location in storage, skipping auto GPS request');
+          return;
+        }
+      } catch {
+        // Continue with GPS request if parse fails
+      }
+    }
+    
+    // Only auto-request if no location stored at all
     if (!stored && isGpsEnabled) {
       // Delay slightly to avoid blocking initial render
-      const timer = setTimeout(() => {
+      // Store timer in ref so it can be cancelled if user sets manual location
+      autoGpsTimerRef.current = setTimeout(() => {
+        autoGpsTimerRef.current = null;
         requestGpsLocation();
       }, 1000);
-      return () => clearTimeout(timer);
+      return () => {
+        if (autoGpsTimerRef.current) {
+          clearTimeout(autoGpsTimerRef.current);
+          autoGpsTimerRef.current = null;
+        }
+      };
     }
-  }, [isGpsEnabled, requestGpsLocation]);
+  }, [isGpsEnabled, requestGpsLocation, manualCity]);
 
   return {
     city,
