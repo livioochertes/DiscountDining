@@ -666,7 +666,7 @@ export default function Marketplace() {
   }, [filters, activeTab, autoDetectLocation, sortBy, manualDietType, useDietaryProfile]);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
       <section className="mb-12">
         {/* Tab Navigation + Location: Restaurants / AI Menu / Vouchers + Location Button */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
