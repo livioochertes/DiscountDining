@@ -36,27 +36,59 @@ function FeaturedChefsSection() {
     queryKey: ["/api/chef-profiles/featured"],
   });
 
-  // Auto-scroll every 3 seconds
+  // Triplicăm lista pentru loop infinit
+  const infiniteChefs = useMemo(() => {
+    if (featuredChefs.length === 0) return [];
+    return [...featuredChefs, ...featuredChefs, ...featuredChefs];
+  }, [featuredChefs]);
+
+  // Setează scroll-ul la mijloc la încărcare
+  useEffect(() => {
+    if (scrollContainerRef.current && featuredChefs.length > 0) {
+      const container = scrollContainerRef.current;
+      const singleSetWidth = (container.scrollWidth / 3);
+      container.scrollLeft = singleSetWidth;
+    }
+  }, [featuredChefs.length]);
+
+  // Auto-scroll every 3 seconds cu loop infinit
   useEffect(() => {
     if (isPaused || featuredChefs.length === 0) return;
     
     const interval = setInterval(() => {
       if (scrollContainerRef.current) {
         const container = scrollContainerRef.current;
-        const cardWidth = 140; // Width of one card + gap
-        const maxScroll = container.scrollWidth - container.clientWidth;
+        const cardWidth = 140;
+        const singleSetWidth = container.scrollWidth / 3;
         
-        if (container.scrollLeft >= maxScroll - 10) {
-          // Reset to beginning with smooth animation
-          container.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          container.scrollBy({ left: cardWidth, behavior: 'smooth' });
-        }
+        container.scrollBy({ left: cardWidth, behavior: 'smooth' });
+        
+        // După animație, verifică dacă trebuie să resetăm
+        setTimeout(() => {
+          if (container.scrollLeft >= singleSetWidth * 2) {
+            container.scrollLeft = singleSetWidth;
+          } else if (container.scrollLeft <= 0) {
+            container.scrollLeft = singleSetWidth;
+          }
+        }, 350);
       }
     }, 3000);
     
     return () => clearInterval(interval);
   }, [isPaused, featuredChefs.length]);
+
+  // Handler pentru scroll manual - resetează poziția când ajunge la capete
+  const handleScroll = useCallback(() => {
+    if (!scrollContainerRef.current || featuredChefs.length === 0) return;
+    const container = scrollContainerRef.current;
+    const singleSetWidth = container.scrollWidth / 3;
+    
+    if (container.scrollLeft >= singleSetWidth * 2 - 50) {
+      container.scrollLeft = singleSetWidth;
+    } else if (container.scrollLeft <= 50) {
+      container.scrollLeft = singleSetWidth;
+    }
+  }, [featuredChefs.length]);
 
   if (isLoading) {
     return (
@@ -96,17 +128,17 @@ function FeaturedChefsSection() {
       <div 
         ref={scrollContainerRef}
         className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2"
-        style={{ scrollSnapType: 'x mandatory' }}
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onTouchStart={() => setIsPaused(true)}
         onTouchEnd={() => setTimeout(() => setIsPaused(false), 2000)}
+        onScroll={handleScroll}
       >
-        {featuredChefs.map((item) => {
+        {infiniteChefs.map((item, index) => {
           const chef = item.profile || item;
           const restaurant = item.restaurant;
           return (
-            <Link key={chef.id} href={`/chef/${chef.id}`} className="flex-shrink-0" style={{ scrollSnapAlign: 'start' }}>
+            <Link key={`${chef.id}-${index}`} href={`/chef/${chef.id}`} className="flex-shrink-0">
               <div className="group cursor-pointer transition-transform hover:scale-[1.02] w-[130px]">
                 <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 h-24 shadow-sm hover:shadow-md transition-shadow">
                   {chef.coverImage && (
