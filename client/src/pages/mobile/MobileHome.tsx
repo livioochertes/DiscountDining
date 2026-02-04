@@ -216,6 +216,7 @@ export default function MobileHome() {
   const [manualCity, setManualCity] = useState('');
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
   const autocompleteServiceRef = useRef<any>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
   
   // Hide greeting when it scrolls out of viewport
   useEffect(() => {
@@ -299,6 +300,16 @@ export default function MobileHome() {
       console.log('[MobileHome Places Init] AutocompleteService created:', !!autocompleteServiceRef.current);
     }
   }, [showLocationModal, googleMapsLoaded]);
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (showLocationModal && addressInputRef.current) {
+      setTimeout(() => {
+        addressInputRef.current?.focus();
+        console.log('[MobileHome Places] Input focused');
+      }, 100);
+    }
+  }, [showLocationModal]);
 
   // Search places with debounce
   useEffect(() => {
@@ -633,7 +644,7 @@ export default function MobileHome() {
                   <MapPin className="w-3 h-3" />
                   <span>{displayCity}</span>
                   <span className="text-[10px] opacity-70">•</span>
-                  <span className="text-[10px] font-medium">{t.change || 'Schimbă'}</span>
+                  <span className="text-[10px] font-medium">{t.changeLocation || 'Change'}</span>
                 </>
               ) : isDetectingLocation && !gpsError ? (
                 <>
@@ -903,6 +914,7 @@ export default function MobileHome() {
                 <div className="flex items-center gap-2 p-3 border border-gray-200 rounded-xl bg-gray-50">
                   <Search className="w-4 h-4 text-gray-400" />
                   <input
+                    ref={addressInputRef}
                     type="text"
                     placeholder={t.enterAddress || 'Enter your address...'}
                     value={addressSearchQuery}
@@ -910,7 +922,6 @@ export default function MobileHome() {
                       console.log('[MobileHome Places] Input changed:', e.target.value);
                       setAddressSearchQuery(e.target.value);
                     }}
-                    autoFocus
                     autoComplete="off"
                     className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-800 placeholder:text-gray-400"
                   />
