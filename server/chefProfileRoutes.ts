@@ -96,7 +96,7 @@ export function registerChefProfileRoutes(app: Express) {
 
   app.get("/api/chef-profiles/featured", async (req: Request, res: Response) => {
     try {
-      const { limit = "6" } = req.query;
+      const { limit = "20" } = req.query;
 
       const profiles = await db
         .select({
