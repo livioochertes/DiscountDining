@@ -187,12 +187,14 @@ export function registerAdminRoutes(app: Express) {
       // Create session token
       const sessionToken = crypto.randomBytes(32).toString('hex');
       
-      // Save session in database for proper validation
+      // Save session in database for proper validation (24 hour expiry)
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await db.insert(adminSessions).values({
         adminId: admin.id,
         sessionToken: sessionToken,
         ipAddress: req.ip || null,
         userAgent: req.get('User-Agent') || null,
+        expiresAt: expiresAt,
       });
 
       res.json({
