@@ -2393,9 +2393,11 @@ export function registerAdminRoutes(app: Express) {
   // 4b. POST /api/admin/loyalty-tiers - Create new loyalty tier for a marketplace
   app.post("/api/admin/loyalty-tiers", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
+      console.log("[Loyalty Tier Create] Received body:", JSON.stringify(req.body));
       const { marketplaceId, name, displayName, cashbackPercentage, minTransactionVolume, maxTransactionVolume, color, icon, tierLevel, benefits } = req.body;
 
       if (!marketplaceId || !name || !displayName || cashbackPercentage === undefined || minTransactionVolume === undefined || tierLevel === undefined) {
+        console.log("[Loyalty Tier Create] Validation failed - missing fields");
         return res.status(400).json({ message: "marketplaceId, name, displayName, cashbackPercentage, minTransactionVolume, and tierLevel are required" });
       }
 
