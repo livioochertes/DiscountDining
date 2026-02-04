@@ -87,7 +87,7 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
           <img 
             src={imageUrl} 
             alt={`${restaurant.name} interior`}
-            className="w-full h-48 object-cover rounded-t-lg"
+            className="w-full h-36 object-cover rounded-t-lg"
             loading="lazy"
             decoding="async"
             onError={(e) => {
@@ -96,15 +96,15 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
             }}
           />
         ) : (
-          <div className="w-full h-48 bg-gray-200 rounded-t-lg animate-pulse flex items-center justify-center">
+          <div className="w-full h-36 bg-gray-200 rounded-t-lg animate-pulse flex items-center justify-center">
             <span className="text-gray-400 text-sm">Loading...</span>
           </div>
         )}
       </div>
       
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-xl font-semibold text-gray-900">{restaurant.name}</h3>
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-1">
+          <h3 className="text-base font-semibold text-gray-900 line-clamp-1">{restaurant.name}</h3>
           <div className="flex items-center space-x-1">
             <Star className="h-4 w-4 text-yellow-400 fill-current" />
             <span className="text-sm font-medium">{restaurant.rating}</span>
@@ -112,14 +112,14 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
           </div>
         </div>
         
-        <div className="flex items-center text-gray-600 text-sm mb-3">
-          <span>{restaurant.cuisine} cuisine</span>
-          <span className="mx-2">•</span>
-          <MapPin className="h-3 w-3 mr-1" />
-          <span>{restaurant.location}</span>
+        <div className="flex items-center text-gray-600 text-xs mb-2 line-clamp-1">
+          <span>{restaurant.cuisine}</span>
+          <span className="mx-1">•</span>
+          <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+          <span className="truncate">{restaurant.location}</span>
         </div>
         
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
             {maxDiscount > 0 && (
               <Badge variant="secondary" className="bg-accent/10 text-accent hover:bg-accent/20">
@@ -132,12 +132,12 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
           </div>
         </div>
         
-        <div className="border-t pt-4">
-          <div className="grid grid-cols-3 gap-2" data-tour="voucher-card">
+        <div className="border-t pt-3">
+          <div className="grid grid-cols-3 gap-1.5" data-tour="voucher-card">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-orange-100 text-orange-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-orange-400 hover:text-white transition-colors flex items-center justify-center gap-1 border border-orange-200"
+                  className="bg-orange-100 text-orange-700 px-2 py-2 rounded-lg font-semibold text-xs hover:bg-orange-400 hover:text-white transition-colors flex flex-col items-center justify-center gap-0.5 border border-orange-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onVouchersClick) {
@@ -147,8 +147,8 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
                     }
                   }}
                 >
-                  <span className="text-2xl">🎫</span> 
-                  <span>{t.vouchers}</span>
+                  <span className="text-lg">🎫</span> 
+                  <span className="text-[10px]">{t.vouchers}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -158,14 +158,14 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-emerald-100 text-emerald-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-emerald-500 hover:text-white transition-all duration-200 flex items-center justify-center gap-1 border border-emerald-200"
+                  className="bg-emerald-100 text-emerald-700 px-2 py-2 rounded-lg font-semibold text-xs hover:bg-emerald-500 hover:text-white transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border border-emerald-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     onMenuClick();
                   }}
                 >
-                  <span className="text-2xl">🍽️</span> 
-                  <span>{t.viewMenu}</span>
+                  <span className="text-lg">🍽️</span> 
+                  <span className="text-[10px]">{t.viewMenu}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -175,7 +175,7 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-blue-100 text-blue-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-blue-500 hover:text-white transition-all duration-200 flex items-center justify-center gap-1 border border-blue-200"
+                  className="bg-blue-100 text-blue-700 px-2 py-2 rounded-lg font-semibold text-xs hover:bg-blue-500 hover:text-white transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border border-blue-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onReservationClick) {
@@ -185,8 +185,8 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
                     }
                   }}
                 >
-                  <Calendar className="h-5 w-5" />
-                  <span>{t.reservations || 'Reserve'}</span>
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-[10px]">{t.reservations || 'Reserve'}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
