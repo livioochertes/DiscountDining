@@ -335,6 +335,7 @@ interface FinancialUser {
 
 interface LoyaltyTier {
   id: number;
+  marketplaceId: number | null;
   name: string;
   displayName: string;
   cashbackPercentage: string;
@@ -368,8 +369,30 @@ function UsersFinancialTab() {
   const [selectedUserForAdjustment, setSelectedUserForAdjustment] = useState<FinancialUser | null>(null);
   const [editTierDialogOpen, setEditTierDialogOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<LoyaltyTier | null>(null);
+  const [selectedMarketplaceId, setSelectedMarketplaceId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  interface Marketplace {
+    id: number;
+    name: string;
+    country: string;
+    currencyCode: string;
+    currencySymbol: string;
+    isActive: boolean;
+  }
+
+  const { data: marketplacesList = [] } = useQuery<Marketplace[]>({
+    queryKey: ['/api/admin/marketplaces'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/marketplaces', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch marketplaces');
+      return response.json();
+    },
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -415,11 +438,16 @@ function UsersFinancialTab() {
     },
   });
 
-  const { data: loyaltyTiers = [], isLoading: tiersLoading } = useQuery<LoyaltyTier[]>({
-    queryKey: ['/api/admin/loyalty-tiers'],
+  interface LoyaltyTierWithMarketplace extends LoyaltyTier {
+    marketplace?: { id: number; name: string; currencyCode: string; currencySymbol: string } | null;
+  }
+
+  const { data: loyaltyTiers = [], isLoading: tiersLoading } = useQuery<LoyaltyTierWithMarketplace[]>({
+    queryKey: ['/api/admin/loyalty-tiers', selectedMarketplaceId],
     queryFn: async () => {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/admin/loyalty-tiers', {
+      const params = selectedMarketplaceId ? `?marketplaceId=${selectedMarketplaceId}` : '';
+      const response = await fetch(`/api/admin/loyalty-tiers${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch loyalty tiers');
@@ -506,11 +534,15 @@ function UsersFinancialTab() {
   });
 
   const tierSeedMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (marketplaceId: number) => {
       const token = localStorage.getItem('adminToken');
       const response = await fetch('/api/admin/loyalty-tiers/seed', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ marketplaceId }),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -554,9 +586,9 @@ function UsersFinancialTab() {
     tierDeleteMutation.mutate(tier.id);
   };
 
-  const handleSeedTiers = () => {
-    if (!confirm('This will create the 5 default loyalty tiers (Bronze, Silver, Gold, Platinum, Black). Continue?')) return;
-    tierSeedMutation.mutate();
+  const handleSeedTiers = (marketplaceId: number, marketplaceName: string) => {
+    if (!confirm(`This will create the 5 default loyalty tiers (Bronze, Silver, Gold, Platinum, Black) for ${marketplaceName}. Continue?`)) return;
+    tierSeedMutation.mutate(marketplaceId);
   };
 
   const handleExportCSV = () => {
@@ -620,65 +652,107 @@ function UsersFinancialTab() {
               <Coins className="h-5 w-5" />
               Loyalty Tiers Configuration
             </span>
-            {loyaltyTiers.length === 0 && (
-              <Button 
-                size="sm" 
-                onClick={handleSeedTiers} 
-                disabled={tierSeedMutation.isPending}
-              >
-                {tierSeedMutation.isPending ? 'Creating...' : 'Seed Default Tiers'}
-              </Button>
-            )}
           </CardTitle>
-          <CardDescription>Manage cashback percentages and tier thresholds</CardDescription>
+          <CardDescription>Manage cashback percentages and tier thresholds per marketplace</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Marketplace:</span>
+              <Select 
+                value={selectedMarketplaceId?.toString() || 'all'} 
+                onValueChange={(v) => setSelectedMarketplaceId(v === 'all' ? null : parseInt(v))}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="All Marketplaces" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Marketplaces</SelectItem>
+                  {marketplacesList.map(mp => (
+                    <SelectItem key={mp.id} value={mp.id.toString()}>
+                      {mp.name} ({mp.currencySymbol})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
           {tiersLoading ? (
             <div className="text-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
             </div>
-          ) : loyaltyTiers.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {loyaltyTiers.map((tier) => (
-                <div
-                  key={tier.id}
-                  className="p-4 rounded-lg border-2"
-                  style={{ borderColor: tier.color || getTierColor(tier.name || 'bronze') }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge
-                      style={{
-                        backgroundColor: tier.color || getTierColor(tier.name || 'bronze'),
-                        color: (tier.name || 'bronze').toLowerCase() === 'black' || (tier.name || 'bronze').toLowerCase() === 'bronze' ? 'white' : 'black',
-                      }}
-                    >
-                      {tier.icon} {tier.displayName}
-                    </Badge>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => openTierEditDialog(tier)}>
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="text-red-600 hover:text-red-700" 
-                        onClick={() => handleDeleteTier(tier)}
-                        disabled={tierDeleteMutation.isPending}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <p><span className="text-muted-foreground">Cashback:</span> {tier.cashbackPercentage}%</p>
-                    <p><span className="text-muted-foreground">Min:</span> €{parseFloat(tier.minTransactionVolume).toFixed(0)}</p>
-                    <p><span className="text-muted-foreground">Max:</span> {tier.maxTransactionVolume ? `€${parseFloat(tier.maxTransactionVolume).toFixed(0)}` : 'Unlimited'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           ) : (
-            <p className="text-center text-muted-foreground py-4">No loyalty tiers configured</p>
+            <div className="space-y-6">
+              {marketplacesList.map(marketplace => {
+                const marketplaceTiers = loyaltyTiers.filter(t => t.marketplaceId === marketplace.id);
+                if (selectedMarketplaceId && selectedMarketplaceId !== marketplace.id) return null;
+                
+                return (
+                  <div key={marketplace.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        {marketplace.name} 
+                        <Badge variant="outline">{marketplace.currencyCode}</Badge>
+                      </h3>
+                      {marketplaceTiers.length === 0 && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleSeedTiers(marketplace.id, marketplace.name)} 
+                          disabled={tierSeedMutation.isPending}
+                        >
+                          {tierSeedMutation.isPending ? 'Creating...' : `Seed Tiers for ${marketplace.name}`}
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {marketplaceTiers.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {marketplaceTiers.map((tier) => (
+                          <div
+                            key={tier.id}
+                            className="p-4 rounded-lg border-2"
+                            style={{ borderColor: tier.color || getTierColor(tier.name || 'bronze') }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge
+                                style={{
+                                  backgroundColor: tier.color || getTierColor(tier.name || 'bronze'),
+                                  color: (tier.name || 'bronze').toLowerCase() === 'black' || (tier.name || 'bronze').toLowerCase() === 'bronze' ? 'white' : 'black',
+                                }}
+                              >
+                                {tier.icon} {tier.displayName}
+                              </Badge>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => openTierEditDialog(tier)}>
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="text-red-600 hover:text-red-700" 
+                                  onClick={() => handleDeleteTier(tier)}
+                                  disabled={tierDeleteMutation.isPending}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              <p><span className="text-muted-foreground">Cashback:</span> {tier.cashbackPercentage}%</p>
+                              <p><span className="text-muted-foreground">Min:</span> {marketplace.currencySymbol}{parseFloat(tier.minTransactionVolume).toFixed(0)}</p>
+                              <p><span className="text-muted-foreground">Max:</span> {tier.maxTransactionVolume ? `${marketplace.currencySymbol}${parseFloat(tier.maxTransactionVolume).toFixed(0)}` : 'Unlimited'}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No tiers configured for this marketplace. Click the button above to create default tiers.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>
