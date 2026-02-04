@@ -1045,6 +1045,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reverse Geocoding Proxy - converts GPS coordinates to address using Nominatim (free, no API key)
+  app.get("/api/reverse-geocode", async (req, res) => {
+    try {
+      const { lat, lng } = req.query;
+      
+      if (!lat || !lng) {
+        return res.status(400).json({ error: 'lat and lng are required' });
+      }
+
+      const latitude = parseFloat(lat as string);
+      const longitude = parseFloat(lng as string);
+
+      if (isNaN(latitude) || isNaN(longitude)) {
+        return res.status(400).json({ error: 'Invalid coordinates' });
+      }
+
+      console.log('[Reverse Geocode] Looking up:', latitude, longitude);
+
+      // Use Nominatim (OpenStreetMap) for reverse geocoding - free and reliable
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'EatOff/1.0 (https://eatoff.app)'
+        }
+      });
+
+      if (!response.ok) {
+        console.error('[Reverse Geocode] Nominatim error:', response.status);
+        return res.status(500).json({ error: 'Geocoding service error' });
+      }
+
+      const data = await response.json();
+      
+      // Extract the most specific locality from the address
+      const address = data.address || {};
+      const locality = address.village || address.town || address.city || address.municipality || address.county || null;
+      const country = address.country || null;
+      const countryCode = address.country_code?.toUpperCase() || null;
+      
+      console.log('[Reverse Geocode] Found:', locality, '-', country);
+
+      res.json({
+        locality,
+        country,
+        countryCode,
+        displayName: data.display_name,
+        address: {
+          village: address.village,
+          town: address.town,
+          city: address.city,
+          municipality: address.municipality,
+          county: address.county,
+          state: address.state,
+          country: address.country,
+          countryCode: address.country_code
+        }
+      });
+    } catch (error: any) {
+      console.error('[Reverse Geocode] Server error:', error);
+      res.status(500).json({ error: 'Failed to reverse geocode' });
+    }
+  });
+
   app.get("/api/restaurants", async (req, res) => {
     try {
       const { location, cuisine, priceRange, minDiscount, marketplaceId } = req.query;

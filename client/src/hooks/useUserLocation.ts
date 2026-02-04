@@ -191,6 +191,35 @@ export function useUserLocation(): UseUserLocationResult {
         longitude = position.coords.longitude;
       }
 
+      // Use server-side reverse geocoding for accurate location detection
+      console.log('[Location] Reverse geocoding coordinates:', latitude, longitude);
+      
+      // Determine API base URL for Capacitor
+      const API_BASE_URL = isNativePlatform ? 'https://eatoff.app' : '';
+      
+      try {
+        const geoResponse = await fetch(`${API_BASE_URL}/api/reverse-geocode?lat=${latitude}&lng=${longitude}`);
+        
+        if (geoResponse.ok) {
+          const geoData = await geoResponse.json();
+          console.log('[Location] Reverse geocode result:', geoData);
+          
+          const detectedCity = geoData.locality;
+          
+          if (detectedCity) {
+            setCity(detectedCity);
+            setManualCityState(null);
+            saveLocation(detectedCity, false);
+            localStorage.setItem(GPS_CITY_STORAGE_KEY, detectedCity);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (geoError) {
+        console.warn('[Location] Reverse geocode failed, using fallback:', geoError);
+      }
+
+      // Fallback to static city list if reverse geocoding fails
       const detectedCity = findClosestCity(latitude, longitude);
       
       if (detectedCity) {
