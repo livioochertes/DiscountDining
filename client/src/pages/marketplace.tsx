@@ -1099,7 +1099,7 @@ export default function Marketplace() {
                     <RestaurantCard
                       key={restaurant.id}
                       restaurant={restaurant}
-                      onClick={() => openRestaurantModal(restaurant)}
+                      onClick={() => openRestaurantVouchers(restaurant)}
                       onMenuClick={() => openRestaurantMenu(restaurant)}
                       onVouchersClick={() => openRestaurantVouchers(restaurant)}
                       onReservationClick={() => openRestaurantReservations(restaurant)}
