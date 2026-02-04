@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -38,7 +39,12 @@ import {
   Trash2,
   Eye,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Search,
+  Download,
+  Wallet,
+  Coins,
+  Gift
 } from "lucide-react";
 import { SectionNavigation } from "@/components/SectionNavigation";
 import { useToast } from "@/hooks/use-toast";
@@ -282,6 +288,675 @@ const FILTER_TYPE_OPTIONS = [
   { value: "experienceType", label: "Experience Type" },
   { value: "deals", label: "Deals" },
 ];
+
+// Tier colors
+const TIER_COLORS: Record<string, string> = {
+  bronze: '#CD7F32',
+  silver: '#C0C0C0',
+  gold: '#FFD700',
+  platinum: '#E5E4E2',
+  black: '#1C1C1C',
+};
+
+// Wallet adjustment schema
+const walletAdjustmentSchema = z.object({
+  adjustmentType: z.enum(['credit', 'debit', 'bonus', 'correction']),
+  amount: z.number().min(0.01, 'Amount must be greater than 0'),
+  reason: z.string().min(10, 'Reason must be at least 10 characters'),
+});
+
+type WalletAdjustmentFormData = z.infer<typeof walletAdjustmentSchema>;
+
+// Loyalty tier edit schema
+const loyaltyTierEditSchema = z.object({
+  displayName: z.string().min(1, 'Display name is required'),
+  cashbackPercentage: z.number().min(0, 'Cashback must be 0 or greater').max(100, 'Cashback cannot exceed 100%'),
+  minTransactionVolume: z.number().min(0, 'Min threshold must be 0 or greater'),
+  maxTransactionVolume: z.number().nullable(),
+});
+
+type LoyaltyTierEditFormData = z.infer<typeof loyaltyTierEditSchema>;
+
+interface FinancialUser {
+  customer: {
+    id: number;
+    email: string;
+    name: string;
+    membershipTier: string;
+    loyaltyPoints: number;
+    balance: string;
+    createdAt: string;
+  };
+  wallet: {
+    cashBalance: string;
+    loyaltyPoints: number;
+  } | null;
+}
+
+interface LoyaltyTier {
+  id: number;
+  name: string;
+  displayName: string;
+  cashbackPercentage: string;
+  minTransactionVolume: string;
+  maxTransactionVolume: string | null;
+  color: string;
+  icon: string;
+  tierLevel: number;
+  benefits: string[];
+  isActive: boolean;
+}
+
+interface UserTransaction {
+  id: number;
+  transactionType: string;
+  amount: string;
+  description: string;
+  balanceBefore: string;
+  balanceAfter: string;
+  createdAt: string;
+  restaurant?: { id: number; name: string } | null;
+}
+
+// Users Financial Tab Component
+function UsersFinancialTab() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  const [selectedUserForAdjustment, setSelectedUserForAdjustment] = useState<FinancialUser | null>(null);
+  const [editTierDialogOpen, setEditTierDialogOpen] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<LoyaltyTier | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const walletAdjustmentForm = useForm<WalletAdjustmentFormData>({
+    resolver: zodResolver(walletAdjustmentSchema),
+    defaultValues: {
+      adjustmentType: 'credit',
+      amount: 0,
+      reason: '',
+    },
+  });
+
+  const tierEditForm = useForm<LoyaltyTierEditFormData>({
+    resolver: zodResolver(loyaltyTierEditSchema),
+    defaultValues: {
+      displayName: '',
+      cashbackPercentage: 0,
+      minTransactionVolume: 0,
+      maxTransactionVolume: null,
+    },
+  });
+
+  const { data: usersData, isLoading: usersLoading } = useQuery<{
+    users: FinancialUser[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }>({
+    queryKey: ['/api/admin/users/financial', currentPage, debouncedSearch],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const params = new URLSearchParams({ page: currentPage.toString() });
+      if (debouncedSearch) params.append('search', debouncedSearch);
+      const response = await fetch(`/api/admin/users/financial?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    },
+  });
+
+  const { data: loyaltyTiers = [], isLoading: tiersLoading } = useQuery<LoyaltyTier[]>({
+    queryKey: ['/api/admin/loyalty-tiers'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/loyalty-tiers', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch loyalty tiers');
+      return response.json();
+    },
+  });
+
+  const { data: transactionsData, isLoading: transactionsLoading } = useQuery<{
+    customer: any;
+    transactions: UserTransaction[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }>({
+    queryKey: ['/api/admin/users', expandedUserId, 'transactions'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/users/${expandedUserId}/transactions?page=1`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+      return response.json();
+    },
+    enabled: !!expandedUserId,
+  });
+
+  const walletAdjustmentMutation = useMutation({
+    mutationFn: async (data: WalletAdjustmentFormData & { customerId: number }) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/users/${data.customerId}/wallet-adjustment`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create adjustment');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Wallet adjustment created successfully' });
+      setAdjustmentDialogOpen(false);
+      walletAdjustmentForm.reset();
+      setSelectedUserForAdjustment(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/financial'] });
+      if (expandedUserId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/users', expandedUserId, 'transactions'] });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const tierUpdateMutation = useMutation({
+    mutationFn: async (data: LoyaltyTierEditFormData & { tierId: number }) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/loyalty-tiers/${data.tierId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update tier');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Loyalty tier updated successfully' });
+      setEditTierDialogOpen(false);
+      tierEditForm.reset();
+      setSelectedTier(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/loyalty-tiers'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleExportCSV = () => {
+    if (!usersData?.users?.length) return;
+    
+    const headers = ['Name', 'Email', 'Membership Tier', 'Wallet Balance', 'Loyalty Points', 'Cashback Balance'];
+    const rows = usersData.users.map(u => [
+      u.customer.name,
+      u.customer.email,
+      u.customer.membershipTier || 'bronze',
+      u.wallet?.cashBalance || u.customer.balance || '0.00',
+      u.wallet?.loyaltyPoints || u.customer.loyaltyPoints || 0,
+      u.wallet?.cashBalance || '0.00',
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `users_financial_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const openAdjustmentDialog = (user: FinancialUser) => {
+    setSelectedUserForAdjustment(user);
+    walletAdjustmentForm.reset({ adjustmentType: 'credit', amount: 0, reason: '' });
+    setAdjustmentDialogOpen(true);
+  };
+
+  const openTierEditDialog = (tier: LoyaltyTier) => {
+    setSelectedTier(tier);
+    tierEditForm.reset({
+      displayName: tier.displayName,
+      cashbackPercentage: parseFloat(tier.cashbackPercentage),
+      minTransactionVolume: parseFloat(tier.minTransactionVolume),
+      maxTransactionVolume: tier.maxTransactionVolume ? parseFloat(tier.maxTransactionVolume) : null,
+    });
+    setEditTierDialogOpen(true);
+  };
+
+  const handleWalletAdjustmentSubmit = (data: WalletAdjustmentFormData) => {
+    if (!selectedUserForAdjustment) return;
+    walletAdjustmentMutation.mutate({ ...data, customerId: selectedUserForAdjustment.customer.id });
+  };
+
+  const handleTierEditSubmit = (data: LoyaltyTierEditFormData) => {
+    if (!selectedTier) return;
+    tierUpdateMutation.mutate({ ...data, tierId: selectedTier.id });
+  };
+
+  const getTierColor = (tier: string) => TIER_COLORS[tier.toLowerCase()] || '#808080';
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5" />
+            Loyalty Tiers Configuration
+          </CardTitle>
+          <CardDescription>Manage cashback percentages and tier thresholds</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {tiersLoading ? (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
+            </div>
+          ) : loyaltyTiers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {loyaltyTiers.map((tier) => (
+                <div
+                  key={tier.id}
+                  className="p-4 rounded-lg border-2"
+                  style={{ borderColor: tier.color || getTierColor(tier.name) }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge
+                      style={{
+                        backgroundColor: tier.color || getTierColor(tier.name),
+                        color: tier.name.toLowerCase() === 'black' || tier.name.toLowerCase() === 'bronze' ? 'white' : 'black',
+                      }}
+                    >
+                      {tier.icon} {tier.displayName}
+                    </Badge>
+                    <Button size="sm" variant="ghost" onClick={() => openTierEditDialog(tier)}>
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <p><span className="text-muted-foreground">Cashback:</span> {tier.cashbackPercentage}%</p>
+                    <p><span className="text-muted-foreground">Min:</span> €{parseFloat(tier.minTransactionVolume).toFixed(0)}</p>
+                    <p><span className="text-muted-foreground">Max:</span> {tier.maxTransactionVolume ? `€${parseFloat(tier.maxTransactionVolume).toFixed(0)}` : 'Unlimited'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-4">No loyalty tiers configured</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              User Financial Management
+            </span>
+            <Button onClick={handleExportCSV} variant="outline" size="sm" disabled={!usersData?.users?.length}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </CardTitle>
+          <CardDescription>Manage user wallets, points, and financial data</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {usersLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+              <p className="mt-2 text-muted-foreground">Loading users...</p>
+            </div>
+          ) : usersData?.users && usersData.users.length > 0 ? (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Tier</TableHead>
+                      <TableHead className="text-right">Wallet Balance</TableHead>
+                      <TableHead className="text-right">Loyalty Points</TableHead>
+                      <TableHead className="text-right">Cashback Balance</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {usersData.users.map((user) => (
+                      <>
+                        <TableRow
+                          key={user.customer.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setExpandedUserId(expandedUserId === user.customer.id ? null : user.customer.id)}
+                        >
+                          <TableCell className="font-medium">{user.customer.name}</TableCell>
+                          <TableCell>{user.customer.email}</TableCell>
+                          <TableCell>
+                            <Badge
+                              style={{
+                                backgroundColor: getTierColor(user.customer.membershipTier || 'bronze'),
+                                color: (user.customer.membershipTier || 'bronze').toLowerCase() === 'black' ? 'white' : 
+                                       (user.customer.membershipTier || 'bronze').toLowerCase() === 'bronze' ? 'white' : 'black',
+                              }}
+                            >
+                              {(user.customer.membershipTier || 'Bronze').charAt(0).toUpperCase() + (user.customer.membershipTier || 'bronze').slice(1)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">€{parseFloat(user.wallet?.cashBalance || user.customer.balance || '0').toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{user.wallet?.loyaltyPoints || user.customer.loyaltyPoints || 0}</TableCell>
+                          <TableCell className="text-right">€{parseFloat(user.wallet?.cashBalance || '0').toFixed(2)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openAdjustmentDialog(user);
+                                }}
+                              >
+                                <Gift className="h-3 w-3 mr-1" />
+                                Adjust
+                              </Button>
+                              {expandedUserId === user.customer.id ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {expandedUserId === user.customer.id && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="bg-muted/30">
+                              <div className="p-4">
+                                <h4 className="font-medium mb-3">Transaction History</h4>
+                                {transactionsLoading ? (
+                                  <div className="text-center py-4">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
+                                  </div>
+                                ) : transactionsData?.transactions && transactionsData.transactions.length > 0 ? (
+                                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                                    {transactionsData.transactions.slice(0, 10).map((tx) => (
+                                      <div key={tx.id} className="flex justify-between items-center p-2 bg-background rounded border text-sm">
+                                        <div>
+                                          <span className="font-medium">{tx.transactionType}</span>
+                                          <span className="text-muted-foreground ml-2">{tx.description}</span>
+                                          {tx.restaurant && (
+                                            <span className="text-muted-foreground ml-2">@ {tx.restaurant.name}</span>
+                                          )}
+                                        </div>
+                                        <div className="text-right">
+                                          <span className={tx.transactionType.includes('debit') ? 'text-red-600' : 'text-green-600'}>
+                                            {tx.transactionType.includes('debit') ? '-' : '+'}€{parseFloat(tx.amount).toFixed(2)}
+                                          </span>
+                                          <span className="text-xs text-muted-foreground ml-2">
+                                            {new Date(tx.createdAt).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-muted-foreground text-sm">No transactions found</p>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {usersData.pagination && usersData.pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Page {usersData.pagination.page} of {usersData.pagination.totalPages} ({usersData.pagination.total} users)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage >= usersData.pagination.totalPages}
+                      onClick={() => setCurrentPage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-4 text-blue-500" />
+              <p>No users found</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Wallet Adjustment</DialogTitle>
+            <DialogDescription>
+              Adjust wallet balance for {selectedUserForAdjustment?.customer.name}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...walletAdjustmentForm}>
+            <form onSubmit={walletAdjustmentForm.handleSubmit(handleWalletAdjustmentSubmit)} className="space-y-4">
+              <FormField
+                control={walletAdjustmentForm.control}
+                name="adjustmentType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adjustment Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="credit">Credit (Add funds)</SelectItem>
+                        <SelectItem value="debit">Debit (Remove funds)</SelectItem>
+                        <SelectItem value="bonus">Bonus (Promotional credit)</SelectItem>
+                        <SelectItem value="correction">Correction (Fix balance)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={walletAdjustmentForm.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount (€)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={walletAdjustmentForm.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason (min 10 characters)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter the reason for this adjustment..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setAdjustmentDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={walletAdjustmentMutation.isPending}>
+                  {walletAdjustmentMutation.isPending ? 'Processing...' : 'Submit Adjustment'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editTierDialogOpen} onOpenChange={setEditTierDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Loyalty Tier</DialogTitle>
+            <DialogDescription>
+              Update settings for {selectedTier?.displayName}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...tierEditForm}>
+            <form onSubmit={tierEditForm.handleSubmit(handleTierEditSubmit)} className="space-y-4">
+              <FormField
+                control={tierEditForm.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Tier name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={tierEditForm.control}
+                name="cashbackPercentage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cashback Percentage (%)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={tierEditForm.control}
+                name="minTransactionVolume"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Minimum Threshold (€)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={tierEditForm.control}
+                name="maxTransactionVolume"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Maximum Threshold (€) - Leave empty for unlimited</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        placeholder="Unlimited"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditTierDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={tierUpdateMutation.isPending}>
+                  {tierUpdateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 // Mobile Filters Management Component
 function MobileFiltersManagement() {
@@ -1479,6 +2154,521 @@ interface Marketplace {
   updatedAt: string;
 }
 
+interface Settlement {
+  id: number;
+  restaurantId: number;
+  periodStart: string;
+  periodEnd: string;
+  grossAmount: string;
+  commissionAmount: string;
+  commissionRate: string;
+  netAmount: string;
+  transactionCount: number;
+  status: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+  paidAt?: string;
+  createdAt: string;
+  restaurant?: { id: number; name: string; restaurantCode?: string; stripeConnectAccountId?: string | null };
+}
+
+interface SettlementMetrics {
+  pendingCount: number;
+  pendingSum: number;
+  thisWeekSum: number;
+  totalPaidOut: number;
+  avgCommissionRate: number;
+}
+
+interface SettlementTransaction {
+  id: number;
+  amount: string;
+  transactionType: string;
+  description: string;
+  createdAt: string;
+}
+
+function FinancesTabContent({ metrics }: { metrics?: DashboardMetrics }) {
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedSettlementId, setExpandedSettlementId] = useState<number | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: settlementMetrics, isLoading: metricsLoading } = useQuery<SettlementMetrics>({
+    queryKey: ['/api/admin/settlements/metrics'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/settlements/metrics', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch settlement metrics');
+      return response.json();
+    },
+  });
+
+  const { data: settlementsData, isLoading: settlementsLoading } = useQuery<{
+    settlements: Settlement[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }>({
+    queryKey: ['/api/admin/settlements', currentPage, statusFilter],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const params = new URLSearchParams({ page: currentPage.toString() });
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      const response = await fetch(`/api/admin/settlements?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch settlements');
+      return response.json();
+    },
+  });
+
+  const { data: settlementTransactions, isLoading: transactionsLoading } = useQuery<{
+    settlement: Settlement;
+    transactions: SettlementTransaction[];
+  }>({
+    queryKey: ['/api/admin/settlements', expandedSettlementId, 'transactions'],
+    queryFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/settlements/${expandedSettlementId}/transactions`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+      return response.json();
+    },
+    enabled: !!expandedSettlementId,
+  });
+
+  const generateSettlementsMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/settlements/generate-all', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate settlements');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: 'Success', description: `Generated ${data.count} settlements` });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settlements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settlements/metrics'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (settlementId: number) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/settlements/${settlementId}/mark-paid`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethod: 'manual' }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to mark as paid');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Settlement marked as paid' });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settlements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settlements/metrics'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const stripePayoutMutation = useMutation({
+    mutationFn: async (settlementId: number) => {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/settlements/${settlementId}/payout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to process Stripe payout');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: 'Success', description: `Payout processed! Transfer ID: ${data.transferId}` });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settlements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settlements/metrics'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Payout Failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const sendEmailsMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem('adminToken');
+      const settlementIds = settlementsData?.settlements
+        .filter(s => s.status === 'pending')
+        .map(s => s.id) || [];
+      const response = await fetch('/api/admin/settlements/send-emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settlementIds }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send emails');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: 'Success', description: data.message });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleExportForBank = () => {
+    if (!settlementsData?.settlements?.length) return;
+    
+    const pendingSettlements = settlementsData.settlements.filter(s => s.status === 'pending' || s.status === 'processing');
+    if (pendingSettlements.length === 0) {
+      toast({ title: 'No Pending Settlements', description: 'No settlements to export for bank transfer', variant: 'destructive' });
+      return;
+    }
+    
+    const headers = ['Restaurant Name', 'Restaurant Code', 'IBAN', 'Amount', 'Reference', 'Period'];
+    const rows = pendingSettlements.map(s => [
+      s.restaurant?.name || 'Unknown',
+      s.restaurant?.restaurantCode || '',
+      'IBAN_PLACEHOLDER',
+      parseFloat(s.netAmount).toFixed(2),
+      `SETTLE-${s.id}-${new Date(s.periodEnd).toISOString().split('T')[0]}`,
+      `${new Date(s.periodStart).toLocaleDateString()} - ${new Date(s.periodEnd).toLocaleDateString()}`,
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bank_settlements_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Exported', description: `Exported ${pendingSettlements.length} settlements for bank transfer` });
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { color: string; bg: string }> = {
+      pending: { color: 'text-yellow-800', bg: 'bg-yellow-100' },
+      processing: { color: 'text-blue-800', bg: 'bg-blue-100' },
+      paid: { color: 'text-green-800', bg: 'bg-green-100' },
+      failed: { color: 'text-red-800', bg: 'bg-red-100' },
+    };
+    const variant = variants[status] || variants.pending;
+    return (
+      <Badge className={`${variant.bg} ${variant.color} border-0`}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  const formatCurrency = (amount: string | number) => {
+    return `€${parseFloat(amount.toString()).toFixed(2)}`;
+  };
+
+  const formatDateRange = (start: string, end: string) => {
+    return `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <CreditCard className="h-5 w-5" />
+            <span>Financial Overview</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <h4 className="font-medium">Monthly Revenue</h4>
+              <p className="text-2xl font-bold">{formatCurrency(metrics?.totalRevenue || 0)}</p>
+              <p className="text-sm text-muted-foreground">Total platform revenue</p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <h4 className="font-medium">Commission Earned</h4>
+              <p className="text-2xl font-bold">{formatCurrency(metrics?.totalCommission || 0)}</p>
+              <p className="text-sm text-muted-foreground">Platform commission (5%)</p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <h4 className="font-medium">Pending Settlements</h4>
+              <p className="text-2xl font-bold">{formatCurrency(settlementMetrics?.pendingSum || 0)}</p>
+              <p className="text-sm text-muted-foreground">Due to restaurants</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Restaurant Settlements
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportForBank}
+                disabled={!settlementsData?.settlements?.length}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export for Bank
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => sendEmailsMutation.mutate()}
+                disabled={sendEmailsMutation.isPending}
+              >
+                {sendEmailsMutation.isPending ? 'Sending...' : 'Email Settlement PDFs'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => generateSettlementsMutation.mutate()}
+                disabled={generateSettlementsMutation.isPending}
+              >
+                {generateSettlementsMutation.isPending ? 'Generating...' : 'Generate Weekly Settlements'}
+              </Button>
+            </div>
+          </CardTitle>
+          <CardDescription>Manage restaurant payouts and settlement reports</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <h4 className="font-medium text-yellow-800 dark:text-yellow-200">Pending Settlements</h4>
+              <p className="text-2xl font-bold">{settlementMetrics?.pendingCount || 0}</p>
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">{formatCurrency(settlementMetrics?.pendingSum || 0)} total</p>
+            </div>
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="font-medium text-blue-800 dark:text-blue-200">This Week's Settlements</h4>
+              <p className="text-2xl font-bold">{formatCurrency(settlementMetrics?.thisWeekSum || 0)}</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">Generated this week</p>
+            </div>
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <h4 className="font-medium text-green-800 dark:text-green-200">Total Paid Out</h4>
+              <p className="text-2xl font-bold">{formatCurrency(settlementMetrics?.totalPaidOut || 0)}</p>
+              <p className="text-sm text-green-600 dark:text-green-400">All time payouts</p>
+            </div>
+            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <h4 className="font-medium text-purple-800 dark:text-purple-200">Avg Commission Rate</h4>
+              <p className="text-2xl font-bold">{(settlementMetrics?.avgCommissionRate || 0).toFixed(2)}%</p>
+              <p className="text-sm text-purple-600 dark:text-purple-400">Platform commission</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Filter by status:</span>
+              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {settlementsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+              <p className="mt-2 text-muted-foreground">Loading settlements...</p>
+            </div>
+          ) : settlementsData?.settlements && settlementsData.settlements.length > 0 ? (
+            <>
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Restaurant</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead className="text-right">Gross Amount</TableHead>
+                      <TableHead className="text-right">Commission (%)</TableHead>
+                      <TableHead className="text-right">Commission Amount</TableHead>
+                      <TableHead className="text-right">Net Payout</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {settlementsData.settlements.map((settlement) => (
+                      <>
+                        <TableRow key={settlement.id}>
+                          <TableCell className="font-medium">
+                            {settlement.restaurant?.name || 'Unknown'}
+                            {settlement.restaurant?.restaurantCode && (
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({settlement.restaurant.restaurantCode})
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatDateRange(settlement.periodStart, settlement.periodEnd)}
+                          </TableCell>
+                          <TableCell className="text-right">{formatCurrency(settlement.grossAmount)}</TableCell>
+                          <TableCell className="text-right">{parseFloat(settlement.commissionRate).toFixed(2)}%</TableCell>
+                          <TableCell className="text-right">{formatCurrency(settlement.commissionAmount)}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(settlement.netAmount)}</TableCell>
+                          <TableCell>{getStatusBadge(settlement.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {(settlement.status === 'pending' || settlement.status === 'processing') && (
+                                <>
+                                  {settlement.restaurant?.stripeConnectAccountId ? (
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => stripePayoutMutation.mutate(settlement.id)}
+                                      disabled={stripePayoutMutation.isPending}
+                                      className="bg-purple-600 hover:bg-purple-700"
+                                    >
+                                      <CreditCard className="h-3 w-3 mr-1" />
+                                      {stripePayoutMutation.isPending ? 'Processing...' : 'Stripe Payout'}
+                                    </Button>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      Setup Required
+                                    </Badge>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => markPaidMutation.mutate(settlement.id)}
+                                    disabled={markPaidMutation.isPending}
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Mark Paid
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setExpandedSettlementId(
+                                  expandedSettlementId === settlement.id ? null : settlement.id
+                                )}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                {expandedSettlementId === settlement.id ? 'Hide' : 'View'}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {expandedSettlementId === settlement.id && (
+                          <TableRow>
+                            <TableCell colSpan={8} className="bg-muted/30">
+                              <div className="p-4">
+                                <h4 className="font-medium mb-3">
+                                  Settlement Transactions ({settlement.transactionCount} transactions)
+                                </h4>
+                                {transactionsLoading ? (
+                                  <div className="text-center py-4">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
+                                  </div>
+                                ) : settlementTransactions?.transactions && settlementTransactions.transactions.length > 0 ? (
+                                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                                    {settlementTransactions.transactions.map((tx) => (
+                                      <div key={tx.id} className="flex justify-between items-center p-2 bg-background rounded border text-sm">
+                                        <div>
+                                          <span className="font-medium">{tx.transactionType}</span>
+                                          <span className="text-muted-foreground ml-2">{tx.description}</span>
+                                        </div>
+                                        <div className="text-right">
+                                          <span className="text-green-600">+{formatCurrency(tx.amount)}</span>
+                                          <span className="text-xs text-muted-foreground ml-2">
+                                            {new Date(tx.createdAt).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-muted-foreground text-sm">No transactions found for this period</p>
+                                )}
+                                {settlement.paidAt && (
+                                  <div className="mt-3 pt-3 border-t text-sm text-muted-foreground">
+                                    <p>Paid on: {new Date(settlement.paidAt).toLocaleDateString()}</p>
+                                    {settlement.paymentMethod && <p>Method: {settlement.paymentMethod}</p>}
+                                    {settlement.paymentReference && <p>Reference: {settlement.paymentReference}</p>}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {settlementsData.pagination && settlementsData.pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Page {settlementsData.pagination.page} of {settlementsData.pagination.totalPages} ({settlementsData.pagination.total} settlements)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage >= settlementsData.pagination.totalPages}
+                      onClick={() => setCurrentPage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <DollarSign className="h-12 w-12 mx-auto mb-4 text-green-500" />
+              <h3 className="text-lg font-medium">No Settlements Yet</h3>
+              <p>Click "Generate Weekly Settlements" to create settlement reports for active restaurants.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function MarketplacesTab() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -2112,29 +3302,141 @@ function WalletCreditTab() {
 }
 
 // Commissions Tab
-function CommissionsTab() {
-  const { data: restaurants = [] } = useQuery<any[]>({
-    queryKey: ['/api/restaurants'],
+interface CommissionsTabProps {
+  setSelectedTab: (tab: string) => void;
+}
+
+interface RestaurantCommissionData {
+  id: number;
+  name: string;
+  cuisine: string;
+  commissionRate: number;
+  isCashbackParticipant: boolean;
+  pendingSettlement: number;
+  totalSettled: number;
+}
+
+interface CommissionsResponse {
+  restaurants: RestaurantCommissionData[];
+  totals: {
+    totalPendingSettlement: number;
+    totalSettled: number;
+    totalCommissionEarned: number;
+    monthlyCommission: number;
+    totalTransactions: number;
+    activeRestaurants: number;
+    cashbackParticipants: number;
+  };
+}
+
+function CommissionsTab({ setSelectedTab }: CommissionsTabProps) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editCommissionRate, setEditCommissionRate] = useState<string>("");
+  const [editCashbackParticipant, setEditCashbackParticipant] = useState<boolean>(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const getToken = () => localStorage.getItem('adminToken') || '';
+
+  const { data: commissionsData, isLoading } = useQuery<CommissionsResponse>({
+    queryKey: ['/api/admin/restaurants/commissions'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/restaurants/commissions', {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch commission data');
+      return res.json();
+    }
   });
 
-  const commissionMetrics = {
-    totalEarnings: restaurants.reduce((sum: number, r: any) => sum + (Number(r.totalEarnings) || 0), 0),
-    monthlyEarnings: restaurants.reduce((sum: number, r: any) => sum + (Number(r.monthlyEarnings) || 0), 0),
-    totalTransactions: restaurants.reduce((sum: number, r: any) => sum + (r.totalTransactions || 0), 0),
-    activeRestaurants: restaurants.filter((r: any) => r.isActive).length,
-    averageCommissionRate: 5,
+  const updateCommissionMutation = useMutation({
+    mutationFn: async ({ id, commissionRate, isCashbackParticipant }: { id: number; commissionRate: number; isCashbackParticipant: boolean }) => {
+      const res = await fetch(`/api/admin/restaurants/${id}/commission`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ commissionRate, isCashbackParticipant })
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to update commission');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Commission Updated",
+        description: "Restaurant commission settings have been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/restaurants/commissions'] });
+      setEditingId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const restaurants = commissionsData?.restaurants || [];
+  const totals = commissionsData?.totals || {
+    totalPendingSettlement: 0,
+    totalSettled: 0,
+    totalCommissionEarned: 0,
+    monthlyCommission: 0,
+    totalTransactions: 0,
+    activeRestaurants: 0,
+    cashbackParticipants: 0
+  };
+
+  const handleEdit = (restaurant: RestaurantCommissionData) => {
+    setEditingId(restaurant.id);
+    setEditCommissionRate(restaurant.commissionRate.toString());
+    setEditCashbackParticipant(restaurant.isCashbackParticipant);
+  };
+
+  const handleSave = () => {
+    if (editingId === null) return;
+    const rate = parseFloat(editCommissionRate);
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      toast({
+        title: "Invalid Rate",
+        description: "Commission rate must be between 0 and 100",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateCommissionMutation.mutate({
+      id: editingId,
+      commissionRate: rate,
+      isCashbackParticipant: editCashbackParticipant
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditCommissionRate("");
+    setEditCashbackParticipant(false);
+  };
+
+  const handleRestaurantClick = (restaurantName: string) => {
+    setSelectedTab("restaurants");
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Commission Earned</CardTitle>
             <CreditCard className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{commissionMetrics.totalEarnings.toLocaleString()}</div>
+            <div className="text-2xl font-bold">€{totals.totalCommissionEarned.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">All-time platform earnings</p>
           </CardContent>
         </Card>
@@ -2144,28 +3446,38 @@ function CommissionsTab() {
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{commissionMetrics.monthlyEarnings.toLocaleString()}</div>
+            <div className="text-2xl font-bold">€{totals.monthlyCommission.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-            <BarChart3 className="h-4 w-4 text-purple-500" />
+            <CardTitle className="text-sm font-medium">Pending Settlement</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{commissionMetrics.totalTransactions.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Processed orders</p>
+            <div className="text-2xl font-bold text-yellow-600">€{totals.totalPendingSettlement.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Awaiting payout</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Commission Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Settled</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">€{totals.totalSettled.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Paid out to restaurants</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cashback Participants</CardTitle>
             <DollarSign className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{commissionMetrics.averageCommissionRate}%</div>
-            <p className="text-xs text-muted-foreground">Platform commission</p>
+            <div className="text-2xl font-bold">{totals.cashbackParticipants}</div>
+            <p className="text-xs text-muted-foreground">of {totals.activeRestaurants} active</p>
           </CardContent>
         </Card>
       </div>
@@ -2173,25 +3485,108 @@ function CommissionsTab() {
       <Card>
         <CardHeader>
           <CardTitle>Commission by Restaurant</CardTitle>
+          <CardDescription>Manage commission rates and cashback participation for each restaurant</CardDescription>
         </CardHeader>
         <CardContent>
-          {restaurants.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-muted-foreground">Loading commission data...</p>
+            </div>
+          ) : restaurants.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No restaurants yet.</p>
           ) : (
-            <div className="space-y-3">
-              {restaurants.slice(0, 10).map((restaurant: any) => (
-                <div key={restaurant.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <div className="font-medium">{restaurant.name}</div>
-                    <div className="text-sm text-gray-500">{restaurant.cuisine}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">€{(Number(restaurant.totalEarnings) * 0.05 || 0).toFixed(2)}</div>
-                    <div className="text-xs text-gray-500">Commission (5%)</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Restaurant Name</TableHead>
+                  <TableHead>Cuisine</TableHead>
+                  <TableHead>Commission Rate (%)</TableHead>
+                  <TableHead>Cashback Participant</TableHead>
+                  <TableHead className="text-right">Pending Settlement</TableHead>
+                  <TableHead className="text-right">Total Settled</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {restaurants.map((restaurant) => (
+                  <TableRow key={restaurant.id}>
+                    <TableCell>
+                      <button
+                        onClick={() => handleRestaurantClick(restaurant.name)}
+                        className="font-medium text-primary hover:underline cursor-pointer text-left"
+                      >
+                        {restaurant.name}
+                      </button>
+                    </TableCell>
+                    <TableCell>{restaurant.cuisine}</TableCell>
+                    <TableCell>
+                      {editingId === restaurant.id ? (
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={editCommissionRate}
+                          onChange={(e) => setEditCommissionRate(e.target.value)}
+                          className="w-20"
+                        />
+                      ) : (
+                        <span>{restaurant.commissionRate}%</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingId === restaurant.id ? (
+                        <Switch
+                          checked={editCashbackParticipant}
+                          onCheckedChange={setEditCashbackParticipant}
+                        />
+                      ) : (
+                        <Badge variant={restaurant.isCashbackParticipant ? "default" : "secondary"}>
+                          {restaurant.isCashbackParticipant ? "Active" : "Inactive"}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      €{restaurant.pendingSettlement.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      €{restaurant.totalSettled.toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      {editingId === restaurant.id ? (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleSave}
+                            disabled={updateCommissionMutation.isPending}
+                          >
+                            {updateCommissionMutation.isPending ? "Saving..." : "Save"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCancel}
+                            disabled={updateCommissionMutation.isPending}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(restaurant)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -5509,42 +6904,7 @@ export default function AdminDashboard() {
           )}
 
           {selectedTab === "users" && (
-            <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                  Manage customer accounts, memberships, and user activities
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-blue-500" />
-                    <p className="text-lg font-medium">User Management System</p>
-                    <p className="text-sm">Comprehensive user analytics and management tools</p>
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <h4 className="font-medium text-blue-900 dark:text-blue-100">Total Users</h4>
-                        <p className="text-2xl font-bold text-blue-600">{metrics?.totalUsers || 0}</p>
-                        <p className="text-sm text-blue-600">Registered customers</p>
-                      </div>
-                      <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                        <h4 className="font-medium text-green-900 dark:text-green-100">Active Users</h4>
-                        <p className="text-2xl font-bold text-green-600">{metrics?.activeUsers || 0}</p>
-                        <p className="text-sm text-green-600">Monthly active users</p>
-                      </div>
-                      <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                        <h4 className="font-medium text-orange-900 dark:text-orange-100">User Growth</h4>
-                        <p className="text-2xl font-bold text-orange-600">+12%</p>
-                        <p className="text-sm text-orange-600">This month vs last</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            </div>
+            <UsersFinancialTab />
           )}
 
           {selectedTab === "marketplaces" && (
@@ -5556,7 +6916,7 @@ export default function AdminDashboard() {
           )}
 
           {selectedTab === "commissions" && (
-            <CommissionsTab />
+            <CommissionsTab setSelectedTab={setSelectedTab} />
           )}
 
           {selectedTab === "marketing" && (
@@ -5568,42 +6928,7 @@ export default function AdminDashboard() {
           )}
 
           {selectedTab === "finances" && (
-            <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <CreditCard className="h-5 w-5 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Financial data, revenue, and commission tracking</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <span>Financial Overview</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="font-medium">Monthly Revenue</h4>
-                    <p className="text-2xl font-bold">€{metrics?.totalRevenue || 0}</p>
-                    <p className="text-sm text-muted-foreground">Total platform revenue</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="font-medium">Commission Earned</h4>
-                    <p className="text-2xl font-bold">€{metrics?.totalCommission || 0}</p>
-                    <p className="text-sm text-muted-foreground">Platform commission (5%)</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="font-medium">Pending Settlements</h4>
-                    <p className="text-2xl font-bold">€0</p>
-                    <p className="text-sm text-muted-foreground">Due to restaurants</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            </div>
+            <FinancesTabContent metrics={metrics} />
           )}
 
           {selectedTab === "chefs" && (

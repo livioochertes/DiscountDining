@@ -199,6 +199,22 @@ export const restaurants = pgTable("restaurants", {
   priority: integer("priority").default(3), // 1 = highest priority, 5 = lowest
   position: integer("position").default(0), // Order within same priority level
   
+  // Commission settings per restaurant
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default("6.00"), // Default 6%, can be customized
+  participatesInCashback: boolean("participates_in_cashback").default(false), // If true, commission is 7.5%
+  customCommissionNote: text("custom_commission_note"), // Reason for custom commission rate
+  
+  // Settlement tracking
+  pendingSettlementAmount: decimal("pending_settlement_amount", { precision: 12, scale: 2 }).default("0.00"),
+  totalSettledAmount: decimal("total_settled_amount", { precision: 12, scale: 2 }).default("0.00"),
+  lastSettlementDate: timestamp("last_settlement_date"),
+  
+  // Bank details for payouts
+  bankAccountName: text("bank_account_name"),
+  bankIban: text("bank_iban"),
+  bankBic: text("bank_bic"),
+  stripeConnectAccountId: text("stripe_connect_account_id"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2247,3 +2263,108 @@ export const insertMobileFilterSchema = createInsertSchema(mobileFilters).omit({
 
 export type MobileFilter = typeof mobileFilters.$inferSelect;
 export type InsertMobileFilter = z.infer<typeof insertMobileFilterSchema>;
+
+// ============================================
+// EATOFF GLOBAL LOYALTY TIERS (Bronze, Silver, Gold, Platinum, Black)
+// ============================================
+
+export const eatoffLoyaltyTiers = pgTable("eatoff_loyalty_tiers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(), // Bronze, Silver, Gold, Platinum, Black
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  cashbackPercentage: decimal("cashback_percentage", { precision: 5, scale: 2 }).notNull(), // e.g., 2.00 for 2%
+  minTransactionVolume: decimal("min_transaction_volume", { precision: 12, scale: 2 }).notNull(), // Minimum total spent to reach this tier
+  maxTransactionVolume: decimal("max_transaction_volume", { precision: 12, scale: 2 }), // null = no max (top tier)
+  color: varchar("color", { length: 20 }).default("#808080"), // Display color
+  icon: varchar("icon", { length: 50 }), // Emoji or icon
+  tierLevel: integer("tier_level").notNull(), // 1 = Bronze (lowest), 5 = Black (highest)
+  benefits: text("benefits").array(), // Array of benefit descriptions
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEatoffLoyaltyTierSchema = createInsertSchema(eatoffLoyaltyTiers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EatoffLoyaltyTier = typeof eatoffLoyaltyTiers.$inferSelect;
+export type InsertEatoffLoyaltyTier = z.infer<typeof insertEatoffLoyaltyTierSchema>;
+
+// ============================================
+// RESTAURANT SETTLEMENTS (Weekly payouts to restaurants)
+// ============================================
+
+export const restaurantSettlements = pgTable("restaurant_settlements", {
+  id: serial("id").primaryKey(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  
+  // Settlement period (Friday to Friday)
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Financial details
+  grossAmount: decimal("gross_amount", { precision: 12, scale: 2 }).notNull(), // Total transaction value
+  commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(), // EatOff commission
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull(), // Rate used for this settlement
+  netAmount: decimal("net_amount", { precision: 12, scale: 2 }).notNull(), // Amount to pay restaurant
+  transactionCount: integer("transaction_count").notNull(),
+  
+  // Status tracking
+  status: varchar("status", { length: 30 }).default("pending"), // pending, processing, paid, failed
+  
+  // Payment details
+  paymentMethod: varchar("payment_method", { length: 30 }), // stripe_connect, bank_transfer, manual
+  paymentReference: varchar("payment_reference", { length: 100 }), // Stripe payout ID or bank reference
+  paidAt: timestamp("paid_at"),
+  paidBy: integer("paid_by"), // Admin user who processed payment
+  
+  // PDF invoice
+  invoicePdfUrl: text("invoice_pdf_url"),
+  invoiceNumber: varchar("invoice_number", { length: 50 }),
+  invoiceSentAt: timestamp("invoice_sent_at"),
+  
+  // Notes
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRestaurantSettlementSchema = createInsertSchema(restaurantSettlements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type RestaurantSettlement = typeof restaurantSettlements.$inferSelect;
+export type InsertRestaurantSettlement = z.infer<typeof insertRestaurantSettlementSchema>;
+
+// ============================================
+// USER WALLET ADJUSTMENTS (Manual adjustments by admin)
+// ============================================
+
+export const walletAdjustments = pgTable("wallet_adjustments", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  
+  adjustmentType: varchar("adjustment_type", { length: 30 }).notNull(), // credit, debit, bonus, correction
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  balanceBefore: decimal("balance_before", { precision: 10, scale: 2 }).notNull(),
+  balanceAfter: decimal("balance_after", { precision: 10, scale: 2 }).notNull(),
+  
+  reason: text("reason").notNull(), // Required reason for audit
+  adminId: integer("admin_id"), // Admin who made the adjustment
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWalletAdjustmentSchema = createInsertSchema(walletAdjustments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type WalletAdjustment = typeof walletAdjustments.$inferSelect;
+export type InsertWalletAdjustment = z.infer<typeof insertWalletAdjustmentSchema>;
