@@ -267,7 +267,7 @@ export default function MobileHome() {
 
   // Load Google Maps script
   useEffect(() => {
-    if ((window as any).google?.maps) {
+    if ((window as any).google?.maps?.places) {
       setGoogleMapsLoaded(true);
       return;
     }
@@ -277,7 +277,7 @@ export default function MobileHome() {
     const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
     if (existingScript) {
       const checkLoaded = setInterval(() => {
-        if ((window as any).google?.maps) {
+        if ((window as any).google?.maps?.places) {
           setGoogleMapsLoaded(true);
           clearInterval(checkLoaded);
         }
