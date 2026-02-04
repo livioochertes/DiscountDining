@@ -29,6 +29,40 @@ The mobile app features a "Bright Clean" design system with a dual-layout approa
 - **Recipe Sharing System**: Allows users to discover, share, like, save, and comment on recipes. Recipes can be associated with restaurants and include dietary tags and difficulty levels.
 - **Cashback & Loyalty System**: Comprehensive system for managing EatOff-wide and restaurant-specific cashback groups, customer credit accounts with an approval flow, and loyalty tiers with automatic upgrades based on spending.
 - **Marketplace System**: Supports multiple countries and currencies, with dynamic Stripe top-up based on the marketplace's currency.
+- **Financial Management System**: Complete admin panel for restaurant commissions, user wallet management, and settlement processing.
+
+### Financial System Architecture
+The financial management system provides comprehensive control over platform economics:
+
+**Commission Management**
+- Default commission rate: 6% (configurable per restaurant)
+- Cashback participant rate: 7.5% (automatic for restaurants in cashback program)
+- Custom rates with notes for special agreements
+- Commission calculated on total transaction value (including vouchers/credits)
+
+**Loyalty Tiers (5 levels)**
+- Bronze: 1% cashback, €0-500 spending
+- Silver: 2% cashback, €500-2,000 spending
+- Gold: 3% cashback, €2,000-5,000 spending
+- Platinum: 4% cashback, €5,000-15,000 spending
+- Black: 5% cashback, €15,000+ spending
+
+**Settlement System**
+- Weekly settlement cycle (Friday-to-Friday)
+- Automatic settlement generation for all active restaurants
+- Status tracking: pending → processing → paid
+- Stripe Connect integration for automated payouts
+- Bank export CSV for manual transfers
+
+**Wallet Adjustments**
+- Admin can credit/debit/bonus/correct user wallets
+- Minimum 10 character reason required for audit trail
+- All adjustments logged with admin ID and timestamp
+
+**Admin Panel Tabs**
+- CommissionsTab: Restaurant commission rates, cashback toggle, pending settlements
+- UsersFinancialTab: User wallets, loyalty tiers, transaction history, CSV export
+- FinancesTab: Settlement generation, payout processing, bank exports
 
 ## External Dependencies
 

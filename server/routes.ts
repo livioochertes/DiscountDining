@@ -57,9 +57,9 @@ const appleAppSiteAssociation = {
 };
 
 // Financial tracking functions for restaurant payments and EatOff commission
-export async function updateRestaurantFinancials(restaurantId: number, amount: number, paymentType: 'cash' | 'points') {
+export async function updateRestaurantFinancials(restaurantId: number, amount: number, paymentType: 'cash' | 'points', customCommissionRate?: number) {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-  const commissionRate = 0.0550; // 5.5% commission rate formatted for numeric(5,4)
+  const commissionRate = customCommissionRate !== undefined ? customCommissionRate : 0.06; // Default 6%, can be customized per restaurant
   const commissionAmount = Math.round(amount * commissionRate * 100) / 100; // Round to 2 decimal places
   const netAmount = Math.round((amount - commissionAmount) * 100) / 100; // Round to 2 decimal places
   
@@ -88,14 +88,22 @@ export async function updateRestaurantFinancials(restaurantId: number, amount: n
           net_amount = restaurant_financials.net_amount + ${netAmount}
       `);
     }
+    
+    // Update restaurant's pending settlement amount with the net amount
+    await db.execute(sql`
+      UPDATE restaurants 
+      SET pending_settlement_amount = COALESCE(pending_settlement_amount, 0) + ${netAmount}
+      WHERE id = ${restaurantId}
+    `);
   } catch (error) {
     console.error('Error updating restaurant financials:', error);
   }
 }
 
-export async function updateEatOffDailySummary(date: Date, amount: number, paymentType: 'cash' | 'points') {
+export async function updateEatOffDailySummary(date: Date, amount: number, paymentType: 'cash' | 'points', customCommissionRate?: number) {
   const dateStr = date.toISOString().split('T')[0];
-  const commissionEarned = Math.round(amount * 0.0550 * 100) / 100; // 5.5% commission, rounded to 2 decimal places
+  const commissionRate = customCommissionRate !== undefined ? customCommissionRate : 0.06; // Default 6%, can be customized per restaurant
+  const commissionEarned = Math.round(amount * commissionRate * 100) / 100; // Commission rounded to 2 decimal places
   const amountOwedToRestaurant = Math.round((amount - commissionEarned) * 100) / 100; // Rounded to 2 decimal places
 
   try {
@@ -124,6 +132,36 @@ export async function updateEatOffDailySummary(date: Date, amount: number, payme
     }
   } catch (error) {
     console.error('Error updating EatOff daily summary:', error);
+  }
+}
+
+// Helper function to get the effective commission rate for a restaurant
+async function getRestaurantCommissionRate(restaurantId: number): Promise<number> {
+  try {
+    const result = await db.execute(sql`
+      SELECT commission_rate, participates_in_cashback 
+      FROM restaurants 
+      WHERE id = ${restaurantId}
+    `);
+    
+    if (result.rows && result.rows.length > 0) {
+      const restaurant = result.rows[0] as { commission_rate: string | null, participates_in_cashback: boolean | null };
+      
+      // If restaurant participates in cashback, use 7.5% commission rate
+      if (restaurant.participates_in_cashback) {
+        return 0.075; // 7.5%
+      }
+      
+      // Otherwise use their custom commission rate or default to 6%
+      if (restaurant.commission_rate) {
+        return parseFloat(restaurant.commission_rate) / 100; // Convert from percentage (e.g., 6.00) to decimal (e.g., 0.06)
+      }
+    }
+    
+    return 0.06; // Default 6%
+  } catch (error) {
+    console.error('Error fetching restaurant commission rate:', error);
+    return 0.06; // Default 6%
   }
 }
 
@@ -2820,6 +2858,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Get the restaurant's commission rate (respects cashback participation)
+      const commissionRate = await getRestaurantCommissionRate(restaurantId);
+
       // Handle points payment portion
       if (pointsUsed > 0) {
         await storage.createPointsTransaction({
@@ -2832,15 +2873,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Update financial tracking for points portion
         const pointsValue = pointsUsed / 100; // 100 points = €1
-        await updateRestaurantFinancials(restaurantId, pointsValue, 'points');
-        await updateEatOffDailySummary(new Date(), pointsValue, 'points');
+        await updateRestaurantFinancials(restaurantId, pointsValue, 'points', commissionRate);
+        await updateEatOffDailySummary(new Date(), pointsValue, 'points', commissionRate);
       }
 
       // Handle card payment portion
       if (cardAmount > 0) {
         // Update financial tracking for card portion
-        await updateRestaurantFinancials(restaurantId, cardAmount, 'cash');
-        await updateEatOffDailySummary(new Date(), cardAmount, 'cash');
+        await updateRestaurantFinancials(restaurantId, cardAmount, 'cash', commissionRate);
+        await updateEatOffDailySummary(new Date(), cardAmount, 'cash', commissionRate);
       }
 
       // Award points for the total purchase (1 point per euro spent)
@@ -2950,9 +2991,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: `Points earned from order: ${orderNumber}`
       });
 
+      // Get the restaurant's commission rate (respects cashback participation)
+      const commissionRate = await getRestaurantCommissionRate(restaurantId);
+
       // Transfer financial data to restaurant and EatOff tracking
-      await updateRestaurantFinancials(restaurantId, totalAmount, 'points');
-      await updateEatOffDailySummary(new Date(), totalAmount, 'points');
+      await updateRestaurantFinancials(restaurantId, totalAmount, 'points', commissionRate);
+      await updateEatOffDailySummary(new Date(), totalAmount, 'points', commissionRate);
 
       res.json({ 
         success: true, 

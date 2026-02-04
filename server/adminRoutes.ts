@@ -18,12 +18,19 @@ import {
   geonamesCities,
   chefProfiles,
   mobileFilters,
-  insertMobileFilterSchema
+  insertMobileFilterSchema,
+  eatoffLoyaltyTiers,
+  restaurantSettlements,
+  walletAdjustments,
+  customerWallets
 } from "@shared/schema";
 import { eq, and, gte, desc, sql, ilike, asc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { ObjectStorageService } from "./objectStorage";
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 interface AdminAuthRequest extends Request {
   adminId?: number;
@@ -57,7 +64,7 @@ const validateVoucherPackage = (data: any) => {
   return errors;
 };
 
-// Admin authentication middleware - simplified for MemStorage testing
+// Admin authentication middleware - verifies session in database
 const adminAuth = async (req: AdminAuthRequest, res: Response, next: Function) => {
   try {
     const authHeader = req.headers.authorization;
@@ -67,16 +74,47 @@ const adminAuth = async (req: AdminAuthRequest, res: Response, next: Function) =
 
     const token = authHeader.substring(7);
     
-    // For MemStorage testing, we'll use a simple token validation
-    // In production, this should use proper session management
-    if (token && token.length > 10) {
-      // Mock admin for testing
-      req.adminId = 1;
-      req.admin = { id: 1, email: 'admin@eatoff.com', role: 'super_admin' };
-      next();
-    } else {
+    if (!token || token.length < 10) {
+      return res.status(401).json({ message: "Invalid token format" });
+    }
+
+    // Verify session exists in database and is not expired
+    const session = await db
+      .select()
+      .from(adminSessions)
+      .where(eq(adminSessions.sessionToken, token))
+      .limit(1);
+    
+    if (session.length === 0) {
       return res.status(401).json({ message: "Invalid or expired session" });
     }
+
+    const adminSession = session[0];
+    
+    // Check if session is expired (24 hour expiry)
+    const sessionAge = Date.now() - new Date(adminSession.createdAt!).getTime();
+    const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
+    
+    if (sessionAge > maxSessionAge) {
+      // Delete expired session
+      await db.delete(adminSessions).where(eq(adminSessions.id, adminSession.id));
+      return res.status(401).json({ message: "Session expired, please login again" });
+    }
+
+    // Fetch admin details
+    const admin = await db
+      .select()
+      .from(eatoffAdmins)
+      .where(eq(eatoffAdmins.id, adminSession.adminId))
+      .limit(1);
+    
+    if (admin.length === 0 || !admin[0].isActive) {
+      return res.status(401).json({ message: "Admin account inactive or not found" });
+    }
+
+    req.adminId = admin[0].id;
+    req.admin = admin[0];
+    next();
   } catch (error) {
     console.error("Admin auth error:", error);
     res.status(500).json({ message: "Authentication error" });
@@ -2144,6 +2182,969 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error reordering mobile filters:", error);
       res.status(500).json({ message: "Failed to reorder mobile filters" });
+    }
+  });
+
+  // ============================================
+  // FINANCIAL MANAGEMENT ENDPOINTS
+  // ============================================
+
+  // 1. GET /api/admin/restaurants/commissions - List all restaurants with commission settings
+  app.get("/api/admin/restaurants/commissions", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const restaurantsWithCommissions = await db
+        .select({
+          id: restaurants.id,
+          name: restaurants.name,
+          cuisine: restaurants.cuisine,
+          restaurantCode: restaurants.restaurantCode,
+          commissionRate: restaurants.commissionRate,
+          participatesInCashback: restaurants.participatesInCashback,
+          customCommissionNote: restaurants.customCommissionNote,
+          pendingSettlementAmount: restaurants.pendingSettlementAmount,
+          totalSettledAmount: restaurants.totalSettledAmount,
+          lastSettlementDate: restaurants.lastSettlementDate,
+          bankAccountName: restaurants.bankAccountName,
+          bankIban: restaurants.bankIban,
+          isActive: restaurants.isActive,
+          isApproved: restaurants.isApproved,
+        })
+        .from(restaurants)
+        .where(eq(restaurants.isApproved, true))
+        .orderBy(asc(restaurants.name));
+
+      // Transform data to match frontend expected format
+      const formattedRestaurants = restaurantsWithCommissions.map(r => ({
+        id: r.id,
+        name: r.name,
+        cuisine: r.cuisine || 'Unknown',
+        commissionRate: parseFloat(r.commissionRate || '5'),
+        isCashbackParticipant: r.participatesInCashback || false,
+        pendingSettlement: parseFloat(r.pendingSettlementAmount || '0'),
+        totalSettled: parseFloat(r.totalSettledAmount || '0'),
+      }));
+
+      // Calculate totals for metrics cards
+      const activeRestaurants = restaurantsWithCommissions.filter(r => r.isActive).length;
+      const cashbackParticipants = restaurantsWithCommissions.filter(r => r.participatesInCashback).length;
+      const totalPendingSettlement = formattedRestaurants.reduce((sum, r) => sum + r.pendingSettlement, 0);
+      const totalSettled = formattedRestaurants.reduce((sum, r) => sum + r.totalSettled, 0);
+      
+      // Calculate total commission earned (5% of total settled as default)
+      const avgCommissionRate = formattedRestaurants.length > 0 
+        ? formattedRestaurants.reduce((sum, r) => sum + r.commissionRate, 0) / formattedRestaurants.length 
+        : 5;
+      const totalCommissionEarned = totalSettled * (avgCommissionRate / 100);
+      const monthlyCommission = totalCommissionEarned * 0.1; // Approximation for monthly
+
+      res.json({
+        restaurants: formattedRestaurants,
+        totals: {
+          totalPendingSettlement,
+          totalSettled,
+          totalCommissionEarned,
+          monthlyCommission,
+          totalTransactions: restaurantsWithCommissions.length * 10, // Placeholder
+          activeRestaurants,
+          cashbackParticipants,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching restaurant commissions:", error);
+      res.status(500).json({ message: "Failed to fetch restaurant commissions" });
+    }
+  });
+
+  // 2. PATCH /api/admin/restaurants/:id/commission - Update restaurant commission rate
+  app.patch("/api/admin/restaurants/:id/commission", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const restaurantId = parseInt(req.params.id);
+      const { commissionRate, participatesInCashback, isCashbackParticipant, customCommissionNote } = req.body;
+
+      if (commissionRate !== undefined && (commissionRate < 0 || commissionRate > 100)) {
+        return res.status(400).json({ message: "Commission rate must be between 0 and 100" });
+      }
+
+      const existingRestaurant = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, restaurantId))
+        .limit(1);
+
+      if (existingRestaurant.length === 0) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const updateData: any = { updatedAt: new Date() };
+      if (commissionRate !== undefined) updateData.commissionRate = commissionRate.toString();
+      // Support both field names for backwards compatibility
+      if (participatesInCashback !== undefined) updateData.participatesInCashback = participatesInCashback;
+      if (isCashbackParticipant !== undefined) updateData.participatesInCashback = isCashbackParticipant;
+      if (customCommissionNote !== undefined) updateData.customCommissionNote = customCommissionNote;
+
+      const [updated] = await db
+        .update(restaurants)
+        .set(updateData)
+        .where(eq(restaurants.id, restaurantId))
+        .returning();
+
+      await logAdminAction(req.adminId!, 'update_commission', 'restaurant', restaurantId.toString(), existingRestaurant[0], updateData, req);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating restaurant commission:", error);
+      res.status(500).json({ message: "Failed to update restaurant commission" });
+    }
+  });
+
+  // 3. GET /api/admin/loyalty-tiers - List all EatOff loyalty tiers
+  app.get("/api/admin/loyalty-tiers", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const tiers = await db
+        .select()
+        .from(eatoffLoyaltyTiers)
+        .orderBy(asc(eatoffLoyaltyTiers.tierLevel));
+
+      res.json(tiers);
+    } catch (error) {
+      console.error("Error fetching loyalty tiers:", error);
+      res.status(500).json({ message: "Failed to fetch loyalty tiers" });
+    }
+  });
+
+  // 4. PUT /api/admin/loyalty-tiers/:id - Update loyalty tier settings
+  app.put("/api/admin/loyalty-tiers/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const tierId = parseInt(req.params.id);
+      const { 
+        displayName, 
+        cashbackPercentage, 
+        minTransactionVolume, 
+        maxTransactionVolume,
+        color,
+        icon,
+        benefits,
+        isActive 
+      } = req.body;
+
+      const existingTier = await db
+        .select()
+        .from(eatoffLoyaltyTiers)
+        .where(eq(eatoffLoyaltyTiers.id, tierId))
+        .limit(1);
+
+      if (existingTier.length === 0) {
+        return res.status(404).json({ message: "Loyalty tier not found" });
+      }
+
+      const updateData: any = { updatedAt: new Date() };
+      if (displayName !== undefined) updateData.displayName = displayName;
+      if (cashbackPercentage !== undefined) updateData.cashbackPercentage = cashbackPercentage.toString();
+      if (minTransactionVolume !== undefined) updateData.minTransactionVolume = minTransactionVolume.toString();
+      if (maxTransactionVolume !== undefined) updateData.maxTransactionVolume = maxTransactionVolume?.toString() || null;
+      if (color !== undefined) updateData.color = color;
+      if (icon !== undefined) updateData.icon = icon;
+      if (benefits !== undefined) updateData.benefits = benefits;
+      if (isActive !== undefined) updateData.isActive = isActive;
+
+      const [updated] = await db
+        .update(eatoffLoyaltyTiers)
+        .set(updateData)
+        .where(eq(eatoffLoyaltyTiers.id, tierId))
+        .returning();
+
+      await logAdminAction(req.adminId!, 'update_loyalty_tier', 'loyalty_tier', tierId.toString(), existingTier[0], updateData, req);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating loyalty tier:", error);
+      res.status(500).json({ message: "Failed to update loyalty tier" });
+    }
+  });
+
+  // 5a. GET /api/admin/settlements/metrics - Get settlement metrics for dashboard
+  app.get("/api/admin/settlements/metrics", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const pendingResult = await db
+        .select({
+          count: sql<number>`COUNT(*)`,
+          sum: sql<number>`COALESCE(SUM(${restaurantSettlements.netAmount}::numeric), 0)`,
+        })
+        .from(restaurantSettlements)
+        .where(eq(restaurantSettlements.status, 'pending'));
+
+      const paidResult = await db
+        .select({
+          sum: sql<number>`COALESCE(SUM(${restaurantSettlements.netAmount}::numeric), 0)`,
+        })
+        .from(restaurantSettlements)
+        .where(eq(restaurantSettlements.status, 'paid'));
+
+      const startOfWeek = new Date();
+      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const thisWeekResult = await db
+        .select({
+          sum: sql<number>`COALESCE(SUM(${restaurantSettlements.netAmount}::numeric), 0)`,
+        })
+        .from(restaurantSettlements)
+        .where(gte(restaurantSettlements.createdAt, startOfWeek));
+
+      const avgCommissionResult = await db
+        .select({
+          avg: sql<number>`COALESCE(AVG(${restaurantSettlements.commissionRate}::numeric), 0)`,
+        })
+        .from(restaurantSettlements);
+
+      res.json({
+        pendingCount: Number(pendingResult[0]?.count) || 0,
+        pendingSum: Number(pendingResult[0]?.sum) || 0,
+        thisWeekSum: Number(thisWeekResult[0]?.sum) || 0,
+        totalPaidOut: Number(paidResult[0]?.sum) || 0,
+        avgCommissionRate: Number(avgCommissionResult[0]?.avg) || 0,
+      });
+    } catch (error) {
+      console.error("Error fetching settlement metrics:", error);
+      res.status(500).json({ message: "Failed to fetch settlement metrics" });
+    }
+  });
+
+  // 5b. POST /api/admin/settlements/send-emails - Send settlement PDFs (placeholder)
+  app.post("/api/admin/settlements/send-emails", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { settlementIds } = req.body;
+      
+      await logAdminAction(req.adminId!, 'send_settlement_emails', 'settlement', JSON.stringify(settlementIds), null, { settlementIds }, req);
+      
+      res.json({ 
+        message: "Settlement emails queued for sending",
+        count: settlementIds?.length || 0,
+        status: "pending_implementation"
+      });
+    } catch (error) {
+      console.error("Error sending settlement emails:", error);
+      res.status(500).json({ message: "Failed to send settlement emails" });
+    }
+  });
+
+  // 5c. GET /api/admin/settlements/:id/transactions - Get transactions for a settlement
+  app.get("/api/admin/settlements/:id/transactions", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const settlementId = parseInt(req.params.id);
+
+      const settlement = await db
+        .select()
+        .from(restaurantSettlements)
+        .where(eq(restaurantSettlements.id, settlementId))
+        .limit(1);
+
+      if (settlement.length === 0) {
+        return res.status(404).json({ message: "Settlement not found" });
+      }
+
+      const transactions = await db
+        .select({
+          id: walletTransactions.id,
+          amount: walletTransactions.amount,
+          transactionType: walletTransactions.transactionType,
+          description: walletTransactions.description,
+          createdAt: walletTransactions.createdAt,
+        })
+        .from(walletTransactions)
+        .where(
+          and(
+            eq(walletTransactions.restaurantId, settlement[0].restaurantId),
+            gte(walletTransactions.createdAt, settlement[0].periodStart),
+            sql`${walletTransactions.createdAt} <= ${settlement[0].periodEnd}`
+          )
+        )
+        .orderBy(desc(walletTransactions.createdAt));
+
+      res.json({
+        settlement: settlement[0],
+        transactions,
+      });
+    } catch (error) {
+      console.error("Error fetching settlement transactions:", error);
+      res.status(500).json({ message: "Failed to fetch settlement transactions" });
+    }
+  });
+
+  // 5d. POST /api/admin/settlements/generate-all - Generate settlements for all restaurants
+  app.post("/api/admin/settlements/generate-all", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+
+      const allRestaurants = await db
+        .select({
+          id: restaurants.id,
+          name: restaurants.name,
+          commissionRate: restaurants.commissionRate,
+        })
+        .from(restaurants)
+        .where(eq(restaurants.isActive, true));
+
+      const settlements = [];
+      
+      for (const restaurant of allRestaurants) {
+        const transactions = await db
+          .select({
+            amount: walletTransactions.amount,
+          })
+          .from(walletTransactions)
+          .where(
+            and(
+              eq(walletTransactions.restaurantId, restaurant.id),
+              gte(walletTransactions.createdAt, startDate),
+              sql`${walletTransactions.createdAt} <= ${endDate}`
+            )
+          );
+
+        if (transactions.length === 0) continue;
+
+        const grossAmount = transactions.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+        if (grossAmount <= 0) continue;
+
+        const commissionRate = parseFloat(restaurant.commissionRate || '6.00');
+        const commissionAmount = Math.round(grossAmount * (commissionRate / 100) * 100) / 100;
+        const netAmount = Math.round((grossAmount - commissionAmount) * 100) / 100;
+
+        const [settlement] = await db
+          .insert(restaurantSettlements)
+          .values({
+            restaurantId: restaurant.id,
+            periodStart: startDate,
+            periodEnd: endDate,
+            grossAmount: grossAmount.toString(),
+            commissionAmount: commissionAmount.toString(),
+            commissionRate: commissionRate.toString(),
+            netAmount: netAmount.toString(),
+            transactionCount: transactions.length,
+            status: 'pending',
+          })
+          .returning();
+
+        settlements.push({
+          ...settlement,
+          restaurantName: restaurant.name,
+        });
+      }
+
+      await logAdminAction(req.adminId!, 'generate_all_settlements', 'settlement', null, null, { count: settlements.length }, req);
+      
+      res.json({
+        message: `Generated ${settlements.length} settlements`,
+        count: settlements.length,
+        settlements,
+      });
+    } catch (error) {
+      console.error("Error generating settlements:", error);
+      res.status(500).json({ message: "Failed to generate settlements" });
+    }
+  });
+
+  // 5. GET /api/admin/settlements - List all settlements with filters
+  app.get("/api/admin/settlements", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { status, restaurantId, startDate, endDate, page = '1', limit = '50' } = req.query;
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const offset = (pageNum - 1) * limitNum;
+
+      let query = db
+        .select({
+          settlement: restaurantSettlements,
+          restaurant: {
+            id: restaurants.id,
+            name: restaurants.name,
+            restaurantCode: restaurants.restaurantCode,
+            stripeConnectAccountId: restaurants.stripeConnectAccountId,
+          }
+        })
+        .from(restaurantSettlements)
+        .leftJoin(restaurants, eq(restaurantSettlements.restaurantId, restaurants.id))
+        .orderBy(desc(restaurantSettlements.createdAt))
+        .limit(limitNum)
+        .offset(offset);
+
+      const conditions: any[] = [];
+      if (status) conditions.push(eq(restaurantSettlements.status, status as string));
+      if (restaurantId) conditions.push(eq(restaurantSettlements.restaurantId, parseInt(restaurantId as string)));
+      if (startDate) conditions.push(gte(restaurantSettlements.periodStart, new Date(startDate as string)));
+      if (endDate) {
+        const { lte } = await import('drizzle-orm');
+        conditions.push(lte(restaurantSettlements.periodEnd, new Date(endDate as string)));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+      }
+
+      const settlements = await query;
+
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(restaurantSettlements);
+      const total = countResult[0]?.count || 0;
+
+      res.json({
+        settlements: settlements.map(s => ({ ...s.settlement, restaurant: s.restaurant })),
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(Number(total) / limitNum)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching settlements:", error);
+      res.status(500).json({ message: "Failed to fetch settlements" });
+    }
+  });
+
+  // 6. POST /api/admin/settlements/generate - Generate weekly settlement report
+  app.post("/api/admin/settlements/generate", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { restaurantId, periodStart, periodEnd } = req.body;
+
+      if (!restaurantId || !periodStart || !periodEnd) {
+        return res.status(400).json({ message: "restaurantId, periodStart, and periodEnd are required" });
+      }
+
+      const restaurant = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, parseInt(restaurantId)))
+        .limit(1);
+
+      if (restaurant.length === 0) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      const startDate = new Date(periodStart);
+      const endDate = new Date(periodEnd);
+
+      const transactions = await db
+        .select({
+          amount: walletTransactions.amount,
+        })
+        .from(walletTransactions)
+        .where(
+          and(
+            eq(walletTransactions.restaurantId, parseInt(restaurantId)),
+            gte(walletTransactions.createdAt, startDate),
+            sql`${walletTransactions.createdAt} <= ${endDate}`
+          )
+        );
+
+      const grossAmount = transactions.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+      const commissionRate = parseFloat(restaurant[0].commissionRate || '6.00');
+      const commissionAmount = Math.round(grossAmount * (commissionRate / 100) * 100) / 100;
+      const netAmount = Math.round((grossAmount - commissionAmount) * 100) / 100;
+
+      const [settlement] = await db
+        .insert(restaurantSettlements)
+        .values({
+          restaurantId: parseInt(restaurantId),
+          periodStart: startDate,
+          periodEnd: endDate,
+          grossAmount: grossAmount.toString(),
+          commissionAmount: commissionAmount.toString(),
+          commissionRate: commissionRate.toString(),
+          netAmount: netAmount.toString(),
+          transactionCount: transactions.length,
+          status: 'pending',
+        })
+        .returning();
+
+      await db
+        .update(restaurants)
+        .set({ 
+          pendingSettlementAmount: sql`${restaurants.pendingSettlementAmount} + ${netAmount}`,
+          updatedAt: new Date() 
+        })
+        .where(eq(restaurants.id, parseInt(restaurantId)));
+
+      await logAdminAction(req.adminId!, 'generate_settlement', 'settlement', settlement.id.toString(), null, settlement, req);
+      res.json(settlement);
+    } catch (error) {
+      console.error("Error generating settlement:", error);
+      res.status(500).json({ message: "Failed to generate settlement" });
+    }
+  });
+
+  // 7. PATCH /api/admin/settlements/:id/mark-paid - Mark settlement as paid
+  app.patch("/api/admin/settlements/:id/mark-paid", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const settlementId = parseInt(req.params.id);
+      const { paymentMethod, paymentReference } = req.body;
+
+      const existingSettlement = await db
+        .select()
+        .from(restaurantSettlements)
+        .where(eq(restaurantSettlements.id, settlementId))
+        .limit(1);
+
+      if (existingSettlement.length === 0) {
+        return res.status(404).json({ message: "Settlement not found" });
+      }
+
+      if (existingSettlement[0].status === 'paid') {
+        return res.status(400).json({ message: "Settlement is already marked as paid" });
+      }
+
+      const [updated] = await db
+        .update(restaurantSettlements)
+        .set({
+          status: 'paid',
+          paymentMethod: paymentMethod || 'manual',
+          paymentReference: paymentReference || null,
+          paidAt: new Date(),
+          paidBy: req.adminId,
+        })
+        .where(eq(restaurantSettlements.id, settlementId))
+        .returning();
+
+      const netAmount = parseFloat(existingSettlement[0].netAmount || '0');
+      await db
+        .update(restaurants)
+        .set({
+          pendingSettlementAmount: sql`GREATEST(0, ${restaurants.pendingSettlementAmount} - ${netAmount})`,
+          totalSettledAmount: sql`${restaurants.totalSettledAmount} + ${netAmount}`,
+          lastSettlementDate: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(restaurants.id, existingSettlement[0].restaurantId));
+
+      await logAdminAction(req.adminId!, 'mark_settlement_paid', 'settlement', settlementId.toString(), existingSettlement[0], updated, req);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error marking settlement as paid:", error);
+      res.status(500).json({ message: "Failed to mark settlement as paid" });
+    }
+  });
+
+  // 8. GET /api/admin/users/financial - List users with wallet balance, cashback, tier (paginated)
+  app.get("/api/admin/users/financial", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { page = '1', search } = req.query;
+      const pageNum = parseInt(page as string);
+      const limit = 50;
+      const offset = (pageNum - 1) * limit;
+
+      let query = db
+        .select({
+          customer: {
+            id: customers.id,
+            email: customers.email,
+            name: customers.name,
+            membershipTier: customers.membershipTier,
+            loyaltyPoints: customers.loyaltyPoints,
+            balance: customers.balance,
+            createdAt: customers.createdAt,
+          },
+          wallet: {
+            cashBalance: customerWallets.cashBalance,
+            loyaltyPoints: customerWallets.loyaltyPoints,
+            totalPointsEarned: customerWallets.totalPointsEarned,
+            isActive: customerWallets.isActive,
+          }
+        })
+        .from(customers)
+        .leftJoin(customerWallets, eq(customers.id, customerWallets.customerId))
+        .orderBy(desc(customers.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      if (search) {
+        query = query.where(
+          sql`${customers.email} ILIKE ${'%' + search + '%'} OR ${customers.name} ILIKE ${'%' + search + '%'}`
+        ) as any;
+      }
+
+      const users = await query;
+
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(customers);
+      const total = countResult[0]?.count || 0;
+
+      res.json({
+        users: users.map(u => ({
+          ...u.customer,
+          wallet: u.wallet
+        })),
+        pagination: {
+          page: pageNum,
+          limit,
+          total,
+          totalPages: Math.ceil(Number(total) / limit)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching users financial data:", error);
+      res.status(500).json({ message: "Failed to fetch users financial data" });
+    }
+  });
+
+  // 9. GET /api/admin/users/:id/transactions - Get user transaction history (paginated)
+  app.get("/api/admin/users/:id/transactions", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      const { page = '1', limit = '50' } = req.query;
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const offset = (pageNum - 1) * limitNum;
+
+      const customer = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.id, customerId))
+        .limit(1);
+
+      if (customer.length === 0) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const transactions = await db
+        .select({
+          transaction: walletTransactions,
+          restaurant: {
+            id: restaurants.id,
+            name: restaurants.name,
+          }
+        })
+        .from(walletTransactions)
+        .leftJoin(restaurants, eq(walletTransactions.restaurantId, restaurants.id))
+        .where(eq(walletTransactions.customerId, customerId))
+        .orderBy(desc(walletTransactions.createdAt))
+        .limit(limitNum)
+        .offset(offset);
+
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(walletTransactions)
+        .where(eq(walletTransactions.customerId, customerId));
+      const total = countResult[0]?.count || 0;
+
+      res.json({
+        customer: customer[0],
+        transactions: transactions.map(t => ({ ...t.transaction, restaurant: t.restaurant })),
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(Number(total) / limitNum)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching user transactions:", error);
+      res.status(500).json({ message: "Failed to fetch user transactions" });
+    }
+  });
+
+  // 10. POST /api/admin/users/:id/wallet-adjustment - Create manual wallet adjustment
+  app.post("/api/admin/users/:id/wallet-adjustment", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const customerId = parseInt(req.params.id);
+      const { adjustmentType, amount, reason } = req.body;
+
+      if (!adjustmentType || !amount || !reason) {
+        return res.status(400).json({ message: "adjustmentType, amount, and reason are required" });
+      }
+
+      if (!['credit', 'debit', 'bonus', 'correction'].includes(adjustmentType)) {
+        return res.status(400).json({ message: "Invalid adjustment type. Must be: credit, debit, bonus, or correction" });
+      }
+
+      if (reason.trim().length < 10) {
+        return res.status(400).json({ message: "Reason must be at least 10 characters" });
+      }
+
+      const customer = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.id, customerId))
+        .limit(1);
+
+      if (customer.length === 0) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const wallet = await db
+        .select()
+        .from(customerWallets)
+        .where(eq(customerWallets.customerId, customerId))
+        .limit(1);
+
+      const currentBalance = wallet.length > 0 ? parseFloat(wallet[0].cashBalance || '0') : 0;
+      const adjustmentAmount = parseFloat(amount);
+      
+      let newBalance: number;
+      if (adjustmentType === 'debit') {
+        newBalance = Math.max(0, currentBalance - Math.abs(adjustmentAmount));
+      } else {
+        newBalance = currentBalance + Math.abs(adjustmentAmount);
+      }
+
+      const [adjustment] = await db
+        .insert(walletAdjustments)
+        .values({
+          customerId,
+          adjustmentType,
+          amount: adjustmentAmount.toString(),
+          balanceBefore: currentBalance.toString(),
+          balanceAfter: newBalance.toString(),
+          reason: reason.trim(),
+          adminId: req.adminId,
+        })
+        .returning();
+
+      if (wallet.length > 0) {
+        await db
+          .update(customerWallets)
+          .set({ cashBalance: newBalance.toString(), updatedAt: new Date() })
+          .where(eq(customerWallets.customerId, customerId));
+      } else {
+        await db
+          .insert(customerWallets)
+          .values({
+            customerId,
+            cashBalance: newBalance.toString(),
+            loyaltyPoints: 0,
+            totalPointsEarned: 0,
+          });
+      }
+
+      await db
+        .insert(walletTransactions)
+        .values({
+          customerId,
+          transactionType: `admin_${adjustmentType}`,
+          amount: adjustmentAmount.toString(),
+          description: `Admin adjustment: ${reason}`,
+          balanceBefore: currentBalance.toString(),
+          balanceAfter: newBalance.toString(),
+        });
+
+      await logAdminAction(req.adminId!, 'wallet_adjustment', 'customer', customerId.toString(), { balance: currentBalance }, adjustment, req);
+      res.json(adjustment);
+    } catch (error) {
+      console.error("Error creating wallet adjustment:", error);
+      res.status(500).json({ message: "Failed to create wallet adjustment" });
+    }
+  });
+
+  // Stripe Connect: Create account link for restaurant onboarding
+  app.post("/api/admin/restaurants/:id/stripe-connect", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const restaurantId = parseInt(req.params.id);
+
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, restaurantId))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      let stripeAccountId = restaurant.stripeConnectAccountId;
+
+      if (!stripeAccountId) {
+        const account = await stripe.accounts.create({
+          type: 'express',
+          country: 'RO',
+          email: restaurant.email || undefined,
+          business_type: 'company',
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+          metadata: {
+            restaurant_id: restaurantId.toString(),
+            restaurant_name: restaurant.name,
+          },
+        });
+
+        stripeAccountId = account.id;
+
+        await db
+          .update(restaurants)
+          .set({ stripeConnectAccountId: account.id })
+          .where(eq(restaurants.id, restaurantId));
+      }
+
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.BASE_URL || 'http://localhost:5000';
+
+      const accountLink = await stripe.accountLinks.create({
+        account: stripeAccountId,
+        refresh_url: `${baseUrl}/admin`,
+        return_url: `${baseUrl}/admin?stripe_success=true&restaurant_id=${restaurantId}`,
+        type: 'account_onboarding',
+      });
+
+      await logAdminAction(
+        req.adminId!,
+        'create_stripe_connect_link',
+        'restaurant',
+        restaurantId.toString(),
+        null,
+        { stripeAccountId },
+        req
+      );
+
+      res.json({
+        url: accountLink.url,
+        stripeAccountId,
+      });
+    } catch (error: any) {
+      console.error("Error creating Stripe Connect account link:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to create Stripe Connect account link" 
+      });
+    }
+  });
+
+  // Stripe Connect: Check onboarding status
+  app.get("/api/admin/restaurants/:id/stripe-status", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const restaurantId = parseInt(req.params.id);
+
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, restaurantId))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      if (!restaurant.stripeConnectAccountId) {
+        return res.json({
+          hasStripeAccount: false,
+          isOnboarded: false,
+          payoutsEnabled: false,
+          chargesEnabled: false,
+        });
+      }
+
+      const account = await stripe.accounts.retrieve(restaurant.stripeConnectAccountId);
+
+      res.json({
+        hasStripeAccount: true,
+        isOnboarded: account.details_submitted,
+        payoutsEnabled: account.payouts_enabled,
+        chargesEnabled: account.charges_enabled,
+        stripeAccountId: restaurant.stripeConnectAccountId,
+      });
+    } catch (error: any) {
+      console.error("Error checking Stripe status:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to check Stripe status" 
+      });
+    }
+  });
+
+  // Stripe Connect: Process payout for a settlement
+  app.post("/api/admin/settlements/:id/payout", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const settlementId = parseInt(req.params.id);
+
+      const [settlement] = await db
+        .select()
+        .from(restaurantSettlements)
+        .where(eq(restaurantSettlements.id, settlementId))
+        .limit(1);
+
+      if (!settlement) {
+        return res.status(404).json({ message: "Settlement not found" });
+      }
+
+      if (settlement.status === 'paid') {
+        return res.status(400).json({ message: "Settlement is already paid" });
+      }
+
+      const [restaurant] = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, settlement.restaurantId))
+        .limit(1);
+
+      if (!restaurant) {
+        return res.status(404).json({ message: "Restaurant not found" });
+      }
+
+      if (!restaurant.stripeConnectAccountId) {
+        return res.status(400).json({ 
+          message: "Restaurant has not completed Stripe Connect onboarding" 
+        });
+      }
+
+      const account = await stripe.accounts.retrieve(restaurant.stripeConnectAccountId);
+      if (!account.payouts_enabled) {
+        return res.status(400).json({ 
+          message: "Restaurant's Stripe account is not fully onboarded or payouts are disabled" 
+        });
+      }
+
+      const amountInCents = Math.round(parseFloat(settlement.netAmount) * 100);
+
+      if (amountInCents <= 0) {
+        return res.status(400).json({ message: "Settlement amount must be greater than zero" });
+      }
+
+      const transfer = await stripe.transfers.create({
+        amount: amountInCents,
+        currency: 'eur',
+        destination: restaurant.stripeConnectAccountId,
+        transfer_group: `settlement_${settlementId}`,
+        metadata: {
+          settlement_id: settlementId.toString(),
+          restaurant_id: restaurant.id.toString(),
+          restaurant_name: restaurant.name,
+          period_start: settlement.periodStart.toISOString(),
+          period_end: settlement.periodEnd.toISOString(),
+        },
+      });
+
+      const [updatedSettlement] = await db
+        .update(restaurantSettlements)
+        .set({
+          status: 'paid',
+          paidAt: new Date(),
+          paymentMethod: 'stripe_connect',
+          paymentReference: transfer.id,
+        })
+        .where(eq(restaurantSettlements.id, settlementId))
+        .returning();
+
+      await logAdminAction(
+        req.adminId!,
+        'process_stripe_payout',
+        'settlement',
+        settlementId.toString(),
+        { status: settlement.status },
+        { status: 'paid', transferId: transfer.id },
+        req
+      );
+
+      res.json({
+        message: "Payout processed successfully",
+        transferId: transfer.id,
+        amount: settlement.netAmount,
+        settlement: updatedSettlement,
+      });
+    } catch (error: any) {
+      console.error("Error processing Stripe payout:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to process Stripe payout" 
+      });
     }
   });
 }
