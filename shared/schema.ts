@@ -2265,15 +2265,17 @@ export type MobileFilter = typeof mobileFilters.$inferSelect;
 export type InsertMobileFilter = z.infer<typeof insertMobileFilterSchema>;
 
 // ============================================
-// EATOFF GLOBAL LOYALTY TIERS (Bronze, Silver, Gold, Platinum, Black)
+// EATOFF LOYALTY TIERS PER MARKETPLACE (Bronze, Silver, Gold, Platinum, Black)
+// Each marketplace has its own tiers with thresholds in local currency
 // ============================================
 
 export const eatoffLoyaltyTiers = pgTable("eatoff_loyalty_tiers", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 50 }).notNull().unique(), // Bronze, Silver, Gold, Platinum, Black
+  marketplaceId: integer("marketplace_id").references(() => marketplaces.id), // null = global default, specific marketplace overrides
+  name: varchar("name", { length: 50 }).notNull(), // Bronze, Silver, Gold, Platinum, Black (unique per marketplace)
   displayName: varchar("display_name", { length: 100 }).notNull(),
   cashbackPercentage: decimal("cashback_percentage", { precision: 5, scale: 2 }).notNull(), // e.g., 2.00 for 2%
-  minTransactionVolume: decimal("min_transaction_volume", { precision: 12, scale: 2 }).notNull(), // Minimum total spent to reach this tier
+  minTransactionVolume: decimal("min_transaction_volume", { precision: 12, scale: 2 }).notNull(), // In marketplace currency
   maxTransactionVolume: decimal("max_transaction_volume", { precision: 12, scale: 2 }), // null = no max (top tier)
   color: varchar("color", { length: 20 }).default("#808080"), // Display color
   icon: varchar("icon", { length: 50 }), // Emoji or icon
