@@ -134,6 +134,8 @@ export function useUserLocation(): UseUserLocationResult {
   const requestGpsLocation = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    
+    console.log('[Location] Starting GPS request, isNativePlatform:', isNativePlatform);
 
     try {
       let latitude: number;
@@ -141,12 +143,32 @@ export function useUserLocation(): UseUserLocationResult {
 
       if (isNativePlatform) {
         // Use native Capacitor Geolocation plugin - only shows one native permission dialog
-        console.log('[Location] Using native Capacitor Geolocation');
+        console.log('[Location] Using native Capacitor Geolocation plugin');
+        
+        // First check/request permissions
+        try {
+          const permStatus = await Geolocation.checkPermissions();
+          console.log('[Location] Permission status:', permStatus.location);
+          
+          if (permStatus.location === 'denied') {
+            console.log('[Location] Permission denied, requesting...');
+            const newPerm = await Geolocation.requestPermissions();
+            console.log('[Location] New permission status:', newPerm.location);
+            if (newPerm.location === 'denied') {
+              throw { code: 1, message: 'Location permission denied' };
+            }
+          }
+        } catch (permError) {
+          console.error('[Location] Permission check error:', permError);
+        }
+        
+        console.log('[Location] Getting current position...');
         const position = await Geolocation.getCurrentPosition({
           enableHighAccuracy: false,
-          timeout: 5000,
+          timeout: 10000,
           maximumAge: 600000
         });
+        console.log('[Location] Got position:', position.coords.latitude, position.coords.longitude);
         latitude = position.coords.latitude;
         longitude = position.coords.longitude;
       } else {
