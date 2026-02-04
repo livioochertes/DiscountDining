@@ -276,21 +276,39 @@ export default function Marketplace() {
     }));
   }, []);
 
-  // Handle place selection
-  const handleSelectPlace = useCallback((place: any) => {
+  // Handle place selection - fetch Place Details for accurate city extraction
+  const handleSelectPlace = useCallback(async (place: any) => {
     const address = place.description;
-    const city = address.split(',')[0].trim();
     setSelectedAddress(address);
     setAddressSearchQuery('');
     setPlaceSuggestions([]);
     setShowLocationModal(false);
-    setDetectedLocation(city);
     setAutoDetectLocation(false);
-    // Update location filter to the city for restaurant filtering
-    handleFilterChange('location', city);
+    
+    // Use Place Details API for accurate city extraction
+    try {
+      const response = await fetch(`/api/places/details?place_id=${encodeURIComponent(place.place_id)}`);
+      if (response.ok) {
+        const details = await response.json();
+        const city = details.city || details.locality || address.split(',')[0].trim();
+        console.log('[Marketplace] Place Details city:', city, 'from:', address);
+        setDetectedLocation(city);
+        handleFilterChange('location', city);
+      } else {
+        // Fallback to first term
+        const city = address.split(',')[0].trim();
+        setDetectedLocation(city);
+        handleFilterChange('location', city);
+      }
+    } catch (error) {
+      console.error('[Marketplace] Place Details error:', error);
+      const city = address.split(',')[0].trim();
+      setDetectedLocation(city);
+      handleFilterChange('location', city);
+    }
   }, [handleFilterChange]);
 
-  // Handle GPS location detection
+  // Handle GPS location detection with correct city priority
   const handleGPSDetect = useCallback(() => {
     if (!navigator.geolocation) {
       return;
@@ -308,16 +326,25 @@ export default function Marketplace() {
               setIsDetectingLocation(false);
               if (status === 'OK' && results && results[0]) {
                 const address = results[0].formatted_address;
-                // Extract city from address components
-                const cityComponent = results[0].address_components?.find(
-                  (c: any) => c.types?.includes('locality') || c.types?.includes('administrative_area_level_1')
-                );
-                const city = cityComponent?.long_name || address.split(',')[0].trim();
+                const components = results[0].address_components || [];
+                
+                // Extract city with correct priority: locality > postal_town > sublocality > admin_level_2
+                const getComponent = (types: string[]) => {
+                  for (const type of types) {
+                    const comp = components.find((c: any) => c.types?.includes(type));
+                    if (comp) return comp.long_name;
+                  }
+                  return null;
+                };
+                
+                const city = getComponent(['locality', 'postal_town', 'sublocality_level_1', 'administrative_area_level_2']) 
+                  || address.split(',')[0].trim();
+                
+                console.log('[Marketplace GPS] City:', city, 'from:', address);
                 setSelectedAddress(address);
                 setDetectedLocation(city);
                 setShowLocationModal(false);
                 setAutoDetectLocation(true);
-                // Update location filter
                 handleFilterChange('location', city);
               }
             }
