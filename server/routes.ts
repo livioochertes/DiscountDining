@@ -1024,7 +1024,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       url.searchParams.set('input', input);
       url.searchParams.set('key', apiKey);
       url.searchParams.set('types', 'geocode');
-      url.searchParams.set('components', 'country:ro|country:es|country:fr|country:de|country:it|country:gb');
+      // Google Places API allows max 5 countries
+      url.searchParams.set('components', 'country:ro|country:es|country:fr|country:de|country:it');
 
       console.log('[Places API] Fetching suggestions for:', input);
       
