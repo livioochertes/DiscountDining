@@ -2779,7 +2779,7 @@ export function registerAdminRoutes(app: Express) {
 
       res.json({
         users: users.map(u => ({
-          ...u.customer,
+          customer: u.customer,
           wallet: u.wallet
         })),
         pagination: {
