@@ -105,16 +105,9 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
       <CardContent className="p-3">
         <div className="flex justify-between items-start mb-0.5">
           <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">{restaurant.name}</h3>
-          <div className="flex flex-col items-end">
-            <div className="flex items-center space-x-1">
-              <Star className="h-3 w-3 text-yellow-400 fill-current" />
-              <span className="text-xs font-medium">{restaurant.rating}</span>
-            </div>
-            {maxDiscount > 0 && (
-              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 mt-0.5">
-                -{maxDiscount}%
-              </Badge>
-            )}
+          <div className="flex items-center space-x-1">
+            <Star className="h-3 w-3 text-yellow-400 fill-current" />
+            <span className="text-xs font-medium">{restaurant.rating}</span>
           </div>
         </div>
         
@@ -123,6 +116,14 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick, onVou
           <span className="mx-1">•</span>
           <MapPin className="h-2.5 w-2.5 mr-0.5 flex-shrink-0" />
           <span className="truncate">{restaurant.location}</span>
+          {maxDiscount > 0 && (
+            <>
+              <span className="mx-1">•</span>
+              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0">
+                -{maxDiscount}%
+              </Badge>
+            </>
+          )}
         </div>
         
         <div className="grid grid-cols-3 gap-1" data-tour="voucher-card">
