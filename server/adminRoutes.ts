@@ -184,11 +184,16 @@ export function registerAdminRoutes(app: Express) {
         }
       }
 
-      // Create session token (simplified for MemStorage)
+      // Create session token
       const sessionToken = crypto.randomBytes(32).toString('hex');
       
-      // For MemStorage, we'll just store the session in memory
-      // No database operations needed
+      // Save session in database for proper validation
+      await db.insert(adminSessions).values({
+        adminId: admin.id,
+        sessionToken: sessionToken,
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
 
       res.json({
         token: sessionToken,
