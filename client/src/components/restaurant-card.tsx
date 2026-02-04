@@ -135,7 +135,7 @@ export default function RestaurantCard({ restaurant, onClick, onMenuClick }: Res
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
-                  className="bg-primary/20 text-primary px-3 py-3 rounded-lg font-semibold text-xs hover:bg-primary/30 transition-colors flex items-center justify-center gap-1 border border-primary/30"
+                  className="bg-orange-100 text-orange-700 px-3 py-3 rounded-lg font-semibold text-xs hover:bg-orange-200 transition-colors flex items-center justify-center gap-1 border border-orange-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     onClick();
