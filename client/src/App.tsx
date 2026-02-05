@@ -82,8 +82,8 @@ function Footer() {
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   
   return (
-    <footer className="bg-white border-t mt-16">
-      <div className="w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 py-12 lg:py-16">
+    <footer className="bg-white border-t mt-8">
+      <div className="w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 py-8 lg:py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
           <div className="col-span-1 md:col-span-2">
             <h3 className="text-lg lg:text-xl font-bold text-primary mb-4">{t.restaurantVouchers}</h3>
@@ -132,7 +132,7 @@ function Footer() {
           
         </div>
         
-        <div className="border-t mt-10 lg:mt-12 pt-8 lg:pt-10 text-center text-sm text-gray-500">
+        <div className="border-t mt-6 lg:mt-8 pt-6 lg:pt-8 text-center text-sm text-gray-500">
           <div className="flex items-center justify-center gap-3 mb-3">
             <img 
               src={eatOffLogo} 
