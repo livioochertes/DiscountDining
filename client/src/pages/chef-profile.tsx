@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ChefHat, Star, Users, BookOpen, Edit, Save, X, 
   Instagram, Youtube, Globe, Heart, Award, Clock,
-  Plus, Trash2, MapPin, ArrowLeft
+  Plus, Trash2, MapPin, ArrowLeft, UtensilsCrossed, Flame
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +54,24 @@ interface Recipe {
   likesCount: number;
 }
 
+interface SignatureDish {
+  id: number;
+  restaurantId: number;
+  name: string;
+  description: string | null;
+  category: string;
+  price: string;
+  imageUrl: string | null;
+  ingredients: string[] | null;
+  allergens: string[] | null;
+  dietaryTags: string[] | null;
+  spiceLevel: number | null;
+  isAvailable: boolean | null;
+  calories: number | null;
+  preparationTime: number | null;
+  isPopular: boolean | null;
+}
+
 const cuisineOptions = [
   "Italian", "French", "Asian", "Mediterranean", "Mexican", 
   "Indian", "Japanese", "Chinese", "Romanian", "American"
@@ -89,6 +107,8 @@ export default function ChefProfilePage() {
     profile?: ChefProfile;
     customer?: { id: number; name: string; email: string; profilePicture: string | null };
     recipes?: Recipe[];
+    signatureDishes?: SignatureDish[];
+    restaurant?: { id: number; name: string; address: string; imageUrl: string | null; cuisineType: string | null };
     isFollowing?: boolean;
   } | ChefProfile>({
     queryKey: isOwnProfile ? ["/api/my-chef-profile"] : ["/api/chef-profiles", id],
@@ -98,6 +118,8 @@ export default function ChefProfilePage() {
   const profile = (profileData && 'profile' in profileData ? profileData.profile : profileData) as ChefProfile | undefined;
   const customer = profileData && 'customer' in profileData ? profileData.customer : undefined;
   const recipes = (profileData && 'recipes' in profileData ? profileData.recipes : []) || [];
+  const signatureDishes = (profileData && 'signatureDishes' in profileData ? profileData.signatureDishes : []) || [];
+  const restaurant = profileData && 'restaurant' in profileData ? profileData.restaurant : undefined;
   const isFollowing = (profileData && 'isFollowing' in profileData ? profileData.isFollowing : false) || false;
 
   const createMutation = useMutation({
@@ -222,8 +244,8 @@ export default function ChefProfilePage() {
           <CardContent className="pt-6 text-center">
             <ChefHat className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <p className="text-gray-600">Chef profile not found</p>
-            <Link href="/recipes">
-              <Button className="mt-4">Browse Recipes</Button>
+            <Link href="/">
+              <Button className="mt-4">Back to Home</Button>
             </Link>
           </CardContent>
         </Card>
@@ -283,14 +305,21 @@ export default function ChefProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="relative">
-        <div className="h-48 bg-gradient-to-r from-teal-500 to-emerald-600" />
+        {displayProfile.coverImage ? (
+          <div 
+            className="h-48 bg-cover bg-center"
+            style={{ backgroundImage: `url(${displayProfile.coverImage})` }}
+          />
+        ) : (
+          <div className="h-48 bg-gradient-to-r from-teal-500 to-emerald-600" />
+        )}
         
         <div className="absolute top-4 left-4">
           <Button 
             variant="ghost" 
             size="sm"
-            className="text-white hover:bg-white/20"
-            onClick={() => setLocation("/recipes")}
+            className="text-white hover:bg-white/20 bg-black/20"
+            onClick={() => setLocation("/")}
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
@@ -383,12 +412,89 @@ export default function ChefProfilePage() {
             </div>
           </div>
 
-          <Tabs defaultValue="about" className="space-y-4">
+          <Tabs defaultValue="signature" className="space-y-4">
             <TabsList>
+              <TabsTrigger value="signature">Signature Dishes</TabsTrigger>
               <TabsTrigger value="about">About</TabsTrigger>
               <TabsTrigger value="recipes">Recipes</TabsTrigger>
               <TabsTrigger value="expertise">Expertise</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="signature">
+              <Card>
+                <CardContent className="pt-6">
+                  {signatureDishes.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {signatureDishes.map((dish: SignatureDish) => (
+                        <Link key={dish.id} href={`/restaurant/${dish.restaurantId}/menu#item-${dish.id}`}>
+                          <div className="rounded-xl border hover:border-teal-300 hover:shadow-md transition cursor-pointer overflow-hidden">
+                            {dish.imageUrl ? (
+                              <img 
+                                src={dish.imageUrl} 
+                                alt={dish.name}
+                                className="w-full h-40 object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-40 bg-gradient-to-br from-teal-100 to-emerald-50 flex items-center justify-center">
+                                <UtensilsCrossed className="h-12 w-12 text-teal-400" />
+                              </div>
+                            )}
+                            <div className="p-4">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-semibold text-gray-900">{dish.name}</h4>
+                                {dish.isPopular && (
+                                  <Badge className="bg-amber-500 text-xs">
+                                    <Flame className="h-3 w-3 mr-0.5" /> Popular
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 line-clamp-2 mb-2">{dish.description}</p>
+                              <div className="flex items-center justify-between">
+                                <span className="text-teal-600 font-bold">
+                                  {dish.price ? `€${parseFloat(dish.price).toFixed(2)}` : '—'}
+                                </span>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  {dish.preparationTime && dish.preparationTime > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" /> {dish.preparationTime} min
+                                    </span>
+                                  )}
+                                  {dish.calories && dish.calories > 0 && (
+                                    <span>{dish.calories} cal</span>
+                                  )}
+                                </div>
+                              </div>
+                              {dish.dietaryTags && dish.dietaryTags.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {dish.dietaryTags.slice(0, 3).map((tag: string) => (
+                                    <Badge key={tag} variant="outline" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {restaurant && (
+                                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" /> {restaurant.name}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <UtensilsCrossed className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-700 mb-2">No Signature Dishes Yet</h3>
+                      <p className="text-gray-500 max-w-md mx-auto">
+                        This chef hasn't added any signature dishes yet. Check back later!
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="about">
               <Card>
