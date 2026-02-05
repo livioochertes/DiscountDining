@@ -83,11 +83,11 @@ function Footer() {
   
   return (
     <footer className="bg-white border-t mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 py-12 lg:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-lg font-bold text-primary mb-4">{t.restaurantVouchers}</h3>
-            <p className="text-gray-600 text-sm mb-4">
+            <h3 className="text-lg lg:text-xl font-bold text-primary mb-4">{t.restaurantVouchers}</h3>
+            <p className="text-gray-600 text-sm lg:text-base mb-4 max-w-md">
               Save money on your favorite restaurants with our flexible voucher system. 
               Buy meal packages in advance and enjoy discounts every time you dine.
             </p>
@@ -110,37 +110,36 @@ function Footer() {
           
           <div>
             <h4 className="font-bold text-primary mb-4 text-lg">{t.forCustomers}</h4>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li><button className="hover:text-primary" onClick={() => setLocation("/how-it-works")}>{t.howItWorks}</button></li>
-              <li><button className="hover:text-primary" onClick={() => setLocation("/heat-map")}>{t.heatMap}</button></li>
-              <li><button className="hover:text-primary" onClick={() => setLocation("/dietary-recommendations")}>{t.aiDietaryRecommendations}</button></li>
-              <li><button className="hover:text-primary" onClick={() => setLocation("/profile")}>{t.myAccount}</button></li>
-              <li><button className="hover:text-primary" onClick={() => setLocation("/support")}>{t.support}</button></li>
+            <ul className="space-y-3 text-sm lg:text-base text-gray-600">
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/how-it-works")}>{t.howItWorks}</button></li>
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/heat-map")}>{t.heatMap}</button></li>
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/dietary-recommendations")}>{t.aiDietaryRecommendations}</button></li>
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/profile")}>{t.myAccount}</button></li>
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/support")}>{t.support}</button></li>
             </ul>
           </div>
           
           <div>
             <h4 className="font-bold text-primary mb-4 text-lg">{t.forRestaurants}</h4>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li><button className="hover:text-primary" onClick={() => setLocation("/restaurant-login")}>{t.joinOurPlatform}</button></li>
-              <li><button className="hover:text-primary" onClick={() => setLocation("/restaurant-scanner")}>{t.qrPaymentScanner}</button></li>
-              <li><button className="hover:text-primary" onClick={() => setLocation("/restaurant-success-stories")}>{t.successStories}</button></li>
-              <li><button className="hover:text-primary" onClick={() => setLocation("/restaurant-help")}>{t.helpCenter}</button></li>
-              <li><button className="hover:text-primary" onClick={() => setLocation("/support")}>{t.support}</button></li>
+            <ul className="space-y-3 text-sm lg:text-base text-gray-600">
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/restaurant-login")}>{t.joinOurPlatform}</button></li>
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/restaurant-scanner")}>{t.qrPaymentScanner}</button></li>
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/restaurant-success-stories")}>{t.successStories}</button></li>
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/restaurant-help")}>{t.helpCenter}</button></li>
+              <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/support")}>{t.support}</button></li>
             </ul>
           </div>
           
-
         </div>
         
-        <div className="border-t mt-8 pt-8 text-center text-sm text-gray-500">
-          <div className="flex items-center justify-center gap-3 mb-2">
+        <div className="border-t mt-10 lg:mt-12 pt-8 lg:pt-10 text-center text-sm text-gray-500">
+          <div className="flex items-center justify-center gap-3 mb-3">
             <img 
               src={eatOffLogo} 
               alt="EatOff Logo" 
-              className="h-8 w-auto object-contain flex-shrink-0"
+              className="h-8 lg:h-10 w-auto object-contain flex-shrink-0"
             />
-            <span className="font-semibold text-primary text-sm leading-none mt-2">{t.restaurantVouchers}</span>
+            <span className="font-semibold text-primary text-sm lg:text-base leading-none mt-2">{t.restaurantVouchers}</span>
           </div>
           <p className="text-sm">&copy; 2025 EatOff. All rights reserved. | <a 
             href="/privacy-policy" 
