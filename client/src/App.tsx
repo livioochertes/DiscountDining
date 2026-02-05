@@ -82,16 +82,16 @@ function Footer() {
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   
   return (
-    <footer className="bg-white border-t mt-8">
-      <div className="w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 py-8 lg:py-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
+    <footer className="bg-white border-t mt-4">
+      <div className="w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 py-4 lg:py-5">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6">
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-lg lg:text-xl font-bold text-primary mb-4">{t.restaurantVouchers}</h3>
-            <p className="text-gray-600 text-sm lg:text-base mb-4 max-w-md">
+            <h3 className="text-lg lg:text-xl font-bold text-primary mb-2">{t.restaurantVouchers}</h3>
+            <p className="text-gray-600 text-sm lg:text-base mb-2 max-w-md">
               Save money on your favorite restaurants with our flexible voucher system. 
               Buy meal packages in advance and enjoy discounts every time you dine.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-3 flex flex-wrap gap-3">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button 
@@ -109,8 +109,8 @@ function Footer() {
           </div>
           
           <div>
-            <h4 className="font-bold text-primary mb-4 text-lg">{t.forCustomers}</h4>
-            <ul className="space-y-3 text-sm lg:text-base text-gray-600">
+            <h4 className="font-bold text-primary mb-2 text-lg">{t.forCustomers}</h4>
+            <ul className="space-y-1.5 text-sm lg:text-base text-gray-600">
               <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/how-it-works")}>{t.howItWorks}</button></li>
               <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/heat-map")}>{t.heatMap}</button></li>
               <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/dietary-recommendations")}>{t.aiDietaryRecommendations}</button></li>
@@ -120,8 +120,8 @@ function Footer() {
           </div>
           
           <div>
-            <h4 className="font-bold text-primary mb-4 text-lg">{t.forRestaurants}</h4>
-            <ul className="space-y-3 text-sm lg:text-base text-gray-600">
+            <h4 className="font-bold text-primary mb-2 text-lg">{t.forRestaurants}</h4>
+            <ul className="space-y-1.5 text-sm lg:text-base text-gray-600">
               <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/restaurant-login")}>{t.joinOurPlatform}</button></li>
               <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/restaurant-scanner")}>{t.qrPaymentScanner}</button></li>
               <li><button className="hover:text-primary transition-colors" onClick={() => setLocation("/restaurant-success-stories")}>{t.successStories}</button></li>
@@ -132,7 +132,7 @@ function Footer() {
           
         </div>
         
-        <div className="border-t mt-6 lg:mt-8 pt-6 lg:pt-8 text-center text-sm text-gray-500">
+        <div className="border-t mt-3 lg:mt-4 pt-3 lg:pt-4 text-center text-sm text-gray-500">
           <div className="flex items-center justify-center gap-3 mb-3">
             <img 
               src={eatOffLogo} 
