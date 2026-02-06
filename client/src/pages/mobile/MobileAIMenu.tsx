@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Brain, Heart, SlidersHorizontal, ChevronRight, Star, MapPin, LogIn, X, ChefHat, Info, User } from 'lucide-react';
+import { Brain, Heart, SlidersHorizontal, ChevronRight, Star, MapPin, LogIn, X, ChefHat, Info, User, Pencil } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +22,19 @@ export default function MobileAIMenu() {
   const [useDietaryProfile, setUseDietaryProfile] = useState(true);
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [editingBadge, setEditingBadge] = useState<string | null>(null);
+  const badgesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editingBadge) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (badgesRef.current && !badgesRef.current.contains(e.target as Node)) {
+        setEditingBadge(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingBadge]);
 
   const { data: restaurants = [], isLoading: restaurantsLoading } = useQuery({
     queryKey: ['/api/restaurants', {}],
@@ -152,33 +165,205 @@ export default function MobileAIMenu() {
           </div>
         </div>
 
-        {/* Profile Summary - only for logged in users */}
-        {isAuthenticated && userDietaryProfile && (
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-gray-900">Your Diet Profile</h3>
+        {/* Interactive Preference Badges */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900">
+              {isAuthenticated && userDietaryProfile ? 'Your Diet Profile' : 'Your Preferences'}
+            </h3>
+            {isAuthenticated && userDietaryProfile && (
               <button 
-                onClick={() => setLocation('/m/profile')}
+                onClick={() => setLocation('/m/profile?section=dietary')}
                 className="text-primary text-sm font-medium flex items-center gap-1"
               >
                 Edit <ChevronRight className="w-4 h-4" />
               </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="bg-white px-3 py-1 rounded-full text-sm text-gray-700">
-                🎯 {userDietaryProfile?.calorieTarget || 2000} kcal/day
-              </span>
-              <span className="bg-white px-3 py-1 rounded-full text-sm text-gray-700">
-                🥗 {userDietaryProfile?.dietType || 'Balanced'}
-              </span>
-              {userDietaryProfile?.allergies?.length > 0 && (
-                <span className="bg-white px-3 py-1 rounded-full text-sm text-gray-700">
-                  ⚠️ {userDietaryProfile.allergies.length} allergies
-                </span>
+            )}
+          </div>
+
+          <div ref={badgesRef} className="flex flex-wrap gap-2">
+            {/* Calories Badge */}
+            <div className="relative">
+              <button
+                onClick={() => setEditingBadge(editingBadge === 'calories' ? null : 'calories')}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
+                  editingBadge === 'calories'
+                    ? "bg-primary text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                )}
+              >
+                🎯 {isAuthenticated && useDietaryProfile && userDietaryProfile
+                  ? `${userDietaryProfile.calorieTarget || 2000} kcal`
+                  : manualCalories === 'all' ? 'Calories'
+                  : manualCalories === 'low' ? '< 1500 kcal'
+                  : manualCalories === 'medium' ? '1500-2000 kcal'
+                  : manualCalories === 'high' ? '2000-2500 kcal'
+                  : '> 2500 kcal'}
+                <Pencil className="w-3 h-3 opacity-50" />
+              </button>
+              {editingBadge === 'calories' && (
+                <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
+                  {[
+                    { value: 'all', label: 'All Calories' },
+                    { value: 'low', label: '< 1500 kcal' },
+                    { value: 'medium', label: '1500-2000 kcal' },
+                    { value: 'high', label: '2000-2500 kcal' },
+                    { value: 'very-high', label: '> 2500 kcal' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setManualCalories(opt.value); setEditingBadge(null); if (isAuthenticated) setUseDietaryProfile(false); }}
+                      className={cn(
+                        "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                        manualCalories === opt.value ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-gray-50"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Use My Profile toggle */}
+            {/* Diet Type Badge */}
+            <div className="relative">
+              <button
+                onClick={() => setEditingBadge(editingBadge === 'diet' ? null : 'diet')}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
+                  editingBadge === 'diet'
+                    ? "bg-primary text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                )}
+              >
+                🥗 {isAuthenticated && useDietaryProfile && userDietaryProfile
+                  ? (userDietaryProfile.dietType || 'Balanced')
+                  : manualDietType === 'all' ? 'Diet Type' : manualDietType.charAt(0).toUpperCase() + manualDietType.slice(1)}
+                <Pencil className="w-3 h-3 opacity-50" />
+              </button>
+              {editingBadge === 'diet' && (
+                <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
+                  {[
+                    { value: 'all', label: 'All Diets' },
+                    { value: 'vegetarian', label: 'Vegetarian' },
+                    { value: 'vegan', label: 'Vegan' },
+                    { value: 'gluten-free', label: 'Gluten-Free' },
+                    { value: 'keto', label: 'Keto' },
+                    { value: 'paleo', label: 'Paleo' },
+                    { value: 'dash', label: 'DASH' },
+                    { value: 'low-carb', label: 'Low-Carb' },
+                    { value: 'mediterranean', label: 'Mediterranean' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setManualDietType(opt.value); setEditingBadge(null); if (isAuthenticated) setUseDietaryProfile(false); }}
+                      className={cn(
+                        "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                        manualDietType === opt.value ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-gray-50"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Allergies Badge */}
+            <div className="relative">
+              <button
+                onClick={() => setEditingBadge(editingBadge === 'allergies' ? null : 'allergies')}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
+                  editingBadge === 'allergies'
+                    ? "bg-primary text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                )}
+              >
+                ⚠️ {isAuthenticated && useDietaryProfile && userDietaryProfile && userDietaryProfile.allergies?.length > 0
+                  ? `${userDietaryProfile.allergies.length} allergies`
+                  : 'Allergens'}
+                <Pencil className="w-3 h-3 opacity-50" />
+              </button>
+              {editingBadge === 'allergies' && (
+                <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-50 min-w-[200px]">
+                  <p className="text-xs text-gray-500 mb-2">
+                    {isAuthenticated ? 'Edit in your full dietary profile:' : 'Sign up to manage allergens:'}
+                  </p>
+                  {isAuthenticated && userDietaryProfile?.allergies?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {userDietaryProfile.allergies.map((a: string) => (
+                        <span key={a} className="bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-xs">
+                          {a}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      setEditingBadge(null);
+                      if (isAuthenticated) {
+                        setLocation('/m/profile?section=dietary');
+                      } else {
+                        window.scrollTo(0, 0);
+                        setLocation('/login');
+                      }
+                    }}
+                    className="w-full text-center py-2 bg-primary/10 text-primary text-sm font-medium rounded-lg hover:bg-primary/20 transition-colors"
+                  >
+                    {isAuthenticated ? 'Edit Dietary Profile' : 'Sign Up to Set'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Cuisine Badge */}
+            <div className="relative">
+              <button
+                onClick={() => setEditingBadge(editingBadge === 'cuisine' ? null : 'cuisine')}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
+                  editingBadge === 'cuisine'
+                    ? "bg-primary text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                )}
+              >
+                🍽️ {isAuthenticated && useDietaryProfile && userDietaryProfile?.preferredCuisines?.length > 0
+                  ? userDietaryProfile.preferredCuisines[0]
+                  : manualCuisine === 'all' ? 'Cuisine' : manualCuisine}
+                <Pencil className="w-3 h-3 opacity-50" />
+              </button>
+              {editingBadge === 'cuisine' && (
+                <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 min-w-[160px] max-h-[250px] overflow-y-auto">
+                  <button
+                    onClick={() => { setManualCuisine('all'); setEditingBadge(null); if (isAuthenticated) setUseDietaryProfile(false); }}
+                    className={cn(
+                      "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                      manualCuisine === 'all' ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-gray-50"
+                    )}
+                  >
+                    All Cuisines
+                  </button>
+                  {availableCuisines.map((cuisine) => (
+                    <button
+                      key={cuisine}
+                      onClick={() => { setManualCuisine(cuisine); setEditingBadge(null); if (isAuthenticated) setUseDietaryProfile(false); }}
+                      className={cn(
+                        "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                        manualCuisine === cuisine ? "bg-primary/10 text-primary font-medium" : "text-gray-700 hover:bg-gray-50"
+                      )}
+                    >
+                      {cuisine}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Use My Profile toggle - only for logged in users with profile */}
+          {isAuthenticated && userDietaryProfile && (
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-purple-100">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-primary" />
@@ -197,34 +382,24 @@ export default function MobileAIMenu() {
                 )} />
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Source indicator */}
-        {isAuthenticated && (
-          <div className="flex items-center justify-center">
+          {/* Source indicator */}
+          <div className="flex items-center justify-center mt-3">
             <span className={cn(
               "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border",
-              useDietaryProfile && userDietaryProfile
+              isAuthenticated && useDietaryProfile && userDietaryProfile
                 ? "border-primary/30 text-primary bg-primary/5"
                 : "border-amber-400/50 text-amber-700 bg-amber-50"
             )}>
-              {useDietaryProfile && userDietaryProfile ? (
+              {isAuthenticated && useDietaryProfile && userDietaryProfile ? (
                 <><User className="w-3 h-3" /> Based on your Profile</>
               ) : (
                 <><SlidersHorizontal className="w-3 h-3" /> Based on selected Preferences</>
               )}
             </span>
           </div>
-        )}
-
-        {!isAuthenticated && (
-          <div className="flex items-center justify-center">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-amber-400/50 text-amber-700 bg-amber-50">
-              <Heart className="w-3 h-3" /> Based on selected Preferences
-            </span>
-          </div>
-        )}
+        </div>
 
         {/* Filters Toggle Button */}
         <button
@@ -254,55 +429,7 @@ export default function MobileAIMenu() {
         {/* Filters Panel */}
         {showFilters && (
           <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
-            {/* Preferences row - shown when not using dietary profile or guest */}
-            {(!isAuthenticated || !useDietaryProfile) && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600">
-                  <Heart className="w-3.5 h-3.5 text-rose-500" />
-                  <span>Cuisine & Diet</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={manualCuisine}
-                    onChange={(e) => setManualCuisine(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white text-gray-700"
-                  >
-                    <option value="all">All Cuisines</option>
-                    {availableCuisines.map((cuisine) => (
-                      <option key={cuisine} value={cuisine}>{cuisine}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={manualDietType}
-                    onChange={(e) => setManualDietType(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white text-gray-700"
-                  >
-                    <option value="all">All Diets</option>
-                    <option value="vegetarian">Vegetarian</option>
-                    <option value="vegan">Vegan</option>
-                    <option value="gluten-free">Gluten-Free</option>
-                    <option value="keto">Keto</option>
-                    <option value="paleo">Paleo</option>
-                    <option value="dash">DASH</option>
-                    <option value="low-carb">Low-Carb</option>
-                    <option value="mediterranean">Mediterranean</option>
-                  </select>
-                </div>
-                <select
-                  value={manualCalories}
-                  onChange={(e) => setManualCalories(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white text-gray-700"
-                >
-                  <option value="all">All Calories</option>
-                  <option value="low">&lt; 1500 kcal</option>
-                  <option value="medium">1500-2000 kcal</option>
-                  <option value="high">2000-2500 kcal</option>
-                  <option value="very-high">&gt; 2500 kcal</option>
-                </select>
-              </div>
-            )}
-
-            {/* Filters row - always visible */}
+            {/* Filters row - Prices & Rating */}
             <div className="space-y-3">
               <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600">
                 <SlidersHorizontal className="w-3.5 h-3.5" />

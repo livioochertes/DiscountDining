@@ -46,7 +46,10 @@ export default function MobileProfile() {
   const { user, isLoading, refetch } = useAuth();
   const [, setLocation] = useLocation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('section') || null;
+  });
   const [editingField, setEditingField] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -198,6 +201,12 @@ export default function MobileProfile() {
         : [...prev[field], value]
     }));
   };
+
+  useEffect(() => {
+    if (expandedSection === 'dietary' && user) {
+      loadDietaryProfile();
+    }
+  }, [expandedSection, user]);
 
   const loadDietaryProfile = async () => {
     setIsLoadingDietaryProfile(true);
