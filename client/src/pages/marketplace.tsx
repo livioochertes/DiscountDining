@@ -1319,21 +1319,16 @@ export default function Marketplace() {
                 {!isAuthenticated && allEnhancedRecommendations.length > 0 ? (
                   <>
                     <AIRecommendations 
-                      recommendations={allEnhancedRecommendations.slice(0, 3)}
+                      recommendations={allEnhancedRecommendations.slice(0, 4)}
                       showFilters={true}
                       className="border-0 shadow-none"
                     />
-                    <Card className="p-6 mt-6 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                      <LogIn className="w-10 h-10 text-primary mx-auto mb-3" />
-                      <h3 className="text-lg font-semibold mb-2">Want more personalized recommendations?</h3>
-                      <p className="text-muted-foreground mb-4 text-sm">
-                        Create a free account to unlock unlimited AI recommendations tailored to your dietary profile and taste preferences.
-                      </p>
-                      <Button onClick={() => setLocation('/login')} className="gap-2">
-                        <LogIn className="w-4 h-4" />
-                        Sign Up / Log In
-                      </Button>
-                    </Card>
+                    <p className="text-center text-sm text-muted-foreground mt-4">
+                      Do you want more recommendations?{' '}
+                      <button onClick={() => setLocation('/login')} className="text-primary font-semibold hover:underline">
+                        Sign-up now!
+                      </button>
+                    </p>
                   </>
                 ) : !isAuthenticated ? (
                   <Card className="p-8 text-center">
