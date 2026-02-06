@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket, MapPin, Filter, User, Clock, Percent, X, Navigation, Search, Loader2 } from "lucide-react";
+import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket, MapPin, Filter, User, Clock, Percent, X, Navigation, Search, Loader2, Heart, SlidersHorizontal, Flame, LogIn } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import RestaurantCard from "@/components/restaurant-card";
@@ -220,7 +220,34 @@ export default function Marketplace() {
   });
 
   // AI recommendations data for the AI Menu tab
-  const allRecommendations = aiRecommendations?.recommendations || [];
+  const authRecommendations = aiRecommendations?.recommendations || [];
+  
+  // Generate basic recommendations from restaurants for non-authenticated users
+  const guestRecommendations = useMemo(() => {
+    if (isAuthenticated || !restaurants || restaurants.length === 0) return [];
+    const topRestaurants = [...restaurants]
+      .sort((a: any, b: any) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0))
+      .slice(0, 6);
+    return topRestaurants.map((r: any) => ({
+      type: 'restaurant' as const,
+      targetId: r.id,
+      restaurantId: r.id,
+      title: r.name,
+      reason: `Top-rated ${r.cuisine || ''} restaurant`,
+      score: parseFloat(r.rating) || 4,
+      restaurant: {
+        name: r.name,
+        cuisine: r.cuisine || '',
+        location: r.location || '',
+        priceRange: r.priceRange || '',
+        rating: r.rating || 0,
+        imageUrl: r.imageUrl || ''
+      },
+      dietaryTags: r.dietaryTags || []
+    }));
+  }, [isAuthenticated, restaurants]);
+
+  const allRecommendations = isAuthenticated ? authRecommendations : guestRecommendations;
   
   // State for recommendation type filter
   const [recommendationType, setRecommendationType] = useState<'all' | 'restaurant' | 'menu_item'>('all');
@@ -230,6 +257,8 @@ export default function Marketplace() {
   
   // State for manual AI Menu filters (when dietary profile toggle is off)
   const [manualDietType, setManualDietType] = useState<string>('all');
+  const [manualCalories, setManualCalories] = useState<string>('all');
+  const [manualRating, setManualRating] = useState<string>('all');
   
   // Fetch user's dietary profile
   const { data: userDietaryProfile } = useQuery<any>({
@@ -430,19 +459,34 @@ export default function Marketplace() {
       return false;
     }
     
-    // When not using dietary profile, apply manual filters
+    // When not using dietary profile, apply manual preference filters
     if (!useDietaryProfile || !isAuthenticated) {
-      // Filter by cuisine if set
       if (filters.cuisine && rec.restaurant?.cuisine !== filters.cuisine) {
         return false;
       }
-      // Filter by diet type if set
       if (manualDietType !== 'all') {
         const dietaryTags = rec.dietaryTags || rec.restaurant?.dietaryTags || [];
         if (!dietaryTags.some((tag: string) => tag.toLowerCase().includes(manualDietType.toLowerCase()))) {
           return false;
         }
       }
+      if (manualCalories !== 'all') {
+        const cal = rec.calories || rec.estimatedCalories || 0;
+        if (manualCalories === 'low' && cal > 400) return false;
+        if (manualCalories === 'medium' && (cal < 400 || cal > 700)) return false;
+        if (manualCalories === 'high' && cal < 700) return false;
+      }
+    }
+
+    // Apply filter-section filters (Prices & Rating) always
+    if (filters.priceRange) {
+      const recPrice = rec.restaurant?.priceRange || '';
+      if (recPrice !== filters.priceRange) return false;
+    }
+    if (manualRating !== 'all') {
+      const recRating = parseFloat(rec.restaurant?.rating) || 0;
+      const minRating = parseFloat(manualRating);
+      if (recRating < minRating) return false;
     }
     
     return true;
@@ -731,6 +775,8 @@ export default function Marketplace() {
     setSortBy('featured');
     // Reset AI Menu specific filters
     setManualDietType('all');
+    setManualCalories('all');
+    setManualRating('all');
     setUseDietaryProfile(true);
   }, []);
 
@@ -741,13 +787,13 @@ export default function Marketplace() {
       return baseFilters || autoDetectLocation || sortBy !== 'featured';
     }
     if (activeTab === 'ai-menu') {
-      return baseFilters || manualDietType !== 'all' || !useDietaryProfile;
+      return baseFilters || manualDietType !== 'all' || manualCalories !== 'all' || manualRating !== 'all' || !useDietaryProfile;
     }
     if (activeTab === 'vouchers') {
       return baseFilters || sortBy === 'expiring-soon';
     }
     return baseFilters;
-  }, [filters, activeTab, autoDetectLocation, sortBy, manualDietType, useDietaryProfile]);
+  }, [filters, activeTab, autoDetectLocation, sortBy, manualDietType, manualCalories, manualRating, useDietaryProfile]);
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
@@ -911,54 +957,107 @@ export default function Marketplace() {
             </div>
           )}
 
-          {/* AI Menu Filters */}
+          {/* AI Menu Preferences & Filters */}
           {activeTab === 'ai-menu' && (
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
-                <Filter className="w-4 h-4" />
-                <span>{t.filters}:</span>
-              </div>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                {/* LEFT: Preferences section */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300">
+                    <Heart className="w-4 h-4 text-rose-500" />
+                    <span>Preferences:</span>
+                  </div>
 
-              {/* Use My Dietary Profile Toggle - only show when authenticated */}
-              {isAuthenticated && userDietaryProfile && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
-                  <User className="w-4 h-4 text-primary" />
-                  <Label htmlFor="use-dietary-profile" className="text-sm font-medium text-primary cursor-pointer">
-                    Use My Dietary Profile
-                  </Label>
-                  <Switch
-                    id="use-dietary-profile"
-                    checked={useDietaryProfile}
-                    onCheckedChange={setUseDietaryProfile}
-                    className="data-[state=checked]:bg-primary"
-                  />
-                </div>
-              )}
+                  {isAuthenticated && userDietaryProfile && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
+                      <User className="w-4 h-4 text-primary" />
+                      <Label htmlFor="use-dietary-profile" className="text-sm font-medium text-primary cursor-pointer">
+                        Use My Profile
+                      </Label>
+                      <Switch
+                        id="use-dietary-profile"
+                        checked={useDietaryProfile}
+                        onCheckedChange={setUseDietaryProfile}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                    </div>
+                  )}
 
-              {/* Show manual filters when toggle is off or user is not logged in */}
-              {(!isAuthenticated || !useDietaryProfile) && (
-                <>
-                  {/* Cuisine Type Dropdown */}
-                  <Select 
-                    value={filters.cuisine || "all"} 
-                    onValueChange={(value) => handleFilterChange('cuisine', value === 'all' ? undefined : value)}
-                  >
-                    <SelectTrigger className="w-[140px] h-9 text-sm">
-                      <SelectValue placeholder={t.cuisineType} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.allCuisines || 'All Cuisines'}</SelectItem>
-                      {cuisinesLoading ? (
-                        <SelectItem value="loading" disabled>Loading...</SelectItem>
-                      ) : availableCuisines.map((cuisine) => (
-                        <SelectItem key={cuisine} value={cuisine}>
-                          {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
-                        </SelectItem>
+                  {(!isAuthenticated || !useDietaryProfile) && (
+                    <>
+                      <Select 
+                        value={filters.cuisine || "all"} 
+                        onValueChange={(value) => handleFilterChange('cuisine', value === 'all' ? undefined : value)}
+                      >
+                        <SelectTrigger className="w-[140px] h-9 text-sm">
+                          <SelectValue placeholder={t.cuisineType} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t.allCuisines || 'All Cuisines'}</SelectItem>
+                          {cuisinesLoading ? (
+                            <SelectItem value="loading" disabled>Loading...</SelectItem>
+                          ) : availableCuisines.map((cuisine) => (
+                            <SelectItem key={cuisine} value={cuisine}>
+                              {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={manualDietType} onValueChange={setManualDietType}>
+                        <SelectTrigger className="w-[150px] h-9 text-sm">
+                          <SelectValue placeholder="Diet" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Diets</SelectItem>
+                          <SelectItem value="vegetarian">Vegetarian</SelectItem>
+                          <SelectItem value="vegan">Vegan</SelectItem>
+                          <SelectItem value="gluten-free">Gluten-Free</SelectItem>
+                          <SelectItem value="keto">Keto</SelectItem>
+                          <SelectItem value="paleo">Paleo</SelectItem>
+                          <SelectItem value="dash">DASH</SelectItem>
+                          <SelectItem value="low-carb">Low-Carb</SelectItem>
+                          <SelectItem value="mediterranean">Mediterranean</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={manualCalories} onValueChange={setManualCalories}>
+                        <SelectTrigger className="w-[140px] h-9 text-sm">
+                          <SelectValue placeholder="Calories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Calories</SelectItem>
+                          <SelectItem value="low">&lt; 400 kcal</SelectItem>
+                          <SelectItem value="medium">400-700 kcal</SelectItem>
+                          <SelectItem value="high">&gt; 700 kcal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </>
+                  )}
+
+                  {isAuthenticated && useDietaryProfile && userDietaryProfile && (
+                    <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
+                      {userDietaryProfile.dietaryPreferences?.slice(0, 3).map((pref: string, index: number) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {pref}
+                        </Badge>
                       ))}
-                    </SelectContent>
-                  </Select>
+                      {userDietaryProfile.dietaryPreferences?.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{userDietaryProfile.dietaryPreferences.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-                  {/* Price Range Dropdown */}
+                {/* RIGHT: Filters section */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300">
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <span>Filters:</span>
+                  </div>
+
                   <Select 
                     value={filters.priceRange || "all"} 
                     onValueChange={(value) => handleFilterChange('priceRange', value === 'all' ? undefined : value)}
@@ -974,50 +1073,30 @@ export default function Marketplace() {
                     </SelectContent>
                   </Select>
 
-                  {/* Diet Type Dropdown */}
-                  <Select value={manualDietType} onValueChange={setManualDietType}>
-                    <SelectTrigger className="w-[140px] h-9 text-sm">
-                      <SelectValue placeholder="Diet Type" />
+                  <Select value={manualRating} onValueChange={setManualRating}>
+                    <SelectTrigger className="w-[130px] h-9 text-sm">
+                      <SelectValue placeholder="Rating" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Diets</SelectItem>
-                      <SelectItem value="vegetarian">Vegetarian</SelectItem>
-                      <SelectItem value="vegan">Vegan</SelectItem>
-                      <SelectItem value="gluten-free">Gluten-Free</SelectItem>
-                      <SelectItem value="keto">Keto</SelectItem>
-                      <SelectItem value="paleo">Paleo</SelectItem>
+                      <SelectItem value="all">All Ratings</SelectItem>
+                      <SelectItem value="3">⭐ 3+ Stars</SelectItem>
+                      <SelectItem value="3.5">⭐ 3.5+ Stars</SelectItem>
+                      <SelectItem value="4">⭐ 4+ Stars</SelectItem>
+                      <SelectItem value="4.5">⭐ 4.5+ Stars</SelectItem>
                     </SelectContent>
                   </Select>
-                </>
-              )}
 
-              {/* Show dietary profile summary when toggle is on */}
-              {isAuthenticated && useDietaryProfile && userDietaryProfile && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <span className="text-gray-400">Preferences:</span>
-                  {userDietaryProfile.dietaryPreferences?.slice(0, 3).map((pref: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {pref}
-                    </Badge>
-                  ))}
-                  {userDietaryProfile.dietaryPreferences?.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{userDietaryProfile.dietaryPreferences.length - 3} more
-                    </Badge>
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearAllFilters}
+                      className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Clear
+                    </button>
                   )}
                 </div>
-              )}
-
-              {/* Clear Filters for AI Menu */}
-              {hasActiveFilters && (
-                <button
-                  onClick={clearAllFilters}
-                  className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors ml-auto"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  Clear
-                </button>
-              )}
+              </div>
             </div>
           )}
 
@@ -1195,15 +1274,63 @@ export default function Marketplace() {
                   </p>
                 </div>
                 
-                {!isAuthenticated ? (
+                {/* Source indicator */}
+                {isAuthenticated && (
+                  <div className="flex items-center justify-center gap-2 mb-6">
+                    <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30">
+                      {useDietaryProfile && userDietaryProfile ? (
+                        <>
+                          <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                          Based on your Profile
+                        </>
+                      ) : (
+                        <>
+                          <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                          Based on selected Preferences
+                        </>
+                      )}
+                    </Badge>
+                  </div>
+                )}
+
+                {!isAuthenticated && (
+                  <div className="flex items-center justify-center gap-2 mb-6">
+                    <Badge variant="outline" className="px-3 py-1 text-sm border-amber-400/50 text-amber-700 bg-amber-50">
+                      <Heart className="w-3.5 h-3.5 mr-1.5" />
+                      Based on selected Preferences
+                    </Badge>
+                  </div>
+                )}
+
+                {!isAuthenticated && allEnhancedRecommendations.length > 0 ? (
+                  <>
+                    <AIRecommendations 
+                      recommendations={allEnhancedRecommendations.slice(0, 3)}
+                      showFilters={true}
+                      className="border-0 shadow-none"
+                    />
+                    <Card className="p-6 mt-6 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                      <LogIn className="w-10 h-10 text-primary mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold mb-2">Want more personalized recommendations?</h3>
+                      <p className="text-muted-foreground mb-4 text-sm">
+                        Create a free account to unlock unlimited AI recommendations tailored to your dietary profile and taste preferences.
+                      </p>
+                      <Button onClick={() => setLocation('/login')} className="gap-2">
+                        <LogIn className="w-4 h-4" />
+                        Sign Up / Log In
+                      </Button>
+                    </Card>
+                  </>
+                ) : !isAuthenticated ? (
                   <Card className="p-8 text-center">
                     <Brain className="w-12 h-12 text-primary mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Sign in for AI Recommendations</h3>
+                    <h3 className="text-lg font-semibold mb-2">AI Recommendations</h3>
                     <p className="text-muted-foreground mb-4">
-                      Log in to get personalized restaurant and menu recommendations based on your dietary preferences
+                      Set your preferences above to discover personalized restaurant recommendations, or create an account for a fully tailored experience.
                     </p>
-                    <Button onClick={() => setLocation('/login')}>
-                      Sign In
+                    <Button onClick={() => setLocation('/login')} className="gap-2">
+                      <LogIn className="w-4 h-4" />
+                      Sign Up / Log In
                     </Button>
                   </Card>
                 ) : allRecommendations.length === 0 ? (
