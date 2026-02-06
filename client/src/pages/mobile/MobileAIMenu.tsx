@@ -60,10 +60,31 @@ export default function MobileAIMenu() {
 
   const guestRecommendations = useMemo(() => {
     if (isAuthenticated || !restaurants || restaurants.length === 0) return [];
-    const topRestaurants = [...restaurants]
+
+    let filtered = [...restaurants];
+
+    if (manualCuisine !== 'all') {
+      const cuisineFiltered = filtered.filter((r: any) => r.cuisine === manualCuisine);
+      if (cuisineFiltered.length > 0) filtered = cuisineFiltered;
+    }
+
+    if (manualDietType !== 'all') {
+      const dietFiltered = filtered.filter((r: any) => {
+        const tags = r.dietaryTags || [];
+        const cuisine = (r.cuisine || '').toLowerCase();
+        const name = (r.name || '').toLowerCase();
+        const dietLower = manualDietType.toLowerCase();
+        return tags.some((tag: string) => tag.toLowerCase().includes(dietLower)) ||
+               cuisine.includes(dietLower) || name.includes(dietLower);
+      });
+      if (dietFiltered.length > 0) filtered = dietFiltered;
+    }
+
+    const sorted = filtered
       .sort((a: any, b: any) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0))
-      .slice(0, 6);
-    return topRestaurants.map((r: any, idx: number) => ({
+      .slice(0, 8);
+
+    return sorted.map((r: any, idx: number) => ({
       id: r.id || idx,
       type: 'restaurant' as const,
       targetId: r.id,
@@ -88,13 +109,13 @@ export default function MobileAIMenu() {
       },
       dietaryTags: r.dietaryTags || []
     }));
-  }, [isAuthenticated, restaurants]);
+  }, [isAuthenticated, restaurants, manualCuisine, manualDietType]);
 
   const allRecommendations = isAuthenticated ? authRecommendations : guestRecommendations;
 
   const filteredRecommendations = useMemo(() => {
     return allRecommendations.filter((rec: any) => {
-      if (!useDietaryProfile || !isAuthenticated) {
+      if (isAuthenticated && !useDietaryProfile) {
         if (manualCuisine !== 'all' && rec.restaurant?.cuisine !== manualCuisine) {
           return false;
         }
@@ -129,7 +150,7 @@ export default function MobileAIMenu() {
 
   const displayedRecommendations = isAuthenticated 
     ? filteredRecommendations 
-    : filteredRecommendations.slice(0, 4);
+    : filteredRecommendations.slice(0, 6);
 
   const hasActiveFilters = manualDietType !== 'all' || manualCalories !== 'all' || manualCuisine !== 'all' || manualPriceRange !== 'all' || manualRating !== 'all';
 
@@ -181,26 +202,26 @@ export default function MobileAIMenu() {
             )}
           </div>
 
-          <div ref={badgesRef} className="flex flex-wrap gap-2">
+          <div ref={badgesRef} className="flex flex-wrap gap-2.5">
             {/* Calories Badge */}
             <div className="relative">
               <button
                 onClick={() => setEditingBadge(editingBadge === 'calories' ? null : 'calories')}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
+                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-base font-medium transition-all",
                   editingBadge === 'calories'
                     ? "bg-primary text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 shadow-sm"
                 )}
               >
                 🎯 {isAuthenticated && useDietaryProfile && userDietaryProfile
                   ? `${userDietaryProfile.calorieTarget || 2000} kcal`
                   : manualCalories === 'all' ? 'Calories'
                   : manualCalories === 'low' ? '< 1500 kcal'
-                  : manualCalories === 'medium' ? '1500-2000 kcal'
-                  : manualCalories === 'high' ? '2000-2500 kcal'
+                  : manualCalories === 'medium' ? '1500-2000'
+                  : manualCalories === 'high' ? '2000-2500'
                   : '> 2500 kcal'}
-                <Pencil className="w-3 h-3 opacity-50" />
+                <Pencil className="w-3.5 h-3.5 opacity-50" />
               </button>
               {editingBadge === 'calories' && (
                 <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
@@ -231,16 +252,16 @@ export default function MobileAIMenu() {
               <button
                 onClick={() => setEditingBadge(editingBadge === 'diet' ? null : 'diet')}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
+                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-base font-medium transition-all",
                   editingBadge === 'diet'
                     ? "bg-primary text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 shadow-sm"
                 )}
               >
                 🥗 {isAuthenticated && useDietaryProfile && userDietaryProfile
                   ? (userDietaryProfile.dietType || 'Balanced')
                   : manualDietType === 'all' ? 'Diet Type' : manualDietType.charAt(0).toUpperCase() + manualDietType.slice(1)}
-                <Pencil className="w-3 h-3 opacity-50" />
+                <Pencil className="w-3.5 h-3.5 opacity-50" />
               </button>
               {editingBadge === 'diet' && (
                 <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
@@ -275,16 +296,16 @@ export default function MobileAIMenu() {
               <button
                 onClick={() => setEditingBadge(editingBadge === 'allergies' ? null : 'allergies')}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
+                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-base font-medium transition-all",
                   editingBadge === 'allergies'
                     ? "bg-primary text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 shadow-sm"
                 )}
               >
                 ⚠️ {isAuthenticated && useDietaryProfile && userDietaryProfile && userDietaryProfile.allergies?.length > 0
                   ? `${userDietaryProfile.allergies.length} allergies`
                   : 'Allergens'}
-                <Pencil className="w-3 h-3 opacity-50" />
+                <Pencil className="w-3.5 h-3.5 opacity-50" />
               </button>
               {editingBadge === 'allergies' && (
                 <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-50 min-w-[200px]">
@@ -323,16 +344,16 @@ export default function MobileAIMenu() {
               <button
                 onClick={() => setEditingBadge(editingBadge === 'cuisine' ? null : 'cuisine')}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
+                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-base font-medium transition-all",
                   editingBadge === 'cuisine'
                     ? "bg-primary text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                    : "bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 shadow-sm"
                 )}
               >
                 🍽️ {isAuthenticated && useDietaryProfile && userDietaryProfile?.preferredCuisines?.length > 0
                   ? userDietaryProfile.preferredCuisines[0]
                   : manualCuisine === 'all' ? 'Cuisine' : manualCuisine}
-                <Pencil className="w-3 h-3 opacity-50" />
+                <Pencil className="w-3.5 h-3.5 opacity-50" />
               </button>
               {editingBadge === 'cuisine' && (
                 <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 min-w-[160px] max-h-[250px] overflow-y-auto">
