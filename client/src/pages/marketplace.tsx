@@ -1343,7 +1343,7 @@ export default function Marketplace() {
                     />
                     <p className="text-center text-sm text-muted-foreground mt-4">
                       Do you want more recommendations?{' '}
-                      <button onClick={() => setLocation('/login')} className="text-primary font-semibold hover:underline">
+                      <button onClick={() => { window.scrollTo(0, 0); setLocation('/login'); }} className="text-primary font-semibold hover:underline">
                         Sign-up now!
                       </button>
                     </p>
@@ -1355,7 +1355,7 @@ export default function Marketplace() {
                     <p className="text-muted-foreground mb-4">
                       Set your preferences above to discover personalized restaurant recommendations, or create an account for a fully tailored experience.
                     </p>
-                    <Button onClick={() => setLocation('/login')} className="gap-2">
+                    <Button onClick={() => { window.scrollTo(0, 0); setLocation('/login'); }} className="gap-2">
                       <LogIn className="w-4 h-4" />
                       Sign Up / Log In
                     </Button>
