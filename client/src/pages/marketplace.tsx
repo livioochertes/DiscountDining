@@ -482,9 +482,11 @@ export default function Marketplace() {
       }
       if (manualCalories !== 'all') {
         const cal = rec.calories || rec.estimatedCalories || 0;
-        if (manualCalories === 'low' && cal > 400) return false;
-        if (manualCalories === 'medium' && (cal < 400 || cal > 700)) return false;
-        if (manualCalories === 'high' && cal < 700) return false;
+        if (cal > 0) {
+          if (manualCalories === 'low' && cal > 400) return false;
+          if (manualCalories === 'medium' && (cal < 400 || cal > 700)) return false;
+          if (manualCalories === 'high' && cal < 700) return false;
+        }
       }
     }
 

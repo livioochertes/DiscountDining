@@ -42,6 +42,7 @@ interface AIRecommendation {
   cautionaryNotes: string[];
   recommendedFor?: string;
   idealDayTime?: string;
+  reasoning?: string;
   restaurant?: {
     id: number;
     name: string;
@@ -49,6 +50,9 @@ interface AIRecommendation {
     location: string;
     priceRange: string;
     rating: number;
+    description?: string;
+    phone?: string;
+    email?: string;
   };
   menuItem?: {
     id: number;
@@ -58,6 +62,8 @@ interface AIRecommendation {
     category: string;
     calories?: number;
     dietaryTags?: string[];
+    ingredients?: string;
+    allergens?: string[];
   };
 }
 
