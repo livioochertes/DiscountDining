@@ -141,8 +141,8 @@ function RestaurantVoucherRowHome({ data, onVoucherClick }: {
   
   return (
     <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
-      <div className="flex gap-3">
-        <div className="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+      <div className="flex items-stretch gap-3">
+        <div className="w-14 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
           {restaurant.imageUrl ? (
             <img 
               src={restaurant.imageUrl} 
