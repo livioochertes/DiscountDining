@@ -373,7 +373,7 @@ export function AIRecommendations({ className, mealType, showFilters = true, rec
 
                     <p className="text-xs mb-3 leading-relaxed text-muted-foreground">{rec.recommendationText}</p>
 
-                    {rec.nutritionalHighlights.length > 0 && (
+                    {rec.nutritionalHighlights?.length > 0 && (
                       <div className="mb-2">
                         <div className="flex items-center gap-1 mb-1">
                           <Heart className="h-3 w-3 text-green-500 flex-shrink-0" />
@@ -394,7 +394,7 @@ export function AIRecommendations({ className, mealType, showFilters = true, rec
                       </div>
                     )}
 
-                    {rec.cautionaryNotes.length > 0 && (
+                    {rec.cautionaryNotes?.length > 0 && (
                       <div className="mb-2">
                         <div className="flex items-center gap-1 mb-1">
                           <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
