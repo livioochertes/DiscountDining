@@ -304,235 +304,157 @@ export function AIRecommendations({ className, mealType, showFilters = true, rec
             </div>
           ) : recommendations && recommendations.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {recommendations.map((rec: any) => (
                   <Card 
                     key={rec.id} 
-                    className="border-l-4 border-l-primary cursor-pointer hover:shadow-md transition-shadow flex flex-col"
+                    className="restaurant-card hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => handleRecommendationClick(rec)}
                   >
-                  <CardContent className="p-3 flex-1 flex flex-col">
-                    <div className="space-y-2 mb-3 flex-1">
-                      {/* Header with title and match score */}
-                      <div className="flex items-start gap-2">
+                  <div className="relative">
+                    {rec.restaurant?.imageUrl ? (
+                      <img 
+                        src={rec.restaurant.imageUrl}
+                        alt={rec.restaurant?.name || 'Recommendation'}
+                        className="w-full h-36 object-cover rounded-t-lg"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.src = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="144" viewBox="0 0 320 144"><rect fill="%23f3f4f6" width="320" height="144"/><text fill="%239ca3af" font-size="14" x="160" y="72" text-anchor="middle" dominant-baseline="middle">${rec.restaurant?.name || 'Restaurant'}</text></svg>`)}`;
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-36 bg-gradient-to-br from-primary/10 to-primary/5 rounded-t-lg flex items-center justify-center">
                         {rec.type === 'restaurant' ? (
-                          <ChefHat className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                          <ChefHat className="h-8 w-8 text-primary/40" />
                         ) : (
-                          <MapPin className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                          <Menu className="h-8 w-8 text-primary/40" />
                         )}
-                        <div className="flex-1 min-w-0">
-                          {rec.type === 'menu_item' ? (
-                            // For product recommendations: Product name prominent, restaurant name secondary
-                            <>
-                              <h4 className="font-semibold text-sm leading-tight truncate text-gray-900 dark:text-gray-100">
-                                {rec.recommendationText?.split('.')[0] || rec.menuItem?.name || 'Menu Item'}
-                              </h4>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
-                                {rec.restaurant?.name ? `from ${rec.restaurant.name} • ${rec.restaurant.cuisine}` : 'Menu Item Recommendation'}
-                              </p>
-                            </>
-                          ) : (
-                            // For restaurant recommendations: Restaurant name prominent
-                            <>
-                              <h4 className="font-semibold text-sm leading-tight truncate text-gray-900 dark:text-gray-100">
-                                {rec.restaurant?.name || rec.recommendationText?.split('.')[0] || 'Restaurant'}
-                              </h4>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
-                                {rec.restaurant?.name ? `from ${rec.restaurant.name} • ${rec.restaurant.cuisine}` : `${rec.restaurant?.cuisine || 'Restaurant'} • ${rec.restaurant?.location || 'Location'}`}
-                              </p>
-                            </>
-                          )}
-                          <div className="mt-1">
-                            <Badge variant={getScoreBadgeVariant(rec.recommendationScore)} className="text-xs">
-                              {Math.round(rec.recommendationScore * 100)}%
-                            </Badge>
-                          </div>
-                        </div>
                       </div>
-
-                      {/* Additional details */}
+                    )}
+                    <Badge variant={getScoreBadgeVariant(rec.recommendationScore)} className="absolute top-2 right-2 text-xs">
+                      {Math.round(rec.recommendationScore * 100)}% match
+                    </Badge>
+                  </div>
+                  <CardContent className="p-3">
+                    <div className="flex justify-between items-start mb-0.5">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                        {rec.type === 'menu_item' 
+                          ? (rec.menuItem?.name || rec.recommendationText?.split('.')[0] || 'Menu Item')
+                          : (rec.restaurant?.name || rec.recommendationText?.split('.')[0] || 'Restaurant')}
+                      </h3>
                       {rec.type === 'restaurant' && rec.restaurant && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="h-3 w-3 fill-current" />
-                          <span>{rec.restaurant.rating}</span>
-                          <span>•</span>
-                          <span>{rec.restaurant.priceRange}</span>
+                        <div className="flex items-center space-x-1">
+                          <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                          <span className="text-xs font-medium">{rec.restaurant.rating}</span>
                         </div>
                       )}
+                    </div>
 
-                      {rec.type === 'menu_item' && rec.menuItem && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span className="truncate">{rec.menuItem.category}</span>
-                          <span>•</span>
-                          <Euro className="h-3 w-3" />
-                          <span>{rec.menuItem.price}</span>
-                          {rec.menuItem.calories && (
+                    <div className="flex items-center text-[10px] text-gray-500 mb-1.5">
+                      {rec.type === 'menu_item' ? (
+                        <>
+                          <span className="truncate">{rec.restaurant?.name || 'Restaurant'}</span>
+                          <span className="mx-1">•</span>
+                          <Euro className="h-2.5 w-2.5 mr-0.5" />
+                          <span>{rec.menuItem?.price}</span>
+                          {rec.menuItem?.calories > 0 && (
                             <>
-                              <span>•</span>
+                              <span className="mx-1">•</span>
                               <span>{rec.menuItem.calories} cal</span>
                             </>
                           )}
-                        </div>
+                        </>
+                      ) : (
+                        <>
+                          <span>{rec.restaurant?.cuisine || 'Cuisine'}</span>
+                          <span className="mx-1">•</span>
+                          <MapPin className="h-2.5 w-2.5 mr-0.5 flex-shrink-0" />
+                          <span className="truncate">{rec.restaurant?.location || 'Location'}</span>
+                          {rec.restaurant?.priceRange && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span>{rec.restaurant.priceRange}</span>
+                            </>
+                          )}
+                        </>
                       )}
-
                     </div>
 
-                    <p className="text-xs mb-3 leading-relaxed text-muted-foreground">{rec.recommendationText}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-2 mb-1.5">{rec.recommendationText}</p>
 
                     {rec.nutritionalHighlights?.length > 0 && (
-                      <div className="mb-2">
-                        <div className="flex items-center gap-1 mb-1">
-                          <Heart className="h-3 w-3 text-green-500 flex-shrink-0" />
-                          <span className="text-xs font-medium truncate">{t.nutritionalHighlights}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {rec.nutritionalHighlights.slice(0, 2).map((highlight: any, index: number) => (
-                            <Badge key={index} variant="secondary" className="text-xs max-w-full">
-                              <span className="truncate max-w-20">{highlight}</span>
-                            </Badge>
-                          ))}
-                          {rec.nutritionalHighlights.length > 2 && (
-                            <Badge variant="secondary" className="text-xs flex-shrink-0">
-                              +{rec.nutritionalHighlights.length - 2}
-                            </Badge>
-                          )}
-                        </div>
+                      <div className="flex flex-wrap gap-1">
+                        {rec.nutritionalHighlights.slice(0, 2).map((highlight: any, index: number) => (
+                          <Badge key={index} variant="secondary" className="text-[10px] px-1 py-0">
+                            <span className="truncate max-w-20">{highlight}</span>
+                          </Badge>
+                        ))}
+                        {rec.nutritionalHighlights.length > 2 && (
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                            +{rec.nutritionalHighlights.length - 2}
+                          </Badge>
+                        )}
                       </div>
                     )}
 
-                    {rec.cautionaryNotes?.length > 0 && (
-                      <div className="mb-2">
-                        <div className="flex items-center gap-1 mb-1">
-                          <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
-                          <span className="text-xs font-medium truncate">Notes</span>
-                        </div>
-                        <div className="space-y-1 max-h-16 overflow-y-auto">
-                          {rec.cautionaryNotes.slice(0, 2).map((note: any, index: number) => (
-                            <p key={index} className="text-xs text-amber-700 dark:text-amber-300 leading-tight truncate">
-                              • {note}
-                            </p>
-                          ))}
-                          {rec.cautionaryNotes.length > 2 && (
-                            <p className="text-xs text-amber-700 dark:text-amber-300">
-                              • +{rec.cautionaryNotes.length - 2} more notes
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      {/* Time/context badges */}
-                      {(rec.recommendedFor || rec.idealDayTime) && (
-                        <div className="flex flex-wrap gap-1">
-                          {rec.recommendedFor && (
-                            <Badge variant="outline" className="text-xs max-w-full">
-                              <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
-                              <span className="truncate">{rec.recommendedFor}</span>
-                            </Badge>
-                          )}
-                          {rec.idealDayTime && (
-                            <Badge variant="outline" className="text-xs max-w-full">
-                              <span className="truncate">{rec.idealDayTime}</span>
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Action buttons */}
-                      <div className="flex gap-1 mt-auto pt-2">
-                        {/* Always show View button for both types */}
-                        {rec.type === 'restaurant' && (
-                          <Button 
-                            size="sm" 
-                            variant="default"
-                            onMouseEnter={() => {
-                              // Prefetch data on hover for instant loading
-                              queryClient.prefetchQuery({
-                                queryKey: ['/api/restaurants', rec.targetId, 'full'],
-                                queryFn: async () => {
-                                  const response = await fetch(`/api/restaurants/${rec.targetId}/full`, {
-                                    credentials: 'include'
-                                  });
-                                  if (!response.ok) throw new Error('Failed to fetch restaurant data');
-                                  return response.json();
-                                },
-                                staleTime: 30 * 60 * 1000,
-                              });
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Navigate immediately - data already prefetched on hover
-                              setLocation(`/restaurant/${rec.targetId}/menu?from=ai-recommendations`);
-                            }}
-                            className="flex items-center gap-1 flex-1 text-xs"
+                    <div className="grid grid-cols-3 gap-1 mt-2">
+                      <button 
+                        className="bg-orange-100 text-orange-700 px-1.5 py-1 rounded font-medium text-[10px] hover:bg-orange-400 hover:text-white transition-colors flex items-center justify-center gap-1 border border-orange-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (rec.type === 'restaurant') {
+                            setLocation(`/restaurant/${rec.targetId}/menu?from=ai-recommendations`);
+                          } else {
+                            const restaurantId = rec.restaurant?.id || rec.targetId;
+                            openRestaurantMenu(restaurantId, rec.type === 'menu_item' ? rec.targetId : undefined);
+                          }
+                        }}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        <span>View</span>
+                      </button>
+                      <button 
+                        className="bg-emerald-100 text-emerald-700 px-1.5 py-1 rounded font-medium text-[10px] hover:bg-emerald-500 hover:text-white transition-colors flex items-center justify-center gap-1 border border-emerald-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const restaurantId = rec.restaurant?.id || rec.targetId;
+                          openRestaurantMenu(restaurantId);
+                        }}
+                      >
+                        <Menu className="h-3 w-3" />
+                        <span>Menu</span>
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button 
+                            className="bg-blue-100 text-blue-700 px-1.5 py-1 rounded font-medium text-[10px] hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center gap-1 border border-blue-200"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <ExternalLink className="h-3 w-3" />
-                            <span className="truncate">View</span>
-                          </Button>
-                        )}
-                        
-                        {rec.type === 'menu_item' && (
-                          <Button 
-                            size="sm" 
-                            variant="default"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const restaurantId = rec.restaurant?.id;
-                              const menuItemId = rec.targetId; // For menu items, targetId is the menu item ID
-                              if (restaurantId && menuItemId) {
-                                openRestaurantMenu(restaurantId, menuItemId);
-                              } else {
-                                console.warn('Missing restaurant or menu item ID:', { restaurantId, menuItemId, rec });
-                                // Fallback: just open the restaurant menu
-                                openRestaurantMenu(restaurantId || rec.targetId);
-                              }
-                            }}
-                            className="flex items-center gap-1 flex-1 text-xs"
+                            <Navigation className="h-3 w-3" />
+                            <span>Nav</span>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem
+                            onClick={() => openGoogleMaps(
+                              rec.restaurant?.location || 'Restaurant location', 
+                              rec.restaurant?.name || 'Restaurant'
+                            )}
                           >
-                            <Menu className="h-3 w-3" />
-                            <span className="truncate">Menu</span>
-                          </Button>
-                        )}
-
-                        {/* Direction dropdown button */}
-                        {(rec.restaurant?.location || rec.type === 'restaurant') && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="flex items-center gap-1 flex-1 text-xs"
-                              >
-                                <Navigation className="h-3 w-3" />
-                                <span className="truncate">Nav</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem
-                                onClick={() => openGoogleMaps(
-                                  rec.restaurant?.location || 'Restaurant location', 
-                                  rec.restaurant?.name || (rec.type === 'restaurant' ? 'Restaurant' : 'Menu Item Restaurant')
-                                )}
-                                className="flex items-center gap-2"
-                              >
-                                <Navigation className="h-4 w-4" />
-                                Google Maps
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => openWaze(
-                                  rec.restaurant?.location || 'Restaurant location', 
-                                  rec.restaurant?.name || (rec.type === 'restaurant' ? 'Restaurant' : 'Menu Item Restaurant')
-                                )}
-                                className="flex items-center gap-2"
-                              >
-                                <Navigation className="h-4 w-4 text-blue-600" />
-                                Waze
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
+                            <Navigation className="h-4 w-4 mr-2" />
+                            Google Maps
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => openWaze(
+                              rec.restaurant?.location || 'Restaurant location', 
+                              rec.restaurant?.name || 'Restaurant'
+                            )}
+                          >
+                            <Navigation className="h-4 w-4 mr-2 text-blue-600" />
+                            Waze
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </CardContent>
                 </Card>

@@ -116,7 +116,7 @@ export default function MobileAIMenu() {
 
   const displayedRecommendations = isAuthenticated 
     ? filteredRecommendations 
-    : filteredRecommendations.slice(0, 3);
+    : filteredRecommendations.slice(0, 4);
 
   const hasActiveFilters = manualDietType !== 'all' || manualCalories !== 'all' || manualCuisine !== 'all' || manualPriceRange !== 'all' || manualRating !== 'all';
 
@@ -454,21 +454,14 @@ export default function MobileAIMenu() {
           )}
         </section>
 
-        {/* Guest CTA - show after 3 items */}
+        {/* Guest CTA - single line after recommendations */}
         {!isAuthenticated && filteredRecommendations.length > 0 && (
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl border border-primary/20 p-6 text-center">
-            <LogIn className="w-10 h-10 text-primary mx-auto mb-3" />
-            <h3 className="text-lg font-semibold mb-2">Want more recommendations?</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Create a free account to unlock unlimited AI recommendations tailored to your dietary profile and taste preferences.
-            </p>
-            <button
-              onClick={() => setLocation('/m/signin')}
-              className="w-full bg-primary text-white font-semibold py-3.5 px-6 rounded-2xl hover:bg-primary/90 transition-colors"
-            >
-              Sign Up / Log In
+          <p className="text-center text-sm text-gray-500 mt-2">
+            Do you want more recommendations?{' '}
+            <button onClick={() => setLocation('/m/signin')} className="text-primary font-semibold">
+              Sign-up now!
             </button>
-          </div>
+          </p>
         )}
 
         {/* Empty state for guests with no restaurants */}
