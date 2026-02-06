@@ -1004,153 +1004,170 @@ export default function Marketplace() {
             </div>
           )}
 
-          {/* AI Menu Preferences & Filters - single compact row */}
+          {/* AI Menu Preferences & Filters */}
           {activeTab === 'ai-menu' && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {isAuthenticated && userDietaryProfile && (
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-md border border-primary/20">
-                  <Label htmlFor="use-dietary-profile" className="text-xs font-medium text-primary cursor-pointer whitespace-nowrap">
-                    My Profile
-                  </Label>
-                  <Switch
-                    id="use-dietary-profile"
-                    checked={useDietaryProfile}
-                    onCheckedChange={setUseDietaryProfile}
-                    className="data-[state=checked]:bg-primary scale-75"
-                  />
-                </div>
-              )}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                {/* LEFT: Preferences section */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300">
+                    <Heart className="w-4 h-4 text-rose-500" />
+                    <span>Preferences:</span>
+                  </div>
 
-              {isAuthenticated && useDietaryProfile && userDietaryProfile && (
-                <div className="flex items-center gap-1">
-                  {userDietaryProfile.dietaryPreferences?.slice(0, 3).map((pref: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="text-[10px] px-1.5 py-0">
-                      {pref}
-                    </Badge>
-                  ))}
-                  {userDietaryProfile.dietaryPreferences?.length > 3 && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      +{userDietaryProfile.dietaryPreferences.length - 3}
-                    </Badge>
+                  {isAuthenticated && userDietaryProfile && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
+                      <User className="w-4 h-4 text-primary" />
+                      <Label htmlFor="use-dietary-profile" className="text-sm font-medium text-primary cursor-pointer">
+                        Use My Profile
+                      </Label>
+                      <Switch
+                        id="use-dietary-profile"
+                        checked={useDietaryProfile}
+                        onCheckedChange={setUseDietaryProfile}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                    </div>
+                  )}
+
+                  {(!isAuthenticated || !useDietaryProfile) && (
+                    <>
+                      <Select 
+                        value={filters.cuisine || "all"} 
+                        onValueChange={(value) => handleFilterChange('cuisine', value === 'all' ? undefined : value)}
+                      >
+                        <SelectTrigger className="w-[140px] h-9 text-sm">
+                          <SelectValue placeholder={t.cuisineType} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{t.allCuisines || 'All Cuisines'}</SelectItem>
+                          {cuisinesLoading ? (
+                            <SelectItem value="loading" disabled>Loading...</SelectItem>
+                          ) : availableCuisines.map((cuisine) => (
+                            <SelectItem key={cuisine} value={cuisine}>
+                              {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={manualDietType} onValueChange={setManualDietType}>
+                        <SelectTrigger className="w-[150px] h-9 text-sm">
+                          <SelectValue placeholder="Diet" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Diets</SelectItem>
+                          <SelectItem value="vegetarian">Vegetarian</SelectItem>
+                          <SelectItem value="vegan">Vegan</SelectItem>
+                          <SelectItem value="gluten-free">Gluten-Free</SelectItem>
+                          <SelectItem value="keto">Keto</SelectItem>
+                          <SelectItem value="paleo">Paleo</SelectItem>
+                          <SelectItem value="dash">DASH</SelectItem>
+                          <SelectItem value="low-carb">Low-Carb</SelectItem>
+                          <SelectItem value="mediterranean">Mediterranean</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={manualCalories} onValueChange={setManualCalories}>
+                        <SelectTrigger className="w-[140px] h-9 text-sm">
+                          <SelectValue placeholder="Calories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Calories</SelectItem>
+                          <SelectItem value="low">&lt; 1500 kcal</SelectItem>
+                          <SelectItem value="medium">1500-2000 kcal</SelectItem>
+                          <SelectItem value="high">2000-2500 kcal</SelectItem>
+                          <SelectItem value="very-high">&gt; 2500 kcal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </>
+                  )}
+
+                  {isAuthenticated && useDietaryProfile && userDietaryProfile && (
+                    <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
+                      {userDietaryProfile.dietaryPreferences?.slice(0, 3).map((pref: string, index: number) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {pref}
+                        </Badge>
+                      ))}
+                      {userDietaryProfile.dietaryPreferences?.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{userDietaryProfile.dietaryPreferences.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
 
-              {(!isAuthenticated || !useDietaryProfile) && (
-                <>
+                {/* RIGHT: Filters section */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300">
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <span>Filters:</span>
+                  </div>
+
+                  <Select value={selectedMealType} onValueChange={setSelectedMealType}>
+                    <SelectTrigger className="w-[130px] h-9 text-sm">
+                      <SelectValue placeholder="Meal Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any Meal</SelectItem>
+                      <SelectItem value="breakfast">Breakfast</SelectItem>
+                      <SelectItem value="lunch">Lunch</SelectItem>
+                      <SelectItem value="dinner">Dinner</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={recommendationType} onValueChange={setRecommendationType}>
+                    <SelectTrigger className="w-[130px] h-9 text-sm">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="both">Both</SelectItem>
+                      <SelectItem value="restaurants">Restaurants</SelectItem>
+                      <SelectItem value="menu_items">Menu Items</SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   <Select 
-                    value={filters.cuisine || "all"} 
-                    onValueChange={(value) => handleFilterChange('cuisine', value === 'all' ? undefined : value)}
+                    value={filters.priceRange || "all"} 
+                    onValueChange={(value) => handleFilterChange('priceRange', value === 'all' ? undefined : value)}
                   >
-                    <SelectTrigger className="w-[110px] h-7 text-xs">
-                      <SelectValue placeholder={t.cuisineType} />
+                    <SelectTrigger className="w-[130px] h-9 text-sm">
+                      <SelectValue placeholder={t.priceRange} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{t.allCuisines || 'All Cuisines'}</SelectItem>
-                      {cuisinesLoading ? (
-                        <SelectItem value="loading" disabled>Loading...</SelectItem>
-                      ) : availableCuisines.map((cuisine) => (
-                        <SelectItem key={cuisine} value={cuisine}>
-                          {t[cuisine.toLowerCase() as keyof typeof t] || cuisine}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="all">{t.allPrices || 'All Prices'}</SelectItem>
+                      <SelectItem value="€">€ - {t.budget}</SelectItem>
+                      <SelectItem value="€€">€€ - {t.moderate}</SelectItem>
+                      <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
                     </SelectContent>
                   </Select>
 
-                  <Select value={manualDietType} onValueChange={setManualDietType}>
-                    <SelectTrigger className="w-[110px] h-7 text-xs">
-                      <SelectValue placeholder="Diet" />
+                  <Select value={manualRating} onValueChange={setManualRating}>
+                    <SelectTrigger className="w-[130px] h-9 text-sm">
+                      <SelectValue placeholder="Rating" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Diets</SelectItem>
-                      <SelectItem value="vegetarian">Vegetarian</SelectItem>
-                      <SelectItem value="vegan">Vegan</SelectItem>
-                      <SelectItem value="gluten-free">Gluten-Free</SelectItem>
-                      <SelectItem value="keto">Keto</SelectItem>
-                      <SelectItem value="paleo">Paleo</SelectItem>
-                      <SelectItem value="dash">DASH</SelectItem>
-                      <SelectItem value="low-carb">Low-Carb</SelectItem>
-                      <SelectItem value="mediterranean">Mediterranean</SelectItem>
+                      <SelectItem value="all">All Ratings</SelectItem>
+                      <SelectItem value="3">⭐ 3+ Stars</SelectItem>
+                      <SelectItem value="3.5">⭐ 3.5+ Stars</SelectItem>
+                      <SelectItem value="4">⭐ 4+ Stars</SelectItem>
+                      <SelectItem value="4.5">⭐ 4.5+ Stars</SelectItem>
                     </SelectContent>
                   </Select>
 
-                  <Select value={manualCalories} onValueChange={setManualCalories}>
-                    <SelectTrigger className="w-[110px] h-7 text-xs">
-                      <SelectValue placeholder="Calories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Calories</SelectItem>
-                      <SelectItem value="low">&lt; 1500 kcal</SelectItem>
-                      <SelectItem value="medium">1500-2000 kcal</SelectItem>
-                      <SelectItem value="high">2000-2500 kcal</SelectItem>
-                      <SelectItem value="very-high">&gt; 2500 kcal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-
-              <div className="w-px h-5 bg-gray-300 mx-0.5" />
-
-              <Select value={selectedMealType} onValueChange={setSelectedMealType}>
-                <SelectTrigger className="w-[100px] h-7 text-xs">
-                  <SelectValue placeholder="Meal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any Meal</SelectItem>
-                  <SelectItem value="breakfast">Breakfast</SelectItem>
-                  <SelectItem value="lunch">Lunch</SelectItem>
-                  <SelectItem value="dinner">Dinner</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={recommendationType} onValueChange={setRecommendationType}>
-                <SelectTrigger className="w-[100px] h-7 text-xs">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="both">Both</SelectItem>
-                  <SelectItem value="restaurants">Restaurants</SelectItem>
-                  <SelectItem value="menu_items">Menu Items</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select 
-                value={filters.priceRange || "all"} 
-                onValueChange={(value) => handleFilterChange('priceRange', value === 'all' ? undefined : value)}
-              >
-                <SelectTrigger className="w-[100px] h-7 text-xs">
-                  <SelectValue placeholder={t.priceRange} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.allPrices || 'All Prices'}</SelectItem>
-                  <SelectItem value="€">€ - {t.budget}</SelectItem>
-                  <SelectItem value="€€">€€ - {t.moderate}</SelectItem>
-                  <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={manualRating} onValueChange={setManualRating}>
-                <SelectTrigger className="w-[100px] h-7 text-xs">
-                  <SelectValue placeholder="Rating" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Ratings</SelectItem>
-                  <SelectItem value="3">⭐ 3+</SelectItem>
-                  <SelectItem value="3.5">⭐ 3.5+</SelectItem>
-                  <SelectItem value="4">⭐ 4+</SelectItem>
-                  <SelectItem value="4.5">⭐ 4.5+</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {hasActiveFilters && (
-                <button
-                  onClick={clearAllFilters}
-                  className="flex items-center gap-0.5 px-1.5 py-1 text-xs text-gray-500 hover:text-red-500 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                  Clear
-                </button>
-              )}
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearAllFilters}
+                      className="flex items-center gap-1 px-2 py-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
