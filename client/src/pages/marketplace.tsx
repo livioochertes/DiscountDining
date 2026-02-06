@@ -976,6 +976,34 @@ export default function Marketplace() {
             </div>
           )}
 
+          {/* AI Menu Title & Badge */}
+          {activeTab === 'ai-menu' && (
+            <div className="text-center mb-4">
+              <h2 className="text-2xl font-bold text-primary mb-2 flex items-center justify-center gap-2">
+                <Brain className="w-6 h-6" />
+                AI Menu Recommendations
+              </h2>
+              <p className="text-muted-foreground">
+                Personalized restaurant and menu recommendations based on your preferences
+              </p>
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30">
+                  {isAuthenticated && useDietaryProfile && userDietaryProfile ? (
+                    <>
+                      <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                      Based on your Profile
+                    </>
+                  ) : (
+                    <>
+                      <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                      Based on selected Preferences
+                    </>
+                  )}
+                </Badge>
+              </div>
+            </div>
+          )}
+
           {/* AI Menu Preferences & Filters */}
           {activeTab === 'ai-menu' && (
             <div className="flex flex-col gap-3">
@@ -1307,31 +1335,6 @@ export default function Marketplace() {
             {/* AI Menu Tab Content */}
             {activeTab === 'ai-menu' && (
               <div className="py-8">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold text-primary mb-2 flex items-center justify-center gap-2">
-                    <Brain className="w-6 h-6" />
-                    AI Menu Recommendations
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Personalized restaurant and menu recommendations based on your preferences
-                  </p>
-                  <div className="flex items-center justify-center gap-2 mt-3">
-                    <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30">
-                      {isAuthenticated && useDietaryProfile && userDietaryProfile ? (
-                        <>
-                          <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                          Based on your Profile
-                        </>
-                      ) : (
-                        <>
-                          <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                          Based on selected Preferences
-                        </>
-                      )}
-                    </Badge>
-                  </div>
-                </div>
-
                 {!isAuthenticated && allEnhancedRecommendations.length > 0 ? (
                   <>
                     <AIRecommendations 
