@@ -483,9 +483,10 @@ export default function Marketplace() {
       if (manualCalories !== 'all') {
         const cal = rec.calories || rec.estimatedCalories || 0;
         if (cal > 0) {
-          if (manualCalories === 'low' && cal > 400) return false;
-          if (manualCalories === 'medium' && (cal < 400 || cal > 700)) return false;
-          if (manualCalories === 'high' && cal < 700) return false;
+          if (manualCalories === 'low' && cal >= 1500) return false;
+          if (manualCalories === 'medium' && (cal < 1500 || cal > 2000)) return false;
+          if (manualCalories === 'high' && (cal < 2000 || cal > 2500)) return false;
+          if (manualCalories === 'very-high' && cal < 2500) return false;
         }
       }
     }
@@ -1039,9 +1040,10 @@ export default function Marketplace() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Calories</SelectItem>
-                          <SelectItem value="low">&lt; 400 kcal</SelectItem>
-                          <SelectItem value="medium">400-700 kcal</SelectItem>
-                          <SelectItem value="high">&gt; 700 kcal</SelectItem>
+                          <SelectItem value="low">&lt; 1500 kcal</SelectItem>
+                          <SelectItem value="medium">1500-2000 kcal</SelectItem>
+                          <SelectItem value="high">2000-2500 kcal</SelectItem>
+                          <SelectItem value="very-high">&gt; 2500 kcal</SelectItem>
                         </SelectContent>
                       </Select>
                     </>
