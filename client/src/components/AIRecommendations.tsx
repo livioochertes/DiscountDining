@@ -24,7 +24,9 @@ import {
   Euro,
   Navigation,
   ExternalLink,
-  Menu
+  Menu,
+  User,
+  SlidersHorizontal
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -72,9 +74,12 @@ interface AIRecommendationsProps {
   mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   showFilters?: boolean;
   recommendations?: AIRecommendation[];
+  useDietaryProfile?: boolean;
+  hasDietaryProfile?: boolean;
+  isAuthenticated?: boolean;
 }
 
-export function AIRecommendations({ className, mealType, showFilters = true, recommendations: propRecommendations }: AIRecommendationsProps) {
+export function AIRecommendations({ className, mealType, showFilters = true, recommendations: propRecommendations, useDietaryProfile, hasDietaryProfile, isAuthenticated: isAuthProp }: AIRecommendationsProps) {
   const [selectedMealType, setSelectedMealType] = useState<string>(mealType || 'any');
   const [recommendationType, setRecommendationType] = useState<string>('both');
   const [selectedRecommendation, setSelectedRecommendation] = useState<AIRecommendation | null>(null);
@@ -218,13 +223,32 @@ export function AIRecommendations({ className, mealType, showFilters = true, rec
     <div className={className}>
       <Card className="lg:max-h-[calc(100vh-20rem)] lg:flex lg:flex-col">
         <CardHeader className="pb-3 lg:flex-shrink-0">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Brain className="h-4 w-4 text-primary flex-shrink-0" />
-            <span className="truncate">{t.aiPoweredRecommendations}</span>
-          </CardTitle>
-          <CardDescription className="text-xs">
-            {t.personalizedSuggestions}
-          </CardDescription>
+          <div className="text-center mb-2">
+            <CardTitle className="flex items-center justify-center gap-2 text-lg text-primary">
+              <Brain className="h-5 w-5 flex-shrink-0" />
+              AI Menu Recommendations
+            </CardTitle>
+            <CardDescription className="text-sm mt-1">
+              Personalized restaurant and menu recommendations based on your preferences
+            </CardDescription>
+          </div>
+          {isAuthProp !== undefined && (
+            <div className="flex items-center justify-center mt-1">
+              <Badge variant="outline" className="px-3 py-1 text-xs border-primary/30">
+                {isAuthProp && useDietaryProfile && hasDietaryProfile ? (
+                  <>
+                    <User className="w-3 h-3 mr-1.5 text-primary" />
+                    Based on your Profile
+                  </>
+                ) : (
+                  <>
+                    <SlidersHorizontal className="w-3 h-3 mr-1.5 text-primary" />
+                    Based on selected Preferences
+                  </>
+                )}
+              </Badge>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-3 lg:overflow-y-auto lg:flex-1">
           {showFilters && (

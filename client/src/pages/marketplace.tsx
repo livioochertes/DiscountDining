@@ -1278,43 +1278,6 @@ export default function Marketplace() {
             {/* AI Menu Tab Content */}
             {activeTab === 'ai-menu' && (
               <div className="py-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-primary mb-2 flex items-center justify-center gap-2">
-                    <Brain className="w-6 h-6" />
-                    AI Menu Recommendations
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Personalized restaurant and menu recommendations based on your preferences
-                  </p>
-                </div>
-                
-                {/* Source indicator */}
-                {isAuthenticated && (
-                  <div className="flex items-center justify-center gap-2 mb-6">
-                    <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30">
-                      {useDietaryProfile && userDietaryProfile ? (
-                        <>
-                          <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                          Based on your Profile
-                        </>
-                      ) : (
-                        <>
-                          <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                          Based on selected Preferences
-                        </>
-                      )}
-                    </Badge>
-                  </div>
-                )}
-
-                {!isAuthenticated && (
-                  <div className="flex items-center justify-center gap-2 mb-6">
-                    <Badge variant="outline" className="px-3 py-1 text-sm border-amber-400/50 text-amber-700 bg-amber-50">
-                      <Heart className="w-3.5 h-3.5 mr-1.5" />
-                      Based on selected Preferences
-                    </Badge>
-                  </div>
-                )}
 
                 {!isAuthenticated && allEnhancedRecommendations.length > 0 ? (
                   <>
@@ -1322,6 +1285,9 @@ export default function Marketplace() {
                       recommendations={allEnhancedRecommendations.slice(0, 4)}
                       showFilters={true}
                       className="border-0 shadow-none"
+                      isAuthenticated={false}
+                      useDietaryProfile={false}
+                      hasDietaryProfile={false}
                     />
                     <p className="text-center text-sm text-muted-foreground mt-4">
                       Do you want more recommendations?{' '}
@@ -1358,6 +1324,9 @@ export default function Marketplace() {
                     recommendations={allEnhancedRecommendations}
                     showFilters={true}
                     className="border-0 shadow-none"
+                    isAuthenticated={isAuthenticated}
+                    useDietaryProfile={useDietaryProfile}
+                    hasDietaryProfile={!!userDietaryProfile}
                   />
                 )}
               </div>
