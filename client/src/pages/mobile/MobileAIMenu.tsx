@@ -627,8 +627,8 @@ export default function MobileAIMenu() {
                   onClick={() => setExpandedItem(expandedItem === rec.id ? null : rec.id)}
                   className="w-full p-4 text-left"
                 >
-                  <div className="flex items-stretch gap-3">
-                    <div className="w-14 rounded-xl overflow-hidden flex-shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
                       {rec.restaurant?.imageUrl ? (
                         <img
                           src={rec.restaurant.imageUrl}
@@ -642,13 +642,18 @@ export default function MobileAIMenu() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate">
-                        {rec.restaurant?.name || rec.title || 'Restaurant'}
-                      </h3>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="font-semibold text-gray-900 truncate">
+                          {rec.restaurant?.name || rec.title || 'Restaurant'}
+                        </h3>
+                        <span className="flex-shrink-0 bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                          {Math.round((rec.recommendationScore || 0) * 100)}%
+                        </span>
+                      </div>
                       <p className="text-sm text-gray-500 truncate">
                         {rec.restaurant?.cuisine}{rec.restaurant?.location ? ` • ${rec.restaurant.location}` : ''}
                       </p>
-                      <div className="flex items-center gap-3 mt-1.5">
+                      <div className="flex items-center gap-3 mt-1">
                         {rec.restaurant?.rating > 0 && (
                           <div className="flex items-center gap-1 text-sm">
                             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -658,9 +663,6 @@ export default function MobileAIMenu() {
                         {rec.restaurant?.priceRange && (
                           <span className="text-sm text-gray-500">{rec.restaurant.priceRange}</span>
                         )}
-                        <span className="text-sm font-medium text-green-600">
-                          {Math.round((rec.recommendationScore || 0) * 100)}% match
-                        </span>
                       </div>
                     </div>
                     <ChevronRight className={cn(
