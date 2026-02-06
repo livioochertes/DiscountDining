@@ -131,6 +131,7 @@ export default function MobileRestaurantDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const initialTab = urlParams.get('tab') === 'vouchers' ? 'vouchers' : 'menu';
   const highlightedVoucherId = urlParams.get('voucherId');
+  const highlightedMenuItemId = urlParams.get('menuItem');
   const fromPage = urlParams.get('from');
   
   const [activeTab, setActiveTab] = useState<'menu' | 'vouchers'>(initialTab);
@@ -189,12 +190,16 @@ export default function MobileRestaurantDetail() {
   };
 
   const handleBack = () => {
-    if (fromPage === 'vouchers') {
+    if (fromPage === 'ai-menu' || fromPage === 'ai-recommendations') {
+      setLocation('/m/ai-menu');
+    } else if (fromPage === 'vouchers') {
       setLocation('/m/explore?tab=vouchers');
     } else {
       setLocation('/m/explore');
     }
   };
+
+  const menuItemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   useEffect(() => {
     if (highlightedVoucherId && activeTab === 'vouchers') {
@@ -206,6 +211,19 @@ export default function MobileRestaurantDetail() {
       }, 300);
     }
   }, [highlightedVoucherId, activeTab, packages]);
+
+  useEffect(() => {
+    if (highlightedMenuItemId && activeTab === 'menu') {
+      setTimeout(() => {
+        const ref = menuItemRefs.current[highlightedMenuItemId];
+        if (ref) {
+          ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          ref.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+          setTimeout(() => ref.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'), 3000);
+        }
+      }, 500);
+    }
+  }, [highlightedMenuItemId, activeTab, menuItems]);
 
   if (isLoading) {
     return (
@@ -350,11 +368,16 @@ export default function MobileRestaurantDetail() {
                   <h3 className="font-bold text-gray-900 mb-3">{category}</h3>
                   <div className="space-y-3">
                     {items.map((item) => (
-                      <MenuItemCard 
-                        key={item.id} 
-                        item={item} 
-                        onAdd={() => handleAddToCart(item)}
-                      />
+                      <div
+                        key={item.id}
+                        ref={(el) => { menuItemRefs.current[String(item.id)] = el; }}
+                        className="transition-all duration-300"
+                      >
+                        <MenuItemCard 
+                          item={item} 
+                          onAdd={() => handleAddToCart(item)}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>

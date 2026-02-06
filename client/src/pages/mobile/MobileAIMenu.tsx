@@ -1,12 +1,112 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Brain, Heart, SlidersHorizontal, ChevronRight, Star, MapPin, LogIn, X, ChefHat, Info, User, Pencil } from 'lucide-react';
+import { Brain, Heart, SlidersHorizontal, ChevronRight, Star, MapPin, LogIn, X, ChefHat, Info, User, Pencil, UtensilsCrossed } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { api } from '@/lib/api';
+
+function ExpandedRecommendation({ rec, setLocation, isAuthenticated }: { rec: any; setLocation: (path: string) => void; isAuthenticated: boolean }) {
+  const [matchingItems, setMatchingItems] = useState<any[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const restaurantId = rec.restaurant?.id || rec.targetId;
+
+  useEffect(() => {
+    if (!isAuthenticated || !restaurantId) return;
+    setLoadingItems(true);
+    fetch(`/api/dietary/restaurant/${restaurantId}/matching-items`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => setMatchingItems(data.items || []))
+      .catch(() => setMatchingItems([]))
+      .finally(() => setLoadingItems(false));
+  }, [restaurantId, isAuthenticated]);
+
+  return (
+    <div className="px-4 pb-4 border-t border-gray-50">
+      {rec.recommendationText && (
+        <div className="flex items-start gap-2 mt-3 p-3 bg-blue-50 rounded-xl">
+          <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-700">{rec.recommendationText}</p>
+        </div>
+      )}
+
+      {rec.nutritionalHighlights?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {rec.nutritionalHighlights.map((h: string, i: number) => (
+            <span key={i} className="bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-full">
+              {h}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {rec.cautionaryNotes?.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {rec.cautionaryNotes.map((note: string, i: number) => (
+            <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
+              <span>⚠️</span> {note}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {isAuthenticated && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <UtensilsCrossed className="w-4 h-4 text-primary" />
+            <h4 className="text-sm font-semibold text-gray-800">Menu Items for You</h4>
+          </div>
+          {loadingItems ? (
+            <div className="flex items-center gap-2 py-3">
+              <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+              <span className="text-xs text-gray-500">Finding matching dishes...</span>
+            </div>
+          ) : matchingItems.length > 0 ? (
+            <div className="space-y-2">
+              {matchingItems.map((item: any) => (
+                <button
+                  key={item.id}
+                  onClick={() => setLocation(`/m/restaurant/${restaurantId}?menuItem=${item.id}&from=ai-menu`)}
+                  className="w-full flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl text-left hover:bg-gray-100 active:bg-gray-100 transition-colors"
+                >
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <UtensilsCrossed className="w-4 h-4 text-primary" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {item.price && <span className="text-xs font-medium text-primary">{item.price}</span>}
+                      {item.calories && <span className="text-xs text-gray-400">{item.calories} kcal</span>}
+                      {item.dietaryTags?.length > 0 && (
+                        <span className="text-xs text-green-600">{item.dietaryTags[0]}</span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 py-2">No specific menu item matches found.</p>
+          )}
+        </div>
+      )}
+
+      <button
+        onClick={() => setLocation(`/m/restaurant/${restaurantId}?from=ai-menu`)}
+        className="w-full mt-3 bg-primary text-white py-3 rounded-xl font-semibold text-sm"
+      >
+        View Full Menu
+      </button>
+    </div>
+  );
+}
 
 export default function MobileAIMenu() {
   const { t } = useLanguage();
@@ -528,9 +628,17 @@ export default function MobileAIMenu() {
                   className="w-full p-4 text-left"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <ChefHat className="w-5 h-5 text-primary" />
-                    </div>
+                    {rec.restaurant?.imageUrl ? (
+                      <img
+                        src={rec.restaurant.imageUrl}
+                        alt={rec.restaurant.name}
+                        className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <ChefHat className="w-6 h-6 text-primary" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">
                         {rec.restaurant?.name || rec.title || 'Restaurant'}
@@ -561,41 +669,7 @@ export default function MobileAIMenu() {
                 </button>
 
                 {expandedItem === rec.id && (
-                  <div className="px-4 pb-4 border-t border-gray-50">
-                    {rec.recommendationText && (
-                      <div className="flex items-start gap-2 mt-3 p-3 bg-blue-50 rounded-xl">
-                        <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-blue-700">{rec.recommendationText}</p>
-                      </div>
-                    )}
-
-                    {rec.nutritionalHighlights?.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        {rec.nutritionalHighlights.map((h: string, i: number) => (
-                          <span key={i} className="bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-full">
-                            {h}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {rec.cautionaryNotes?.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {rec.cautionaryNotes.map((note: string, i: number) => (
-                          <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
-                            <span>⚠️</span> {note}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => setLocation(`/restaurant/${rec.targetId}/menu?from=ai-recommendations`)}
-                      className="w-full mt-3 bg-primary text-white py-3 rounded-xl font-semibold text-sm"
-                    >
-                      View Restaurant
-                    </button>
-                  </div>
+                  <ExpandedRecommendation rec={rec} setLocation={setLocation} isAuthenticated={isAuthenticated} />
                 )}
               </div>
             ))

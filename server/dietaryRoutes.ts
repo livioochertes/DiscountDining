@@ -189,6 +189,72 @@ export function registerDietaryRoutes(app: Express) {
     }
   });
 
+  app.get("/api/dietary/restaurant/:restaurantId/matching-items", dietaryAuth, async (req: any, res: Response) => {
+    try {
+      const userId = req.ownerId;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      const restaurantId = parseInt(req.params.restaurantId);
+      if (!restaurantId) {
+        return res.status(400).json({ message: "Invalid restaurant ID" });
+      }
+
+      const profile = await dietaryEngine.getUserDietaryProfile(userId);
+      const allItems = await storage.getMenuItemsByRestaurant(restaurantId);
+      const availableItems = allItems.filter((item: any) => item.isAvailable !== false);
+
+      if (!profile) {
+        return res.json({ items: availableItems.slice(0, 6) });
+      }
+
+      const scored = availableItems.map((item: any) => {
+        let score = 0;
+        const tags = (item.dietaryTags || []).map((t: string) => t.toLowerCase());
+        const allergens = (item.allergens || []).map((a: string) => a.toLowerCase());
+        const userAllergies = (profile.allergies || []).map((a: string) => a.toLowerCase());
+
+        if (userAllergies.some((a: string) => allergens.includes(a))) {
+          return { ...item, matchScore: -1 };
+        }
+
+        const dietPrefs = profile.dietaryPreferences || [];
+        if (dietPrefs.length > 0) {
+          for (const dp of dietPrefs) {
+            const dt = dp.toLowerCase();
+            if (tags.includes(dt) || tags.some((t: string) => t.includes(dt))) { score += 3; break; }
+          }
+        }
+
+        if (profile.calorieTarget && item.calories) {
+          const cal = parseInt(item.calories);
+          const target = profile.calorieTarget / 3;
+          const diff = Math.abs(cal - target) / target;
+          if (diff < 0.2) score += 2;
+          else if (diff < 0.4) score += 1;
+        }
+
+        const prefCuisines = (profile.preferredCuisines || []).map((c: string) => c.toLowerCase());
+        const category = (item.category || '').toLowerCase();
+        if (prefCuisines.some((c: string) => category.includes(c))) score += 1;
+
+        if (tags.includes('healthy') || tags.includes('light') || tags.includes('fresh')) score += 1;
+
+        return { ...item, matchScore: score };
+      });
+
+      const matching = scored
+        .filter((item: any) => item.matchScore >= 0)
+        .sort((a: any, b: any) => b.matchScore - a.matchScore)
+        .slice(0, 6);
+
+      res.json({ items: matching });
+    } catch (error) {
+      console.error("Error fetching matching menu items:", error);
+      res.json({ items: [] });
+    }
+  });
+
   // Record meal history
   app.post("/api/dietary/meal-history", dietaryAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
