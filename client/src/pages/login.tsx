@@ -191,7 +191,7 @@ export default function Login() {
         <div className="text-center mt-4">
           <Button
             variant="ghost"
-            onClick={() => window.location.href = "/"}
+            onClick={() => { window.scrollTo(0, 0); setLocation('/'); }}
             className="text-primary hover:text-primary/80"
           >
             ← Back to Home
