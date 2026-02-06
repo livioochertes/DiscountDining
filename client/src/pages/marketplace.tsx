@@ -228,14 +228,24 @@ export default function Marketplace() {
     const topRestaurants = [...restaurants]
       .sort((a: any, b: any) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0))
       .slice(0, 6);
-    return topRestaurants.map((r: any) => ({
+    return topRestaurants.map((r: any, idx: number) => ({
+      id: r.id || idx,
       type: 'restaurant' as const,
       targetId: r.id,
       restaurantId: r.id,
       title: r.name,
+      recommendationScore: (parseFloat(r.rating) || 4) / 5,
+      recommendationText: `Popular ${r.cuisine || ''} restaurant with great reviews.`,
+      reasoningFactors: [],
+      nutritionalMatch: 0,
+      preferenceMatch: 0,
+      healthGoalAlignment: 0,
+      nutritionalHighlights: [],
+      cautionaryNotes: [],
       reason: `Top-rated ${r.cuisine || ''} restaurant`,
       score: parseFloat(r.rating) || 4,
       restaurant: {
+        id: r.id,
         name: r.name,
         cuisine: r.cuisine || '',
         location: r.location || '',
