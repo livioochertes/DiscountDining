@@ -3,10 +3,9 @@ import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -24,9 +23,7 @@ import {
   Euro,
   Navigation,
   ExternalLink,
-  Menu,
-  User,
-  SlidersHorizontal
+  Menu
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -71,17 +68,15 @@ interface AIRecommendation {
 
 interface AIRecommendationsProps {
   className?: string;
-  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  mealType?: string;
   showFilters?: boolean;
   recommendations?: AIRecommendation[];
-  useDietaryProfile?: boolean;
-  hasDietaryProfile?: boolean;
-  isAuthenticated?: boolean;
+  recommendationType?: string;
 }
 
-export function AIRecommendations({ className, mealType, showFilters = true, recommendations: propRecommendations, useDietaryProfile, hasDietaryProfile, isAuthenticated: isAuthProp }: AIRecommendationsProps) {
-  const [selectedMealType, setSelectedMealType] = useState<string>(mealType || 'any');
-  const [recommendationType, setRecommendationType] = useState<string>('both');
+export function AIRecommendations({ className, mealType, showFilters = true, recommendations: propRecommendations, recommendationType: propRecommendationType }: AIRecommendationsProps) {
+  const selectedMealType = mealType || 'any';
+  const recommendationType = propRecommendationType || 'both';
   const [selectedRecommendation, setSelectedRecommendation] = useState<AIRecommendation | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
@@ -221,74 +216,16 @@ export function AIRecommendations({ className, mealType, showFilters = true, rec
 
   return (
     <div className={className}>
-      <Card className="lg:max-h-[calc(100vh-20rem)] lg:flex lg:flex-col">
-        <CardHeader className="pb-3 lg:flex-shrink-0">
-          <div className="text-center mb-2">
-            <CardTitle className="flex items-center justify-center gap-2 text-lg text-primary">
-              <Brain className="h-5 w-5 flex-shrink-0" />
-              AI Menu Recommendations
-            </CardTitle>
-            <CardDescription className="text-sm mt-1">
-              Personalized restaurant and menu recommendations based on your preferences
-            </CardDescription>
-          </div>
-          {isAuthProp !== undefined && (
-            <div className="flex items-center justify-center mt-1">
-              <Badge variant="outline" className="px-3 py-1 text-xs border-primary/30">
-                {isAuthProp && useDietaryProfile && hasDietaryProfile ? (
-                  <>
-                    <User className="w-3 h-3 mr-1.5 text-primary" />
-                    Based on your Profile
-                  </>
-                ) : (
-                  <>
-                    <SlidersHorizontal className="w-3 h-3 mr-1.5 text-primary" />
-                    Based on selected Preferences
-                  </>
-                )}
-              </Badge>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent className="p-3 lg:overflow-y-auto lg:flex-1">
+      <Card className="lg:max-h-[calc(100vh-20rem)] lg:flex lg:flex-col border-0 shadow-none">
+        <CardContent className="p-0 lg:overflow-y-auto lg:flex-1">
           {showFilters && (
-            <div className="space-y-3 mb-6">
-              <div className="space-y-2">
-                <label className="text-xs font-medium block truncate">{t.mealType}:</label>
-                <Select value={selectedMealType} onValueChange={setSelectedMealType}>
-                  <SelectTrigger className="w-full text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">{t.any}</SelectItem>
-                    <SelectItem value="breakfast">{t.breakfast}</SelectItem>
-                    <SelectItem value="lunch">{t.lunch}</SelectItem>
-                    <SelectItem value="dinner">{t.dinner}</SelectItem>
-                    <SelectItem value="snack">{t.snack}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium block truncate">{t.type}:</label>
-                <Select value={recommendationType} onValueChange={setRecommendationType}>
-                  <SelectTrigger className="w-full text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="both">{t.both}</SelectItem>
-                    <SelectItem value="restaurants">{t.restaurants}</SelectItem>
-                    <SelectItem value="menu_items">{t.menuItems}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
+            <div className="flex justify-center mb-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => generateRecommendationsMutation.mutate()}
                 disabled={generateRecommendationsMutation.isPending}
-                className="flex items-center gap-2 w-full"
+                className="flex items-center gap-2"
               >
                 <RefreshCw className={`h-4 w-4 ${generateRecommendationsMutation.isPending ? 'animate-spin' : ''}`} />
                 <span className="truncate">
