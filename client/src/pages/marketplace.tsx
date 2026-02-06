@@ -983,21 +983,6 @@ export default function Marketplace() {
                 <Brain className="w-6 h-6" />
                 AI Menu Recommendations
               </h2>
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30">
-                  {isAuthenticated && useDietaryProfile && userDietaryProfile ? (
-                    <>
-                      <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                      Based on your Profile
-                    </>
-                  ) : (
-                    <>
-                      <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                      Based on selected Preferences
-                    </>
-                  )}
-                </Badge>
-              </div>
             </div>
           )}
 
@@ -1095,6 +1080,21 @@ export default function Marketplace() {
                     </div>
                   )}
                 </div>
+
+                {/* CENTER: Based on badge */}
+                <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30 self-center">
+                  {isAuthenticated && useDietaryProfile && userDietaryProfile ? (
+                    <>
+                      <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                      Based on your Profile
+                    </>
+                  ) : (
+                    <>
+                      <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                      Based on selected Preferences
+                    </>
+                  )}
+                </Badge>
 
                 {/* RIGHT: Filters section */}
                 <div className="flex flex-wrap items-center gap-2">
