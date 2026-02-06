@@ -260,7 +260,8 @@ export default function Marketplace() {
   const allRecommendations = isAuthenticated ? authRecommendations : guestRecommendations;
   
   // State for recommendation type filter
-  const [recommendationType, setRecommendationType] = useState<'all' | 'restaurant' | 'menu_item'>('all');
+  const [recommendationType, setRecommendationType] = useState<string>('both');
+  const [selectedMealType, setSelectedMealType] = useState<string>('any');
   
   // State for "Use My Dietary Profile" toggle in AI Menu
   const [useDietaryProfile, setUseDietaryProfile] = useState(true);
@@ -465,7 +466,10 @@ export default function Marketplace() {
   // Filter recommendations based on selected type and manual filters
   const filteredRecommendations = allRecommendations.filter((rec: any) => {
     // Filter by recommendation type
-    if (recommendationType !== 'all' && rec.type !== recommendationType) {
+    if (recommendationType === 'restaurants' && rec.type !== 'restaurant') {
+      return false;
+    }
+    if (recommendationType === 'menu_items' && rec.type !== 'menu_item') {
       return false;
     }
     
@@ -791,6 +795,8 @@ export default function Marketplace() {
     setManualCalories('all');
     setManualRating('all');
     setUseDietaryProfile(true);
+    setSelectedMealType('any');
+    setRecommendationType('both');
   }, []);
 
   // Check if any filters are active based on current tab
@@ -800,13 +806,13 @@ export default function Marketplace() {
       return baseFilters || autoDetectLocation || sortBy !== 'featured';
     }
     if (activeTab === 'ai-menu') {
-      return baseFilters || manualDietType !== 'all' || manualCalories !== 'all' || manualRating !== 'all' || !useDietaryProfile;
+      return baseFilters || manualDietType !== 'all' || manualCalories !== 'all' || manualRating !== 'all' || !useDietaryProfile || selectedMealType !== 'any' || recommendationType !== 'both';
     }
     if (activeTab === 'vouchers') {
       return baseFilters || sortBy === 'expiring-soon';
     }
     return baseFilters;
-  }, [filters, activeTab, autoDetectLocation, sortBy, manualDietType, manualCalories, manualRating, useDietaryProfile]);
+  }, [filters, activeTab, autoDetectLocation, sortBy, manualDietType, manualCalories, manualRating, useDietaryProfile, selectedMealType, recommendationType]);
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
@@ -1072,6 +1078,29 @@ export default function Marketplace() {
                     <span>Filters:</span>
                   </div>
 
+                  <Select value={selectedMealType} onValueChange={setSelectedMealType}>
+                    <SelectTrigger className="w-[130px] h-9 text-sm">
+                      <SelectValue placeholder="Meal Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any Meal</SelectItem>
+                      <SelectItem value="breakfast">Breakfast</SelectItem>
+                      <SelectItem value="lunch">Lunch</SelectItem>
+                      <SelectItem value="dinner">Dinner</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={recommendationType} onValueChange={setRecommendationType}>
+                    <SelectTrigger className="w-[130px] h-9 text-sm">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="both">Both</SelectItem>
+                      <SelectItem value="restaurants">Restaurants</SelectItem>
+                      <SelectItem value="menu_items">Menu Items</SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   <Select 
                     value={filters.priceRange || "all"} 
                     onValueChange={(value) => handleFilterChange('priceRange', value === 'all' ? undefined : value)}
@@ -1278,6 +1307,30 @@ export default function Marketplace() {
             {/* AI Menu Tab Content */}
             {activeTab === 'ai-menu' && (
               <div className="py-8">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-primary mb-2 flex items-center justify-center gap-2">
+                    <Brain className="w-6 h-6" />
+                    AI Menu Recommendations
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Personalized restaurant and menu recommendations based on your preferences
+                  </p>
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30">
+                      {isAuthenticated && useDietaryProfile && userDietaryProfile ? (
+                        <>
+                          <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                          Based on your Profile
+                        </>
+                      ) : (
+                        <>
+                          <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                          Based on selected Preferences
+                        </>
+                      )}
+                    </Badge>
+                  </div>
+                </div>
 
                 {!isAuthenticated && allEnhancedRecommendations.length > 0 ? (
                   <>
@@ -1285,9 +1338,8 @@ export default function Marketplace() {
                       recommendations={allEnhancedRecommendations.slice(0, 4)}
                       showFilters={true}
                       className="border-0 shadow-none"
-                      isAuthenticated={false}
-                      useDietaryProfile={false}
-                      hasDietaryProfile={false}
+                      mealType={selectedMealType}
+                      recommendationType={recommendationType}
                     />
                     <p className="text-center text-sm text-muted-foreground mt-4">
                       Do you want more recommendations?{' '}
@@ -1324,9 +1376,8 @@ export default function Marketplace() {
                     recommendations={allEnhancedRecommendations}
                     showFilters={true}
                     className="border-0 shadow-none"
-                    isAuthenticated={isAuthenticated}
-                    useDietaryProfile={useDietaryProfile}
-                    hasDietaryProfile={!!userDietaryProfile}
+                    mealType={selectedMealType}
+                    recommendationType={recommendationType}
                   />
                 )}
               </div>
