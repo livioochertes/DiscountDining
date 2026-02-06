@@ -80,9 +80,28 @@ export class DietaryRecommendationEngine {
       }
 
       const profile = await this.getUserDietaryProfile(request.userId);
-      if (!profile) {
-        throw new Error("User dietary profile not found");
-      }
+      const effectiveProfile: DietaryProfile = profile || {
+        userId: request.userId,
+        age: null,
+        height: null,
+        weight: null,
+        gender: null,
+        activityLevel: 'moderate',
+        healthGoal: 'maintain',
+        targetWeight: null,
+        dietaryPreferences: [],
+        allergies: [],
+        foodIntolerances: [],
+        dislikedIngredients: [],
+        preferredCuisines: [],
+        healthConditions: [],
+        calorieTarget: 2000,
+        proteinTarget: null,
+        carbTarget: null,
+        fatTarget: null,
+        budgetRange: 'medium',
+        diningFrequency: 'weekly',
+      };
 
       // Parallel data fetching for better performance
       const [mealHistory, availableRestaurants, availableMenuItems] = await Promise.all([
@@ -93,7 +112,7 @@ export class DietaryRecommendationEngine {
 
       // Generate AI recommendations with limited data for faster processing
       const aiRecommendations = await this.generateAIRecommendations({
-        profile,
+        profile: effectiveProfile,
         mealHistory,
         availableRestaurants: availableRestaurants.slice(0, 20), // Limit for faster AI processing
         availableMenuItems: availableMenuItems.slice(0, 40), // Limit menu items

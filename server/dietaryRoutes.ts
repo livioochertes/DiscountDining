@@ -119,7 +119,7 @@ export function registerDietaryRoutes(app: Express) {
     }
   });
 
-  // Get stored recommendations
+  // Get stored recommendations (auto-generates if none exist)
   app.get("/api/dietary/recommendations", dietaryAuth, async (req: any, res: Response) => {
     try {
       const userId = req.ownerId;
@@ -128,7 +128,25 @@ export function registerDietaryRoutes(app: Express) {
       }
 
       const limit = parseInt(req.query.limit as string) || 10;
-      const recommendations = await dietaryEngine.getStoredRecommendations(userId, limit);
+      let recommendations = await dietaryEngine.getStoredRecommendations(userId, limit);
+
+      // Auto-generate if no stored recommendations exist
+      if (!recommendations || recommendations.length === 0) {
+        try {
+          console.log(`[AI Recommendations] No stored recommendations for user ${userId}, auto-generating...`);
+          const generated = await dietaryEngine.generatePersonalizedRecommendations({
+            userId,
+            maxRecommendations: 10,
+            includeRestaurants: true,
+            includeMenuItems: true
+          });
+          recommendations = generated || [];
+          console.log(`[AI Recommendations] Generated ${recommendations.length} recommendations for user ${userId}`);
+        } catch (genError) {
+          console.error("[AI Recommendations] Auto-generation failed:", genError);
+          recommendations = [];
+        }
+      }
 
       // Ensure recommendations is always an array
       const validRecommendations = Array.isArray(recommendations) ? recommendations : [];
