@@ -627,18 +627,20 @@ export default function MobileAIMenu() {
                   onClick={() => setExpandedItem(expandedItem === rec.id ? null : rec.id)}
                   className="w-full p-4 text-left"
                 >
-                  <div className="flex items-start gap-3">
-                    {rec.restaurant?.imageUrl ? (
-                      <img
-                        src={rec.restaurant.imageUrl}
-                        alt={rec.restaurant.name}
-                        className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <ChefHat className="w-6 h-6 text-primary" />
-                      </div>
-                    )}
+                  <div className="flex items-stretch gap-3">
+                    <div className="w-14 rounded-xl overflow-hidden flex-shrink-0">
+                      {rec.restaurant?.imageUrl ? (
+                        <img
+                          src={rec.restaurant.imageUrl}
+                          alt={rec.restaurant.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-xl bg-primary/10 flex items-center justify-center">
+                          <ChefHat className="w-6 h-6 text-primary" />
+                        </div>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">
                         {rec.restaurant?.name || rec.title || 'Restaurant'}
