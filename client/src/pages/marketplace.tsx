@@ -983,9 +983,6 @@ export default function Marketplace() {
                 <Brain className="w-6 h-6" />
                 AI Menu Recommendations
               </h2>
-              <p className="text-muted-foreground">
-                Personalized restaurant and menu recommendations based on your preferences
-              </p>
               <div className="flex items-center justify-center gap-2 mt-3">
                 <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30">
                   {isAuthenticated && useDietaryProfile && userDietaryProfile ? (
