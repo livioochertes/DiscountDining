@@ -22,7 +22,10 @@ import {
   eatoffLoyaltyTiers,
   restaurantSettlements,
   walletAdjustments,
-  customerWallets
+  customerWallets,
+  marketingDeals,
+  marketingDealRestaurants,
+  insertMarketingDealSchema
 } from "@shared/schema";
 import { eq, and, gte, desc, sql, ilike, asc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -3275,6 +3278,129 @@ export function registerAdminRoutes(app: Express) {
       res.status(500).json({ 
         message: error.message || "Failed to process Stripe payout" 
       });
+    }
+  });
+
+  // ==================== Marketing Deals ====================
+
+  app.get("/api/admin/marketing-deals", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const deals = await db.select().from(marketingDeals).orderBy(asc(marketingDeals.sortOrder));
+
+      const dealsWithRestaurants = await Promise.all(
+        deals.map(async (deal) => {
+          const associations = await db
+            .select({
+              id: restaurants.id,
+              name: restaurants.name,
+              imageUrl: restaurants.imageUrl,
+              cuisine: restaurants.cuisine,
+              location: restaurants.location,
+              rating: restaurants.rating,
+            })
+            .from(marketingDealRestaurants)
+            .innerJoin(restaurants, eq(marketingDealRestaurants.restaurantId, restaurants.id))
+            .where(eq(marketingDealRestaurants.dealId, deal.id));
+          return { ...deal, restaurants: associations };
+        })
+      );
+
+      res.json(dealsWithRestaurants);
+    } catch (error) {
+      console.error("Error fetching marketing deals:", error);
+      res.status(500).json({ message: "Failed to fetch marketing deals" });
+    }
+  });
+
+  app.post("/api/admin/marketing-deals", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const parsed = insertMarketingDealSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      }
+
+      const [deal] = await db.insert(marketingDeals).values(parsed.data).returning();
+      await logAdminAction(req.adminId!, "create_marketing_deal", "marketing_deal", deal.id.toString(), undefined, parsed.data, req);
+      res.status(201).json(deal);
+    } catch (error) {
+      console.error("Error creating marketing deal:", error);
+      res.status(500).json({ message: "Failed to create marketing deal" });
+    }
+  });
+
+  app.patch("/api/admin/marketing-deals/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const dealId = parseInt(req.params.id);
+      if (isNaN(dealId)) return res.status(400).json({ message: "Invalid deal ID" });
+
+      const existing = await db.select().from(marketingDeals).where(eq(marketingDeals.id, dealId)).limit(1);
+      if (existing.length === 0) return res.status(404).json({ message: "Deal not found" });
+
+      const [updated] = await db.update(marketingDeals).set(req.body).where(eq(marketingDeals.id, dealId)).returning();
+      await logAdminAction(req.adminId!, "update_marketing_deal", "marketing_deal", dealId.toString(), existing[0], req.body, req);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating marketing deal:", error);
+      res.status(500).json({ message: "Failed to update marketing deal" });
+    }
+  });
+
+  app.delete("/api/admin/marketing-deals/:id", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const dealId = parseInt(req.params.id);
+      if (isNaN(dealId)) return res.status(400).json({ message: "Invalid deal ID" });
+
+      await db.delete(marketingDealRestaurants).where(eq(marketingDealRestaurants.dealId, dealId));
+      const [deleted] = await db.delete(marketingDeals).where(eq(marketingDeals.id, dealId)).returning();
+      if (!deleted) return res.status(404).json({ message: "Deal not found" });
+
+      await logAdminAction(req.adminId!, "delete_marketing_deal", "marketing_deal", dealId.toString(), deleted, undefined, req);
+      res.json({ message: "Deal deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting marketing deal:", error);
+      res.status(500).json({ message: "Failed to delete marketing deal" });
+    }
+  });
+
+  app.post("/api/admin/marketing-deals/:id/restaurants", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const dealId = parseInt(req.params.id);
+      if (isNaN(dealId)) return res.status(400).json({ message: "Invalid deal ID" });
+
+      const { restaurantIds } = req.body;
+      if (!Array.isArray(restaurantIds) || restaurantIds.length === 0) {
+        return res.status(400).json({ message: "restaurantIds array is required" });
+      }
+
+      const values = restaurantIds.map((restaurantId: number) => ({
+        dealId,
+        restaurantId,
+      }));
+
+      await db.insert(marketingDealRestaurants).values(values);
+      await logAdminAction(req.adminId!, "add_deal_restaurants", "marketing_deal", dealId.toString(), undefined, { restaurantIds }, req);
+      res.status(201).json({ message: "Restaurants added to deal" });
+    } catch (error) {
+      console.error("Error adding restaurants to deal:", error);
+      res.status(500).json({ message: "Failed to add restaurants to deal" });
+    }
+  });
+
+  app.delete("/api/admin/marketing-deals/:id/restaurants/:restaurantId", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const dealId = parseInt(req.params.id);
+      const restaurantId = parseInt(req.params.restaurantId);
+      if (isNaN(dealId) || isNaN(restaurantId)) return res.status(400).json({ message: "Invalid IDs" });
+
+      await db
+        .delete(marketingDealRestaurants)
+        .where(and(eq(marketingDealRestaurants.dealId, dealId), eq(marketingDealRestaurants.restaurantId, restaurantId)));
+
+      await logAdminAction(req.adminId!, "remove_deal_restaurant", "marketing_deal", dealId.toString(), undefined, { restaurantId }, req);
+      res.json({ message: "Restaurant removed from deal" });
+    } catch (error) {
+      console.error("Error removing restaurant from deal:", error);
+      res.status(500).json({ message: "Failed to remove restaurant from deal" });
     }
   });
 }

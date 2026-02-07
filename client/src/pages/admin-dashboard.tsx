@@ -4544,8 +4544,379 @@ function MarketingTab() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const { toast } = useToast();
 
+  interface MarketingDeal {
+    id: number;
+    title: string;
+    discountText: string;
+    emoji: string;
+    description: string;
+    isActive: boolean;
+    sortOrder: number;
+    marketplaceId: number | null;
+    createdAt: string;
+    restaurants: Array<{
+      id: number;
+      restaurantId: number;
+      dealId: number;
+      restaurant: { id: number; name: string; imageUrl?: string; cuisine?: string; location?: string };
+    }>;
+  }
+
+  interface DealFormData {
+    title: string;
+    discountText: string;
+    emoji: string;
+    description: string;
+    isActive: boolean;
+    sortOrder: number;
+    marketplaceId: number | null;
+  }
+
+  const emptyDealForm: DealFormData = {
+    title: '',
+    discountText: '',
+    emoji: '🔥',
+    description: '',
+    isActive: true,
+    sortOrder: 0,
+    marketplaceId: null,
+  };
+
+  const [deals, setDeals] = useState<MarketingDeal[]>([]);
+  const [allRestaurants, setAllRestaurants] = useState<Array<{ id: number; name: string; imageUrl?: string; cuisine?: string; location?: string }>>([]);
+  const [dealsLoading, setDealsLoading] = useState(true);
+  const [dealDialogOpen, setDealDialogOpen] = useState(false);
+  const [editingDeal, setEditingDeal] = useState<MarketingDeal | null>(null);
+  const [dealForm, setDealForm] = useState<DealFormData>(emptyDealForm);
+  const [expandedDealId, setExpandedDealId] = useState<number | null>(null);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
+  const [marketplaces, setMarketplaces] = useState<Array<{ id: number; name: string }>>([]);
+
+  const fetchDeals = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('/api/admin/marketing-deals', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch deals');
+      const data = await res.json();
+      setDeals(data);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setDealsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchDeals();
+    fetch('/api/restaurants')
+      .then(r => r.json())
+      .then(data => setAllRestaurants(Array.isArray(data) ? data : []))
+      .catch(() => {});
+    const token = localStorage.getItem('adminToken');
+    fetch('/api/admin/marketplaces', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setMarketplaces(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [fetchDeals]);
+
+  const openCreateDialog = () => {
+    setEditingDeal(null);
+    setDealForm(emptyDealForm);
+    setDealDialogOpen(true);
+  };
+
+  const openEditDialog = (deal: MarketingDeal) => {
+    setEditingDeal(deal);
+    setDealForm({
+      title: deal.title,
+      discountText: deal.discountText,
+      emoji: deal.emoji,
+      description: deal.description,
+      isActive: deal.isActive,
+      sortOrder: deal.sortOrder,
+      marketplaceId: deal.marketplaceId,
+    });
+    setDealDialogOpen(true);
+  };
+
+  const handleSaveDeal = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const url = editingDeal
+        ? `/api/admin/marketing-deals/${editingDeal.id}`
+        : '/api/admin/marketing-deals';
+      const method = editingDeal ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(dealForm),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to save deal');
+      }
+      toast({ title: 'Success', description: editingDeal ? 'Deal updated' : 'Deal created' });
+      setDealDialogOpen(false);
+      fetchDeals();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteDeal = async (dealId: number) => {
+    if (!confirm('Are you sure you want to delete this deal?')) return;
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`/api/admin/marketing-deals/${dealId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to delete deal');
+      toast({ title: 'Success', description: 'Deal deleted' });
+      fetchDeals();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleAddRestaurant = async (dealId: number) => {
+    if (!selectedRestaurantId) return;
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`/api/admin/marketing-deals/${dealId}/restaurants`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantIds: [parseInt(selectedRestaurantId)] }),
+      });
+      if (!res.ok) throw new Error('Failed to add restaurant');
+      toast({ title: 'Success', description: 'Restaurant added to deal' });
+      setSelectedRestaurantId('');
+      fetchDeals();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleRemoveRestaurant = async (dealId: number, restaurantId: number) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`/api/admin/marketing-deals/${dealId}/restaurants/${restaurantId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to remove restaurant');
+      toast({ title: 'Success', description: 'Restaurant removed from deal' });
+      fetchDeals();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5" />
+              Promotional Deals
+            </CardTitle>
+            <Button onClick={openCreateDialog} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Deal
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {dealsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+              <p className="mt-2 text-muted-foreground">Loading deals...</p>
+            </div>
+          ) : deals.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No promotional deals yet</p>
+              <p className="text-sm">Create a promotional deal to feature on the marketplace</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {deals.map((deal) => (
+                <div key={deal.id} className="border rounded-lg">
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="text-2xl">{deal.emoji}</span>
+                      <div>
+                        <h4 className="font-medium">{deal.title}</h4>
+                        <p className="text-sm text-muted-foreground">{deal.discountText}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={deal.isActive ? "default" : "secondary"}>
+                        {deal.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                      <Badge variant="outline">
+                        <Store className="h-3 w-3 mr-1" />
+                        {deal.restaurants?.length || 0}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setExpandedDealId(expandedDealId === deal.id ? null : deal.id)}
+                      >
+                        {expandedDealId === deal.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEditDialog(deal)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteDeal(deal.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  {expandedDealId === deal.id && (
+                    <div className="border-t px-4 py-3 bg-muted/30">
+                      {deal.description && (
+                        <p className="text-sm text-muted-foreground mb-3">{deal.description}</p>
+                      )}
+                      <div className="text-sm font-medium mb-2">Restaurants ({deal.restaurants?.length || 0})</div>
+                      {deal.restaurants && deal.restaurants.length > 0 ? (
+                        <div className="space-y-2 mb-3">
+                          {deal.restaurants.map((dr) => (
+                            <div key={dr.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded border">
+                              <div className="flex items-center gap-2">
+                                <Store className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">{dr.restaurant.name}</span>
+                                {dr.restaurant.cuisine && (
+                                  <Badge variant="outline" className="text-xs">{dr.restaurant.cuisine}</Badge>
+                                )}
+                                {dr.restaurant.location && (
+                                  <span className="text-xs text-muted-foreground">{dr.restaurant.location}</span>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-600 hover:text-red-700 h-7"
+                                onClick={() => handleRemoveRestaurant(deal.id, dr.restaurantId)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mb-3">No restaurants assigned yet</p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId}>
+                          <SelectTrigger className="w-[250px]">
+                            <SelectValue placeholder="Select restaurant..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allRestaurants
+                              .filter(r => !deal.restaurants?.some(dr => dr.restaurantId === r.id))
+                              .map(r => (
+                                <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" onClick={() => handleAddRestaurant(deal.id)} disabled={!selectedRestaurantId}>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={dealDialogOpen} onOpenChange={setDealDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingDeal ? 'Edit Deal' : 'Create Deal'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                value={dealForm.title}
+                onChange={(e) => setDealForm({ ...dealForm, title: e.target.value })}
+                placeholder="e.g. Weekend Special"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Discount Text</label>
+              <Input
+                value={dealForm.discountText}
+                onChange={(e) => setDealForm({ ...dealForm, discountText: e.target.value })}
+                placeholder="e.g. 20% OFF"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Emoji</label>
+                <Input
+                  value={dealForm.emoji}
+                  onChange={(e) => setDealForm({ ...dealForm, emoji: e.target.value })}
+                  placeholder="🔥"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Sort Order</label>
+                <Input
+                  type="number"
+                  value={dealForm.sortOrder}
+                  onChange={(e) => setDealForm({ ...dealForm, sortOrder: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Input
+                value={dealForm.description}
+                onChange={(e) => setDealForm({ ...dealForm, description: e.target.value })}
+                placeholder="Deal description..."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Marketplace</label>
+              <Select
+                value={dealForm.marketplaceId?.toString() || ''}
+                onValueChange={(v) => setDealForm({ ...dealForm, marketplaceId: v ? parseInt(v) : null })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select marketplace..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {marketplaces.map(mp => (
+                    <SelectItem key={mp.id} value={mp.id.toString()}>{mp.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={dealForm.isActive}
+                onCheckedChange={(checked) => setDealForm({ ...dealForm, isActive: checked })}
+              />
+              <label className="text-sm font-medium">Active</label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setDealDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveDeal} disabled={!dealForm.title || !dealForm.discountText}>
+                {editingDeal ? 'Update' : 'Create'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -4586,15 +4957,6 @@ function MarketingTab() {
               <Badge variant="secondary" className="mt-2">Paused</Badge>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Promotional Banners</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-500 text-center py-4">Configure home page promotional banners here</p>
         </CardContent>
       </Card>
     </div>

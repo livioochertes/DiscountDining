@@ -2370,3 +2370,36 @@ export const insertWalletAdjustmentSchema = createInsertSchema(walletAdjustments
 
 export type WalletAdjustment = typeof walletAdjustments.$inferSelect;
 export type InsertWalletAdjustment = z.infer<typeof insertWalletAdjustmentSchema>;
+
+export const marketingDeals = pgTable("marketing_deals", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  discountText: text("discount_text").notNull(),
+  emoji: text("emoji").default("🎉"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  marketplaceId: integer("marketplace_id").references(() => marketplaces.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMarketingDealSchema = createInsertSchema(marketingDeals).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MarketingDeal = typeof marketingDeals.$inferSelect;
+export type InsertMarketingDeal = z.infer<typeof insertMarketingDealSchema>;
+
+export const marketingDealRestaurants = pgTable("marketing_deal_restaurants", {
+  id: serial("id").primaryKey(),
+  dealId: integer("deal_id").references(() => marketingDeals.id).notNull(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+});
+
+export const insertMarketingDealRestaurantSchema = createInsertSchema(marketingDealRestaurants).omit({
+  id: true,
+});
+
+export type MarketingDealRestaurant = typeof marketingDealRestaurants.$inferSelect;
+export type InsertMarketingDealRestaurant = z.infer<typeof insertMarketingDealRestaurantSchema>;
