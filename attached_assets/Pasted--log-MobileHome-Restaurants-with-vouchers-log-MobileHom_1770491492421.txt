@@ -1,0 +1,43 @@
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome Places] Query: 
+⚡️  [log] - [MobileHome] Fetching restaurants from: https://eatoff.app/api/restaurants?location=Feleacu&marketplaceId=1 Marketplace: Romania - Country
+⚡️  To Native ->  App removeListener 53060926
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] Response status: 200
+⚡️  [log] - [MobileHome] Restaurants loaded: 0 for marketplace: Romania - Country
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: [{"name":"Test Vizibilitate","voucherType":"discount","discount":"11.00"},{"name":"Iky / Liviu","voucherType":"discount","discount":"50.00"},{"name":"Iky 33%","voucherType":"discount","discount":"33.00"},{"name":"Family test 2","voucherType":"discount","discount":"22.00"},{"name":"Family","voucherType":"discount","discount":"10.00"},{"name":"Test","voucherType":"discount","discount":"15.00"},{"name":"EatOff test 25","voucherType":"discount","discount":"25.00"},{"name":"liviu C33","voucherType":"discount","discount":"33.00"},{"name":"liviu 25","voucherType":"discount","discount":"25.00"},{"name":"eatoff2","voucherType":"discount","discount":"10.00"},{"name":"eatoff10","voucherType":"discount","discount":"10.00"},{"name":"Gourmand Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+quic_migration_fallback [C28.1.1.1.1:2] [-01de0a397fcd9696eade38384dcd9364c78c92b7] no path found for pdp_ip0
+Tracking element window has a non-placeholder input view: (null)
+Tracking element window has a non-placeholder input view: (null)
+Tracking element window has a non-placeholder input view: (null)
+Tracking element window has a non-placeholder input view: (null)
+Tracking element window has a non-placeholder input view: (null)
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+Tracking element window has a non-placeholder input view: (null)
+Tracking element window has a non-placeholder input view: (null)
+Tracking element window has a non-placeholder input view: (null)
+Tracking element window has a non-placeholder input view: (null)
+Tracking element window has a non-placeholder input view: (null)
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
