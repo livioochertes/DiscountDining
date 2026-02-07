@@ -639,8 +639,8 @@ export default function MobileHome() {
   const handleBuyVoucher = () => setLocation('/m/explore?tab=vouchers');
   const handleUseVoucher = () => setLocation('/m/wallet');
   const handleAIMenu = () => setLocation('/m/ai-menu');
-  const handleCashback = () => setLocation('/m/wallet');
-  const handleCredit = () => setLocation('/m/wallet');
+  const handleCashback = () => setLocation('/m/wallet?tab=cashback');
+  const handleCredit = () => setLocation('/m/wallet?tab=credit');
   const handleRestaurants = () => setLocation('/m/explore?tab=restaurants');
 
   return (

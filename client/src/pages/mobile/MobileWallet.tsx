@@ -76,7 +76,11 @@ export default function MobileWallet() {
   const { t } = useLanguage();
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<WalletTab>('vouchers');
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = (['vouchers', 'cashback', 'credit'].includes(urlParams.get('tab') || '') 
+    ? urlParams.get('tab') as WalletTab 
+    : 'vouchers');
+  const [activeTab, setActiveTab] = useState<WalletTab>(initialTab);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
