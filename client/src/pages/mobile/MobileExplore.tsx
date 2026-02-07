@@ -497,7 +497,11 @@ export default function MobileExplore() {
   const [activeTab, setActiveTab] = useState<'restaurants' | 'vouchers' | 'ai-menu'>(tabFromUrl);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
-  const [selectedCity, setSelectedCity] = useState<string>(() => gpsCity || 'All locations');
+  const showAllFromHome = sessionStorage.getItem('showAllRestaurants') === 'true';
+  const [selectedCity, setSelectedCity] = useState<string>(() => {
+    if (showAllFromHome) return 'All locations';
+    return gpsCity || 'All locations';
+  });
   const [activeUrlFilter, setActiveUrlFilter] = useState<{ filterType: string; filterValues: string[]; filterId: string } | null>(
     urlFilterType && urlFilterValues.length > 0 ? { filterType: urlFilterType, filterValues: urlFilterValues, filterId: urlFilterId || '' } : null
   );
@@ -517,12 +521,12 @@ export default function MobileExplore() {
     }
   }, [location]);
   
-  // Sync selected city with GPS detected city
+  // Sync selected city with GPS detected city (but not if user chose "show all")
   useEffect(() => {
-    if (gpsCity && !showCityPicker) {
+    if (gpsCity && !showCityPicker && !showAllFromHome) {
       setSelectedCity(gpsCity);
     }
-  }, [gpsCity, showCityPicker]);
+  }, [gpsCity, showCityPicker, showAllFromHome]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
