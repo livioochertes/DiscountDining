@@ -323,6 +323,7 @@ export default function MobileHome() {
     // Clear manual location to allow GPS to work
     setManualAddress(null, null);
     setSelectedAddress('');
+    setShowAllRestaurants(false);
     requestGpsLocation();
     setShowLocationModal(false);
   }, [requestGpsLocation, setManualAddress]);
@@ -335,6 +336,7 @@ export default function MobileHome() {
     setSelectedAddress(place.description);
     setAddressSearchQuery('');
     setPlaceSuggestions([]);
+    setShowAllRestaurants(false);
     setShowLocationModal(false);
     
     // Fetch structured address components
@@ -377,11 +379,13 @@ export default function MobileHome() {
   // Marketplace for filtering restaurants
   const { marketplace, detectedCountry } = useMarketplace();
 
+  const [showAllRestaurants, setShowAllRestaurants] = useState(false);
+
   const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
-    queryKey: ['/api/restaurants', displayCity, marketplace?.id],
+    queryKey: ['/api/restaurants', showAllRestaurants ? null : displayCity, marketplace?.id],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (displayCity) params.append('location', displayCity);
+      if (!showAllRestaurants && displayCity) params.append('location', displayCity);
       if (marketplace?.id) params.append('marketplaceId', marketplace.id.toString());
       
       const url = params.toString() 
@@ -398,20 +402,6 @@ export default function MobileHome() {
         }
         const data = await res.json();
         console.log('[MobileHome] Restaurants loaded:', data.length, 'for marketplace:', marketplace?.name);
-        if (data.length === 0 && displayCity) {
-          const fallbackParams = new URLSearchParams();
-          if (marketplace?.id) fallbackParams.append('marketplaceId', marketplace.id.toString());
-          const fallbackUrl = fallbackParams.toString()
-            ? `${API_BASE_URL}/api/restaurants?${fallbackParams.toString()}`
-            : `${API_BASE_URL}/api/restaurants`;
-          console.log('[MobileHome] No restaurants in', displayCity, '- fetching all for marketplace');
-          const fallbackRes = await fetch(fallbackUrl);
-          if (fallbackRes.ok) {
-            const fallbackData = await fallbackRes.json();
-            console.log('[MobileHome] Fallback restaurants loaded:', fallbackData.length);
-            return fallbackData;
-          }
-        }
         return data;
       } catch (err) {
         console.error('[MobileHome] Fetch error:', err);
@@ -419,6 +409,8 @@ export default function MobileHome() {
       }
     }
   });
+
+  const noRestaurantsInArea = !restaurantsLoading && restaurants.length === 0 && displayCity && !showAllRestaurants;
 
   console.log('[MobileHome] State:', {
     API_BASE_URL,
@@ -795,36 +787,83 @@ export default function MobileHome() {
             <h2 className="text-lg font-bold text-gray-900">
               {activeFilter ? `${selectedCategory !== 'all' ? '' : ''}Recommended for you` : 'Recommended for you'}
             </h2>
-            <button 
-              onClick={() => {
-                const params = new URLSearchParams({ tab: 'restaurants' });
-                if (activeFilter && selectedCategory !== 'all') {
-                  params.set('filterId', selectedCategory);
-                  params.set('filterType', activeFilter.filterType || '');
-                  params.set('filterValues', activeFilter.filterValues?.join(',') || '');
-                }
-                setLocation(`/m/explore?${params.toString()}`);
-              }}
-              className="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-1 hover:bg-primary/90 transition-colors"
-            >
-              {t.seeAll}
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            {filteredRestaurants.length > 0 && (
+              <button 
+                onClick={() => {
+                  const params = new URLSearchParams({ tab: 'restaurants' });
+                  if (activeFilter && selectedCategory !== 'all') {
+                    params.set('filterId', selectedCategory);
+                    params.set('filterType', activeFilter.filterType || '');
+                    params.set('filterValues', activeFilter.filterValues?.join(',') || '');
+                  }
+                  setLocation(`/m/explore?${params.toString()}`);
+                }}
+                className="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-1 hover:bg-primary/90 transition-colors"
+              >
+                {t.seeAll}
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex gap-3">
-              {filteredRestaurants.map((restaurant: any) => (
-                <RestaurantCardSmall
-                  key={restaurant.id}
-                  name={restaurant.name}
-                  image={restaurant.imageUrl}
-                  rating={restaurant.rating || 4.5}
-                  cashbackPercent={restaurant.cashbackPercent || 5}
-                  onClick={() => setLocation(`/m/restaurant/${restaurant.id}`)}
-                />
-              ))}
+
+          {noRestaurantsInArea ? (
+            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5 text-center">
+              <MapPin className="w-10 h-10 text-orange-400 mx-auto mb-3" />
+              <h3 className="text-base font-semibold text-gray-900 mb-1">
+                Nu sunt restaurante în {displayCity}
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Momentan nu avem restaurante partenere în zona ta. Poți vedea toate restaurantele disponibile sau alege altă localitate.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAllRestaurants(true)}
+                  className="flex-1 bg-primary text-white font-semibold py-3 rounded-xl text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Store className="w-4 h-4" />
+                  Vezi toate
+                </button>
+                <button
+                  onClick={() => setShowLocationModal(true)}
+                  className="flex-1 bg-white border-2 border-primary text-primary font-semibold py-3 rounded-xl text-sm hover:bg-primary/5 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <MapPin className="w-4 h-4" />
+                  Alege localitate
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex gap-3">
+                {filteredRestaurants.map((restaurant: any) => (
+                  <RestaurantCardSmall
+                    key={restaurant.id}
+                    name={restaurant.name}
+                    image={restaurant.imageUrl}
+                    rating={restaurant.rating || 4.5}
+                    cashbackPercent={restaurant.cashbackPercent || 5}
+                    onClick={() => setLocation(`/m/restaurant/${restaurant.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showAllRestaurants && displayCity && restaurants.length > 0 && (
+            <div className="mt-2 flex items-center justify-between bg-orange-50 rounded-xl px-3 py-2">
+              <p className="text-xs text-orange-700">
+                Se afișează toate restaurantele din {marketplace?.name || 'marketplace'}
+              </p>
+              <button
+                onClick={() => {
+                  setShowAllRestaurants(false);
+                }}
+                className="text-xs text-primary font-semibold ml-2 whitespace-nowrap"
+              >
+                Doar zona mea
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Today's Deals */}
