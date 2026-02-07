@@ -379,7 +379,12 @@ export default function MobileHome() {
   // Marketplace for filtering restaurants
   const { marketplace, detectedCountry } = useMarketplace();
 
-  const [showAllRestaurants, setShowAllRestaurants] = useState(false);
+  const [showAllRestaurants, setShowAllRestaurants] = useState(() => {
+    return sessionStorage.getItem('showAllRestaurants') === 'true';
+  });
+  useEffect(() => {
+    sessionStorage.setItem('showAllRestaurants', String(showAllRestaurants));
+  }, [showAllRestaurants]);
 
   const { data: restaurants = [], isLoading: restaurantsLoading, error: restaurantsError } = useQuery<any[]>({
     queryKey: ['/api/restaurants', showAllRestaurants ? null : displayCity, marketplace?.id],
