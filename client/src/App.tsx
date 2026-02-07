@@ -70,6 +70,7 @@ import MobileRecipeDetail from "@/pages/mobile/MobileRecipeDetail";
 import MobileRecipeCreate from "@/pages/mobile/MobileRecipeCreate";
 import MobileRestaurantSignIn from "@/pages/mobile/MobileRestaurantSignIn";
 import MobileRestaurantDashboard from "@/pages/mobile/MobileRestaurantDashboard";
+import MobileDealDetail from "@/pages/mobile/MobileDealDetail";
 import { useIsMobileApp } from "@/hooks/useIsMobile";
 import { useLocation } from "wouter";
 import eatOffLogo from "@assets/EatOff_Logo_1750512988041.png";
@@ -282,6 +283,7 @@ function Router() {
       <Route path="/m/recipes" component={MobileRecipes} />
       <Route path="/m/recipes/create" component={MobileRecipeCreate} />
       <Route path="/m/recipes/:id" component={MobileRecipeDetail} />
+      <Route path="/m/deal/:id" component={MobileDealDetail} />
       <Route path="/m/restaurant/signin" component={MobileRestaurantSignIn} />
       <Route path="/m/restaurant/dashboard" component={MobileRestaurantDashboard} />
       

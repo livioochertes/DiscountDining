@@ -10,7 +10,7 @@ import { WalletCard, ActionRow } from '@/components/mobile/WalletCard';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCardSmall } from '@/components/mobile/RestaurantCard';
 import { preloadImages } from '@/components/ui/cached-image';
-import { DealBanner, SmallDealCard } from '@/components/mobile/DealBanner';
+import { SmallDealCard } from '@/components/mobile/DealBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useMarketplace } from '@/contexts/MarketplaceContext';
@@ -488,6 +488,10 @@ export default function MobileHome() {
     enabled: !!user,
   });
 
+  const { data: marketingDeals = [] } = useQuery<any[]>({
+    queryKey: ['/api/marketing-deals'],
+  });
+
   const activeVouchers = vouchers
     .filter(v => v.isActive)
     .sort((a, b) => {
@@ -810,36 +814,24 @@ export default function MobileHome() {
         </section>
 
         {/* Today's Deals */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-bold text-gray-900">{t.todaysDeals}</h2>
-          
-          <DealBanner
-            title="Get 20% off your first voucher"
-            subtitle="Use code WELCOME20"
-            discount="-20%"
-            backgroundColor="bg-gradient-to-r from-primary to-primary/80"
-          />
-
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex gap-3">
-              <SmallDealCard
-                title={t.doubleCashback}
-                discount="2x"
-                icon="💰"
-              />
-              <SmallDealCard
-                title={t.networkVouchers}
-                discount="-15%"
-                icon="🏪"
-              />
-              <SmallDealCard
-                title={t.weekendSpecial}
-                discount="-10%"
-                icon="🎉"
-              />
+        {marketingDeals.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-gray-900">{t.todaysDeals}</h2>
+            <div className="overflow-x-auto scrollbar-hide">
+              <div className="flex gap-3">
+                {marketingDeals.map((deal: any) => (
+                  <SmallDealCard
+                    key={deal.id}
+                    title={deal.title}
+                    discount={deal.discountText}
+                    icon={deal.emoji || '🎉'}
+                    onClick={() => setLocation(`/m/deal/${deal.id}`)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Vouchers Section */}
         {restaurantsWithVouchers.length > 0 && (

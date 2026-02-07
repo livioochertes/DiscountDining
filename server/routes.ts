@@ -15,7 +15,7 @@ import { loyaltyRoutes } from "./loyaltyRoutes";
 import { registerSupportRoutes } from "./supportRoutes";
 import { registerRecipeRoutes } from "./recipeRoutes";
 import { registerChefProfileRoutes } from "./chefProfileRoutes";
-import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments, mobileFilters } from "@shared/schema";
+import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments, mobileFilters, marketingDeals, marketingDealRestaurants, restaurants } from "@shared/schema";
 import { asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { setupMultiAuth, isAuthenticated, consumeMobileAuthToken, validateMobileSessionToken, invalidateMobileSessionToken } from "./multiAuth";
@@ -3034,6 +3034,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating upload URL:", error);
       res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
+  // Public marketing deals endpoint for mobile home page
+  app.get("/api/marketing-deals", async (req, res) => {
+    try {
+      const deals = await db
+        .select()
+        .from(marketingDeals)
+        .where(eq(marketingDeals.isActive, true))
+        .orderBy(asc(marketingDeals.sortOrder));
+
+      const dealsWithRestaurants = await Promise.all(
+        deals.map(async (deal) => {
+          const dealRestaurants = await db
+            .select({
+              id: restaurants.id,
+              name: restaurants.name,
+              imageUrl: restaurants.imageUrl,
+              cuisine: restaurants.cuisine,
+              location: restaurants.location,
+              rating: restaurants.rating,
+            })
+            .from(marketingDealRestaurants)
+            .innerJoin(restaurants, eq(marketingDealRestaurants.restaurantId, restaurants.id))
+            .where(eq(marketingDealRestaurants.dealId, deal.id));
+          return { ...deal, restaurants: dealRestaurants };
+        })
+      );
+
+      res.json(dealsWithRestaurants);
+    } catch (error) {
+      console.error("Error fetching marketing deals:", error);
+      res.status(500).json({ message: "Failed to fetch marketing deals" });
     }
   });
 
