@@ -398,6 +398,20 @@ export default function MobileHome() {
         }
         const data = await res.json();
         console.log('[MobileHome] Restaurants loaded:', data.length, 'for marketplace:', marketplace?.name);
+        if (data.length === 0 && displayCity) {
+          const fallbackParams = new URLSearchParams();
+          if (marketplace?.id) fallbackParams.append('marketplaceId', marketplace.id.toString());
+          const fallbackUrl = fallbackParams.toString()
+            ? `${API_BASE_URL}/api/restaurants?${fallbackParams.toString()}`
+            : `${API_BASE_URL}/api/restaurants`;
+          console.log('[MobileHome] No restaurants in', displayCity, '- fetching all for marketplace');
+          const fallbackRes = await fetch(fallbackUrl);
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            console.log('[MobileHome] Fallback restaurants loaded:', fallbackData.length);
+            return fallbackData;
+          }
+        }
         return data;
       } catch (err) {
         console.error('[MobileHome] Fetch error:', err);
