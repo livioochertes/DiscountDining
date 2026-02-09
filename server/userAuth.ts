@@ -445,6 +445,13 @@ export function registerUserAuthRoutes(app: Express) {
   // Get current user endpoint
   app.get('/api/auth/user', async (req: Request, res: Response) => {
     try {
+      // Debug: log session state
+      console.log('[Auth User] Session ID:', req.sessionID);
+      console.log('[Auth User] Session ownerId:', (req.session as any)?.ownerId);
+      console.log('[Auth User] req.user:', req.user ? JSON.stringify({ id: (req.user as any).id }) : 'null');
+      console.log('[Auth User] req.mobileUser:', (req as any).mobileUser ? 'set' : 'null');
+      console.log('[Auth User] Session passport:', (req.session as any)?.passport ? JSON.stringify((req.session as any).passport) : 'null');
+      
       // Check for mobile user (set by Authorization header middleware)
       const mobileUser = (req as any).mobileUser || (req as any).user;
       if (mobileUser && mobileUser.id && typeof mobileUser.id === 'string') {
