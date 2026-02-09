@@ -471,9 +471,13 @@ export async function setupMultiAuth(app: Express) {
             console.log('[Google OAuth] Customer created with ID:', customer.id);
           }
           
+          if (customer && !isMobileOAuth) {
+            (req.session as any).ownerId = customer.id;
+            console.log('[Google OAuth] Set session ownerId:', customer.id);
+          }
+          
           if (customer && customer.twoFactorEnabled) {
             console.log('[Google OAuth] User has 2FA enabled, redirecting to verification');
-            // Generate a pending 2FA token
             const pending2faToken = generate2FAPendingToken(user, customer.id, isMobileOAuth);
             
             if (isMobileOAuth) {
@@ -488,8 +492,11 @@ export async function setupMultiAuth(app: Express) {
               }
             }
             
-            // Web flow - redirect to 2FA verification page
-            return res.redirect(`/verify-2fa?pending2fa=${pending2faToken}`);
+            // Web flow - save session before redirect to 2FA
+            return req.session.save((saveErr) => {
+              if (saveErr) console.error('[Google OAuth] Session save error:', saveErr);
+              return res.redirect(`/verify-2fa?pending2fa=${pending2faToken}`);
+            });
           }
         } catch (e) {
           console.error('[Google OAuth] Error checking 2FA:', e);
@@ -527,7 +534,13 @@ export async function setupMultiAuth(app: Express) {
           }
         }
         
-        return res.redirect("/");
+        // Web flow - save session explicitly before redirect to ensure ownerId persists
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('[Google OAuth] Session save error:', saveErr);
+          }
+          return res.redirect("/");
+        });
       });
     })(req, res, next);
   });
@@ -807,9 +820,14 @@ export async function setupMultiAuth(app: Express) {
               });
               console.log('[Apple OAuth] Customer created with ID:', customer.id);
             }
+            
+            if (customer && !isMobileOAuth) {
+              (req.session as any).ownerId = customer.id;
+              console.log('[Apple OAuth] Set session ownerId:', customer.id);
+            }
+            
             if (customer && customer.twoFactorEnabled) {
               console.log('[Apple OAuth] User has 2FA enabled, redirecting to verification');
-              // Generate a pending 2FA token
               const pending2faToken = generate2FAPendingToken(user, customer.id, isMobileOAuth);
               
               if (isMobileOAuth) {
@@ -824,8 +842,11 @@ export async function setupMultiAuth(app: Express) {
                 }
               }
               
-              // Web flow - redirect to 2FA verification page
-              return res.redirect(`/verify-2fa?pending2fa=${pending2faToken}`);
+              // Web flow - save session before redirect to 2FA
+              return req.session.save((saveErr) => {
+                if (saveErr) console.error('[Apple OAuth] Session save error:', saveErr);
+                return res.redirect(`/verify-2fa?pending2fa=${pending2faToken}`);
+              });
             }
           } catch (e) {
             console.error('[Apple OAuth] Error checking 2FA:', e);
@@ -849,7 +870,13 @@ export async function setupMultiAuth(app: Express) {
             }
           }
           
-          return res.redirect('/');
+          // Web flow - save session explicitly before redirect to ensure ownerId persists
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error('[Apple OAuth] Session save error:', saveErr);
+            }
+            return res.redirect('/');
+          });
         });
         
       } catch (error: any) {
