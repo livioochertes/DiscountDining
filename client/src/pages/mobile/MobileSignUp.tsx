@@ -378,6 +378,7 @@ export default function MobileSignUp() {
             src={eatoffLogo} 
             alt="EatOff" 
             className="h-16 mx-auto mb-6"
+            style={{ mixBlendMode: 'multiply' }}
           />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.createAccount}</h2>
           <p className="text-gray-500">{t.joinEatOff}</p>
