@@ -535,10 +535,14 @@ export async function setupMultiAuth(app: Express) {
         }
         
         // Web flow - save session explicitly before redirect to ensure ownerId persists
+        console.log('[Google OAuth] Before save - Session ID:', req.sessionID);
+        console.log('[Google OAuth] Before save - ownerId:', (req.session as any).ownerId);
+        console.log('[Google OAuth] Before save - passport:', JSON.stringify((req.session as any).passport));
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error('[Google OAuth] Session save error:', saveErr);
           }
+          console.log('[Google OAuth] Session saved successfully, redirecting to /');
           return res.redirect("/");
         });
       });
@@ -871,10 +875,14 @@ export async function setupMultiAuth(app: Express) {
           }
           
           // Web flow - save session explicitly before redirect to ensure ownerId persists
+          console.log('[Apple OAuth] Before save - Session ID:', req.sessionID);
+          console.log('[Apple OAuth] Before save - ownerId:', (req.session as any).ownerId);
+          console.log('[Apple OAuth] Before save - passport:', JSON.stringify((req.session as any).passport));
           req.session.save((saveErr) => {
             if (saveErr) {
               console.error('[Apple OAuth] Session save error:', saveErr);
             }
+            console.log('[Apple OAuth] Session saved successfully, redirecting to /');
             return res.redirect('/');
           });
         });
