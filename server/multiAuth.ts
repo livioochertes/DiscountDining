@@ -244,9 +244,9 @@ async function upsertUser(profile: any, provider: string) {
 export async function setupMultiAuth(app: Express) {
   app.set("trust proxy", 1);
   
-  // Session is already set up in routes.ts, just initialize passport
-  app.use(passport.initialize());
-  app.use(passport.session());
+  // NOTE: Session and passport middleware are already set up by setupAuth (Replit Auth).
+  // Do NOT add passport.initialize() or passport.session() again here - 
+  // duplicate passport middleware causes session deserialization issues.
 
   // Google OAuth Strategy
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {

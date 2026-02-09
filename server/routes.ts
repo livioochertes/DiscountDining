@@ -195,11 +195,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
   
-  // Register user authentication routes (AFTER mobile middleware so /api/auth/user works with tokens)
-  registerUserAuthRoutes(app);
-  
-  // Setup OAuth routes (without conflicting session)
+  // Setup OAuth strategies and routes (BEFORE user auth routes, no duplicate session/passport middleware)
   await setupMultiAuth(app);
+  
+  // Register user authentication routes (AFTER mobile middleware and OAuth setup)
+  registerUserAuthRoutes(app);
 
   // Mobile OAuth token exchange endpoint
   // This allows the mobile app to exchange a one-time token for a session
