@@ -203,7 +203,7 @@ export default function RestaurantMenuPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredItems.map((item: MenuItem) => (
-              <Card key={item.id} id={`item-${item.id}`} className="overflow-hidden hover:shadow-lg transition-shadow scroll-mt-4">
+              <Card key={item.id} id={`item-${item.id}`} className="overflow-hidden hover:shadow-lg transition-shadow scroll-mt-4 flex flex-col">
                 <div className="relative h-48 overflow-hidden bg-gray-100 dark:bg-gray-800">
                   {item.imageUrl ? (
                     <img
@@ -232,7 +232,7 @@ export default function RestaurantMenuPage() {
                   )}
                 </div>
                 
-                <CardContent className="p-4">
+                <CardContent className="p-4 flex flex-col flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-semibold text-lg">{item.name}</h4>
                     <span className="text-primary font-bold text-lg">€{item.price}</span>
@@ -294,7 +294,7 @@ export default function RestaurantMenuPage() {
                     </div>
                   )}
 
-                  <div className="mt-4 pt-3 border-t">
+                  <div className="mt-auto pt-3 border-t">
                     <Button 
                       onClick={() => setSelectedMenuItem(item)}
                       className="w-full bg-primary hover:bg-primary/90 text-white"
