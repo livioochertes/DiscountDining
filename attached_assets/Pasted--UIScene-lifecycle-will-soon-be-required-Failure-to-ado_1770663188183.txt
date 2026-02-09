@@ -1,0 +1,408 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+Could not create a sandbox extension for '/var/containers/Bundle/Application/4A140EF7-36C0-4A1F-852B-6C664121D06A/App.app'
+⚡️  Loading app at capacitor://localhost...
+WebContent[34844] Unable to hide query parameters from script (missing data)
+⚡️  WebView loaded
+⚡️  [log] - [QueryClient] Platform detection: {"isNativePlatform":true,"API_BASE_URL":"https://eatoff.app","IS_CROSS_ORIGIN":true}
+quic_migration_fallback [C1.1.1.1.1:2] [-0172251088f5669b507217118cf56dd47b7cf718] no path found for pdp_ip0
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [Location] Manual location in state, skipping auto GPS request
+⚡️  [log] - [MobileHome Places] Query: 
+⚡️  [log] - [MobileHome] Fetching restaurants from: https://eatoff.app/api/restaurants?location=Cluj-Napoca&marketplaceId=1 Marketplace: Romania - Country
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [Location] Manual location in state, skipping auto GPS request
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: [{"name":"Test Vizibilitate","voucherType":"discount","discount":"11.00"},{"name":"Iky / Liviu","voucherType":"discount","discount":"50.00"},{"name":"Iky 33%","voucherType":"discount","discount":"33.00"},{"name":"Family test 2","voucherType":"discount","discount":"22.00"},{"name":"Family","voucherType":"discount","discount":"10.00"},{"name":"Test","voucherType":"discount","discount":"15.00"},{"name":"EatOff test 25","voucherType":"discount","discount":"25.00"},{"name":"liviu C33","voucherType":"discount","discount":"33.00"},{"name":"liviu 25","voucherType":"discount","discount":"25.00"},{"name":"eatoff2","voucherType":"discount","discount":"10.00"},{"name":"eatoff10","voucherType":"discount","discount":"10.00"},{"name":"Gourmand Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] Response status: 200
+⚡️  [log] - [MobileHome] Restaurants loaded: 9 for marketplace: Romania - Country
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Gourmand Special","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"12.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Gourmand Special","voucherType":"discount","bonusPercentage":"0","discountPercentage":"28.00","isPayLater":false,"bonusPercent":0,"discountPercent":28}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Gourmand Special","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"12.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Gourmand Special","voucherType":"discount","bonusPercentage":"0","discountPercentage":"28.00","isPayLater":false,"bonusPercent":0,"discountPercent":28}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  To Native ->  App addListener 85443788
+⚡️  [warn] - Using addListener() without 'await' is deprecated.
+⚡️  [log] - [MobileSignIn] Setting up deep link handler, isNative: true
+⚡️  To Native ->  StatusBar getInfo 85443789
+⚡️  To Native ->  App addListener 85443790
+⚡️  To Native ->  App removeListener 85443791
+⚡️  TO JS {"height":54,"overlays":true,"visible":true,"color":"#000000","style":"DEFAULT"}
+⚡️  To Native ->  StatusBar getInfo 85443792
+⚡️  To Native ->  App addListener 85443793
+⚡️  TO JS {"height":54,"overlays":true,"visible":true,"color":"#000000","style":"DEFAULT"}
+⚡️  To Native ->  App removeListener 85443794
+⚡️  [log] - [MobileSignUp] Opening browser for Google OAuth: https://eatoff.app/api/auth/google?mobile=true
+⚡️  To Native ->  Browser open 85443795
+(501) personaAttributesForPersonaType for type:0 failed with error Error Domain=NSCocoaErrorDomain Code=4099 "The connection to service named com.apple.mobile.usermanagerd.xpc was invalidated: Connection init failed at lookup with error 159 - Sandbox restriction." UserInfo={NSDebugDescription=The connection to service named com.apple.mobile.usermanagerd.xpc was invalidated: Connection init failed at lookup with error 159 - Sandbox restriction.}
+(501) Invalidation handler invoked, clearing connection
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+⚡️  TO JS undefined
+quic_migration_fallback [C1.1.1.1.1:2] [-0172251088f5669b507217118cf56dd47b7cf718] no path found for pdp_ip0
+⚡️  TO JS {"iosOpenInPlace":"","iosSourceApplication":"com.apple.SafariViewService","url":"eatoff:\/\/oauth-callback?token=fc39def554526e6b80ca65f6c1cbb8b16611d427f4dcfaae2ca05e061732c3da"}
+⚡️  To Native ->  Browser close 85443796
+⚡️  [log] - [MobileSignUp] Deep link received: eatoff://oauth-callback?token=fc39def554526e6b80ca65f6c1cbb8b16611d427f4dcfaae2ca05e061732c3da
+⚡️  TO JS undefined
+⚡️  To Native ->  CapacitorHttp request 85443797
+⚡️  [log] - [MobileSignUp] Received auth token, exchanging for session...
+quic_migration_fallback [C5.1.1.1.1:2] [-01cb682f2f8f4598b7cb5a2e2a8f4be9d40b2838] no path found for pdp_ip0
+⚡️  TO JS {"data":{"user":{"firstName":"Liviu","lastName":"Chertes","id":"google_115727455773196517825","profileImageUrl":"https:\/\/lh3.googleusercontent.com\/a\/ACg8ocKxCFTb3RH7UIE1ttPxEEB2LYDJO07kLiX4XeEn6EOPIo66GMo=s96-c","email":"liviu.chertes@gmail.com"},"sess
+⚡️  [log] - [MobileSignUp] Session created successfully: google_115727455773196517825
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: [{"name":"Test Vizibilitate","voucherType":"discount","discount":"11.00"},{"name":"Iky / Liviu","voucherType":"discount","discount":"50.00"},{"name":"Iky 33%","voucherType":"discount","discount":"33.00"},{"name":"Family test 2","voucherType":"discount","discount":"22.00"},{"name":"Family","voucherType":"discount","discount":"10.00"},{"name":"Test","voucherType":"discount","discount":"15.00"},{"name":"EatOff test 25","voucherType":"discount","discount":"25.00"},{"name":"liviu C33","voucherType":"discount","discount":"33.00"},{"name":"liviu 25","voucherType":"discount","discount":"25.00"},{"name":"eatoff2","voucherType":"discount","discount":"10.00"},{"name":"eatoff10","voucherType":"discount","discount":"10.00"},{"name":"Gourmand Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Gourmand Special","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"12.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Gourmand Special","voucherType":"discount","bonusPercentage":"0","discountPercentage":"28.00","isPayLater":false,"bonusPercent":0,"discountPercent":28}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [Location] Manual location in state, skipping auto GPS request
+⚡️  [log] - [MobileHome Places] Query: 
+⚡️  To Native ->  App removeListener 85443798
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Gourmand Special","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"12.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Gourmand Special","voucherType":"discount","bonusPercentage":"0","discountPercentage":"28.00","isPayLater":false,"bonusPercent":0,"discountPercent":28}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [Location] Manual location in state, skipping auto GPS request
+quic_migration_fallback [C5.1.1.1.1:2] [-01cb682f2f8f4598b7cb5a2e2a8f4be9d40b2838] no path found for pdp_ip0
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Gourmand Special","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"12.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Gourmand Special","voucherType":"discount","bonusPercentage":"0","discountPercentage":"28.00","isPayLater":false,"bonusPercent":0,"discountPercent":28}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x14d4f45a0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14d41a200.width == _UIButtonBarButton:0x14d35a080.width   (active)>",
+    "<NSLayoutConstraint:0x14d4f46e0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x14d405880]   (active, names: '|':_UIButtonBarButton:0x14d35a080 )>",
+    "<NSLayoutConstraint:0x14d4f4730 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x14d405880]-(8)-|   (active, names: '|':_UIButtonBarButton:0x14d35a080 )>",
+    "<NSLayoutConstraint:0x14d4f4cd0 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14d41a200.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x14d4f4730 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x14d405880]-(8)-|   (active, names: '|':_UIButtonBarButton:0x14d35a080 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x14d4f50e0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14d41a600.width == _UIButtonBarButton:0x14d35a580.width   (active)>",
+    "<NSLayoutConstraint:0x14d4f51d0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x14d405c00]   (active, names: '|':_UIButtonBarButton:0x14d35a580 )>",
+    "<NSLayoutConstraint:0x14d4f5220 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x14d405c00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x14d35a580 )>",
+    "<NSLayoutConstraint:0x14d4f56d0 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14d41a600.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x14d4f5220 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x14d405c00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x14d35a580 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x14d4f5ae0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14d41aa00.width == _UIButtonBarButton:0x14d35aa80.width   (active)>",
+    "<NSLayoutConstraint:0x14d4f5bd0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x14d405f80]   (active, names: '|':_UIButtonBarButton:0x14d35aa80 )>",
+    "<NSLayoutConstraint:0x14d4f5c20 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x14d405f80]-(8)-|   (active, names: '|':_UIButtonBarButton:0x14d35aa80 )>",
+    "<NSLayoutConstraint:0x14d4f60d0 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14d41aa00.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x14d4f5c20 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x14d405f80]-(8)-|   (active, names: '|':_UIButtonBarButton:0x14d35aa80 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+⚡️  [log] - [MobileHome Places] Input focused
+⚡️  To Native ->  Geolocation checkPermissions 85443799
+⚡️  [log] - [MobileHome] GPS detection requested, clearing manual location
+⚡️  [log] - [Location] Setting manual address, city: null address: undefined
+⚡️  [log] - [Location] Starting GPS request, isNativePlatform: true
+⚡️  [log] - [Location] Using native Capacitor Geolocation plugin
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] Fetching restaurants from: https://eatoff.app/api/restaurants?marketplaceId=1 Marketplace: Romania - Country
+⚡️  TO JS {"coarseLocation":"granted","location":"granted"}
+⚡️  [log] - [Location] Permission status: granted
+⚡️  [log] - [Location] Getting current position...
+⚡️  To Native ->  Geolocation getCurrentPosition 85443800
+⚡️  TO JS {"timestamp":1770662997574.9868,"coords":{"altitudeAccuracy":30.000019737754513,"latitude":46.700965310978141,"longitude":23.613628227285933,"heading":-1,"altitude":628.85669407489331,"accuracy":7.2184404753504658,"speed":-1}}
+⚡️  [log] - [Location] Got position: 46.70096531097814 23.613628227285933
+⚡️  [log] - [Location] Reverse geocoding coordinates: 46.70096531097814 23.613628227285933
+quic_migration_fallback [C9.1.1.1.1:2] [-0130908fc5aa8b85e930a28f1eaa824980dd61b4] no path found for pdp_ip0
+⚡️  [log] - [Location] Reverse geocode result: {"locality":"Feleacu","country":"România","countryCode":"RO","displayName":"Feleacu, Zona Metropolitană Cluj, Cluj, România","address":{"municipality":"Feleacu","county":"Cluj","country":"România","countryCode":"ro"}}
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] Fetching restaurants from: https://eatoff.app/api/restaurants?location=Feleacu&marketplaceId=1 Marketplace: Romania - Country
+⚡️  [log] - [MobileHome] Response status: 200
+⚡️  [log] - [MobileHome] Restaurants loaded: 9 for marketplace: Romania - Country
+⚡️  [log] - [MobileHome] Response status: 200
+⚡️  [log] - [MobileHome] Restaurants loaded: 0 for marketplace: Romania - Country
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [Location] Starting GPS request, isNativePlatform: true
+⚡️  To Native ->  Geolocation checkPermissions 85443801
+⚡️  [log] - [Location] Using native Capacitor Geolocation plugin
+⚡️  TO JS {"location":"granted","coarseLocation":"granted"}
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [Location] Permission status: granted
+⚡️  To Native ->  Geolocation getCurrentPosition 85443802
+⚡️  [log] - [Location] Getting current position...
+⚡️  TO JS {"timestamp":1770662998557.7642,"coords":{"longitude":23.613646682377738,"altitudeAccuracy":31.579610749743313,"altitude":631.6629061871879,"speed":-1,"latitude":46.700960706869523,"accuracy":13.195014,"heading":-1}}
+⚡️  [log] - [Location] Got position: 46.70096070686952 23.613646682377738
+⚡️  [log] - [Location] Reverse geocoding coordinates: 46.70096070686952 23.613646682377738
+⚡️  [log] - [Location] Reverse geocode result: {"locality":"Feleacu","country":"România","countryCode":"RO","displayName":"Feleacu, Zona Metropolitană Cluj, Cluj, România","address":{"municipality":"Feleacu","county":"Cluj","country":"România","countryCode":"ro"}}
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":0}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Gourmand Special","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"12.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Gourmand Special","voucherType":"discount","bonusPercentage":"0","discountPercentage":"28.00","isPayLater":false,"bonusPercent":0,"discountPercent":28}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [MobileSignIn] Setting up deep link handler, isNative: true
+⚡️  To Native ->  StatusBar getInfo 85443803
+⚡️  To Native ->  App addListener 85443804
+⚡️  TO JS {"visible":true,"overlays":true,"height":54,"style":"DEFAULT","color":"#000000"}
+⚡️  [log] - [MobileSignIn] handleGoogleSignIn called, isNative: true
+⚡️  [log] - [MobileSignIn] Opening browser for Google OAuth: https://eatoff.app/api/auth/google?mobile=true
+⚡️  To Native ->  Browser open 85443805
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+⚡️  TO JS undefined
+⚡️  [log] - [MobileSignIn] Browser opened successfully, waiting for deep link callback...
+⚡️  TO JS {"iosOpenInPlace":"","url":"eatoff:\/\/oauth-callback?token=51454e2d500a4b034417632cbda048e0509e7d4f6d9c2b5fdcee3c5716415bee","iosSourceApplication":"com.apple.SafariViewService"}
+⚡️  [log] - [MobileSignIn] ========================================
+⚡️  [log] - [MobileSignIn] Deep link received: eatoff://oauth-callback?token=51454e2d500a4b034417632cbda048e0509e7d4f6d9c2b5fdcee3c5716415bee
+⚡️  To Native ->  Browser close 85443806
+⚡️  [log] - [MobileSignIn] ========================================
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+⚡️  TO JS undefined
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+⚡️  To Native ->  CapacitorHttp post 85443807
+⚡️  [log] - [MobileSignIn] Browser closed
+⚡️  [log] - [MobileSignIn] Received auth token, exchanging for session...
+⚡️  [log] - [MobileSignIn] Using CapacitorHttp for native request to: https://eatoff.app/api/auth/mobile-exchange
+⚡️  TO JS {"url":"https:\/\/eatoff.app\/api\/auth\/mobile-exchange","status":200,"headers":{"strict-transport-security":"max-age=63072000; includeSubDomains","nel":"{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}","alt-svc":"h3=\":443\"; ma=86
+⚡️  [log] - [MobileSignIn] CapacitorHttp response status: 200
+⚡️  [log] - [MobileSignIn] CapacitorHttp response data: {"user":{"firstName":"Liviu","lastName":"Chertes","id":"google_115727455773196517825","profileImageUrl":"https://lh3.googleusercontent.com/a/ACg8ocKxCFTb3RH7UIE1ttPxEEB2LYDJO07kLiX4XeEn6EOPIo66GMo=s96-c","email":"liviu.chertes@gmail.com"},"sessionToken":"d7b2aed3da9539c9bf5bc8cbee16fc0a60f432fe56c1fe7795ddffa1905a3065","success":true}
+⚡️  [log] - [MobileSignIn] Session created successfully: google_115727455773196517825
+⚡️  [log] - [MobileSignIn] Session token stored
+⚡️  [log] - [MobileSignIn] Navigating to /m
+⚡️  [log] - [QueryClient] Using auth token: d7b2aed3da...
+⚡️  [log] - [QueryClient] Using auth token: d7b2aed3da...
+⚡️  To Native ->  App removeListener 85443808
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [QueryClient] Using auth token: d7b2aed3da...
+⚡️  [log] - [QueryClient] Using auth token: d7b2aed3da...
+⚡️  [log] - [MobileHome Places] Query: 
+⚡️  [log] - [MobileHome] Fetching restaurants from: https://eatoff.app/api/restaurants?marketplaceId=1 Marketplace: Romania - Country
+⚡️  [log] - [QueryClient] Using auth token: d7b2aed3da...
+⚡️  [log] - [QueryClient] Using auth token: d7b2aed3da...
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: []
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":true,"restaurantsCount":0}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 0 of 0
+⚡️  [log] - [MobileHome] Restaurants with vouchers: []
+⚡️  [log] - [MobileHome] Response status: 200
+⚡️  [log] - [MobileHome] Restaurants loaded: 9 for marketplace: Romania - Country
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: []
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome] Credit vouchers mapped: [{"name":"Credit for 60 days","voucherType":"pay_later","bonus":"10.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","bonus":"5.00","discount":"5.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","bonus":"0.00","discount":"10.00"}]
+⚡️  [log] - [MobileHome] Discount packages mapped: [{"name":"Test Vizibilitate","voucherType":"discount","discount":"11.00"},{"name":"Iky / Liviu","voucherType":"discount","discount":"50.00"},{"name":"Iky 33%","voucherType":"discount","discount":"33.00"},{"name":"Family test 2","voucherType":"discount","discount":"22.00"},{"name":"Family","voucherType":"discount","discount":"10.00"},{"name":"Test","voucherType":"discount","discount":"15.00"},{"name":"EatOff test 25","voucherType":"discount","discount":"25.00"},{"name":"liviu C33","voucherType":"discount","discount":"33.00"},{"name":"liviu 25","voucherType":"discount","discount":"25.00"},{"name":"eatoff2","voucherType":"discount","discount":"10.00"},{"name":"eatoff10","voucherType":"discount","discount":"10.00"},{"name":"Gourmand Special","voucherType":"discount","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","discount":"12.00"},{"name":"Omakase Package","voucherType":"discount","discount":"18.00"},{"name":"Sushi Enthusiast","voucherType":"discount","discount":"15.00"},{"name":"Sushi Sampler","voucherType":"discount","discount":"8.00"},{"name":"VIP Experience","voucherType":"discount","discount":"25.00"},{"name":"Family Package","voucherType":"discount","discount":"20.00"},{"name":"Monthly Special","voucherType":"discount","discount":"15.00"},{"name":"Taste Test","voucherType":"discount","discount":"10.00"}]
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Gourmand Special","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"12.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Gourmand Special","voucherType":"discount","bonusPercentage":"0","discountPercentage":"28.00","isPayLater":false,"bonusPercent":0,"discountPercent":28}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [MobileHome] State: {"API_BASE_URL":"https://eatoff.app","restaurantsLoading":false,"restaurantsCount":9}
+⚡️  [log] - [MobileHome Filter] Active filter: null Filtered count: 9 of 9
+⚡️  [log] - [MobileHome] Restaurants with vouchers: [{"restaurantName":"Le Petit Bistro","restaurantId":81,"vouchers":[{"name":"Gourmand Special","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"28.00"},{"name":"Bon Appetit","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"22.00"},{"name":"Petit Dejeuner","voucherType":"discount","isCredit":false,"restaurantId":81,"bonus":"0","discount":"12.00"},{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Dragon Palace","restaurantId":83,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Fish & Chips Co.","restaurantId":97,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]},{"restaurantName":"Caribbean Jerk","restaurantId":119,"vouchers":[{"name":"Off -10% EatOff Professional","voucherType":"immediate","isCredit":true,"restaurantId":0,"bonus":"0.00","discount":"10.00"},{"name":"Credit for 30 days ","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"5.00","discount":"5.00"},{"name":"Credit for 60 days","voucherType":"pay_later","isCredit":true,"restaurantId":0,"bonus":"10.00","discount":"10.00"}]}]
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Gourmand Special","voucherType":"discount","bonusPercentage":"0","discountPercentage":"28.00","isPayLater":false,"bonusPercent":0,"discountPercent":28}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+quic_migration_fallback [C9.1.1.1.1:2] [-0130908fc5aa8b85e930a28f1eaa824980dd61b4] no path found for pdp_ip0
+⚡️  [log] - [QueryClient] Using auth token: d7b2aed3da...
+⚡️  To Native ->  CapacitorHttp request 85443809
+⚡️  TO JS {"url":"https:\/\/eatoff.app\/api\/auth\/logout","status":200,"headers":{"strict-transport-security":"max-age=63072000; includeSubDomains","nel":"{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}","alt-svc":"h3=\":443\"; ma=86400","con
+⚡️  [log] - [MobileSignIn] Setting up deep link handler, isNative: true
+⚡️  To Native ->  StatusBar getInfo 85443810
+⚡️  To Native ->  App addListener 85443811
+⚡️  TO JS {"overlays":true,"height":54,"style":"DEFAULT","visible":true,"color":"#000000"}
+quic_migration_fallback [C9.1.1.1.1:2] [-0130908fc5aa8b85e930a28f1eaa824980dd61b4] no path found for pdp_ip0

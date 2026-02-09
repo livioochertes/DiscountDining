@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
@@ -8,7 +8,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { queryClient } from '@/lib/queryClient';
+import { queryClient, setMobileSessionToken } from '@/lib/queryClient';
 import { useLanguage } from '@/contexts/LanguageContext';
 import eatoffLogo from '@assets/EatOff_Logo_1769386471015.png';
 
@@ -68,7 +68,11 @@ export default function MobileSignUp() {
       const data = await result.json();
 
       if (result.ok) {
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        if (data.sessionToken) {
+          setMobileSessionToken(data.sessionToken);
+          console.log('[MobileSignUp] Session token stored from Google native');
+        }
+        queryClient.clear();
         toast({
           title: t.authSuccess,
           description: "Welcome!",
@@ -141,28 +145,34 @@ export default function MobileSignUp() {
           
           if (token) {
             console.log('[MobileSignUp] Received auth token, exchanging for session...');
+            console.log('[MobileSignUp] Using CapacitorHttp for native request to:', `${API_BASE_URL}/api/auth/mobile-exchange`);
             try {
-              // Exchange the token for a session in the WebView context
-              const response = await fetch(`${API_BASE_URL}/api/auth/mobile-exchange`, {
-                method: 'POST',
+              const response = await CapacitorHttp.post({
+                url: `${API_BASE_URL}/api/auth/mobile-exchange`,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token }),
-                credentials: 'include'
+                data: { token }
               });
               
-              if (response.ok) {
-                const data = await response.json();
+              console.log('[MobileSignUp] CapacitorHttp response status:', response.status);
+              console.log('[MobileSignUp] CapacitorHttp response data:', JSON.stringify(response.data));
+              
+              if (response.status === 200) {
+                const data = response.data;
                 console.log('[MobileSignUp] Session created successfully:', data.user?.id);
-                await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-                toast({
-                  title: t.authSuccess,
-                  description: "Welcome!",
-                });
-                setTimeout(() => {
-                  setLocation('/m');
-                }, 100);
+                
+                if (data.sessionToken) {
+                  setMobileSessionToken(data.sessionToken);
+                  console.log('[MobileSignUp] Session token stored');
+                }
+                
+                queryClient.clear();
+                
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                console.log('[MobileSignUp] Navigating to /m');
+                setLocation('/m');
               } else {
-                const errorData = await response.json();
+                const errorData = response.data;
                 console.error('[MobileSignUp] Token exchange failed:', errorData);
                 toast({
                   title: t.authFailed,
