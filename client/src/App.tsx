@@ -9,7 +9,6 @@ import { CartProvider } from "@/contexts/CartContext";
 import { MarketplaceProvider } from "@/contexts/MarketplaceContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useRestaurantAuth } from "@/hooks/useRestaurantAuth";
-import RestaurantLoginModal from "@/components/RestaurantLoginModal";
 import LanguageSelector from "@/components/LanguageSelector";
 import Marketplace from "@/pages/marketplace";
 import MyVouchers from "@/pages/my-vouchers";
@@ -80,8 +79,6 @@ import eatOffLogo from "@assets/EatOff_Logo_1750512988041.png";
 function Footer() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
-  const [showRestaurantModal, setShowRestaurantModal] = useState(false);
-  
   return (
     <footer className="bg-white border-t mt-4">
       <div className="w-full max-w-[1920px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24 py-4 lg:py-5">
@@ -96,7 +93,7 @@ function Footer() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button 
-                    onClick={() => setShowRestaurantModal(true)}
+                    onClick={() => setLocation('/restaurant-login')}
                     className="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors shadow-md"
                   >
                     Restaurant Portal
@@ -194,11 +191,6 @@ function Footer() {
         </div>
       </div>
 
-      {/* Restaurant Login Modal */}
-      <RestaurantLoginModal 
-        isOpen={showRestaurantModal} 
-        onClose={() => setShowRestaurantModal(false)} 
-      />
     </footer>
   );
 }
