@@ -37,6 +37,8 @@ export default function ChefForm({
     yearsOfExperience: chef?.yearsOfExperience || 0,
     instagram: chef?.instagram || "",
     youtube: chef?.youtube || "",
+    facebook: chef?.facebook || "",
+    tiktok: chef?.tiktok || "",
     website: chef?.website || "",
     isPublic: chef?.isPublic !== false,
     isFeatured: chef?.isFeatured || false,
@@ -58,8 +60,8 @@ export default function ChefForm({
     onSave({
       ...formData,
       restaurantId: restaurantIdNum,
-      specialties: formData.specialties.split(",").map(s => s.trim()).filter(Boolean),
-      cuisineExpertise: formData.cuisineExpertise.split(",").map(s => s.trim()).filter(Boolean),
+      specialties: formData.specialties.split(",").map((s: string) => s.trim()).filter(Boolean),
+      cuisineExpertise: formData.cuisineExpertise.split(",").map((s: string) => s.trim()).filter(Boolean),
     });
   };
 
@@ -188,12 +190,13 @@ export default function ChefForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Instagram</label>
               <Input
                 value={formData.instagram}
                 onChange={(e) => setFormData({...formData, instagram: e.target.value})}
+                placeholder="https://instagram.com/..."
               />
             </div>
             <div>
@@ -201,6 +204,23 @@ export default function ChefForm({
               <Input
                 value={formData.youtube}
                 onChange={(e) => setFormData({...formData, youtube: e.target.value})}
+                placeholder="https://youtube.com/..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Facebook</label>
+              <Input
+                value={formData.facebook}
+                onChange={(e) => setFormData({...formData, facebook: e.target.value})}
+                placeholder="https://facebook.com/..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">TikTok</label>
+              <Input
+                value={formData.tiktok}
+                onChange={(e) => setFormData({...formData, tiktok: e.target.value})}
+                placeholder="https://tiktok.com/@..."
               />
             </div>
             <div>
@@ -208,6 +228,7 @@ export default function ChefForm({
               <Input
                 value={formData.website}
                 onChange={(e) => setFormData({...formData, website: e.target.value})}
+                placeholder="https://..."
               />
             </div>
           </div>

@@ -1829,6 +1829,7 @@ export const chefProfiles = pgTable("chef_profiles", {
   instagram: text("instagram"),
   youtube: text("youtube"),
   tiktok: text("tiktok"),
+  facebook: text("facebook"),
   
   // Favorite recipes (curated list)
   favoriteRecipeIds: integer("favorite_recipe_ids").array(),
