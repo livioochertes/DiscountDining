@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon, ChefHat } from "lucide-react";
+import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon, ChefHat, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ChefForm from "@/components/ChefForm";
 import { useLocation } from "wouter";
@@ -69,6 +69,7 @@ export default function RestaurantPortal() {
     calories: '', preparationTime: '', isAvailable: true, isPopular: false
   });
   const [isSubmittingMenuItem, setIsSubmittingMenuItem] = useState(false);
+  const [isAiSuggesting, setIsAiSuggesting] = useState(false);
   const [accountFormData, setAccountFormData] = useState({
     companyName: '',
     email: '',
@@ -646,6 +647,36 @@ export default function RestaurantPortal() {
       });
     }
     setIsMenuItemFormOpen(true);
+  };
+
+  const handleAiSuggest = async () => {
+    if (!menuFormData.name.trim()) {
+      toast({ title: "Please enter a dish name first", variant: "destructive" });
+      return;
+    }
+    setIsAiSuggesting(true);
+    try {
+      const response = await apiRequest("POST", "/api/restaurant-portal/menu-items/ai-suggest", {
+        name: menuFormData.name,
+        category: menuFormData.category
+      });
+      const suggestion = await response.json();
+      setMenuFormData(prev => ({
+        ...prev,
+        description: suggestion.description || prev.description,
+        ingredients: Array.isArray(suggestion.ingredients) ? suggestion.ingredients.join(', ') : prev.ingredients,
+        allergens: Array.isArray(suggestion.allergens) ? suggestion.allergens.join(', ') : prev.allergens,
+        dietaryTags: Array.isArray(suggestion.dietaryTags) ? suggestion.dietaryTags.join(', ') : prev.dietaryTags,
+        calories: suggestion.calories ? String(suggestion.calories) : prev.calories,
+        preparationTime: suggestion.preparationTime ? String(suggestion.preparationTime) : prev.preparationTime,
+        spiceLevel: typeof suggestion.spiceLevel === 'number' ? suggestion.spiceLevel : prev.spiceLevel,
+      }));
+      toast({ title: "AI suggestions applied! You can edit any field." });
+    } catch (error) {
+      toast({ title: "Failed to get AI suggestions", variant: "destructive" });
+    } finally {
+      setIsAiSuggesting(false);
+    }
   };
 
   const handleSubmitMenuItem = async () => {
@@ -2603,8 +2634,25 @@ export default function RestaurantPortal() {
                 <h2 className="text-xl font-bold mb-4">{editingMenuItem ? 'Edit Menu Item' : 'Add Menu Item'}</h2>
                 <div className="space-y-4">
                   <div>
-                    <Label>Name *</Label>
-                    <Input value={menuFormData.name} onChange={e => setMenuFormData(p => ({ ...p, name: e.target.value }))} />
+                    <div className="flex items-center justify-between mb-1">
+                      <Label>Name *</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAiSuggest}
+                        disabled={isAiSuggesting || !menuFormData.name.trim()}
+                        className="text-xs h-7 px-2 gap-1 border-purple-300 text-purple-700 hover:bg-purple-50"
+                      >
+                        {isAiSuggesting ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3 h-3" />
+                        )}
+                        {isAiSuggesting ? 'AI analyzing...' : 'AI Autocomplete'}
+                      </Button>
+                    </div>
+                    <Input value={menuFormData.name} onChange={e => setMenuFormData(p => ({ ...p, name: e.target.value }))} placeholder="Enter dish name, then click AI Autocomplete" />
                   </div>
                   <div>
                     <Label>Description</Label>
