@@ -7,7 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon } from "lucide-react";
+import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon, ChefHat } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ChefForm from "@/components/ChefForm";
 import { useLocation } from "wouter";
 import BankingInformationForm from "@/components/BankingInformationForm";
 import { EditRestaurantForm } from "@/components/EditRestaurantForm";
@@ -55,6 +57,8 @@ export default function RestaurantPortal() {
   const [isManagingUsers, setIsManagingUsers] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
+  const [isChefFormOpen, setIsChefFormOpen] = useState(false);
+  const [editingChef, setEditingChef] = useState<any>(null);
   const [accountFormData, setAccountFormData] = useState({
     companyName: '',
     email: '',
@@ -555,6 +559,15 @@ export default function RestaurantPortal() {
     enabled: activeTab === "packages"
   });
 
+  const { data: chefs = [], isLoading: isLoadingChefs } = useQuery<any[]>({
+    queryKey: ["/api/restaurant-portal/chefs"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/restaurant-portal/chefs");
+      return response.json();
+    },
+    enabled: activeTab === "chef"
+  });
+
   // Mutations for reservation management
   const confirmReservationMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: number; notes?: string }) => {
@@ -894,7 +907,7 @@ export default function RestaurantPortal() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-9 h-auto">
+          <TabsList className="grid w-full grid-cols-10 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-1 text-xs px-2">
               <BarChart3 className="w-3 h-3" />
               {t.overview}
@@ -926,6 +939,10 @@ export default function RestaurantPortal() {
             <TabsTrigger value="menu" className="flex items-center gap-1 text-xs px-2">
               <Menu className="w-3 h-3" />
               {t.menu}
+            </TabsTrigger>
+            <TabsTrigger value="chef" className="flex items-center gap-1 text-xs px-2">
+              <ChefHat className="w-3 h-3" />
+              Chef
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-1 text-xs px-2">
               <Settings className="w-3 h-3" />
@@ -1838,6 +1855,138 @@ export default function RestaurantPortal() {
           {/* Loyalty Tab */}
           <TabsContent value="loyalty" className="space-y-6">
             <LoyaltyManagement restaurants={restaurants} />
+          </TabsContent>
+
+          {/* Chef Tab */}
+          <TabsContent value="chef" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <ChefHat className="h-5 w-5" />
+                  Chef Management
+                </CardTitle>
+                <Button onClick={() => { setEditingChef(null); setIsChefFormOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Chef
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {isLoadingChefs ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : chefs.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ChefHat className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Chefs Yet</h3>
+                    <p className="text-muted-foreground mb-4">Add your first chef to showcase your culinary talent</p>
+                    <Button onClick={() => { setEditingChef(null); setIsChefFormOpen(true); }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Chef
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {chefs.map((item: any) => {
+                      const chef = item.chef || item;
+                      const restaurantName = item.restaurant?.name || "Unknown";
+                      return (
+                        <Card key={chef.id} className="overflow-hidden">
+                          <div className="p-4">
+                            <div className="flex items-start gap-3">
+                              {chef.profileImage ? (
+                                <img src={chef.profileImage} alt={chef.chefName} className="w-12 h-12 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                                  <ChefHat className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold truncate">{chef.chefName}</h3>
+                                {chef.title && <p className="text-sm text-muted-foreground">{chef.title}</p>}
+                                <p className="text-xs text-muted-foreground mt-1">{restaurantName}</p>
+                              </div>
+                            </div>
+                            {chef.bio && (
+                              <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{chef.bio}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-3 flex-wrap">
+                              {chef.experienceLevel && (
+                                <Badge variant="secondary" className="text-xs">{chef.experienceLevel}</Badge>
+                              )}
+                              {chef.yearsOfExperience > 0 && (
+                                <Badge variant="outline" className="text-xs">{chef.yearsOfExperience} yrs</Badge>
+                              )}
+                              {chef.isPublic && (
+                                <Badge variant="outline" className="text-xs">Public</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-4">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setEditingChef(chef); setIsChefFormOpen(true); }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(`/chef/${chef.id}`, '_blank')}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={async () => {
+                                  if (!confirm("Are you sure you want to delete this chef?")) return;
+                                  try {
+                                    await apiRequest("DELETE", `/api/restaurant-portal/chefs/${chef.id}`);
+                                    queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/chefs"] });
+                                    toast({ title: "Chef deleted successfully" });
+                                  } catch (error: any) {
+                                    toast({ title: "Error", description: error.message || "Failed to delete chef", variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {isChefFormOpen && (
+              <ChefForm
+                chef={editingChef}
+                restaurants={restaurants.length > 1 ? restaurants : undefined}
+                fixedRestaurantId={restaurants.length === 1 ? restaurants[0]?.id : undefined}
+                showFeatured={false}
+                onClose={() => { setIsChefFormOpen(false); setEditingChef(null); }}
+                onSave={async (data: any) => {
+                  try {
+                    if (editingChef) {
+                      await apiRequest("PUT", `/api/restaurant-portal/chefs/${editingChef.id}`, data);
+                      toast({ title: "Chef updated successfully" });
+                    } else {
+                      await apiRequest("POST", "/api/restaurant-portal/chefs", data);
+                      toast({ title: "Chef created successfully" });
+                    }
+                    queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/chefs"] });
+                    setIsChefFormOpen(false);
+                    setEditingChef(null);
+                  } catch (error: any) {
+                    toast({ title: "Error", description: error.message || "Failed to save chef", variant: "destructive" });
+                  }
+                }}
+              />
+            )}
           </TabsContent>
 
           {/* Settings Tab */}
