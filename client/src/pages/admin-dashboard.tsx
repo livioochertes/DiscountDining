@@ -349,6 +349,20 @@ interface FinancialUser {
     cashBalance: string;
     loyaltyPoints: number;
   } | null;
+  cashback: {
+    totalCashbackBalance: string;
+    eatoffCashbackBalance: string;
+  } | null;
+  credit: {
+    creditLimit: string;
+    availableCredit: string;
+    usedCredit: string;
+    status: string;
+  } | null;
+  vouchers: {
+    totalValue: string;
+    activeCount: number;
+  } | null;
 }
 
 interface LoyaltyTier {
@@ -661,14 +675,15 @@ function UsersFinancialTab() {
   const handleExportCSV = () => {
     if (!usersData?.users?.length) return;
     
-    const headers = ['Name', 'Email', 'Membership Tier', 'Wallet Balance', 'Loyalty Points', 'Cashback Balance'];
+    const headers = ['Name', 'Email', 'Membership Tier', 'Personal Balance', 'Vouchere Balance', 'Cashback Balance', 'Credit Available'];
     const rows = usersData.users.map(u => [
       u.customer.name,
       u.customer.email,
       u.customer.membershipTier || 'bronze',
       u.wallet?.cashBalance || u.customer.balance || '0.00',
-      u.wallet?.loyaltyPoints || u.customer.loyaltyPoints || 0,
-      u.wallet?.cashBalance || '0.00',
+      u.vouchers?.totalValue || '0.00',
+      u.cashback?.totalCashbackBalance || '0.00',
+      u.credit?.status === 'approved' ? (u.credit?.availableCredit || '0.00') : 'N/A',
     ]);
     
     const csvContent = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
@@ -883,9 +898,10 @@ function UsersFinancialTab() {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Tier</TableHead>
-                      <TableHead className="text-right">Wallet Balance</TableHead>
-                      <TableHead className="text-right">Loyalty Points</TableHead>
-                      <TableHead className="text-right">Cashback Balance</TableHead>
+                      <TableHead className="text-right">Personal</TableHead>
+                      <TableHead className="text-right">Vouchere</TableHead>
+                      <TableHead className="text-right">Cashback</TableHead>
+                      <TableHead className="text-right">Credit</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -911,8 +927,18 @@ function UsersFinancialTab() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">€{parseFloat(user.wallet?.cashBalance || user.customer.balance || '0').toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{user.wallet?.loyaltyPoints || user.customer.loyaltyPoints || 0}</TableCell>
-                          <TableCell className="text-right">€{parseFloat(user.wallet?.cashBalance || '0').toFixed(2)}</TableCell>
+                          <TableCell className="text-right">
+                            €{parseFloat(user.vouchers?.totalValue || '0').toFixed(2)}
+                            {(user.vouchers?.activeCount || 0) > 0 && (
+                              <span className="text-xs text-muted-foreground ml-1">({user.vouchers?.activeCount})</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">€{parseFloat(user.cashback?.totalCashbackBalance || '0').toFixed(2)}</TableCell>
+                          <TableCell className="text-right">
+                            {user.credit?.status === 'approved' 
+                              ? `€${parseFloat(user.credit?.availableCredit || '0').toFixed(2)}`
+                              : user.credit?.status === 'pending' ? 'Pending' : 'N/A'}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Button
@@ -1021,6 +1047,30 @@ function UsersFinancialTab() {
               Adjust wallet balance for {selectedUserForAdjustment?.customer.name}
             </DialogDescription>
           </DialogHeader>
+          {selectedUserForAdjustment && (
+            <div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-lg text-sm mb-2">
+              <div>
+                <span className="text-muted-foreground">Personal:</span>{' '}
+                <span className="font-semibold">€{parseFloat(selectedUserForAdjustment.wallet?.cashBalance || selectedUserForAdjustment.customer.balance || '0').toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Vouchere:</span>{' '}
+                <span className="font-semibold">€{parseFloat(selectedUserForAdjustment.vouchers?.totalValue || '0').toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Cashback:</span>{' '}
+                <span className="font-semibold">€{parseFloat(selectedUserForAdjustment.cashback?.totalCashbackBalance || '0').toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Credit:</span>{' '}
+                <span className="font-semibold">
+                  {selectedUserForAdjustment.credit?.status === 'approved' 
+                    ? `€${parseFloat(selectedUserForAdjustment.credit?.availableCredit || '0').toFixed(2)}`
+                    : selectedUserForAdjustment.credit?.status === 'pending' ? 'Pending' : 'N/A'}
+                </span>
+              </div>
+            </div>
+          )}
           <Form {...walletAdjustmentForm}>
             <form onSubmit={walletAdjustmentForm.handleSubmit(handleWalletAdjustmentSubmit)} className="space-y-4">
               <FormField

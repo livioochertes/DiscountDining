@@ -559,8 +559,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Basic wallet endpoints
   app.get("/api/customers/:id/wallet", async (req, res) => {
     try {
-      const customerId = parseInt(req.params.id);
-      const customer = await storage.getCustomerById(customerId);
+      let customerId = parseInt(req.params.id);
+      let customer: any;
+      
+      if (isNaN(customerId)) {
+        const email = (req as any).mobileUser?.email || (req as any).user?.email;
+        if (email) {
+          customer = await storage.getCustomerByEmail(email);
+        }
+        if (!customer) {
+          return res.status(404).json({ message: "Customer not found" });
+        }
+        customerId = customer.id;
+      } else {
+        customer = await storage.getCustomerById(customerId);
+      }
       
       if (!customer) {
         return res.status(404).json({ message: "Customer not found" });

@@ -32,7 +32,7 @@ interface CreditType {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (Capacitor.isNativePlatform() ? 'https://eatoff.app' : '');
 
-type WalletTab = 'vouchers' | 'cashback' | 'credit' | 'istoric';
+type WalletTab = 'vouchers' | 'cashback' | 'credit' | 'personal';
 
 interface WalletOverview {
   personalBalance: string;
@@ -69,7 +69,7 @@ export default function MobileWallet() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const urlParams = new URLSearchParams(window.location.search);
-  const initialTab = (['vouchers', 'cashback', 'credit', 'istoric'].includes(urlParams.get('tab') || '') 
+  const initialTab = (['vouchers', 'cashback', 'credit', 'personal'].includes(urlParams.get('tab') || '') 
     ? urlParams.get('tab') as WalletTab 
     : 'vouchers');
   const [activeTab, setActiveTab] = useState<WalletTab>(initialTab);
@@ -387,7 +387,7 @@ export default function MobileWallet() {
     { id: 'vouchers' as const, label: 'Vouchers', icon: Gift, count: vouchers.length },
     { id: 'cashback' as const, label: 'Cashback', icon: TrendingUp },
     { id: 'credit' as const, label: 'Credit', icon: CreditCard },
-    { id: 'istoric' as const, label: 'Istoric', icon: History },
+    { id: 'personal' as const, label: 'Personal', icon: Wallet },
   ];
 
   return (
@@ -466,7 +466,7 @@ export default function MobileWallet() {
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-gray-100 rounded-2xl p-1">
+        <div className="flex bg-gray-100 rounded-2xl p-1 gap-0.5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -474,19 +474,14 @@ export default function MobileWallet() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all",
+                  "flex-1 flex flex-col items-center justify-center gap-0.5 py-2 rounded-xl text-xs font-medium transition-all min-w-0",
                   activeTab === tab.id
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500"
                 )}
               >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-                    {tab.count}
-                  </span>
-                )}
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{tab.label}</span>
               </button>
             );
           })}
@@ -1066,9 +1061,9 @@ export default function MobileWallet() {
           </div>
         )}
 
-        {activeTab === 'istoric' && (
+        {activeTab === 'personal' && (
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-900">Istoric Tranzacții</h3>
+            <h3 className="font-semibold text-gray-900">Personal - Istoric Tranzacții</h3>
             {transactionsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
