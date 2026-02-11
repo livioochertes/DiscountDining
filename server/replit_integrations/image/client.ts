@@ -19,13 +19,25 @@ export async function generateImageBuffer(
     model: "gpt-image-1",
     prompt,
     size,
-    response_format: "b64_json",
-  });
-  const base64 = response.data?.[0]?.b64_json;
-  if (!base64) {
+  } as any);
+  const imageData = response.data?.[0];
+  if (!imageData) {
     throw new Error("No image data returned from AI model");
   }
-  return Buffer.from(base64, "base64");
+  const base64 = imageData.b64_json;
+  if (base64) {
+    return Buffer.from(base64, "base64");
+  }
+  const url = imageData.url;
+  if (url) {
+    const imgResponse = await fetch(url);
+    if (!imgResponse.ok) {
+      throw new Error("Failed to download generated image");
+    }
+    const arrayBuffer = await imgResponse.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+  throw new Error("No image data or URL returned from AI model");
 }
 
 /**
