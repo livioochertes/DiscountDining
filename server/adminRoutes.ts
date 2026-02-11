@@ -2983,7 +2983,6 @@ export function registerAdminRoutes(app: Express) {
     try {
       const customerId = parseInt(req.params.id);
       const { adjustmentType, amount, reason } = req.body;
-
       if (!adjustmentType || !amount || !reason) {
         return res.status(400).json({ message: "adjustmentType, amount, and reason are required" });
       }
@@ -3007,7 +3006,14 @@ export function registerAdminRoutes(app: Express) {
       }
 
       const wallet = await db
-        .select()
+        .select({
+          id: customerWallets.id,
+          customerId: customerWallets.customerId,
+          cashBalance: customerWallets.cashBalance,
+          loyaltyPoints: customerWallets.loyaltyPoints,
+          totalPointsEarned: customerWallets.totalPointsEarned,
+          isActive: customerWallets.isActive,
+        })
         .from(customerWallets)
         .where(eq(customerWallets.customerId, customerId))
         .limit(1);
@@ -3066,7 +3072,8 @@ export function registerAdminRoutes(app: Express) {
       res.json(adjustment);
     } catch (error) {
       console.error("Error creating wallet adjustment:", error);
-      res.status(500).json({ message: "Failed to create wallet adjustment" });
+      const errMsg = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ message: `Failed to create wallet adjustment: ${errMsg}` });
     }
   });
 
