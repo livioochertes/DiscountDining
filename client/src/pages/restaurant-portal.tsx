@@ -2683,23 +2683,22 @@ export default function RestaurantPortal() {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <Label>Name *</Label>
-                      <div title={!menuFormData.name.trim() ? 'Introduceți mai întâi denumirea produsului' : ''}>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleAiSuggest}
-                          disabled={isAiSuggesting || !menuFormData.name.trim()}
-                          className="text-xs h-7 px-2 gap-1 border-purple-300 text-purple-700 hover:bg-purple-50"
-                        >
-                          {isAiSuggesting ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Sparkles className="w-3 h-3" />
-                          )}
-                          {isAiSuggesting ? 'AI analyzing...' : 'AI Autocomplete'}
-                        </Button>
-                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        title={!menuFormData.name.trim() ? 'Introduceți mai întâi denumirea produsului' : ''}
+                        onClick={handleAiSuggest}
+                        disabled={isAiSuggesting || !menuFormData.name.trim()}
+                        className="text-xs h-7 px-2 gap-1 border-purple-300 text-purple-700 hover:text-purple-700 hover:bg-purple-50 disabled:text-purple-400 disabled:opacity-60"
+                      >
+                        {isAiSuggesting ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3 h-3" />
+                        )}
+                        {isAiSuggesting ? 'AI analyzing...' : 'AI Autocomplete'}
+                      </Button>
                     </div>
                     <Input value={menuFormData.name} onChange={e => setMenuFormData(p => ({ ...p, name: e.target.value }))} placeholder="Enter dish name, then click AI Autocomplete" />
                   </div>
