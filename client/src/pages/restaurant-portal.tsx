@@ -70,6 +70,7 @@ export default function RestaurantPortal() {
   });
   const [isSubmittingMenuItem, setIsSubmittingMenuItem] = useState(false);
   const [isAiSuggesting, setIsAiSuggesting] = useState(false);
+  const [aiSuggestedForName, setAiSuggestedForName] = useState<string | null>(null);
   const [isUploadingMenuImage, setIsUploadingMenuImage] = useState(false);
   const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
   const [accountFormData, setAccountFormData] = useState({
@@ -648,6 +649,7 @@ export default function RestaurantPortal() {
         calories: '', preparationTime: '', isAvailable: true, isPopular: false
       });
     }
+    setAiSuggestedForName(null);
     setIsMenuItemFormOpen(true);
   };
 
@@ -718,6 +720,7 @@ export default function RestaurantPortal() {
         preparationTime: suggestion.preparationTime ? String(suggestion.preparationTime) : prev.preparationTime,
         spiceLevel: typeof suggestion.spiceLevel === 'number' ? suggestion.spiceLevel : prev.spiceLevel,
       }));
+      setAiSuggestedForName(menuFormData.name.trim());
       toast({ title: "AI suggestions applied! You can edit any field." });
     } catch (error) {
       toast({ title: "Failed to get AI suggestions", variant: "destructive" });
@@ -2687,9 +2690,9 @@ export default function RestaurantPortal() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        title={!menuFormData.name.trim() ? 'Introduceți mai întâi denumirea produsului' : ''}
+                        title={!menuFormData.name.trim() ? 'Introduceți mai întâi denumirea produsului' : aiSuggestedForName === menuFormData.name.trim() ? 'Autocomplete deja aplicat. Modificați denumirea pentru a reutiliza.' : ''}
                         onClick={handleAiSuggest}
-                        disabled={isAiSuggesting || !menuFormData.name.trim()}
+                        disabled={isAiSuggesting || !menuFormData.name.trim() || aiSuggestedForName === menuFormData.name.trim()}
                         className="text-xs h-7 px-2 gap-1 border-purple-300 text-purple-700 hover:text-purple-700 hover:bg-purple-50 disabled:text-purple-400 disabled:opacity-60"
                       >
                         {isAiSuggesting ? (
