@@ -741,7 +741,7 @@ router.post("/restaurants/:restaurantId/chefs", requireAuth, async (req, res) =>
       return res.status(400).json({ message: "Maximum 3 chefs per restaurant allowed" });
     }
 
-    const { chefName, title, bio, profileImage, coverImage, specialties, cuisineExpertise, cookingStyles, experienceLevel, yearsOfExperience, certifications, website, instagram, youtube, tiktok, isPublic } = req.body;
+    const { chefName, title, bio, profileImage, coverImage, specialties, cuisineExpertise, cookingStyles, experienceLevel, yearsOfExperience, certifications, website, instagram, youtube, tiktok, facebook, isPublic } = req.body;
 
     if (!chefName) {
       return res.status(400).json({ message: "Chef name is required" });
@@ -766,6 +766,7 @@ router.post("/restaurants/:restaurantId/chefs", requireAuth, async (req, res) =>
         instagram: instagram || null,
         youtube: youtube || null,
         tiktok: tiktok || null,
+        facebook: facebook || null,
         isPublic: isPublic !== false,
         isFeatured: false,
       })
@@ -802,7 +803,7 @@ router.put("/restaurants/:restaurantId/chefs/:chefId", requireAuth, async (req, 
     }
 
     const updateData: any = { updatedAt: new Date() };
-    const fields = ['chefName', 'title', 'bio', 'profileImage', 'coverImage', 'specialties', 'cuisineExpertise', 'cookingStyles', 'experienceLevel', 'yearsOfExperience', 'certifications', 'website', 'instagram', 'youtube', 'tiktok', 'isPublic'];
+    const fields = ['chefName', 'title', 'bio', 'profileImage', 'coverImage', 'specialties', 'cuisineExpertise', 'cookingStyles', 'experienceLevel', 'yearsOfExperience', 'certifications', 'website', 'instagram', 'youtube', 'tiktok', 'facebook', 'isPublic'];
 
     fields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -959,6 +960,7 @@ router.post("/chefs", requireAuth, async (req: any, res) => {
       instagram: chefData.instagram || null,
       youtube: chefData.youtube || null,
       tiktok: chefData.tiktok || null,
+      facebook: chefData.facebook || null,
       isPublic: chefData.isPublic !== false,
       isFeatured: false,
     }).returning();
@@ -987,7 +989,7 @@ router.put("/chefs/:id", requireAuth, async (req: any, res) => {
     }
     
     const updateData: any = { updatedAt: new Date() };
-    const allowedFields = ['chefName', 'title', 'bio', 'profileImage', 'coverImage', 'specialties', 'cuisineExpertise', 'cookingStyles', 'experienceLevel', 'yearsOfExperience', 'certifications', 'website', 'instagram', 'youtube', 'tiktok', 'isPublic'];
+    const allowedFields = ['chefName', 'title', 'bio', 'profileImage', 'coverImage', 'specialties', 'cuisineExpertise', 'cookingStyles', 'experienceLevel', 'yearsOfExperience', 'certifications', 'website', 'instagram', 'youtube', 'tiktok', 'facebook', 'isPublic'];
     
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {

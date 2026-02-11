@@ -1888,7 +1888,7 @@ export function registerAdminRoutes(app: Express) {
 
   app.post("/api/admin/chefs", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
-      const { restaurantId, chefName, title, bio, profileImage, coverImage, specialties, cuisineExpertise, cookingStyles, experienceLevel, yearsOfExperience, certifications, website, instagram, youtube, tiktok, isPublic, isFeatured } = req.body;
+      const { restaurantId, chefName, title, bio, profileImage, coverImage, specialties, cuisineExpertise, cookingStyles, experienceLevel, yearsOfExperience, certifications, website, instagram, youtube, tiktok, facebook, isPublic, isFeatured } = req.body;
 
       if (!restaurantId || !chefName) {
         return res.status(400).json({ message: "Restaurant and chef name are required" });
@@ -1918,6 +1918,7 @@ export function registerAdminRoutes(app: Express) {
           instagram: instagram || null,
           youtube: youtube || null,
           tiktok: tiktok || null,
+          facebook: facebook || null,
           isPublic: isPublic !== false,
           isFeatured: isFeatured || false,
         })
@@ -1942,7 +1943,7 @@ export function registerAdminRoutes(app: Express) {
       }
 
       const updateData: any = { updatedAt: new Date() };
-      const fields = ['restaurantId', 'chefName', 'title', 'bio', 'profileImage', 'coverImage', 'specialties', 'cuisineExpertise', 'cookingStyles', 'experienceLevel', 'yearsOfExperience', 'certifications', 'website', 'instagram', 'youtube', 'tiktok', 'isPublic', 'isFeatured'];
+      const fields = ['restaurantId', 'chefName', 'title', 'bio', 'profileImage', 'coverImage', 'specialties', 'cuisineExpertise', 'cookingStyles', 'experienceLevel', 'yearsOfExperience', 'certifications', 'website', 'instagram', 'youtube', 'tiktok', 'facebook', 'isPublic', 'isFeatured'];
 
       fields.forEach(field => {
         if (req.body[field] !== undefined) {
