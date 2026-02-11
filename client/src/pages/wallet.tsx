@@ -158,16 +158,18 @@ export default function WalletPage() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const { t } = useLanguage();
 
+  const resolvedCustomerId = (user as any)?.customerId || user?.id;
+
   // All hooks must be called before any conditional returns
   // Fetch wallet data
   const { data: walletData, isLoading, isRefetching, refetch: refetchWallet } = useQuery<WalletData>({
-    queryKey: ["wallet", user?.id],
+    queryKey: ["wallet", resolvedCustomerId],
     queryFn: async () => {
-      if (!user?.id) throw new Error("User not authenticated");
-      const response = await apiRequest("GET", `/api/customers/${user.id}/wallet`);
+      if (!resolvedCustomerId) throw new Error("User not authenticated");
+      const response = await apiRequest("GET", `/api/customers/${resolvedCustomerId}/wallet`);
       return response.json();
     },
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!resolvedCustomerId && isAuthenticated,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     staleTime: 10000,
@@ -175,7 +177,7 @@ export default function WalletPage() {
 
   const { data: walletOverview } = useQuery<any>({
     queryKey: ['/api/wallet/overview'],
-    enabled: !!user?.id && isAuthenticated,
+    enabled: !!resolvedCustomerId && isAuthenticated,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     staleTime: 10000,
@@ -194,8 +196,8 @@ export default function WalletPage() {
   // Create Stripe payment intent for wallet top-up
   const createPaymentIntentMutation = useMutation({
     mutationFn: async ({ amount }: { amount: string }) => {
-      if (!user?.id) throw new Error("User not authenticated");
-      const response = await apiRequest("POST", `/api/customers/${user.id}/wallet/create-payment-intent`, {
+      if (!resolvedCustomerId) throw new Error("User not authenticated");
+      const response = await apiRequest("POST", `/api/customers/${resolvedCustomerId}/wallet/create-payment-intent`, {
         amount: parseFloat(amount)
       });
       return response.json();
@@ -212,14 +214,14 @@ export default function WalletPage() {
   // Complete wallet top-up after successful Stripe payment
   const completeTopUpMutation = useMutation({
     mutationFn: async ({ paymentIntentId }: { paymentIntentId: string }) => {
-      if (!user?.id) throw new Error("User not authenticated");
-      const response = await apiRequest("POST", `/api/customers/${user.id}/wallet/complete-topup`, {
+      if (!resolvedCustomerId) throw new Error("User not authenticated");
+      const response = await apiRequest("POST", `/api/customers/${resolvedCustomerId}/wallet/complete-topup`, {
         paymentIntentId
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wallet", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["wallet", resolvedCustomerId] });
       toast({
         title: "Payment Successful",
         description: "Your wallet has been topped up successfully!"
@@ -239,15 +241,15 @@ export default function WalletPage() {
   // Purchase general voucher mutation
   const purchaseVoucherMutation = useMutation({
     mutationFn: async ({ voucherId, paymentMethod }: { voucherId: number, paymentMethod: string }) => {
-      if (!user?.id) throw new Error("User not authenticated");
-      const response = await apiRequest("POST", `/api/customers/${user.id}/purchase-general-voucher`, {
+      if (!resolvedCustomerId) throw new Error("User not authenticated");
+      const response = await apiRequest("POST", `/api/customers/${resolvedCustomerId}/purchase-general-voucher`, {
         generalVoucherId: voucherId,
         paymentMethod
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wallet", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["wallet", resolvedCustomerId] });
       queryClient.invalidateQueries({ queryKey: ["general-vouchers"] });
       toast({
         title: "Voucher Purchased Successfully",
@@ -353,7 +355,7 @@ export default function WalletPage() {
   const handleStripeSuccess = () => {
     setShowStripeCheckout(false);
     setTopUpAmount("");
-    queryClient.invalidateQueries({ queryKey: ["wallet", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["wallet", resolvedCustomerId] });
   };
 
   const handlePurchaseVoucher = (voucherId: number) => {
@@ -540,7 +542,7 @@ export default function WalletPage() {
             <QrPaymentSection 
               isOpen={showQrCode} 
               onClose={() => setShowQrCode(false)}
-              customerId={user?.id || 0}
+              customerId={resolvedCustomerId || 0}
             />
 
             {/* Recent Activity */}
@@ -799,7 +801,7 @@ export default function WalletPage() {
               >
                 <WalletStripeCheckout 
                   amount={topUpAmount}
-                  customerId={user?.id || 0}
+                  customerId={resolvedCustomerId || 0}
                   onSuccess={handleStripeSuccess}
                 />
               </Elements>

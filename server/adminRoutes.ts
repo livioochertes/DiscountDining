@@ -25,7 +25,10 @@ import {
   customerWallets,
   marketingDeals,
   marketingDealRestaurants,
-  insertMarketingDealSchema
+  insertMarketingDealSchema,
+  customerCashbackBalance,
+  customerCreditAccount,
+  purchasedVouchers
 } from "@shared/schema";
 import { eq, and, gte, desc, sql, ilike, asc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -2883,10 +2886,22 @@ export function registerAdminRoutes(app: Express) {
             loyaltyPoints: customerWallets.loyaltyPoints,
             totalPointsEarned: customerWallets.totalPointsEarned,
             isActive: customerWallets.isActive,
+          },
+          cashback: {
+            totalCashbackBalance: customerCashbackBalance.totalCashbackBalance,
+            eatoffCashbackBalance: customerCashbackBalance.eatoffCashbackBalance,
+          },
+          credit: {
+            creditLimit: customerCreditAccount.creditLimit,
+            availableCredit: customerCreditAccount.availableCredit,
+            usedCredit: customerCreditAccount.usedCredit,
+            status: customerCreditAccount.status,
           }
         })
         .from(customers)
         .leftJoin(customerWallets, eq(customers.id, customerWallets.customerId))
+        .leftJoin(customerCashbackBalance, eq(customers.id, customerCashbackBalance.customerId))
+        .leftJoin(customerCreditAccount, eq(customers.id, customerCreditAccount.customerId))
         .orderBy(desc(customers.createdAt))
         .limit(limit)
         .offset(offset);
@@ -2899,16 +2914,46 @@ export function registerAdminRoutes(app: Express) {
 
       const users = await query;
 
+      const userIds = users.map(u => u.customer.id);
+      let voucherData: any[] = [];
+      if (userIds.length > 0) {
+        voucherData = await db
+          .select({
+            customerId: purchasedVouchers.customerId,
+            totalValue: sql<string>`COALESCE(SUM(
+              (${purchasedVouchers.totalMeals} - COALESCE(${purchasedVouchers.usedMeals}, 0)) * 
+              (${purchasedVouchers.purchasePrice}::numeric / NULLIF(${purchasedVouchers.totalMeals}, 0))
+            ), 0)`,
+            activeCount: sql<number>`COUNT(*)`,
+          })
+          .from(purchasedVouchers)
+          .where(and(
+            sql`${purchasedVouchers.customerId} = ANY(ARRAY[${sql.raw(userIds.join(','))}])`,
+            eq(purchasedVouchers.status, 'active')
+          ))
+          .groupBy(purchasedVouchers.customerId);
+      }
+      const voucherMap = new Map(voucherData.map(v => [v.customerId, v]));
+
       const countResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(customers);
       const total = countResult[0]?.count || 0;
 
       res.json({
-        users: users.map(u => ({
-          customer: u.customer,
-          wallet: u.wallet
-        })),
+        users: users.map(u => {
+          const vInfo = voucherMap.get(u.customer.id);
+          return {
+            customer: u.customer,
+            wallet: u.wallet,
+            cashback: u.cashback,
+            credit: u.credit,
+            vouchers: {
+              totalValue: vInfo?.totalValue || '0.00',
+              activeCount: vInfo?.activeCount || 0,
+            },
+          };
+        }),
         pagination: {
           page: pageNum,
           limit,
