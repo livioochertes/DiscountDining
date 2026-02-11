@@ -589,7 +589,7 @@ router.post("/menu-items/ai-generate-image", requireAuth, async (req: any, res) 
 
     const prompt = `Professional food photography of "${name}"${category ? ` (${category})` : ''}, beautifully plated on a restaurant dish, top-down view, warm natural lighting, appetizing presentation, clean background, high quality food photography style`;
     
-    const imageBuffer = await generateImageBuffer(prompt, "512x512");
+    const imageBuffer = await generateImageBuffer(prompt, "1024x1024");
     
     const objectStorageService = new ObjectStorageService();
     const { uploadUrl, objectPath } = await objectStorageService.getSignedUploadUrl(`${name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-ai.png`, "image/png");
