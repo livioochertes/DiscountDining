@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X, Plus, Loader2 } from 'lucide-react';
+import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X, Plus, Loader2, History } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,7 +32,7 @@ interface CreditType {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (Capacitor.isNativePlatform() ? 'https://eatoff.app' : '');
 
-type WalletTab = 'vouchers' | 'cashback' | 'credit';
+type WalletTab = 'vouchers' | 'cashback' | 'credit' | 'istoric';
 
 interface WalletOverview {
   personalBalance: string;
@@ -63,21 +63,13 @@ interface WalletOverview {
   restaurantCashbacks: Array<any>;
 }
 
-interface Transaction {
-  id: number;
-  type: 'voucher_purchase' | 'voucher_use' | 'cashback' | 'credit_payment';
-  merchant: string;
-  amount: number;
-  date: string;
-  status: 'completed' | 'pending';
-}
 
 export default function MobileWallet() {
   const { t } = useLanguage();
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const urlParams = new URLSearchParams(window.location.search);
-  const initialTab = (['vouchers', 'cashback', 'credit'].includes(urlParams.get('tab') || '') 
+  const initialTab = (['vouchers', 'cashback', 'credit', 'istoric'].includes(urlParams.get('tab') || '') 
     ? urlParams.get('tab') as WalletTab 
     : 'vouchers');
   const [activeTab, setActiveTab] = useState<WalletTab>(initialTab);
@@ -182,6 +174,31 @@ export default function MobileWallet() {
       });
       
       if (!response.ok) throw new Error('Failed to fetch wallet overview');
+      return response.json();
+    },
+    enabled: !!user,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    staleTime: 10000,
+  });
+
+  const { data: walletTransactions = [], isLoading: transactionsLoading } = useQuery<any[]>({
+    queryKey: ['/api/wallet/transactions'],
+    queryFn: async () => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
+        credentials: 'include',
+        headers,
+      });
+      if (!response.ok) throw new Error('Failed to fetch transactions');
       return response.json();
     },
     enabled: !!user,
@@ -366,27 +383,12 @@ export default function MobileWallet() {
     );
   }
 
-  const transactions: Transaction[] = [];
-
   const tabs = [
     { id: 'vouchers' as const, label: 'Vouchers', icon: Gift, count: vouchers.length },
     { id: 'cashback' as const, label: 'Cashback', icon: TrendingUp },
     { id: 'credit' as const, label: 'Credit', icon: CreditCard },
+    { id: 'istoric' as const, label: 'Istoric', icon: History },
   ];
-
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case 'voucher_purchase':
-      case 'voucher_use':
-        return Gift;
-      case 'cashback':
-        return TrendingUp;
-      case 'credit_payment':
-        return CreditCard;
-      default:
-        return Wallet;
-    }
-  };
 
   return (
     <MobileLayout>
@@ -1064,58 +1066,59 @@ export default function MobileWallet() {
           </div>
         )}
 
-        {/* Recent Transactions */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
-            {transactions.length > 0 && (
-              <button className="text-primary text-sm font-medium">See all</button>
+        {activeTab === 'istoric' && (
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900">Istoric Tranzacții</h3>
+            {transactionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : walletTransactions.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-2xl">
+                <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">Nu ai tranzacții încă</p>
+              </div>
+            ) : (
+              walletTransactions.map((tx: any) => {
+                const isPositive = !['withdrawal', 'admin_debit'].includes(tx.transactionType) && 
+                  !(tx.transactionType || '').includes('debit') && !(tx.transactionType || '').includes('payment') && !(tx.transactionType || '').includes('purchase');
+                return (
+                  <div key={tx.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex items-center gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                      isPositive ? "bg-green-50" : "bg-red-50"
+                    )}>
+                      {isPositive ? (
+                        <ArrowDownLeft className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <ArrowUpRight className="w-5 h-5 text-red-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm truncate">{tx.description}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(tx.createdAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {' '}
+                        {new Date(tx.createdAt).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={cn(
+                        "font-bold text-sm",
+                        isPositive ? "text-green-600" : "text-red-600"
+                      )}>
+                        {isPositive ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} RON
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        Sold: {parseFloat(tx.balanceAfter || '0').toFixed(2)} RON
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
-
-          {transactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Wallet className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>No transactions yet</p>
-            </div>
-          ) : (
-            transactions.map((tx) => {
-              const Icon = getTransactionIcon(tx.type);
-              const isPositive = tx.amount > 0;
-              
-              return (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center",
-                      isPositive ? "bg-green-50" : "bg-gray-100"
-                    )}>
-                      <Icon className={cn("w-5 h-5", isPositive ? "text-green-600" : "text-gray-600")} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{tx.merchant}</p>
-                      <p className="text-xs text-gray-500">{tx.date}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={cn(
-                      "font-semibold",
-                      isPositive ? "text-green-600" : "text-gray-900"
-                    )}>
-                      {isPositive ? '+' : ''}€{Math.abs(tx.amount).toFixed(2)}
-                    </p>
-                    {tx.status === 'pending' && (
-                      <p className="text-xs text-amber-500">Pending</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </section>
+        )}
       </div>
       
       {/* Payment Modal */}
