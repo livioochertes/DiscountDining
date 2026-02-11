@@ -26,7 +26,8 @@ import {
   insertCashbackGroupSchema,
   insertLoyaltyGroupSchema,
   creditTypes,
-  insertCreditTypeSchema
+  insertCreditTypeSchema,
+  walletTransactions
 } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -850,6 +851,27 @@ router.get("/wallet/overview", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[WalletOverview] Fatal error:', error.message, error.stack);
     res.status(500).json({ message: "Failed to fetch wallet overview: " + error.message });
+  }
+});
+
+router.get("/wallet/transactions", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const transactions = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.customerId, customerId))
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(50);
+    
+    res.json(transactions);
+  } catch (error: any) {
+    console.error('Error fetching wallet transactions:', error);
+    res.status(500).json({ message: "Failed to fetch transactions" });
   }
 });
 

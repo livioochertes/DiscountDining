@@ -3063,13 +3063,21 @@ export function registerAdminRoutes(app: Express) {
         .set({ balance: newBalance.toString() })
         .where(eq(customers.id, customerId));
 
+      const transactionDescription = adjustmentType === 'bonus' 
+        ? `Bonus EatOff: ${reason}`
+        : adjustmentType === 'credit'
+        ? `Credit EatOff: ${reason}`
+        : adjustmentType === 'correction'
+        ? `Corecție EatOff: ${reason}`
+        : `Debit EatOff: ${reason}`;
+
       await db
         .insert(walletTransactions)
         .values({
           customerId,
-          transactionType: `admin_${adjustmentType}`,
+          transactionType: adjustmentType === 'debit' ? 'withdrawal' : 'deposit',
           amount: adjustmentAmount.toString(),
-          description: `Admin adjustment: ${reason}`,
+          description: transactionDescription,
           balanceBefore: currentBalance.toString(),
           balanceAfter: newBalance.toString(),
         });

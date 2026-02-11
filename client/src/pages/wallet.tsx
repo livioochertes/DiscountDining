@@ -25,7 +25,8 @@ import {
   Euro,
   Ticket,
   ArrowUpRight,
-  ArrowDownLeft
+  ArrowDownLeft,
+  TrendingUp
 } from "lucide-react";
 
 // Initialize Stripe - gracefully handle missing key for mobile builds
@@ -166,6 +167,14 @@ export default function WalletPage() {
       const response = await apiRequest("GET", `/api/customers/${user.id}/wallet`);
       return response.json();
     },
+    enabled: !!user?.id && isAuthenticated,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    staleTime: 10000,
+  });
+
+  const { data: walletOverview } = useQuery<any>({
+    queryKey: ['/api/wallet/overview'],
     enabled: !!user?.id && isAuthenticated,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
@@ -406,47 +415,51 @@ export default function WalletPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cash Balance</CardTitle>
+              <CardTitle className="text-sm font-medium">Personal</CardTitle>
               <Euro className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{walletData.wallet.cashBalance}</div>
-              <p className="text-xs text-muted-foreground">Available to spend</p>
+              <div className="text-2xl font-bold">€{parseFloat(walletData.wallet.cashBalance || '0').toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Top-up & bonusuri</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Loyalty Points</CardTitle>
-              <Star className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{walletData.wallet.loyaltyPoints}</div>
-              <p className="text-xs text-muted-foreground">
-                Worth €{(walletData.wallet.loyaltyPoints / 100).toFixed(2)}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Vouchers</CardTitle>
+              <CardTitle className="text-sm font-medium">Vouchere</CardTitle>
               <Ticket className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{walletData.summary.totalVouchers}</div>
-              <p className="text-xs text-muted-foreground">Restaurant vouchers</p>
+              <p className="text-xs text-muted-foreground">Vouchere active</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-              <Wallet className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium">Cashback</CardTitle>
+              <TrendingUp className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{walletData.summary.estimatedValue}</div>
-              <p className="text-xs text-muted-foreground">Everything combined</p>
+              <div className="text-2xl font-bold">€{parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Din programul cashback</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Credit</CardTitle>
+              <CreditCard className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {walletOverview?.credit?.status === 'approved'
+                  ? `€${parseFloat(walletOverview?.credit?.availableCredit || '0').toFixed(2)}`
+                  : walletOverview?.credit?.status === 'pending'
+                    ? 'În așteptare'
+                    : 'N/A'}
+              </div>
+              <p className="text-xs text-muted-foreground">Credit disponibil</p>
             </CardContent>
           </Card>
         </div>
@@ -540,32 +553,33 @@ export default function WalletPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {walletData.transactions.slice(0, 5).map((transaction: any) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        {transaction.transactionType === "deposit" ? (
-                          <ArrowDownLeft className="h-5 w-5 text-green-600" />
-                        ) : (
-                          <ArrowUpRight className="h-5 w-5 text-red-600" />
-                        )}
-                        <div>
-                          <p className="font-medium">{transaction.description}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(transaction.createdAt).toLocaleDateString()}
+                  {walletData.transactions.slice(0, 5).map((transaction: any) => {
+                    const txType = transaction.transactionType || '';
+                    const isPositive = !['withdrawal', 'admin_debit'].includes(txType) && 
+                      !txType.includes('debit') && !txType.includes('payment') && !txType.includes('purchase');
+                    return (
+                      <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          {isPositive ? (
+                            <ArrowDownLeft className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <ArrowUpRight className="h-5 w-5 text-red-600" />
+                          )}
+                          <div>
+                            <p className="font-medium">{transaction.description}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(transaction.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
+                            {isPositive ? "+" : "-"}€{transaction.amount}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`font-medium ${
-                          transaction.transactionType === "deposit" 
-                            ? "text-green-600" 
-                            : "text-red-600"
-                        }`}>
-                          {transaction.transactionType === "deposit" ? "+" : ""}€{transaction.amount}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -719,36 +733,37 @@ export default function WalletPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {walletData.transactions.map((transaction: any) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        {transaction.transactionType === "deposit" ? (
-                          <ArrowDownLeft className="h-5 w-5 text-green-600" />
-                        ) : (
-                          <ArrowUpRight className="h-5 w-5 text-red-600" />
-                        )}
-                        <div>
-                          <p className="font-medium">{transaction.description}</p>
+                  {walletData.transactions.map((transaction: any) => {
+                    const txType = transaction.transactionType || '';
+                    const isPositive = !['withdrawal', 'admin_debit'].includes(txType) && 
+                      !txType.includes('debit') && !txType.includes('payment') && !txType.includes('purchase');
+                    return (
+                      <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          {isPositive ? (
+                            <ArrowDownLeft className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <ArrowUpRight className="h-5 w-5 text-red-600" />
+                          )}
+                          <div>
+                            <p className="font-medium">{transaction.description}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(transaction.createdAt).toLocaleDateString()} at{" "}
+                              {new Date(transaction.createdAt).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
+                            {isPositive ? "+" : "-"}€{transaction.amount}
+                          </p>
                           <p className="text-sm text-muted-foreground">
-                            {new Date(transaction.createdAt).toLocaleDateString()} at{" "}
-                            {new Date(transaction.createdAt).toLocaleTimeString()}
+                            Balance: €{transaction.balanceAfter}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`font-medium ${
-                          transaction.transactionType === "deposit" 
-                            ? "text-green-600" 
-                            : "text-red-600"
-                        }`}>
-                          {transaction.transactionType === "deposit" ? "+" : ""}€{transaction.amount}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Balance: €{transaction.balanceAfter}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

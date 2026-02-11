@@ -15,7 +15,7 @@ import { loyaltyRoutes } from "./loyaltyRoutes";
 import { registerSupportRoutes } from "./supportRoutes";
 import { registerRecipeRoutes } from "./recipeRoutes";
 import { registerChefProfileRoutes } from "./chefProfileRoutes";
-import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments, mobileFilters, marketingDeals, marketingDealRestaurants, restaurants } from "@shared/schema";
+import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments, mobileFilters, marketingDeals, marketingDealRestaurants, restaurants, customerWallets } from "@shared/schema";
 import { asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { setupMultiAuth, isAuthenticated, consumeMobileAuthToken, validateMobileSessionToken, invalidateMobileSessionToken } from "./multiAuth";
@@ -574,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const generalVouchers: any[] = [];
 
       // Get real transactions from database
-      const transactions = await storage.getWalletTransactions(customerId, 10);
+      const transactions = await storage.getWalletTransactions(customerId, 50);
 
       const totalVoucherValue = activeVouchers.reduce((sum, voucher) => {
         const remainingMeals = voucher.totalMeals - (voucher.usedMeals || 0);
@@ -582,13 +582,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return sum + (remainingMeals * mealValue);
       }, 0);
 
-      const estimatedValue = parseFloat(customer.balance || "0") + 
-                           (customer.loyaltyPoints || 0) / 100 + 
-                           totalVoucherValue;
+      const walletRecord = await db
+        .select({
+          id: customerWallets.id,
+          customerId: customerWallets.customerId,
+          cashBalance: customerWallets.cashBalance,
+          loyaltyPoints: customerWallets.loyaltyPoints,
+          totalPointsEarned: customerWallets.totalPointsEarned,
+          isActive: customerWallets.isActive,
+        })
+        .from(customerWallets)
+        .where(eq(customerWallets.customerId, customerId))
+        .limit(1);
+
+      const walletCashBalance = walletRecord.length > 0 
+        ? parseFloat(walletRecord[0].cashBalance || "0")
+        : parseFloat(customer.balance || "0");
+      const estimatedValue = walletCashBalance + totalVoucherValue;
 
       res.json({
-        wallet: {
-          id: 1,
+        wallet: walletRecord.length > 0 ? walletRecord[0] : {
+          id: 0,
           customerId,
           cashBalance: customer.balance || "0.00",
           loyaltyPoints: customer.loyaltyPoints || 0,
@@ -599,7 +613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         generalVouchers,
         transactions,
         summary: {
-          totalCashBalance: customer.balance || "0.00",
+          totalCashBalance: walletCashBalance.toFixed(2),
           totalLoyaltyPoints: customer.loyaltyPoints || 0,
           totalVouchers: activeVouchers.length,
           totalGeneralVouchers: 0,
