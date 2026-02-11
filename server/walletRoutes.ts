@@ -22,6 +22,7 @@ import {
   loyaltyGroups,
   customerLoyaltyEnrollments,
   customers,
+  customerWallets,
   insertCashbackGroupSchema,
   insertLoyaltyGroupSchema,
   creditTypes,
@@ -722,15 +723,27 @@ router.get("/wallet/overview", async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Authentication required" });
     }
     
-    // Fetch personal balance from customers table
+    // Fetch personal balance from customerWallets table (same source as desktop wallet)
     let personalBalance = "0.00";
     try {
-      const [customer] = await db
-        .select({ balance: customers.balance })
-        .from(customers)
-        .where(eq(customers.id, customerId))
+      const walletResult = await db
+        .select({
+          cashBalance: customerWallets.cashBalance,
+        })
+        .from(customerWallets)
+        .where(eq(customerWallets.customerId, customerId))
         .limit(1);
-      personalBalance = customer?.balance || "0.00";
+      if (walletResult.length > 0) {
+        personalBalance = walletResult[0].cashBalance || "0.00";
+      } else {
+        // Fallback to customers.balance if no wallet record exists
+        const [customer] = await db
+          .select({ balance: customers.balance })
+          .from(customers)
+          .where(eq(customers.id, customerId))
+          .limit(1);
+        personalBalance = customer?.balance || "0.00";
+      }
     } catch (dbErr) {
       console.error('[WalletOverview] Error fetching personal balance:', dbErr);
     }

@@ -185,6 +185,9 @@ export default function MobileWallet() {
       return response.json();
     },
     enabled: !!user,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    staleTime: 10000,
   });
 
   // Fetch credit types for the request form (always fetch fresh to show max available)
