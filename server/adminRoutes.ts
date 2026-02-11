@@ -3057,6 +3057,12 @@ export function registerAdminRoutes(app: Express) {
           });
       }
 
+      // Also sync customers.balance for mobile wallet consistency
+      await db
+        .update(customers)
+        .set({ balance: newBalance.toString() })
+        .where(eq(customers.id, customerId));
+
       await db
         .insert(walletTransactions)
         .values({
