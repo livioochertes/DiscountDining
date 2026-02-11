@@ -9,9 +9,10 @@ import {
   insertVoucherPackageSchema,
   insertMenuItemSchema,
   chefProfiles,
-  menuItems
+  menuItems,
+  restaurants
 } from "@shared/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
 const router = Router();
 
@@ -898,6 +899,133 @@ router.patch("/restaurants/:restaurantId/menu-items/:menuItemId/signature-chef",
   } catch (error: any) {
     console.error("Error updating menu item signature chef:", error);
     res.status(500).json({ message: "Failed to update menu item" });
+  }
+});
+
+// GET /api/restaurant-portal/chefs - Get chefs for owner's restaurants
+router.get("/chefs", requireAuth, async (req: any, res) => {
+  try {
+    const ownerId = req.ownerId!;
+    const ownerRestaurants = await db.select({ id: restaurants.id }).from(restaurants).where(eq(restaurants.ownerId, ownerId));
+    const restaurantIds = ownerRestaurants.map(r => r.id);
+    
+    if (restaurantIds.length === 0) {
+      return res.json([]);
+    }
+    
+    const chefs = await db
+      .select({ chef: chefProfiles, restaurant: { id: restaurants.id, name: restaurants.name } })
+      .from(chefProfiles)
+      .leftJoin(restaurants, eq(chefProfiles.restaurantId, restaurants.id))
+      .where(inArray(chefProfiles.restaurantId, restaurantIds))
+      .orderBy(desc(chefProfiles.createdAt));
+    
+    res.json(chefs);
+  } catch (error) {
+    console.error("Error fetching restaurant chefs:", error);
+    res.status(500).json({ message: "Failed to fetch chefs" });
+  }
+});
+
+// POST /api/restaurant-portal/chefs - Create chef for owner's restaurant
+router.post("/chefs", requireAuth, async (req: any, res) => {
+  try {
+    const ownerId = req.ownerId!;
+    const { restaurantId, ...chefData } = req.body;
+    
+    if (!restaurantId || !chefData.chefName) {
+      return res.status(400).json({ message: "Restaurant and chef name are required" });
+    }
+    
+    const [restaurant] = await db.select().from(restaurants).where(and(eq(restaurants.id, restaurantId), eq(restaurants.ownerId, ownerId)));
+    if (!restaurant) {
+      return res.status(403).json({ message: "Restaurant not found or not owned by you" });
+    }
+    
+    const [chef] = await db.insert(chefProfiles).values({
+      restaurantId,
+      chefName: chefData.chefName,
+      title: chefData.title || null,
+      bio: chefData.bio || null,
+      profileImage: chefData.profileImage || null,
+      coverImage: chefData.coverImage || null,
+      specialties: chefData.specialties || [],
+      cuisineExpertise: chefData.cuisineExpertise || [],
+      cookingStyles: chefData.cookingStyles || [],
+      experienceLevel: chefData.experienceLevel || 'professional',
+      yearsOfExperience: chefData.yearsOfExperience || 0,
+      certifications: chefData.certifications || [],
+      website: chefData.website || null,
+      instagram: chefData.instagram || null,
+      youtube: chefData.youtube || null,
+      tiktok: chefData.tiktok || null,
+      isPublic: chefData.isPublic !== false,
+      isFeatured: false,
+    }).returning();
+    
+    res.status(201).json(chef);
+  } catch (error) {
+    console.error("Error creating chef:", error);
+    res.status(500).json({ message: "Failed to create chef" });
+  }
+});
+
+// PUT /api/restaurant-portal/chefs/:id - Update chef
+router.put("/chefs/:id", requireAuth, async (req: any, res) => {
+  try {
+    const ownerId = req.ownerId!;
+    const chefId = parseInt(req.params.id);
+    
+    const [existing] = await db.select().from(chefProfiles).where(eq(chefProfiles.id, chefId));
+    if (!existing) {
+      return res.status(404).json({ message: "Chef not found" });
+    }
+    
+    const [restaurant] = await db.select().from(restaurants).where(and(eq(restaurants.id, existing.restaurantId), eq(restaurants.ownerId, ownerId)));
+    if (!restaurant) {
+      return res.status(403).json({ message: "Not authorized to edit this chef" });
+    }
+    
+    const updateData: any = { updatedAt: new Date() };
+    const allowedFields = ['chefName', 'title', 'bio', 'profileImage', 'coverImage', 'specialties', 'cuisineExpertise', 'cookingStyles', 'experienceLevel', 'yearsOfExperience', 'certifications', 'website', 'instagram', 'youtube', 'tiktok', 'isPublic'];
+    
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
+    
+    const [updated] = await db.update(chefProfiles).set(updateData).where(eq(chefProfiles.id, chefId)).returning();
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating chef:", error);
+    res.status(500).json({ message: "Failed to update chef" });
+  }
+});
+
+// DELETE /api/restaurant-portal/chefs/:id - Delete chef
+router.delete("/chefs/:id", requireAuth, async (req: any, res) => {
+  try {
+    const ownerId = req.ownerId!;
+    const chefId = parseInt(req.params.id);
+    
+    const [existing] = await db.select().from(chefProfiles).where(eq(chefProfiles.id, chefId));
+    if (!existing) {
+      return res.status(404).json({ message: "Chef not found" });
+    }
+    
+    const [restaurant] = await db.select().from(restaurants).where(and(eq(restaurants.id, existing.restaurantId), eq(restaurants.ownerId, ownerId)));
+    if (!restaurant) {
+      return res.status(403).json({ message: "Not authorized to delete this chef" });
+    }
+    
+    await db.update(menuItems).set({ signatureChefId: null }).where(eq(menuItems.signatureChefId, chefId));
+    await db.delete(chefProfiles).where(eq(chefProfiles.id, chefId));
+    
+    res.json({ message: "Chef deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting chef:", error);
+    res.status(500).json({ message: "Failed to delete chef" });
   }
 });
 
