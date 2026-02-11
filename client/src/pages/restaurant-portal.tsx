@@ -59,6 +59,16 @@ export default function RestaurantPortal() {
   const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
   const [isChefFormOpen, setIsChefFormOpen] = useState(false);
   const [editingChef, setEditingChef] = useState<any>(null);
+  const [menuRestaurantId, setMenuRestaurantId] = useState<number | null>(null);
+  const [menuCategory, setMenuCategory] = useState<string>("all");
+  const [isMenuItemFormOpen, setIsMenuItemFormOpen] = useState(false);
+  const [editingMenuItem, setEditingMenuItem] = useState<any>(null);
+  const [menuFormData, setMenuFormData] = useState({
+    name: '', description: '', category: 'mains', price: '', imageUrl: '',
+    ingredients: '', allergens: '', dietaryTags: '', spiceLevel: 0,
+    calories: '', preparationTime: '', isAvailable: true, isPopular: false
+  });
+  const [isSubmittingMenuItem, setIsSubmittingMenuItem] = useState(false);
   const [accountFormData, setAccountFormData] = useState({
     companyName: '',
     email: '',
@@ -567,6 +577,116 @@ export default function RestaurantPortal() {
     },
     enabled: activeTab === "chef"
   });
+
+  const { data: allMenuItems = [], isLoading: isLoadingMenu } = useQuery<any[]>({
+    queryKey: ["/api/restaurant-portal/menu-items"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/restaurant-portal/menu-items");
+      return response.json();
+    },
+    enabled: activeTab === "menu"
+  });
+
+  useEffect(() => {
+    if (activeTab === "menu" && restaurants.length === 1 && !menuRestaurantId) {
+      setMenuRestaurantId(restaurants[0].id);
+    }
+  }, [activeTab, restaurants, menuRestaurantId]);
+
+  const filteredMenuItems = allMenuItems.filter((item: any) => {
+    if (menuRestaurantId && item.restaurantId !== menuRestaurantId) return false;
+    if (menuCategory !== "all" && item.category !== menuCategory) return false;
+    return true;
+  });
+
+  const handleDeleteMenuItem = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this menu item?")) return;
+    try {
+      await apiRequest("DELETE", `/api/restaurant-portal/menu-items/${id}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/menu-items"] });
+      toast({ title: "Menu item deleted" });
+    } catch (error) {
+      toast({ title: "Failed to delete menu item", variant: "destructive" });
+    }
+  };
+
+  const handleToggleAvailability = async (id: number) => {
+    try {
+      await apiRequest("PATCH", `/api/restaurant-portal/menu-items/${id}/availability`);
+      queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/menu-items"] });
+    } catch (error) {
+      toast({ title: "Failed to toggle availability", variant: "destructive" });
+    }
+  };
+
+  const handleOpenMenuItemForm = (item?: any) => {
+    if (item) {
+      setEditingMenuItem(item);
+      setMenuFormData({
+        name: item.name || '',
+        description: item.description || '',
+        category: item.category || 'mains',
+        price: item.price?.toString() || '',
+        imageUrl: item.imageUrl || '',
+        ingredients: (item.ingredients || []).join(', '),
+        allergens: (item.allergens || []).join(', '),
+        dietaryTags: (item.dietaryTags || []).join(', '),
+        spiceLevel: item.spiceLevel || 0,
+        calories: item.calories?.toString() || '',
+        preparationTime: item.preparationTime?.toString() || '',
+        isAvailable: item.isAvailable ?? true,
+        isPopular: item.isPopular ?? false
+      });
+    } else {
+      setEditingMenuItem(null);
+      setMenuFormData({
+        name: '', description: '', category: 'mains', price: '', imageUrl: '',
+        ingredients: '', allergens: '', dietaryTags: '', spiceLevel: 0,
+        calories: '', preparationTime: '', isAvailable: true, isPopular: false
+      });
+    }
+    setIsMenuItemFormOpen(true);
+  };
+
+  const handleSubmitMenuItem = async () => {
+    if (!menuFormData.name || !menuFormData.price) {
+      toast({ title: "Name and price are required", variant: "destructive" });
+      return;
+    }
+    setIsSubmittingMenuItem(true);
+    try {
+      const payload: any = {
+        name: menuFormData.name,
+        description: menuFormData.description || null,
+        category: menuFormData.category,
+        price: menuFormData.price,
+        imageUrl: menuFormData.imageUrl || null,
+        ingredients: menuFormData.ingredients ? menuFormData.ingredients.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+        allergens: menuFormData.allergens ? menuFormData.allergens.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+        dietaryTags: menuFormData.dietaryTags ? menuFormData.dietaryTags.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+        spiceLevel: menuFormData.spiceLevel,
+        calories: menuFormData.calories ? parseInt(menuFormData.calories) : null,
+        preparationTime: menuFormData.preparationTime ? parseInt(menuFormData.preparationTime) : null,
+        isAvailable: menuFormData.isAvailable,
+        isPopular: menuFormData.isPopular
+      };
+
+      if (editingMenuItem) {
+        await apiRequest("PUT", `/api/restaurant-portal/menu-items/${editingMenuItem.id}`, payload);
+        toast({ title: "Menu item updated successfully" });
+      } else {
+        await apiRequest("POST", `/api/restaurant-portal/restaurants/${menuRestaurantId}/menu`, payload);
+        toast({ title: "Menu item created successfully" });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/menu-items"] });
+      setIsMenuItemFormOpen(false);
+      setEditingMenuItem(null);
+    } catch (error) {
+      toast({ title: editingMenuItem ? "Failed to update menu item" : "Failed to create menu item", variant: "destructive" });
+    } finally {
+      setIsSubmittingMenuItem(false);
+    }
+  };
 
   // Mutations for reservation management
   const confirmReservationMutation = useMutation({
@@ -2339,150 +2459,230 @@ export default function RestaurantPortal() {
                 <h2 className="text-2xl font-bold text-gray-900">Menu Management</h2>
                 <p className="text-gray-600">Manage your restaurant menus and menu items</p>
               </div>
-              <Button className="bg-primary hover:bg-primary/90">
+              <Button 
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => {
+                  if (!menuRestaurantId) {
+                    toast({ title: "Please select a restaurant first", variant: "destructive" });
+                    return;
+                  }
+                  handleOpenMenuItemForm();
+                }}
+              >
                 <PlusCircle className="w-4 h-4 mr-2" />
                 Add Menu Item
               </Button>
             </div>
 
-            {/* Restaurant Selector */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Restaurant</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {restaurants.map((restaurant: any) => (
-                    <Card key={restaurant.id} className="cursor-pointer hover:shadow-md transition-shadow border-2 border-primary">
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold">{restaurant.name}</h3>
-                        <p className="text-sm text-gray-600">{restaurant.cuisine} • {restaurant.location}</p>
-                        <div className="mt-3 flex justify-between items-center">
-                          <Badge variant={restaurant.isActive ? "default" : "secondary"}>
-                            {restaurant.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedRestaurant(restaurant);
-                                setIsEditRestaurantOpen(true);
-                              }}
+            {restaurants.length > 1 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Select Restaurant</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {restaurants.map((restaurant: any) => (
+                      <Card 
+                        key={restaurant.id} 
+                        className={`cursor-pointer hover:shadow-md transition-shadow border-2 ${menuRestaurantId === restaurant.id ? 'border-primary' : 'border-transparent'}`}
+                        onClick={() => setMenuRestaurantId(restaurant.id)}
+                      >
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold">{restaurant.name}</h3>
+                          <p className="text-sm text-gray-600">{restaurant.cuisine} • {restaurant.location}</p>
+                          <div className="mt-2">
+                            <Badge variant={restaurant.isActive ? "default" : "secondary"}>
+                              {restaurant.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {menuRestaurantId ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Menu Items for {restaurants.find((r: any) => r.id === menuRestaurantId)?.name || 'Restaurant'}
+                  </CardTitle>
+                  <div className="flex gap-2 flex-wrap">
+                    {["all", "appetizers", "mains", "desserts", "beverages", "sides", "soups", "salads", "specials"].map(cat => (
+                      <Button 
+                        key={cat}
+                        variant={menuCategory === cat ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => setMenuCategory(cat)}
+                      >
+                        {cat === "all" ? "All Categories" : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingMenu ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                    </div>
+                  ) : filteredMenuItems.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="text-lg font-medium">No menu items found</p>
+                      <p className="text-sm mt-1">Add your first menu item to get started</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {filteredMenuItems.map((item: any) => (
+                        <div key={item.id} className="border rounded-lg p-4 flex justify-between items-center">
+                          <div className="flex items-center space-x-4">
+                            {item.imageUrl ? (
+                              <img 
+                                src={item.imageUrl}
+                                alt={item.name}
+                                className="w-16 h-16 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
+                                <Package className="w-6 h-6 text-gray-400" />
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="font-semibold">{item.name}</h4>
+                              {item.description && (
+                                <p className="text-sm text-gray-600 line-clamp-1">{item.description}</p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <Badge variant="secondary">{item.category}</Badge>
+                                {(item.dietaryTags || []).map((tag: string) => (
+                                  <Badge key={tag} variant="outline">{tag}</Badge>
+                                ))}
+                                <span className="text-sm font-medium text-gray-700">€{parseFloat(item.price).toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge 
+                              className="cursor-pointer"
+                              variant={item.isAvailable ? "default" : "destructive"}
+                              onClick={() => handleToggleAvailability(item.id)}
                             >
-                              Edit Details
+                              {item.isAvailable ? "Available" : "Unavailable"}
+                            </Badge>
+                            <Button variant="outline" size="sm" onClick={() => handleOpenMenuItemForm(item)}>
+                              <Edit className="w-3 h-3 mr-1" />
+                              Edit
                             </Button>
-                            <Button size="sm" variant="outline">
-                              Manage Menu
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteMenuItem(item.id)}>
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Delete
                             </Button>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Menu Items Management */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Menu Items for Bella Vista</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">All Categories</Button>
-                  <Button variant="outline" size="sm">Appetizers</Button>
-                  <Button variant="outline" size="sm">Mains</Button>
-                  <Button variant="outline" size="sm">Desserts</Button>
-                  <Button variant="outline" size="sm">Beverages</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Sample Menu Items */}
-                  <div className="border rounded-lg p-4 flex justify-between items-center">
-                    <div className="flex items-center space-x-4">
-                      <img 
-                        src="https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=80&h=80&fit=crop" 
-                        alt="Menu item" 
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
-                      <div>
-                        <h4 className="font-semibold">Margherita Pizza</h4>
-                        <p className="text-sm text-gray-600">Fresh tomato sauce, mozzarella, basil</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary">Mains</Badge>
-                          <Badge variant="outline">Vegetarian</Badge>
-                          <span className="text-sm text-gray-500">€14.50</span>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm">Edit</Button>
-                      <Button variant="outline" size="sm">Delete</Button>
-                      <Badge variant={true ? "default" : "secondary"}>
-                        {true ? "Available" : "Unavailable"}
-                      </Badge>
-                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="py-8">
+                  <div className="text-center text-gray-500">
+                    <p className="text-lg font-medium">Select a restaurant</p>
+                    <p className="text-sm mt-1">Choose a restaurant above to manage its menu</p>
                   </div>
-
-                  <div className="border rounded-lg p-4 flex justify-between items-center">
-                    <div className="flex items-center space-x-4">
-                      <img 
-                        src="https://images.unsplash.com/photo-1546793665-c74683f339c1?w=80&h=80&fit=crop" 
-                        alt="Menu item" 
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
-                      <div>
-                        <h4 className="font-semibold">Caesar Salad</h4>
-                        <p className="text-sm text-gray-600">Romaine lettuce, parmesan, croutons, caesar dressing</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary">Appetizers</Badge>
-                          <Badge variant="outline">Vegetarian</Badge>
-                          <span className="text-sm text-gray-500">€9.75</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm">Edit</Button>
-                      <Button variant="outline" size="sm">Delete</Button>
-                      <Badge variant={true ? "default" : "secondary"}>
-                        {true ? "Available" : "Unavailable"}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="border rounded-lg p-4 flex justify-between items-center">
-                    <div className="flex items-center space-x-4">
-                      <img 
-                        src="https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=80&h=80&fit=crop" 
-                        alt="Menu item" 
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
-                      <div>
-                        <h4 className="font-semibold">Tiramisu</h4>
-                        <p className="text-sm text-gray-600">Classic Italian dessert with mascarpone and coffee</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary">Desserts</Badge>
-                          <span className="text-sm text-gray-500">€7.25</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm">Edit</Button>
-                      <Button variant="outline" size="sm">Delete</Button>
-                      <Badge variant={true ? "default" : "secondary"}>
-                        {true ? "Available" : "Unavailable"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex justify-center">
-                  <Button variant="outline">Load More Items</Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
+
+          {isMenuItemFormOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <h2 className="text-xl font-bold mb-4">{editingMenuItem ? 'Edit Menu Item' : 'Add Menu Item'}</h2>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Name *</Label>
+                    <Input value={menuFormData.name} onChange={e => setMenuFormData(p => ({ ...p, name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea value={menuFormData.description} onChange={e => setMenuFormData(p => ({ ...p, description: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Category</Label>
+                      <Select value={menuFormData.category} onValueChange={v => setMenuFormData(p => ({ ...p, category: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="appetizers">Appetizers</SelectItem>
+                          <SelectItem value="mains">Mains</SelectItem>
+                          <SelectItem value="desserts">Desserts</SelectItem>
+                          <SelectItem value="beverages">Beverages</SelectItem>
+                          <SelectItem value="sides">Sides</SelectItem>
+                          <SelectItem value="soups">Soups</SelectItem>
+                          <SelectItem value="salads">Salads</SelectItem>
+                          <SelectItem value="specials">Specials</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Price (€) *</Label>
+                      <Input type="number" step="0.01" min="0" value={menuFormData.price} onChange={e => setMenuFormData(p => ({ ...p, price: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Image URL</Label>
+                    <Input value={menuFormData.imageUrl} onChange={e => setMenuFormData(p => ({ ...p, imageUrl: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Ingredients (comma-separated)</Label>
+                    <Input value={menuFormData.ingredients} onChange={e => setMenuFormData(p => ({ ...p, ingredients: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Allergens (comma-separated)</Label>
+                    <Input value={menuFormData.allergens} onChange={e => setMenuFormData(p => ({ ...p, allergens: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Dietary Tags (comma-separated)</Label>
+                    <Input value={menuFormData.dietaryTags} onChange={e => setMenuFormData(p => ({ ...p, dietaryTags: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label>Spice Level (0-5)</Label>
+                      <Input type="number" min="0" max="5" value={menuFormData.spiceLevel} onChange={e => setMenuFormData(p => ({ ...p, spiceLevel: parseInt(e.target.value) || 0 }))} />
+                    </div>
+                    <div>
+                      <Label>Calories</Label>
+                      <Input type="number" min="0" value={menuFormData.calories} onChange={e => setMenuFormData(p => ({ ...p, calories: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label>Prep Time (min)</Label>
+                      <Input type="number" min="0" value={menuFormData.preparationTime} onChange={e => setMenuFormData(p => ({ ...p, preparationTime: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={menuFormData.isAvailable} onChange={e => setMenuFormData(p => ({ ...p, isAvailable: e.target.checked }))} className="rounded" />
+                      <span className="text-sm">Available</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={menuFormData.isPopular} onChange={e => setMenuFormData(p => ({ ...p, isPopular: e.target.checked }))} className="rounded" />
+                      <span className="text-sm">Popular</span>
+                    </label>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => { setIsMenuItemFormOpen(false); setEditingMenuItem(null); }}>Cancel</Button>
+                    <Button onClick={handleSubmitMenuItem} disabled={isSubmittingMenuItem}>
+                      {isSubmittingMenuItem && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {editingMenuItem ? 'Update' : 'Create'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
 
         </Tabs>

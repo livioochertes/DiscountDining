@@ -510,6 +510,109 @@ router.post("/restaurants/:id/menu", requireAuth, async (req, res) => {
   }
 });
 
+// GET all menu items for owner's restaurants (including unavailable)
+router.get("/menu-items", requireAuth, async (req: any, res) => {
+  try {
+    const ownerId = req.ownerId!;
+    const ownerRestaurants = await storage.getRestaurantsByOwner(ownerId);
+    const restaurantIds = ownerRestaurants.map(r => r.id);
+    
+    if (restaurantIds.length === 0) {
+      return res.json([]);
+    }
+    
+    const items = await db.select()
+      .from(menuItems)
+      .where(inArray(menuItems.restaurantId, restaurantIds))
+      .orderBy(menuItems.category, menuItems.name);
+    
+    res.json(items);
+  } catch (error) {
+    console.error("Error fetching menu items:", error);
+    res.status(500).json({ message: "Failed to fetch menu items" });
+  }
+});
+
+// PUT update menu item
+router.put("/menu-items/:id", requireAuth, async (req: any, res) => {
+  try {
+    const ownerId = req.ownerId!;
+    const itemId = parseInt(req.params.id);
+    
+    const item = await storage.getMenuItemById(itemId);
+    if (!item) {
+      return res.status(404).json({ message: "Menu item not found" });
+    }
+    
+    const ownerRestaurants = await storage.getRestaurantsByOwner(ownerId);
+    if (!ownerRestaurants.some(r => r.id === item.restaurantId)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    const allowedFields = ['name', 'description', 'category', 'price', 'imageUrl', 'ingredients', 'allergens', 'dietaryTags', 'spiceLevel', 'isAvailable', 'calories', 'preparationTime', 'isPopular'];
+    const updates: any = {};
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+    
+    const updated = await storage.updateMenuItem(itemId, updates);
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating menu item:", error);
+    res.status(500).json({ message: "Failed to update menu item" });
+  }
+});
+
+// DELETE menu item
+router.delete("/menu-items/:id", requireAuth, async (req: any, res) => {
+  try {
+    const ownerId = req.ownerId!;
+    const itemId = parseInt(req.params.id);
+    
+    const item = await storage.getMenuItemById(itemId);
+    if (!item) {
+      return res.status(404).json({ message: "Menu item not found" });
+    }
+    
+    const ownerRestaurants = await storage.getRestaurantsByOwner(ownerId);
+    if (!ownerRestaurants.some(r => r.id === item.restaurantId)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    await storage.deleteMenuItem(itemId);
+    res.json({ message: "Menu item deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting menu item:", error);
+    res.status(500).json({ message: "Failed to delete menu item" });
+  }
+});
+
+// PATCH toggle availability
+router.patch("/menu-items/:id/availability", requireAuth, async (req: any, res) => {
+  try {
+    const ownerId = req.ownerId!;
+    const itemId = parseInt(req.params.id);
+    
+    const item = await storage.getMenuItemById(itemId);
+    if (!item) {
+      return res.status(404).json({ message: "Menu item not found" });
+    }
+    
+    const ownerRestaurants = await storage.getRestaurantsByOwner(ownerId);
+    if (!ownerRestaurants.some(r => r.id === item.restaurantId)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    const updated = await storage.updateMenuItem(itemId, { isAvailable: !item.isAvailable });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error toggling availability:", error);
+    res.status(500).json({ message: "Failed to toggle availability" });
+  }
+});
+
 // Update restaurant owner banking information
 router.put("/owner/banking", requireAuth, async (req, res) => {
   try {
