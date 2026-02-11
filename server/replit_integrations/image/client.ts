@@ -19,8 +19,12 @@ export async function generateImageBuffer(
     model: "gpt-image-1",
     prompt,
     size,
+    response_format: "b64_json",
   });
-  const base64 = response.data[0]?.b64_json ?? "";
+  const base64 = response.data?.[0]?.b64_json;
+  if (!base64) {
+    throw new Error("No image data returned from AI model");
+  }
   return Buffer.from(base64, "base64");
 }
 
