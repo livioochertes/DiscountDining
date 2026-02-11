@@ -510,6 +510,72 @@ router.post("/restaurants/:id/menu", requireAuth, async (req, res) => {
   }
 });
 
+// AI suggest menu item details based on dish name
+router.post("/menu-items/ai-suggest", requireAuth, async (req: any, res) => {
+  try {
+    const { name, category } = req.body;
+    if (!name) {
+      return res.status(400).json({ message: "Dish name is required" });
+    }
+
+    const OpenAI = (await import("openai")).default;
+    const openai = new OpenAI({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-5-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a culinary expert. Given a dish name and optionally its category, provide realistic details about the dish. Respond ONLY with valid JSON in this exact format:
+{
+  "ingredients": ["ingredient1", "ingredient2", ...],
+  "allergens": ["allergen1", ...],
+  "dietaryTags": ["tag1", ...],
+  "calories": number,
+  "preparationTime": number,
+  "spiceLevel": number,
+  "description": "brief description"
+}
+
+Rules:
+- ingredients: list the main ingredients used in the dish
+- allergens: only include relevant food allergens (e.g., gluten, dairy, nuts, eggs, soy, shellfish, fish, sesame)
+- dietaryTags: only include applicable tags from: vegetarian, vegan, gluten-free, dairy-free, nut-free, keto, paleo, halal, kosher, low-carb, high-protein
+- calories: estimated calories per serving (reasonable number)
+- preparationTime: estimated prep time in minutes
+- spiceLevel: 0-5 scale (0=not spicy, 5=extremely spicy)
+- description: a brief appetizing description (1-2 sentences)`
+        },
+        {
+          role: "user",
+          content: `Dish name: "${name}"${category ? `, Category: "${category}"` : ''}`
+        }
+      ],
+      max_completion_tokens: 500,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      return res.status(500).json({ message: "AI did not return a response" });
+    }
+
+    let suggestion;
+    try {
+      suggestion = JSON.parse(content);
+    } catch {
+      return res.status(500).json({ message: "AI returned an invalid response, please try again" });
+    }
+    res.json(suggestion);
+  } catch (error: any) {
+    console.error("AI suggest error:", error);
+    res.status(500).json({ message: "Failed to get AI suggestions" });
+  }
+});
+
 // GET all menu items for owner's restaurants (including unavailable)
 router.get("/menu-items", requireAuth, async (req: any, res) => {
   try {
