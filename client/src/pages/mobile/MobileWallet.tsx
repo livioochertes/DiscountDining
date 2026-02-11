@@ -1380,7 +1380,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
   // Show payment code QR
   if (paymentCode) {
     return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
         <div className="bg-white w-full max-w-sm rounded-3xl p-6 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-10 h-10 text-green-600" />
@@ -1405,10 +1405,10 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
   }
   
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-      <div className="bg-white w-full rounded-t-3xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-end">
+      <div className="bg-white w-full rounded-t-3xl max-h-[85vh] overflow-y-auto pb-20">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10 rounded-t-3xl">
           <h2 className="text-xl font-bold">Plătește</h2>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100">
             <X className="w-5 h-5" />
