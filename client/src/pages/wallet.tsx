@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,14 +159,17 @@ export default function WalletPage() {
 
   // All hooks must be called before any conditional returns
   // Fetch wallet data
-  const { data: walletData, isLoading } = useQuery<WalletData>({
+  const { data: walletData, isLoading, isRefetching, refetch: refetchWallet } = useQuery<WalletData>({
     queryKey: ["wallet", user?.id],
     queryFn: async () => {
       if (!user?.id) throw new Error("User not authenticated");
       const response = await apiRequest("GET", `/api/customers/${user.id}/wallet`);
       return response.json();
     },
-    enabled: !!user?.id && isAuthenticated
+    enabled: !!user?.id && isAuthenticated,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    staleTime: 10000,
   });
 
   // Fetch available general vouchers
@@ -251,6 +254,39 @@ export default function WalletPage() {
     }
   });
 
+  const pullRef = useRef<HTMLDivElement>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const startYRef = useRef(0);
+  const isPullingRef = useRef(false);
+
+  const handleTouchStart = useCallback((e: { touches: { clientY: number }[] }) => {
+    const el = pullRef.current;
+    if (el && el.scrollTop <= 0) {
+      startYRef.current = e.touches[0].clientY;
+      isPullingRef.current = true;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: { touches: { clientY: number }[] }) => {
+    if (!isPullingRef.current) return;
+    const currentY = e.touches[0].clientY;
+    const diff = Math.max(0, currentY - startYRef.current);
+    const dampened = Math.min(diff * 0.4, 80);
+    setPullDistance(dampened);
+    setIsPulling(dampened > 0);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (pullDistance > 50) {
+      refetchWallet();
+      toast({ title: "Wallet actualizat!" });
+    }
+    setPullDistance(0);
+    setIsPulling(false);
+    isPullingRef.current = false;
+  }, [pullDistance, refetchWallet, toast]);
+
   // Show loading while checking authentication
   if (authLoading) {
     return (
@@ -334,7 +370,26 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+    <div
+      ref={pullRef}
+      className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {(isPulling || isRefetching) && (
+        <div
+          className="flex items-center justify-center transition-all duration-200 overflow-hidden"
+          style={{ height: isPulling ? `${pullDistance}px` : isRefetching ? '48px' : '0px' }}
+        >
+          <div className={`flex items-center gap-2 text-sm text-gray-500 ${pullDistance > 50 ? 'text-primary font-medium' : ''}`}>
+            <div className={`w-5 h-5 border-2 border-current border-t-transparent rounded-full ${(pullDistance > 50 || isRefetching) ? 'animate-spin' : ''}`}
+              style={{ transform: isPulling ? `rotate(${pullDistance * 4}deg)` : undefined }}
+            />
+            {isRefetching ? 'Se actualizează...' : pullDistance > 50 ? 'Eliberați pentru refresh' : 'Trageți în jos...'}
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
