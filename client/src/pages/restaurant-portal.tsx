@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon, ChefHat, Sparkles } from "lucide-react";
+import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon, ChefHat, Sparkles, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ChefForm from "@/components/ChefForm";
 import { useLocation } from "wouter";
@@ -70,6 +70,8 @@ export default function RestaurantPortal() {
   });
   const [isSubmittingMenuItem, setIsSubmittingMenuItem] = useState(false);
   const [isAiSuggesting, setIsAiSuggesting] = useState(false);
+  const [isUploadingMenuImage, setIsUploadingMenuImage] = useState(false);
+  const [isGeneratingAiImage, setIsGeneratingAiImage] = useState(false);
   const [accountFormData, setAccountFormData] = useState({
     companyName: '',
     email: '',
@@ -647,6 +649,51 @@ export default function RestaurantPortal() {
       });
     }
     setIsMenuItemFormOpen(true);
+  };
+
+  const handleMenuImageUpload = async (file: File) => {
+    setIsUploadingMenuImage(true);
+    try {
+      const res = await apiRequest("POST", "/api/uploads/restaurant-image", {
+        fileName: file.name,
+        contentType: file.type
+      });
+      const { uploadUrl, objectPath } = await res.json();
+      
+      await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type }
+      });
+      
+      setMenuFormData(prev => ({ ...prev, imageUrl: objectPath }));
+      toast({ title: "Image uploaded successfully" });
+    } catch (error) {
+      toast({ title: "Failed to upload image", variant: "destructive" });
+    } finally {
+      setIsUploadingMenuImage(false);
+    }
+  };
+
+  const handleGenerateAiImage = async () => {
+    if (!menuFormData.name.trim()) {
+      toast({ title: "Please enter a dish name first", variant: "destructive" });
+      return;
+    }
+    setIsGeneratingAiImage(true);
+    try {
+      const response = await apiRequest("POST", "/api/restaurant-portal/menu-items/ai-generate-image", {
+        name: menuFormData.name,
+        category: menuFormData.category
+      });
+      const { objectPath } = await response.json();
+      setMenuFormData(prev => ({ ...prev, imageUrl: objectPath }));
+      toast({ title: "AI image generated and saved!" });
+    } catch (error) {
+      toast({ title: "Failed to generate AI image", variant: "destructive" });
+    } finally {
+      setIsGeneratingAiImage(false);
+    }
   };
 
   const handleAiSuggest = async () => {
@@ -2681,8 +2728,69 @@ export default function RestaurantPortal() {
                     </div>
                   </div>
                   <div>
-                    <Label>Image URL</Label>
-                    <Input value={menuFormData.imageUrl} onChange={e => setMenuFormData(p => ({ ...p, imageUrl: e.target.value }))} />
+                    <Label>Product Image</Label>
+                    {menuFormData.imageUrl ? (
+                      <div className="flex items-center gap-3 mt-1">
+                        <img src={menuFormData.imageUrl} alt="Product" className="w-20 h-20 object-cover rounded-lg border" />
+                        <Button type="button" variant="outline" size="sm" onClick={() => setMenuFormData(p => ({ ...p, imageUrl: '' }))}>
+                          <X className="w-4 h-4 mr-1" /> Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 mt-1">
+                        <div
+                          className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('border-teal-500', 'bg-teal-50'); }}
+                          onDragLeave={e => { e.preventDefault(); e.currentTarget.classList.remove('border-teal-500', 'bg-teal-50'); }}
+                          onDrop={e => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('border-teal-500', 'bg-teal-50');
+                            const file = e.dataTransfer.files[0];
+                            if (file && file.type.startsWith('image/')) handleMenuImageUpload(file);
+                          }}
+                          onClick={() => document.getElementById('menu-image-input')?.click()}
+                        >
+                          {isUploadingMenuImage ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
+                              <p className="text-sm text-gray-500">Uploading...</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <Upload className="w-6 h-6 text-gray-400" />
+                              <p className="text-sm text-gray-500">Drag & drop or click to browse</p>
+                              <p className="text-xs text-gray-400">PNG, JPG up to 10MB</p>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          id="menu-image-input"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) handleMenuImageUpload(file);
+                            e.target.value = '';
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGenerateAiImage}
+                          disabled={isGeneratingAiImage || !menuFormData.name.trim()}
+                          className="w-full text-xs h-8 gap-1 border-purple-300 text-purple-700 hover:bg-purple-50"
+                        >
+                          {isGeneratingAiImage ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3 h-3" />
+                          )}
+                          {isGeneratingAiImage ? 'Generating image...' : 'AI Generate Image'}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label>Ingredients (comma-separated)</Label>
