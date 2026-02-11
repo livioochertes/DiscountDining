@@ -525,7 +525,7 @@ router.post("/menu-items/ai-suggest", requireAuth, async (req: any, res) => {
     });
 
     const response = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -554,7 +554,7 @@ Rules:
           content: `Dish name: "${name}"${category ? `, Category: "${category}"` : ''}`
         }
       ],
-      max_completion_tokens: 500,
+      max_tokens: 500,
       response_format: { type: "json_object" }
     });
 
@@ -571,8 +571,8 @@ Rules:
     }
     res.json(suggestion);
   } catch (error: any) {
-    console.error("AI suggest error:", error);
-    res.status(500).json({ message: "Failed to get AI suggestions" });
+    console.error("AI suggest error:", error?.message || error);
+    res.status(500).json({ message: error?.message || "Failed to get AI suggestions" });
   }
 });
 
