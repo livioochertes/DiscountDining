@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { 
-  Store, QrCode, Users, LogOut, ChevronRight, Plus, 
-  TrendingUp, BadgePercent, Scan, X, Check, UserPlus, Camera
+import {
+  Store, QrCode, Users, LogOut, ChevronRight, Plus,
+  TrendingUp, BadgePercent, Scan, X, Check, UserPlus, Camera,
+  CreditCard, UtensilsCrossed, Calendar, ClipboardList, Wallet,
+  Send, Printer, ToggleLeft, ToggleRight, Edit2, Loader2,
+  Clock, CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -12,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (Capacitor.isNativePlatform() ? 'https://eatoff.app' : '');
+
+type DashboardTab = 'home' | 'payments' | 'menu' | 'reservations' | 'orders';
 
 interface RestaurantSession {
   token: string;
@@ -24,6 +29,8 @@ export default function MobileRestaurantDashboard() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [session, setSession] = useState<RestaurantSession | null>(null);
+  const [activeTab, setActiveTab] = useState<DashboardTab>('home');
+
   const [showScanner, setShowScanner] = useState(false);
   const [manualCustomerId, setManualCustomerId] = useState('');
   const [selectedGroupType, setSelectedGroupType] = useState<'cashback' | 'loyalty'>('cashback');
@@ -33,17 +40,23 @@ export default function MobileRestaurantDashboard() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
-  // Request camera permission and start QR scanning
-  const startQRScanner = async () => {
+  const [paymentCode, setPaymentCode] = useState('');
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [paymentActionResult, setPaymentActionResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [customerCode, setCustomerCode] = useState('');
+  const [requestAmount, setRequestAmount] = useState('');
+  const [requestResult, setRequestResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const [editingMenuItem, setEditingMenuItem] = useState<number | null>(null);
+  const [editPrice, setEditPrice] = useState('');
+
+  const startQRScanner = async (onScan?: (value: string) => void) => {
     if (!Capacitor.isNativePlatform()) {
       setScanError('Scanarea QR este disponibilă doar în aplicația mobilă');
       return;
     }
-
     try {
-      // Check if permission is already granted
       const { camera } = await BarcodeScanner.checkPermissions();
-      
       if (camera !== 'granted') {
         const permission = await BarcodeScanner.requestPermissions();
         if (permission.camera !== 'granted') {
@@ -51,28 +64,25 @@ export default function MobileRestaurantDashboard() {
           return;
         }
       }
-
       setIsScanning(true);
       setScanError(null);
-
-      // Start scanning
       const { barcodes } = await BarcodeScanner.scan();
-      
       setIsScanning(false);
-
       if (barcodes.length > 0) {
         const scannedValue = barcodes[0].rawValue;
-        // Parse customer ID from QR code (format: eatoff://customer/{id})
-        const customerIdMatch = scannedValue?.match(/eatoff:\/\/customer\/(\d+)/);
-        if (customerIdMatch) {
-          setManualCustomerId(customerIdMatch[1]);
-          lookupCustomerMutation.mutate(customerIdMatch[1]);
-        } else if (scannedValue && /^\d+$/.test(scannedValue)) {
-          // If it's just a number, use it directly as customer ID
-          setManualCustomerId(scannedValue);
-          lookupCustomerMutation.mutate(scannedValue);
+        if (onScan && scannedValue) {
+          onScan(scannedValue);
         } else {
-          setScanError('Cod QR invalid. Scanează codul din profilul clientului.');
+          const customerIdMatch = scannedValue?.match(/eatoff:\/\/customer\/(\d+)/);
+          if (customerIdMatch) {
+            setManualCustomerId(customerIdMatch[1]);
+            lookupCustomerMutation.mutate(customerIdMatch[1]);
+          } else if (scannedValue && /^\d+$/.test(scannedValue)) {
+            setManualCustomerId(scannedValue);
+            lookupCustomerMutation.mutate(scannedValue);
+          } else {
+            setScanError('Cod QR invalid. Scanează codul din profilul clientului.');
+          }
         }
       }
     } catch (error: any) {
@@ -92,7 +102,6 @@ export default function MobileRestaurantDashboard() {
 
   const restaurantId = session?.restaurant?.id;
 
-  // Fetch cashback groups
   const { data: cashbackGroups = [] } = useQuery<any[]>({
     queryKey: ['/api/restaurant', restaurantId, 'cashback-groups'],
     queryFn: async () => {
@@ -105,7 +114,6 @@ export default function MobileRestaurantDashboard() {
     enabled: !!restaurantId,
   });
 
-  // Fetch loyalty groups
   const { data: loyaltyGroups = [] } = useQuery<any[]>({
     queryKey: ['/api/restaurant', restaurantId, 'loyalty-groups'],
     queryFn: async () => {
@@ -118,7 +126,54 @@ export default function MobileRestaurantDashboard() {
     enabled: !!restaurantId,
   });
 
-  // Lookup customer mutation
+  const { data: transactions = [], isLoading: transactionsLoading } = useQuery<any[]>({
+    queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/restaurant/${restaurantId}/transactions`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+      return response.json();
+    },
+    enabled: !!restaurantId && activeTab === 'payments',
+  });
+
+  const { data: menuItems = [], isLoading: menuLoading } = useQuery<any[]>({
+    queryKey: ['/api/restaurant-portal/menu-items', restaurantId],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/menu-items?restaurantId=${restaurantId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch menu items');
+      return response.json();
+    },
+    enabled: !!restaurantId && activeTab === 'menu',
+  });
+
+  const { data: reservations = [], isLoading: reservationsLoading } = useQuery<any[]>({
+    queryKey: ['/api/restaurant-portal/reservations', restaurantId],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations?restaurantId=${restaurantId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch reservations');
+      return response.json();
+    },
+    enabled: !!restaurantId && activeTab === 'reservations',
+  });
+
+  const { data: orders = [], isLoading: ordersLoading } = useQuery<any[]>({
+    queryKey: ['/api/restaurant-portal/orders', restaurantId],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/orders?restaurantId=${restaurantId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch orders');
+      return response.json();
+    },
+    enabled: !!restaurantId && activeTab === 'orders',
+  });
+
   const lookupCustomerMutation = useMutation({
     mutationFn: async (customerId: string) => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/customer/${customerId}`, {
@@ -132,7 +187,6 @@ export default function MobileRestaurantDashboard() {
     },
   });
 
-  // Enroll customer in cashback group
   const enrollCashbackMutation = useMutation({
     mutationFn: async ({ customerId, groupId }: { customerId: number; groupId: number }) => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/enroll-customer/cashback`, {
@@ -163,7 +217,6 @@ export default function MobileRestaurantDashboard() {
     },
   });
 
-  // Enroll customer in loyalty group
   const enrollLoyaltyMutation = useMutation({
     mutationFn: async ({ customerId, groupId }: { customerId: number; groupId: number }) => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/enroll-customer/loyalty`, {
@@ -194,6 +247,170 @@ export default function MobileRestaurantDashboard() {
     },
   });
 
+  const fetchPaymentMutation = useMutation({
+    mutationFn: async (transactionId: string) => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/payment/${transactionId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Tranzacția nu a fost găsită');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setPaymentDetails(data);
+      setPaymentActionResult(null);
+    },
+    onError: () => {
+      setPaymentDetails(null);
+      setPaymentActionResult({ type: 'error', message: 'Tranzacția nu a fost găsită sau codul este invalid.' });
+    },
+  });
+
+  const acceptPaymentMutation = useMutation({
+    mutationFn: async (transactionId: string) => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/payment/${transactionId}/accept`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId }),
+      });
+      if (!response.ok) throw new Error('Eroare la acceptarea plății');
+      return response.json();
+    },
+    onSuccess: () => {
+      setPaymentActionResult({ type: 'success', message: 'Plata a fost acceptată cu succes!' });
+      setPaymentDetails(null);
+      setPaymentCode('');
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'] });
+    },
+    onError: (error: Error) => {
+      setPaymentActionResult({ type: 'error', message: error.message });
+    },
+  });
+
+  const rejectPaymentMutation = useMutation({
+    mutationFn: async (transactionId: string) => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/payment/${transactionId}/reject`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error('Eroare la respingerea plății');
+      return response.json();
+    },
+    onSuccess: () => {
+      setPaymentActionResult({ type: 'success', message: 'Plata a fost respinsă.' });
+      setPaymentDetails(null);
+      setPaymentCode('');
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'] });
+    },
+    onError: (error: Error) => {
+      setPaymentActionResult({ type: 'error', message: error.message });
+    },
+  });
+
+  const sendPaymentRequestMutation = useMutation({
+    mutationFn: async (data: { customerCode: string; amount: number; restaurantId: number }) => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/restaurant-payment-request`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Eroare la trimiterea solicitării');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setRequestResult({ type: 'success', message: 'Solicitarea de plată a fost trimisă cu succes!' });
+      setCustomerCode('');
+      setRequestAmount('');
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'] });
+    },
+    onError: (error: Error) => {
+      setRequestResult({ type: 'error', message: error.message });
+    },
+  });
+
+  const toggleMenuItemMutation = useMutation({
+    mutationFn: async ({ id, isAvailable }: { id: number; isAvailable: boolean }) => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/menu-items/${id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isAvailable }),
+      });
+      if (!response.ok) throw new Error('Failed to update');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/menu-items', restaurantId] });
+    },
+  });
+
+  const updatePriceMutation = useMutation({
+    mutationFn: async ({ id, price }: { id: number; price: string }) => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/menu-items/${id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price }),
+      });
+      if (!response.ok) throw new Error('Failed to update price');
+      return response.json();
+    },
+    onSuccess: () => {
+      setEditingMenuItem(null);
+      setEditPrice('');
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/menu-items', restaurantId] });
+    },
+  });
+
+  const confirmReservationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations/${id}/confirm`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to confirm');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/reservations', restaurantId] });
+    },
+  });
+
+  const cancelReservationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations/${id}/cancel`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to cancel');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/reservations', restaurantId] });
+    },
+  });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/orders/${id}/status`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) throw new Error('Failed to update order');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/orders', restaurantId] });
+    },
+  });
+
   const handleLogout = () => {
     localStorage.removeItem('restaurantSession');
     setLocation('/m/restaurant/signin');
@@ -207,18 +424,41 @@ export default function MobileRestaurantDashboard() {
 
   const handleEnroll = () => {
     if (!scannedCustomer?.customer?.id || !selectedGroupId) return;
-    
     if (selectedGroupType === 'cashback') {
-      enrollCashbackMutation.mutate({
-        customerId: scannedCustomer.customer.id,
-        groupId: selectedGroupId,
-      });
+      enrollCashbackMutation.mutate({ customerId: scannedCustomer.customer.id, groupId: selectedGroupId });
     } else {
-      enrollLoyaltyMutation.mutate({
-        customerId: scannedCustomer.customer.id,
-        groupId: selectedGroupId,
-      });
+      enrollLoyaltyMutation.mutate({ customerId: scannedCustomer.customer.id, groupId: selectedGroupId });
     }
+  };
+
+  const handleLookupPayment = () => {
+    if (!paymentCode.trim()) return;
+    const match = paymentCode.match(/EATOFF_PAY:(\S+)/);
+    const txId = match ? match[1] : paymentCode.trim();
+    fetchPaymentMutation.mutate(txId);
+  };
+
+  const handleSendPaymentRequest = () => {
+    if (!customerCode.trim() || !requestAmount.trim() || !restaurantId) return;
+    const amount = parseFloat(requestAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setRequestResult({ type: 'error', message: 'Suma trebuie să fie un număr pozitiv.' });
+      return;
+    }
+    sendPaymentRequestMutation.mutate({ customerCode: customerCode.trim(), amount, restaurantId });
+  };
+
+  const handlePrintOrder = (order: any) => {
+    const printContent = `
+      <html><head><title>Comandă #${order.orderNumber || order.id}</title>
+      <style>body{font-family:sans-serif;padding:20px}h1{font-size:18px}table{width:100%;border-collapse:collapse;margin-top:10px}td,th{border:1px solid #ccc;padding:8px;text-align:left}</style></head>
+      <body><h1>Comandă #${order.orderNumber || order.id}</h1>
+      <p>Status: ${order.status}</p>
+      <p>Total: ${order.total || order.totalAmount} RON</p>
+      ${order.items ? `<table><tr><th>Produs</th><th>Cant.</th><th>Preț</th></tr>${order.items.map((i: any) => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${i.price} RON</td></tr>`).join('')}</table>` : ''}
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(printContent); w.document.close(); w.print(); }
   };
 
   if (!session) {
@@ -233,11 +473,27 @@ export default function MobileRestaurantDashboard() {
 
   const groups = selectedGroupType === 'cashback' ? cashbackGroups : loyaltyGroups;
 
+  const todayTransactions = transactions.filter((tx: any) => {
+    const d = new Date(tx.createdAt || tx.processedAt);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  });
+  const todayRevenue = todayTransactions.reduce((sum: number, tx: any) => sum + parseFloat(tx.amount || tx.restaurantReceives || '0'), 0);
+  const pendingPayments = transactions.filter((tx: any) => tx.transactionStatus === 'pending' || tx.status === 'pending').length;
+  const activeReservations = reservations.filter((r: any) => r.status === 'confirmed' || r.status === 'pending').length;
+
+  const tabs = [
+    { id: 'home' as const, label: 'Acasă', icon: Store },
+    { id: 'payments' as const, label: 'Plăți', icon: Wallet },
+    { id: 'menu' as const, label: 'Meniu', icon: UtensilsCrossed },
+    { id: 'reservations' as const, label: 'Rezervări', icon: Calendar },
+    { id: 'orders' as const, label: 'Comenzi', icon: ClipboardList },
+  ];
+
   return (
     <MobileLayout hideNavigation>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-40">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
               <Store className="w-5 h-5 text-primary" />
@@ -256,93 +512,550 @@ export default function MobileRestaurantDashboard() {
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-2xl p-4 border border-gray-100">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-green-600" />
-                <span className="text-xs text-gray-500">Grupuri Cashback</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{cashbackGroups.length}</p>
-            </div>
-            <div className="bg-white rounded-2xl p-4 border border-gray-100">
-              <div className="flex items-center gap-2 mb-2">
-                <BadgePercent className="w-4 h-4 text-blue-600" />
-                <span className="text-xs text-gray-500">Grupuri Fidelizare</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{loyaltyGroups.length}</p>
-            </div>
-          </div>
-
-          {/* Main Action - Scan QR */}
-          <button
-            onClick={() => setShowScanner(true)}
-            className="w-full bg-primary text-white py-5 rounded-2xl font-semibold flex items-center justify-center gap-3 hover:bg-primary/90 transition-colors"
-          >
-            <QrCode className="w-6 h-6" />
-            Scanează Client pentru Înrolare
-          </button>
-
-          {/* Cashback Groups */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">Grupuri Cashback</h2>
-              <button className="text-primary text-sm font-medium flex items-center gap-1">
-                <Plus className="w-4 h-4" />
-                Adaugă
-              </button>
-            </div>
-            {cashbackGroups.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-                <TrendingUp className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500">Niciun grup cashback creat</p>
-              </div>
-            ) : (
-              cashbackGroups.map((group: any) => (
-                <div key={group.id} className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">{group.name}</p>
-                    <p className="text-sm text-gray-500">{group.description}</p>
+          {activeTab === 'home' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="w-4 h-4 text-green-600" />
+                    <span className="text-xs text-gray-500">Tranzacții azi</span>
                   </div>
-                  <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
-                    {parseFloat(group.cashbackPercentage).toFixed(0)}%
-                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{todayTransactions.length}</p>
                 </div>
-              ))
-            )}
-          </section>
-
-          {/* Loyalty Groups */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">Grupuri Fidelizare</h2>
-              <button className="text-primary text-sm font-medium flex items-center gap-1">
-                <Plus className="w-4 h-4" />
-                Adaugă
-              </button>
-            </div>
-            {loyaltyGroups.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-                <BadgePercent className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500">Niciun grup fidelizare creat</p>
-              </div>
-            ) : (
-              loyaltyGroups.map((group: any) => (
-                <div key={group.id} className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900">{group.name}</p>
-                    <p className="text-sm text-gray-500">Tier {group.tierLevel}</p>
+                <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs text-gray-500">Venituri azi</span>
                   </div>
-                  <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">
-                    {parseFloat(group.discountPercentage).toFixed(0)}% discount
-                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{todayRevenue.toFixed(2)} RON</p>
                 </div>
-              ))
-            )}
-          </section>
+                <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <span className="text-xs text-gray-500">Plăți în așteptare</span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{pendingPayments}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="w-4 h-4 text-purple-600" />
+                    <span className="text-xs text-gray-500">Rezervări active</span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{activeReservations}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setActiveTab('payments')}
+                  className="flex-1 bg-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                >
+                  <Scan className="w-5 h-5" />
+                  Scanează Plată
+                </button>
+                <button
+                  onClick={() => setShowScanner(true)}
+                  className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Înrolează Client
+                </button>
+              </div>
+
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold text-gray-900">Grupuri Cashback</h2>
+                  <button className="text-primary text-sm font-medium flex items-center gap-1">
+                    <Plus className="w-4 h-4" />
+                    Adaugă
+                  </button>
+                </div>
+                {cashbackGroups.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                    <TrendingUp className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500">Niciun grup cashback creat</p>
+                  </div>
+                ) : (
+                  cashbackGroups.map((group: any) => (
+                    <div key={group.id} className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">{group.name}</p>
+                        <p className="text-sm text-gray-500">{group.description}</p>
+                      </div>
+                      <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                        {parseFloat(group.cashbackPercentage).toFixed(0)}%
+                      </div>
+                    </div>
+                  ))
+                )}
+              </section>
+
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold text-gray-900">Grupuri Fidelizare</h2>
+                  <button className="text-primary text-sm font-medium flex items-center gap-1">
+                    <Plus className="w-4 h-4" />
+                    Adaugă
+                  </button>
+                </div>
+                {loyaltyGroups.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                    <BadgePercent className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500">Niciun grup fidelizare creat</p>
+                  </div>
+                ) : (
+                  loyaltyGroups.map((group: any) => (
+                    <div key={group.id} className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">{group.name}</p>
+                        <p className="text-sm text-gray-500">Tier {group.tierLevel}</p>
+                      </div>
+                      <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">
+                        {parseFloat(group.discountPercentage).toFixed(0)}% discount
+                      </div>
+                    </div>
+                  ))
+                )}
+              </section>
+            </>
+          )}
+
+          {activeTab === 'payments' && (
+            <>
+              <section className="bg-white rounded-2xl p-4 border border-gray-100 space-y-4">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Scan className="w-5 h-5 text-primary" />
+                  Scanează & Acceptă Plata
+                </h3>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={paymentCode}
+                    onChange={(e) => setPaymentCode(e.target.value)}
+                    placeholder="Cod plată (ex: EATOFF_PAY:123)"
+                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    onClick={() => startQRScanner((val) => {
+                      setPaymentCode(val);
+                      const match = val.match(/EATOFF_PAY:(\S+)/);
+                      const txId = match ? match[1] : val.trim();
+                      fetchPaymentMutation.mutate(txId);
+                    })}
+                    className="bg-gray-900 text-white p-3 rounded-xl"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </button>
+                </div>
+                <button
+                  onClick={handleLookupPayment}
+                  disabled={!paymentCode.trim() || fetchPaymentMutation.isPending}
+                  className="w-full bg-primary text-white py-3 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {fetchPaymentMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <QrCode className="w-5 h-5" />
+                      Caută Tranzacția
+                    </>
+                  )}
+                </button>
+
+                {paymentActionResult && (
+                  <div className={cn(
+                    "px-4 py-3 rounded-xl text-sm flex items-center gap-2",
+                    paymentActionResult.type === 'success' ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                  )}>
+                    {paymentActionResult.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    {paymentActionResult.message}
+                  </div>
+                )}
+
+                {paymentDetails && (
+                  <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Users className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{paymentDetails.customerName || 'Client'}</p>
+                        <p className="text-xs text-gray-500">{paymentDetails.timestamp ? new Date(paymentDetails.timestamp).toLocaleString('ro-RO') : ''}</p>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-xl p-3 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">Sumă totală</span>
+                        <span className="font-bold text-gray-900">{paymentDetails.amount} RON</span>
+                      </div>
+                      {paymentDetails.paymentMethod && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 text-sm">Metodă</span>
+                          <span className="text-gray-700 text-sm">{paymentDetails.paymentMethod}</span>
+                        </div>
+                      )}
+                      {paymentDetails.voucherValue && parseFloat(paymentDetails.voucherValue) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 text-sm">Voucher</span>
+                          <span className="text-green-600 text-sm">-{paymentDetails.voucherValue} RON</span>
+                        </div>
+                      )}
+                      {paymentDetails.cashUsed && parseFloat(paymentDetails.cashUsed) > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 text-sm">Cash</span>
+                          <span className="text-gray-700 text-sm">{paymentDetails.cashUsed} RON</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          const match = paymentCode.match(/EATOFF_PAY:(\S+)/);
+                          const txId = match ? match[1] : paymentCode.trim();
+                          acceptPaymentMutation.mutate(txId);
+                        }}
+                        disabled={acceptPaymentMutation.isPending}
+                        className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {acceptPaymentMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check className="w-5 h-5" /> Acceptă Plata</>}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const match = paymentCode.match(/EATOFF_PAY:(\S+)/);
+                          const txId = match ? match[1] : paymentCode.trim();
+                          rejectPaymentMutation.mutate(txId);
+                        }}
+                        disabled={rejectPaymentMutation.isPending}
+                        className="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {rejectPaymentMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><X className="w-5 h-5" /> Respinge</>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <section className="bg-white rounded-2xl p-4 border border-gray-100 space-y-4">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Send className="w-5 h-5 text-primary" />
+                  Solicită Plată de la Client
+                </h3>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customerCode}
+                    onChange={(e) => setCustomerCode(e.target.value)}
+                    placeholder="Cod client (ex: CLI-ABC123)"
+                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    onClick={() => startQRScanner((val) => setCustomerCode(val))}
+                    className="bg-gray-900 text-white p-3 rounded-xl"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  value={requestAmount}
+                  onChange={(e) => setRequestAmount(e.target.value)}
+                  placeholder="Sumă (RON)"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button
+                  onClick={handleSendPaymentRequest}
+                  disabled={!customerCode.trim() || !requestAmount.trim() || sendPaymentRequestMutation.isPending}
+                  className="w-full bg-primary text-white py-3 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendPaymentRequestMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" />
+                      Trimite Solicitare de Plată
+                    </>
+                  )}
+                </button>
+
+                {requestResult && (
+                  <div className={cn(
+                    "px-4 py-3 rounded-xl text-sm flex items-center gap-2",
+                    requestResult.type === 'success' ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                  )}>
+                    {requestResult.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    {requestResult.message}
+                  </div>
+                )}
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  Istoric Tranzacții
+                </h3>
+                {transactionsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                    <CreditCard className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500">Nicio tranzacție încă</p>
+                  </div>
+                ) : (
+                  transactions.slice(0, 20).map((tx: any) => {
+                    const status = tx.transactionStatus || tx.status || 'pending';
+                    const statusColor = status === 'completed' ? 'bg-green-100 text-green-700' : status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+                    const statusLabel = status === 'completed' ? 'Finalizat' : status === 'rejected' ? 'Respins' : 'În așteptare';
+                    return (
+                      <div key={tx.id} className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{tx.customerName || `Client #${tx.customerId}`}</p>
+                          <p className="text-xs text-gray-500">{new Date(tx.createdAt || tx.processedAt).toLocaleString('ro-RO')}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium", statusColor)}>{statusLabel}</span>
+                          <span className="font-bold text-gray-900 whitespace-nowrap">{parseFloat(tx.amount || tx.restaurantReceives || '0').toFixed(2)} RON</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </section>
+            </>
+          )}
+
+          {activeTab === 'menu' && (
+            <>
+              <h2 className="font-semibold text-gray-900 text-lg">Managementul Meniului</h2>
+              {menuLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : menuItems.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                  <UtensilsCrossed className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500">Niciun produs în meniu</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {menuItems.map((item: any) => (
+                    <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-100">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-gray-900">{item.name}</p>
+                            {item.category && (
+                              <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">{item.category}</span>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="text-sm text-gray-500 truncate">{item.description}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            toggleMenuItemMutation.mutate({ id: item.id, isAvailable: !item.isAvailable });
+                          }}
+                          className="ml-3"
+                        >
+                          {item.isAvailable !== false ? (
+                            <ToggleRight className="w-8 h-8 text-green-600" />
+                          ) : (
+                            <ToggleLeft className="w-8 h-8 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between mt-3">
+                        {editingMenuItem === item.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              value={editPrice}
+                              onChange={(e) => setEditPrice(e.target.value)}
+                              className="w-24 px-3 py-2 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder="Preț"
+                            />
+                            <button
+                              onClick={() => updatePriceMutation.mutate({ id: item.id, price: editPrice })}
+                              disabled={updatePriceMutation.isPending}
+                              className="bg-green-600 text-white p-2 rounded-xl"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => { setEditingMenuItem(null); setEditPrice(''); }}
+                              className="bg-gray-200 text-gray-600 p-2 rounded-xl"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-900">{parseFloat(item.price || '0').toFixed(2)} RON</span>
+                            <button
+                              onClick={() => { setEditingMenuItem(item.id); setEditPrice(item.price || ''); }}
+                              className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        <span className={cn(
+                          "text-xs font-medium px-2 py-1 rounded-full",
+                          item.isAvailable !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        )}>
+                          {item.isAvailable !== false ? 'Disponibil' : 'Indisponibil'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'reservations' && (
+            <>
+              <h2 className="font-semibold text-gray-900 text-lg">Rezervări</h2>
+              {reservationsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : reservations.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                  <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500">Nicio rezervare</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reservations.map((res: any) => {
+                    const status = res.status || 'pending';
+                    const statusColor = status === 'confirmed' ? 'bg-green-100 text-green-700' : status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+                    const statusLabel = status === 'confirmed' ? 'Confirmat' : status === 'cancelled' ? 'Anulat' : 'În așteptare';
+                    return (
+                      <div key={res.id} className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-medium text-gray-900">{res.customerName || res.guestName || `Client #${res.customerId}`}</p>
+                            <p className="text-sm text-gray-500">
+                              {res.reservationDate ? new Date(res.reservationDate).toLocaleDateString('ro-RO') : ''}{' '}
+                              {res.reservationTime || ''}
+                            </p>
+                          </div>
+                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium", statusColor)}>{statusLabel}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Users className="w-4 h-4" />
+                            <span>{res.partySize || res.guestCount || res.numberOfGuests || '?'} persoane</span>
+                          </div>
+                          {status === 'pending' && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => confirmReservationMutation.mutate(res.id)}
+                                disabled={confirmReservationMutation.isPending}
+                                className="bg-green-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium flex items-center gap-1"
+                              >
+                                <Check className="w-4 h-4" />
+                                Confirmă
+                              </button>
+                              <button
+                                onClick={() => cancelReservationMutation.mutate(res.id)}
+                                disabled={cancelReservationMutation.isPending}
+                                className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium flex items-center gap-1"
+                              >
+                                <X className="w-4 h-4" />
+                                Anulează
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'orders' && (
+            <>
+              <h2 className="font-semibold text-gray-900 text-lg">Comenzi</h2>
+              {ordersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                  <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500">Nicio comandă</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {orders.map((order: any) => {
+                    const status = order.status || 'pending';
+                    const statusColor = status === 'ready' ? 'bg-green-100 text-green-700' : status === 'preparing' ? 'bg-blue-100 text-blue-700' : status === 'completed' ? 'bg-gray-100 text-gray-700' : 'bg-amber-100 text-amber-700';
+                    const statusLabel = status === 'ready' ? 'Gata' : status === 'preparing' ? 'Se pregătește' : status === 'completed' ? 'Finalizat' : 'Nouă';
+                    return (
+                      <div key={order.id} className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-semibold text-gray-900">Comandă #{order.orderNumber || order.id}</p>
+                            <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString('ro-RO')}</p>
+                          </div>
+                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium", statusColor)}>{statusLabel}</span>
+                        </div>
+
+                        {order.items && order.items.length > 0 && (
+                          <div className="bg-gray-50 rounded-xl p-3 mb-3 space-y-1">
+                            {order.items.map((item: any, idx: number) => (
+                              <div key={idx} className="flex justify-between text-sm">
+                                <span className="text-gray-700">{item.quantity}x {item.name}</span>
+                                <span className="text-gray-500">{item.price} RON</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-gray-900">{parseFloat(order.total || order.totalAmount || '0').toFixed(2)} RON</p>
+                          <div className="flex gap-2">
+                            {status === 'pending' && (
+                              <button
+                                onClick={() => updateOrderStatusMutation.mutate({ id: order.id, status: 'preparing' })}
+                                disabled={updateOrderStatusMutation.isPending}
+                                className="bg-blue-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium"
+                              >
+                                Se pregătește
+                              </button>
+                            )}
+                            {status === 'preparing' && (
+                              <button
+                                onClick={() => updateOrderStatusMutation.mutate({ id: order.id, status: 'ready' })}
+                                disabled={updateOrderStatusMutation.isPending}
+                                className="bg-green-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium"
+                              >
+                                Gata
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handlePrintOrder(order)}
+                              className="bg-gray-100 text-gray-700 p-2 rounded-xl"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Scanner Modal */}
         {showScanner && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
             <div className="bg-white w-full rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
@@ -370,7 +1083,6 @@ export default function MobileRestaurantDashboard() {
                     </button>
                   </div>
 
-                  {/* Customer Info */}
                   <div className="bg-gray-50 rounded-2xl p-4 mb-6 flex items-center gap-4">
                     <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
                       <Users className="w-7 h-7 text-primary" />
@@ -381,7 +1093,6 @@ export default function MobileRestaurantDashboard() {
                     </div>
                   </div>
 
-                  {/* Group Type Selection */}
                   <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
                     <button
                       onClick={() => {
@@ -409,7 +1120,6 @@ export default function MobileRestaurantDashboard() {
                     </button>
                   </div>
 
-                  {/* Group Selection */}
                   <div className="space-y-2 mb-6">
                     {groups.length === 0 ? (
                       <p className="text-center text-gray-500 py-4">Niciun grup disponibil</p>
@@ -428,7 +1138,7 @@ export default function MobileRestaurantDashboard() {
                           <div>
                             <p className="font-medium text-gray-900">{group.name}</p>
                             <p className="text-sm text-gray-500">
-                              {selectedGroupType === 'cashback' 
+                              {selectedGroupType === 'cashback'
                                 ? `${parseFloat(group.cashbackPercentage).toFixed(0)}% cashback`
                                 : `${parseFloat(group.discountPercentage).toFixed(0)}% discount`
                               }
@@ -475,9 +1185,8 @@ export default function MobileRestaurantDashboard() {
                     </button>
                   </div>
 
-                  {/* QR Scanner */}
                   <button
-                    onClick={startQRScanner}
+                    onClick={() => startQRScanner()}
                     disabled={isScanning}
                     className="w-full bg-gray-900 text-white rounded-2xl aspect-video flex items-center justify-center mb-4 hover:bg-gray-800 transition-colors disabled:opacity-50"
                   >
@@ -503,7 +1212,6 @@ export default function MobileRestaurantDashboard() {
                     </div>
                   )}
 
-                  {/* Manual ID Input */}
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -535,6 +1243,26 @@ export default function MobileRestaurantDashboard() {
             </div>
           </div>
         )}
+
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-1 flex justify-around items-center z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all min-w-0 flex-1",
+                  isActive ? "text-primary" : "text-gray-400"
+                )}
+              >
+                <Icon className={cn("w-5 h-5 mb-0.5", isActive && "text-primary")} />
+                <span className={cn("text-[10px] font-medium truncate", isActive ? "text-primary" : "text-gray-400")}>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </MobileLayout>
   );

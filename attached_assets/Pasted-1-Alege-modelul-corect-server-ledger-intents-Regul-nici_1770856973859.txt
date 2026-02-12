@@ -1,0 +1,146 @@
+1) Alege modelul corect: server-ledger + intents
+
+Regulă: nici chelnerul, nici clientul nu “mută bani”. Doar serverul mută unități de credit în ledger.
+
+Ledger (double-entry, atomic)
+	•	UserWallet (debit)
+	•	RestaurantWallet (credit)
+	•	EatOffFees (credit, dacă e cazul)
+	•	opțional Escrow/Clearing
+
+Totul în minor units (bani întregi: bani/centime), fără float.
+
+⸻
+
+2) Top-up prin Stripe: sigur, dar fă-l „corect”
+
+Flux recomandat:
+	1.	Client → server: POST /topups (sumă, monedă)
+	2.	Server → Stripe: creează PaymentIntent (client_secret)
+	3.	Client confirmă în Stripe SDK
+	4.	Webhook Stripe (singura sursă de adevăr) → server marchează topup “succeeded”
+	5.	Server postează intrarea în ledger: TopUpCredit
+
+🔑 Important:
+	•	nu credita contul la “success pe client”; numai la webhook.
+	•	folosește idempotency keys la Stripe + la server.
+
+⸻
+
+3) Cheltuirea în restaurant: “proof-of-presence” + anti-replay
+
+Cea mai sigură variantă: QR one-time + session
+
+În restaurant, Device B afișează un QR care conține un token scurt, semnat de server.
+
+Flow:
+	1.	Chelner/POS (Device B) → server: POST /checkin-sessions
+	•	restaurant_id, table_id (opțional), amount_hint (opțional)
+	2.	Server răspunde cu session_id + qr_token (expiră în 30–120 sec)
+	3.	Client (Device A) scanează QR → trimite la server: POST /payment-intents
+	•	session_id, amount, tip (opțional)
+	4.	Server face risk checks + freeze fonduri (hold)
+	5.	Client confirmă (PIN/biometric în app)
+	6.	Server finalizează tranzacția: POST /payment-intents/{id}/confirm
+
+✅ Avantaje:
+	•	Device B nu poate inventa locații
+	•	tokenul expiră rapid, nu se poate re-folosi
+	•	chiar dacă GPS e slab, QR “bate” tot
+
+⸻
+
+4) Device B: telefon chelner vs POS — ce e mai securizat?
+
+✅ Cel mai securizat: POS / tabletă dedicată restaurantului
+	•	cont “restaurant device” dedicat
+	•	device managed (mai stabil, mai puțin risc de malware personal)
+
+Telefon chelner: ok, dar impune reguli
+
+Dacă alegi telefon chelner:
+	•	autentificare staff + role-based access (RBAC)
+	•	device binding (device_id) + limitări
+	•	revocare instant dacă pleacă din firmă
+
+Recomandarea mea:
+➡️ Pentru securitate maximă: POS/tabletă restaurant ca Device B (sau minimum “Restaurant Admin device”), iar chelnerii au acces limitat.
+
+⸻
+
+5) Semnături + idempotency pe requesturile sensibile
+
+Pe toate endpoint-urile de “money movement”:
+	•	X-Request-Id (UUID) = idempotency
+	•	X-Timestamp + X-Nonce (anti replay)
+	•	X-Signature (HMAC cu secret de device stocat în Keychain/Keystore)
+
+Server verifică:
+	•	timestamp în fereastră (ex: 2 minute)
+	•	nonce nefolosit
+	•	request-id neprocesat
+
+Asta oprește:
+	•	replay
+	•	dublări
+	•	modificări prin proxy
+
+⸻
+
+6) „Hold → Capture” pentru credit intern (anti-fraud / anti-dispute)
+
+Când clientul inițiază plata:
+	1.	Hold: scazi din “available”, pui în “reserved” (ledger event Reserve)
+	2.	Confirmare finală → Capture (Capture)
+	3.	Timeout / cancel → Release
+
+Asta îți permite:
+	•	să eviți cheltuiri paralele
+	•	să gestionezi offline / pierdere conexiune
+	•	să ai UX bun (“se procesează”)
+
+⸻
+
+7) Risk checks (simple, dar eficiente)
+
+La confirmare:
+	•	wallet balance suficient
+	•	session valid + ne-expirat + restaurant match
+	•	device A & B “fresh” (nu token vechi)
+	•	rate limits (ex: max 3 încercări/minut)
+	•	„velocity” check: prea multe tranzacții rapide = flag
+
+Opțional (nice-to-have):
+	•	iOS DeviceCheck / App Attest
+	•	Android Play Integrity API
+(ajută contra emulator/root, dar nu te baza doar pe ele)
+
+⸻
+
+8) Decontare către restaurant (payout)
+
+Separă complet:
+	•	ledger intern (instant)
+	•	payout (zilnic/săptămânal)
+
+Payout-ul îl faci dintr-un job server:
+	•	calculezi net (minus fee, refunds)
+	•	transfer bancar / Stripe Connect (dacă alegi) / alt PSP
+
+⸻
+
+9) Ce faci dacă e semnal slab?
+	•	Flow-ul QR + server e “online required” pentru securitate.
+	•	Dacă vrei fallback:
+	•	permiți “offline draft” pe Device B, dar NU finalizezi fără confirmare server.
+	•	clientul poate vedea “pending”, iar la reconectare se finalizează.
+
+Securitate maximă = nu finalizezi money movement offline.
+
+⸻
+
+Configurația pe care ți-aș recomanda-o pentru EatOff (foarte solidă)
+	•	Top-up: Stripe PaymentIntent + webhook creditare
+	•	Pay in restaurant: QR one-time (server-issued) + PaymentIntent intern (hold/capture)
+	•	Device B: POS/tabletă restaurant (preferat) + chelnerii cu permisiuni limitate
+	•	Server: ledger double-entry + idempotency + HMAC signatures
