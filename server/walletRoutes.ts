@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import * as qr from "qr-image";
 import Stripe from "stripe";
 import { db } from "./db";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import { 
   insertCustomerWalletSchema,
   insertGeneralVoucherSchema,
@@ -27,7 +27,10 @@ import {
   insertLoyaltyGroupSchema,
   creditTypes,
   insertCreditTypeSchema,
-  walletTransactions
+  walletTransactions,
+  paymentTransactions,
+  restaurants,
+  restaurantOwners
 } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -2387,7 +2390,7 @@ router.post("/wallet/topup/complete", async (req: Request, res: Response) => {
   }
 });
 
-// Process split payment - deduct from multiple sources
+// Process split payment - create pending transaction (funds validated but not deducted)
 router.post("/wallet/split-payment", async (req: Request, res: Response) => {
   try {
     const customerId = await getAuthCustomerId(req);
@@ -2412,25 +2415,21 @@ router.post("/wallet/split-payment", async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Allocated amounts do not match total" });
     }
 
-    // Fetch current balances
     const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
     const [walletRecord] = await db.select().from(customerWallets).where(eq(customerWallets.customerId, customerId)).limit(1);
     const [cashbackBalance] = await db.select().from(customerCashbackBalance).where(eq(customerCashbackBalance.customerId, customerId)).limit(1);
     const [creditAccount] = await db.select().from(customerCreditAccount).where(eq(customerCreditAccount.customerId, customerId)).limit(1);
 
-    // Validate personal balance - use customerWallets.cashBalance first, fallback to customers.balance
     const currentPersonalBalance = parseFloat(walletRecord?.cashBalance || customer?.balance || "0");
     if (personalAmount > currentPersonalBalance + 0.01) {
       return res.status(400).json({ message: "Insufficient personal balance" });
     }
 
-    // Validate cashback balance
     const currentCashback = parseFloat(cashbackBalance?.totalCashbackBalance || "0");
     if (cashbackAmount > currentCashback) {
       return res.status(400).json({ message: "Insufficient cashback balance" });
     }
 
-    // Validate credit
     if (creditAmount > 0) {
       if (creditAccount?.status !== "approved") {
         return res.status(400).json({ message: "Credit not approved" });
@@ -2441,52 +2440,63 @@ router.post("/wallet/split-payment", async (req: Request, res: Response) => {
       }
     }
 
-    // Validate vouchers
     for (const [voucherId, amount] of Object.entries(voucherAllocations || {})) {
       if (parseFloat(amount as string) > 0) {
-        // TODO: Validate voucher ownership and remaining value
       }
     }
 
-    // Process deductions
-    if (personalAmount > 0) {
-      const newBalance = (currentPersonalBalance - personalAmount).toFixed(2);
-      if (walletRecord) {
-        await db.update(customerWallets).set({ cashBalance: newBalance }).where(eq(customerWallets.customerId, customerId));
+    let commissionRate = 6.0;
+    let platformCommission = total * (commissionRate / 100);
+    let restaurantReceives = total - platformCommission;
+    let parsedRestaurantId = restaurantId ? parseInt(restaurantId) : null;
+
+    if (parsedRestaurantId) {
+      const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, parsedRestaurantId)).limit(1);
+      if (restaurant) {
+        commissionRate = restaurant.participatesInCashback
+          ? 7.5
+          : parseFloat(restaurant.commissionRate || "6.00");
+        platformCommission = total * (commissionRate / 100);
+        restaurantReceives = total - platformCommission;
       }
-      await db.update(customers).set({ balance: newBalance }).where(eq(customers.id, customerId));
     }
 
-    if (cashbackAmount > 0) {
-      const newCashbackBalance = currentCashback - cashbackAmount;
-      const newCashbackUsed = parseFloat(cashbackBalance?.totalCashbackUsed || "0") + cashbackAmount;
-      await db
-        .update(customerCashbackBalance)
-        .set({ 
-          totalCashbackBalance: newCashbackBalance.toFixed(2),
-          totalCashbackUsed: newCashbackUsed.toFixed(2)
-        })
-        .where(eq(customerCashbackBalance.customerId, customerId));
-    }
+    const paymentMethod = [
+      personalAmount > 0 ? "cash_balance" : null,
+      cashbackAmount > 0 ? "cashback" : null,
+      creditAmount > 0 ? "credit" : null,
+      voucherTotal > 0 ? "voucher" : null,
+    ].filter(Boolean).length > 1 ? "mixed" : 
+      (personalAmount > 0 ? "cash_balance" : cashbackAmount > 0 ? "cashback" : creditAmount > 0 ? "credit" : "voucher");
 
-    if (creditAmount > 0) {
-      const newUsedCredit = parseFloat(creditAccount?.usedCredit || "0") + creditAmount;
-      const newAvailableCredit = parseFloat(creditAccount?.creditLimit || "0") - newUsedCredit;
-      await db
-        .update(customerCreditAccount)
-        .set({
-          usedCredit: newUsedCredit.toFixed(2),
-          availableCredit: newAvailableCredit.toFixed(2)
-        })
-        .where(eq(customerCreditAccount.customerId, customerId));
-    }
+    const [transaction] = await db.insert(paymentTransactions).values({
+      customerId,
+      restaurantId: parsedRestaurantId || 0,
+      transactionType: "split_payment",
+      amount: total.toFixed(2),
+      paymentMethod,
+      voucherValue: voucherTotal.toFixed(2),
+      pointsUsed: 0,
+      cashUsed: personalAmount.toFixed(2),
+      generalVoucherDiscount: "0.00",
+      platformCommission: platformCommission.toFixed(2),
+      restaurantReceives: restaurantReceives.toFixed(2),
+      transactionStatus: "pending",
+      qrCodeScanned: JSON.stringify({
+        personalAmount: personalAmount.toFixed(2),
+        cashbackAmount: cashbackAmount.toFixed(2),
+        creditAmount: creditAmount.toFixed(2),
+        voucherTotal: voucherTotal.toFixed(2),
+        voucherAllocations: voucherAllocations || {}
+      }),
+    }).returning();
 
-    // Generate unique payment code
-    const paymentCode = `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const paymentCode = `EATOFF_PAY:${transaction.id}`;
 
     res.json({
       success: true,
       paymentCode,
+      transactionId: transaction.id,
       totalAmount: total.toFixed(2),
       breakdown: {
         personal: personalAmount.toFixed(2),
@@ -2498,6 +2508,519 @@ router.post("/wallet/split-payment", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error processing split payment:", error);
     res.status(500).json({ message: "Error processing payment: " + error.message });
+  }
+});
+
+// Helper to get restaurant owner ID from session
+const getRestaurantOwnerId = (req: Request): number | null => {
+  return req.session?.ownerId || null;
+};
+
+// Accept a pending payment (restaurant staff endpoint)
+router.post("/wallet/payment/:transactionId/accept", async (req: Request, res: Response) => {
+  try {
+    const ownerId = getRestaurantOwnerId(req);
+    if (!ownerId) {
+      return res.status(401).json({ message: "Restaurant authentication required" });
+    }
+
+    const transactionId = parseInt(req.params.transactionId);
+    if (isNaN(transactionId)) {
+      return res.status(400).json({ message: "Invalid transaction ID" });
+    }
+
+    const [transaction] = await db.select().from(paymentTransactions).where(eq(paymentTransactions.id, transactionId)).limit(1);
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    if (transaction.transactionStatus !== "pending") {
+      return res.status(400).json({ message: `Transaction is already ${transaction.transactionStatus}` });
+    }
+
+    const { restaurantId: acceptingRestaurantId } = req.body;
+    let restaurant: any;
+    
+    if (transaction.restaurantId === 0 || !transaction.restaurantId) {
+      const rId = acceptingRestaurantId || req.body.restaurantId;
+      if (!rId) {
+        return res.status(400).json({ message: "Restaurant ID required to claim this payment" });
+      }
+      const [r] = await db.select().from(restaurants)
+        .where(and(eq(restaurants.id, parseInt(rId)), eq(restaurants.ownerId, ownerId)))
+        .limit(1);
+      if (!r) {
+        return res.status(403).json({ message: "You do not have access to this restaurant" });
+      }
+      restaurant = r;
+      const cRate = r.participatesInCashback ? 7.5 : parseFloat(r.commissionRate || "6.00");
+      const amount = parseFloat(transaction.amount);
+      const pComm = amount * (cRate / 100);
+      const rRec = amount - pComm;
+      await db.update(paymentTransactions)
+        .set({ restaurantId: parseInt(rId), platformCommission: pComm.toFixed(2), restaurantReceives: rRec.toFixed(2) })
+        .where(eq(paymentTransactions.id, transactionId));
+      transaction.restaurantId = parseInt(rId);
+      transaction.restaurantReceives = rRec.toFixed(2);
+    } else {
+      const [r] = await db.select().from(restaurants)
+        .where(and(eq(restaurants.id, transaction.restaurantId), eq(restaurants.ownerId, ownerId)))
+        .limit(1);
+      if (!r) {
+        return res.status(403).json({ message: "You do not have access to this restaurant's transactions" });
+      }
+      restaurant = r;
+    }
+
+    let breakdown: any = {};
+    try {
+      breakdown = JSON.parse(transaction.qrCodeScanned || "{}");
+    } catch {}
+
+    const personalAmount = parseFloat(breakdown.personalAmount || transaction.cashUsed || "0");
+    const cashbackAmount = parseFloat(breakdown.cashbackAmount || "0");
+    const creditAmount = parseFloat(breakdown.creditAmount || "0");
+
+    const customerId = transaction.customerId;
+
+    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
+    const [walletRecord] = await db.select().from(customerWallets).where(eq(customerWallets.customerId, customerId)).limit(1);
+
+    const currentPersonalBalance = parseFloat(walletRecord?.cashBalance || customer?.balance || "0");
+
+    if (personalAmount > 0) {
+      const newBalance = (currentPersonalBalance - personalAmount).toFixed(2);
+      if (walletRecord) {
+        await db.update(customerWallets).set({ cashBalance: newBalance }).where(eq(customerWallets.customerId, customerId));
+      }
+      await db.update(customers).set({ balance: newBalance }).where(eq(customers.id, customerId));
+    }
+
+    if (cashbackAmount > 0) {
+      const [cashbackBalance] = await db.select().from(customerCashbackBalance).where(eq(customerCashbackBalance.customerId, customerId)).limit(1);
+      if (cashbackBalance) {
+        const currentCashback = parseFloat(cashbackBalance.totalCashbackBalance || "0");
+        const newCashbackBalance = (currentCashback - cashbackAmount).toFixed(2);
+        const newCashbackUsed = (parseFloat(cashbackBalance.totalCashbackUsed || "0") + cashbackAmount).toFixed(2);
+        await db.update(customerCashbackBalance)
+          .set({ totalCashbackBalance: newCashbackBalance, totalCashbackUsed: newCashbackUsed })
+          .where(eq(customerCashbackBalance.customerId, customerId));
+      }
+    }
+
+    if (creditAmount > 0) {
+      const [creditAccount] = await db.select().from(customerCreditAccount).where(eq(customerCreditAccount.customerId, customerId)).limit(1);
+      if (creditAccount) {
+        const newUsedCredit = (parseFloat(creditAccount.usedCredit || "0") + creditAmount).toFixed(2);
+        const newAvailableCredit = (parseFloat(creditAccount.creditLimit || "0") - parseFloat(newUsedCredit)).toFixed(2);
+        await db.update(customerCreditAccount)
+          .set({ usedCredit: newUsedCredit, availableCredit: newAvailableCredit })
+          .where(eq(customerCreditAccount.customerId, customerId));
+      }
+    }
+
+    await db.update(paymentTransactions)
+      .set({ transactionStatus: "completed", processedAt: new Date(), verifiedBy: ownerId, updatedAt: new Date() })
+      .where(eq(paymentTransactions.id, transactionId));
+
+    const restaurantReceives = parseFloat(transaction.restaurantReceives || "0");
+    const currentPending = parseFloat(restaurant.pendingSettlementAmount || "0");
+    await db.update(restaurants)
+      .set({ pendingSettlementAmount: (currentPending + restaurantReceives).toFixed(2) })
+      .where(eq(restaurants.id, transaction.restaurantId));
+
+    const totalDeducted = personalAmount + cashbackAmount + creditAmount;
+    const balanceBefore = currentPersonalBalance;
+    const balanceAfter = currentPersonalBalance - personalAmount;
+
+    await db.insert(walletTransactions).values({
+      customerId,
+      transactionType: "payment",
+      amount: `-${totalDeducted.toFixed(2)}`,
+      description: `Payment to ${restaurant.name}`,
+      balanceBefore: balanceBefore.toFixed(2),
+      balanceAfter: balanceAfter.toFixed(2),
+      restaurantId: transaction.restaurantId,
+      paymentTransactionId: transactionId,
+    });
+
+    res.json({
+      success: true,
+      message: "Payment accepted and processed",
+      transactionId,
+      amount: transaction.amount,
+      restaurantReceives: transaction.restaurantReceives,
+    });
+  } catch (error: any) {
+    console.error("Error accepting payment:", error);
+    res.status(500).json({ message: "Error accepting payment: " + error.message });
+  }
+});
+
+// Reject a pending payment (restaurant staff endpoint)
+router.post("/wallet/payment/:transactionId/reject", async (req: Request, res: Response) => {
+  try {
+    const ownerId = getRestaurantOwnerId(req);
+    if (!ownerId) {
+      return res.status(401).json({ message: "Restaurant authentication required" });
+    }
+
+    const transactionId = parseInt(req.params.transactionId);
+    if (isNaN(transactionId)) {
+      return res.status(400).json({ message: "Invalid transaction ID" });
+    }
+
+    const [transaction] = await db.select().from(paymentTransactions).where(eq(paymentTransactions.id, transactionId)).limit(1);
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    if (transaction.transactionStatus !== "pending") {
+      return res.status(400).json({ message: `Transaction is already ${transaction.transactionStatus}` });
+    }
+
+    const [restaurant] = await db.select().from(restaurants)
+      .where(and(eq(restaurants.id, transaction.restaurantId), eq(restaurants.ownerId, ownerId)))
+      .limit(1);
+    if (!restaurant) {
+      return res.status(403).json({ message: "You do not have access to this restaurant's transactions" });
+    }
+
+    await db.update(paymentTransactions)
+      .set({ transactionStatus: "rejected", updatedAt: new Date() })
+      .where(eq(paymentTransactions.id, transactionId));
+
+    res.json({
+      success: true,
+      message: "Payment rejected",
+      transactionId,
+    });
+  } catch (error: any) {
+    console.error("Error rejecting payment:", error);
+    res.status(500).json({ message: "Error rejecting payment: " + error.message });
+  }
+});
+
+// Restaurant-initiated payment request (restaurant scans customer QR)
+router.post("/wallet/restaurant-payment-request", async (req: Request, res: Response) => {
+  try {
+    const ownerId = getRestaurantOwnerId(req);
+    if (!ownerId) {
+      return res.status(401).json({ message: "Restaurant authentication required" });
+    }
+
+    const { customerCode, amount, restaurantId } = req.body;
+
+    if (!customerCode || !amount || !restaurantId) {
+      return res.status(400).json({ message: "customerCode, amount, and restaurantId are required" });
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    const [restaurant] = await db.select().from(restaurants)
+      .where(and(eq(restaurants.id, parseInt(restaurantId)), eq(restaurants.ownerId, ownerId)))
+      .limit(1);
+    if (!restaurant) {
+      return res.status(403).json({ message: "You do not have access to this restaurant" });
+    }
+
+    const [customer] = await db.select().from(customers).where(eq(customers.customerCode, customerCode)).limit(1);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found with this code" });
+    }
+
+    const commissionRate = restaurant.participatesInCashback
+      ? 7.5
+      : parseFloat(restaurant.commissionRate || "6.00");
+    const platformCommission = parsedAmount * (commissionRate / 100);
+    const restaurantReceives = parsedAmount - platformCommission;
+
+    const [transaction] = await db.insert(paymentTransactions).values({
+      customerId: customer.id,
+      restaurantId: parseInt(restaurantId),
+      transactionType: "restaurant_initiated",
+      amount: parsedAmount.toFixed(2),
+      paymentMethod: "cash_balance",
+      voucherValue: "0.00",
+      pointsUsed: 0,
+      cashUsed: parsedAmount.toFixed(2),
+      generalVoucherDiscount: "0.00",
+      platformCommission: platformCommission.toFixed(2),
+      restaurantReceives: restaurantReceives.toFixed(2),
+      transactionStatus: "payment_request",
+    }).returning();
+
+    res.json({
+      success: true,
+      transaction: {
+        ...transaction,
+        customerName: customer.name,
+        restaurantName: restaurant.name,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error creating restaurant payment request:", error);
+    res.status(500).json({ message: "Error creating payment request: " + error.message });
+  }
+});
+
+// Customer confirms a restaurant-initiated payment request
+router.post("/wallet/payment-request/:transactionId/confirm", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const transactionId = parseInt(req.params.transactionId);
+    if (isNaN(transactionId)) {
+      return res.status(400).json({ message: "Invalid transaction ID" });
+    }
+
+    const [transaction] = await db.select().from(paymentTransactions).where(eq(paymentTransactions.id, transactionId)).limit(1);
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    if (transaction.customerId !== customerId) {
+      return res.status(403).json({ message: "This payment request is not for you" });
+    }
+
+    if (transaction.transactionStatus !== "payment_request") {
+      return res.status(400).json({ message: `Transaction is already ${transaction.transactionStatus}` });
+    }
+
+    const paymentAmount = parseFloat(transaction.amount);
+
+    const [walletRecord] = await db.select().from(customerWallets).where(eq(customerWallets.customerId, customerId)).limit(1);
+    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
+
+    const currentBalance = parseFloat(walletRecord?.cashBalance || customer?.balance || "0");
+    if (currentBalance < paymentAmount - 0.01) {
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+
+    const newBalance = (currentBalance - paymentAmount).toFixed(2);
+    if (walletRecord) {
+      await db.update(customerWallets).set({ cashBalance: newBalance }).where(eq(customerWallets.customerId, customerId));
+    }
+    await db.update(customers).set({ balance: newBalance }).where(eq(customers.id, customerId));
+
+    await db.update(paymentTransactions)
+      .set({ transactionStatus: "completed", processedAt: new Date(), updatedAt: new Date() })
+      .where(eq(paymentTransactions.id, transactionId));
+
+    const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, transaction.restaurantId)).limit(1);
+    const restaurantReceives = parseFloat(transaction.restaurantReceives || "0");
+    if (restaurant) {
+      const currentPending = parseFloat(restaurant.pendingSettlementAmount || "0");
+      await db.update(restaurants)
+        .set({ pendingSettlementAmount: (currentPending + restaurantReceives).toFixed(2) })
+        .where(eq(restaurants.id, transaction.restaurantId));
+    }
+
+    await db.insert(walletTransactions).values({
+      customerId,
+      transactionType: "payment",
+      amount: `-${paymentAmount.toFixed(2)}`,
+      description: `Payment to ${restaurant?.name || "Restaurant"}`,
+      balanceBefore: currentBalance.toFixed(2),
+      balanceAfter: newBalance,
+      restaurantId: transaction.restaurantId,
+      paymentTransactionId: transactionId,
+    });
+
+    res.json({
+      success: true,
+      message: "Payment confirmed and processed",
+      transactionId,
+      amount: transaction.amount,
+      newBalance,
+    });
+  } catch (error: any) {
+    console.error("Error confirming payment request:", error);
+    res.status(500).json({ message: "Error confirming payment: " + error.message });
+  }
+});
+
+// Customer declines a restaurant-initiated payment request
+router.post("/wallet/payment-request/:transactionId/decline", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const transactionId = parseInt(req.params.transactionId);
+    if (isNaN(transactionId)) {
+      return res.status(400).json({ message: "Invalid transaction ID" });
+    }
+
+    const [transaction] = await db.select().from(paymentTransactions).where(eq(paymentTransactions.id, transactionId)).limit(1);
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    if (transaction.customerId !== customerId) {
+      return res.status(403).json({ message: "This payment request is not for you" });
+    }
+
+    if (transaction.transactionStatus !== "payment_request") {
+      return res.status(400).json({ message: `Transaction is already ${transaction.transactionStatus}` });
+    }
+
+    await db.update(paymentTransactions)
+      .set({ transactionStatus: "declined", updatedAt: new Date() })
+      .where(eq(paymentTransactions.id, transactionId));
+
+    res.json({
+      success: true,
+      message: "Payment request declined",
+      transactionId,
+    });
+  } catch (error: any) {
+    console.error("Error declining payment request:", error);
+    res.status(500).json({ message: "Error declining payment: " + error.message });
+  }
+});
+
+// Get pending payment requests for customer
+router.get("/wallet/pending-requests", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const pendingRequests = await db
+      .select({
+        id: paymentTransactions.id,
+        customerId: paymentTransactions.customerId,
+        restaurantId: paymentTransactions.restaurantId,
+        transactionType: paymentTransactions.transactionType,
+        amount: paymentTransactions.amount,
+        paymentMethod: paymentTransactions.paymentMethod,
+        transactionStatus: paymentTransactions.transactionStatus,
+        restaurantReceives: paymentTransactions.restaurantReceives,
+        platformCommission: paymentTransactions.platformCommission,
+        createdAt: paymentTransactions.createdAt,
+        restaurantName: restaurants.name,
+      })
+      .from(paymentTransactions)
+      .leftJoin(restaurants, eq(paymentTransactions.restaurantId, restaurants.id))
+      .where(and(
+        eq(paymentTransactions.customerId, customerId),
+        eq(paymentTransactions.transactionStatus, "payment_request")
+      ))
+      .orderBy(desc(paymentTransactions.createdAt));
+
+    res.json(pendingRequests);
+  } catch (error: any) {
+    console.error("Error fetching pending requests:", error);
+    res.status(500).json({ message: "Error fetching pending requests: " + error.message });
+  }
+});
+
+// Get transaction history for a restaurant
+router.get("/wallet/restaurant/:restaurantId/transactions", async (req: Request, res: Response) => {
+  try {
+    const ownerId = getRestaurantOwnerId(req);
+    if (!ownerId) {
+      return res.status(401).json({ message: "Restaurant authentication required" });
+    }
+
+    const restaurantId = parseInt(req.params.restaurantId);
+    if (isNaN(restaurantId)) {
+      return res.status(400).json({ message: "Invalid restaurant ID" });
+    }
+
+    const [restaurant] = await db.select().from(restaurants)
+      .where(and(eq(restaurants.id, restaurantId), eq(restaurants.ownerId, ownerId)))
+      .limit(1);
+    if (!restaurant) {
+      return res.status(403).json({ message: "You do not have access to this restaurant" });
+    }
+
+    const transactionList = await db
+      .select({
+        id: paymentTransactions.id,
+        customerId: paymentTransactions.customerId,
+        restaurantId: paymentTransactions.restaurantId,
+        transactionType: paymentTransactions.transactionType,
+        amount: paymentTransactions.amount,
+        paymentMethod: paymentTransactions.paymentMethod,
+        voucherValue: paymentTransactions.voucherValue,
+        pointsUsed: paymentTransactions.pointsUsed,
+        cashUsed: paymentTransactions.cashUsed,
+        generalVoucherDiscount: paymentTransactions.generalVoucherDiscount,
+        platformCommission: paymentTransactions.platformCommission,
+        restaurantReceives: paymentTransactions.restaurantReceives,
+        transactionStatus: paymentTransactions.transactionStatus,
+        processedAt: paymentTransactions.processedAt,
+        verifiedBy: paymentTransactions.verifiedBy,
+        createdAt: paymentTransactions.createdAt,
+        customerName: customers.name,
+      })
+      .from(paymentTransactions)
+      .leftJoin(customers, eq(paymentTransactions.customerId, customers.id))
+      .where(eq(paymentTransactions.restaurantId, restaurantId))
+      .orderBy(desc(paymentTransactions.createdAt));
+
+    res.json(transactionList);
+  } catch (error: any) {
+    console.error("Error fetching restaurant transactions:", error);
+    res.status(500).json({ message: "Error fetching transactions: " + error.message });
+  }
+});
+
+// Get single transaction details by ID
+router.get("/wallet/payment/:transactionId", async (req: Request, res: Response) => {
+  try {
+    const transactionId = parseInt(req.params.transactionId);
+    if (isNaN(transactionId)) {
+      return res.status(400).json({ message: "Invalid transaction ID" });
+    }
+
+    const [transaction] = await db
+      .select({
+        id: paymentTransactions.id,
+        customerId: paymentTransactions.customerId,
+        restaurantId: paymentTransactions.restaurantId,
+        transactionType: paymentTransactions.transactionType,
+        amount: paymentTransactions.amount,
+        paymentMethod: paymentTransactions.paymentMethod,
+        voucherValue: paymentTransactions.voucherValue,
+        pointsUsed: paymentTransactions.pointsUsed,
+        cashUsed: paymentTransactions.cashUsed,
+        generalVoucherDiscount: paymentTransactions.generalVoucherDiscount,
+        platformCommission: paymentTransactions.platformCommission,
+        restaurantReceives: paymentTransactions.restaurantReceives,
+        qrCodeScanned: paymentTransactions.qrCodeScanned,
+        transactionStatus: paymentTransactions.transactionStatus,
+        processedAt: paymentTransactions.processedAt,
+        verifiedBy: paymentTransactions.verifiedBy,
+        createdAt: paymentTransactions.createdAt,
+        updatedAt: paymentTransactions.updatedAt,
+        customerName: customers.name,
+        restaurantName: restaurants.name,
+      })
+      .from(paymentTransactions)
+      .leftJoin(customers, eq(paymentTransactions.customerId, customers.id))
+      .leftJoin(restaurants, eq(paymentTransactions.restaurantId, restaurants.id))
+      .where(eq(paymentTransactions.id, transactionId))
+      .limit(1);
+
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    res.json(transaction);
+  } catch (error: any) {
+    console.error("Error fetching transaction:", error);
+    res.status(500).json({ message: "Error fetching transaction: " + error.message });
   }
 });
 

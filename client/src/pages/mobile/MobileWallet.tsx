@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X, Plus, Loader2, History } from 'lucide-react';
+import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X, Plus, Loader2, History, Store } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
@@ -206,6 +206,22 @@ export default function MobileWallet() {
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     staleTime: 10000,
+  });
+
+  const { data: pendingRequests = [] } = useQuery<any[]>({
+    queryKey: ['/api/wallet/pending-requests'],
+    queryFn: async () => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/api/wallet/pending-requests`, { credentials: 'include', headers });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!user,
+    refetchInterval: 10000,
   });
 
   // Fetch credit types for the request form (always fetch fresh to show max available)
@@ -465,6 +481,20 @@ export default function MobileWallet() {
             {t.walletPay || 'Plătește'}
           </button>
         </div>
+
+        {/* Pending Payment Requests */}
+        {pendingRequests.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              <h3 className="font-semibold text-gray-900 text-sm">{t.pendingPaymentRequests || 'Solicitări de plată'}</h3>
+              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{pendingRequests.length}</span>
+            </div>
+            {pendingRequests.map((req: any) => (
+              <PendingPaymentCard key={req.id} request={req} />
+            ))}
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex bg-gray-100 rounded-2xl p-1 gap-0.5">
@@ -1230,6 +1260,96 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
 }
 
 // Payment Modal Component
+function PendingPaymentCard({ request }: { request: any }) {
+  const { t } = useLanguage();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsConfirming(true);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/api/wallet/payment-request/${request.id}/confirm`, {
+        method: 'POST', headers, credentials: 'include', body: JSON.stringify({})
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to confirm');
+      }
+      toast({ title: t.paymentConfirmed || 'Plata confirmată!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/pending-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/transactions'] });
+    } catch (err: any) {
+      toast({ title: err.message, variant: 'destructive' });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    setIsDeclining(true);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/api/wallet/payment-request/${request.id}/decline`, {
+        method: 'POST', headers, credentials: 'include', body: JSON.stringify({})
+      });
+      if (!response.ok) throw new Error('Failed to decline');
+      toast({ title: t.paymentDeclined || 'Solicitare respinsă' });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/pending-requests'] });
+    } catch (err: any) {
+      toast({ title: err.message, variant: 'destructive' });
+    } finally {
+      setIsDeclining(false);
+    }
+  };
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+            <Store className="w-5 h-5 text-amber-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">{request.restaurantName || 'Restaurant'}</p>
+            <p className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleString()}</p>
+          </div>
+        </div>
+        <p className="text-xl font-bold text-gray-900">{parseFloat(request.amount).toFixed(2)} RON</p>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleDecline}
+          disabled={isDeclining}
+          className="flex-1 py-2.5 rounded-xl font-semibold text-red-600 bg-red-50 border border-red-200 flex items-center justify-center gap-1"
+        >
+          {isDeclining ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+          {t.decline || 'Respinge'}
+        </button>
+        <button
+          onClick={handleConfirm}
+          disabled={isConfirming}
+          className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-green-600 flex items-center justify-center gap-1"
+        >
+          {isConfirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+          {t.confirmPayment || 'Confirmă Plata'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
