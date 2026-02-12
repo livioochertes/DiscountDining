@@ -1241,6 +1241,7 @@ interface PaymentModalProps {
 function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, creditBalance, vouchers }: PaymentModalProps) {
   const queryClient = useQueryClient();
   const [totalAmount, setTotalAmount] = useState('');
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [allocations, setAllocations] = useState<Record<string, number>>({
     personal: 0,
     cashback: 0,
@@ -1254,53 +1255,105 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoadingStripe, setIsLoadingStripe] = useState(false);
-  
-  const totalAllocated = allocations.personal + allocations.cashback + allocations.credit + 
-    Object.values(voucherAllocations).reduce((sum, val) => sum + val, 0);
-  const remaining = parseFloat(totalAmount || '0') - totalAllocated;
-  
+
+  const activeVouchers = vouchers.filter(v => v.status === 'active');
+
+  const availableSources: { key: string; label: string; balance: number; icon: any; bg: string; border: string; text: string; iconColor: string }[] = [];
+  if (personalBalance > 0) availableSources.push({ key: 'personal', label: 'Sold Personal', balance: personalBalance, icon: Wallet, bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-900', iconColor: 'text-blue-600' });
+  if (cashbackBalance > 0) availableSources.push({ key: 'cashback', label: 'Cashback', balance: cashbackBalance, icon: TrendingUp, bg: 'bg-green-50', border: 'border-green-400', text: 'text-green-900', iconColor: 'text-green-600' });
+  if (creditBalance > 0) availableSources.push({ key: 'credit', label: 'Credit', balance: creditBalance, icon: CreditCard, bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-900', iconColor: 'text-purple-600' });
+  activeVouchers.forEach(v => {
+    const val = parseFloat(v.remainingValue || v.value || '0');
+    if (val > 0) availableSources.push({ key: `voucher_${v.id}`, label: v.restaurantName || 'Voucher', balance: val, icon: Gift, bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-900', iconColor: 'text-orange-600' });
+  });
+
+  const totalFundsAvailable = availableSources.reduce((s, src) => s + src.balance, 0);
+  const parsedAmount = parseFloat(totalAmount || '0');
+  const isMultiSource = selectedSources.size > 1;
+
+  const actualAllocated = allocations.personal + allocations.cashback + allocations.credit + Object.values(voucherAllocations).reduce((sum, val) => sum + val, 0);
+  const remaining = parsedAmount - actualAllocated;
+
+  useEffect(() => {
+    if (parsedAmount <= 0) {
+      setSelectedSources(new Set());
+      setAllocations({ personal: 0, cashback: 0, credit: 0 });
+      setVoucherAllocations({});
+      return;
+    }
+
+    const sourcesWithFunds = availableSources.filter(s => s.balance > 0);
+    if (sourcesWithFunds.length === 1) {
+      const src = sourcesWithFunds[0];
+      setSelectedSources(new Set([src.key]));
+      if (src.key.startsWith('voucher_')) {
+        const vId = parseInt(src.key.split('_')[1]);
+        setVoucherAllocations({ [vId]: Math.min(parsedAmount, src.balance) });
+        setAllocations({ personal: 0, cashback: 0, credit: 0 });
+      } else {
+        setAllocations(prev => ({ personal: 0, cashback: 0, credit: 0, [src.key]: Math.min(parsedAmount, src.balance) }));
+        setVoucherAllocations({});
+      }
+    } else if (sourcesWithFunds.length === 0) {
+      setSelectedSources(new Set());
+    }
+  }, [totalAmount]);
+
+  const toggleSource = (key: string) => {
+    setSelectedSources(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+        if (key.startsWith('voucher_')) {
+          const vId = parseInt(key.split('_')[1]);
+          setVoucherAllocations(p => { const n = { ...p }; delete n[vId]; return n; });
+        } else {
+          setAllocations(p => ({ ...p, [key]: 0 }));
+        }
+      } else {
+        next.add(key);
+        if (next.size === 1) {
+          const src = availableSources.find(s => s.key === key);
+          if (src) {
+            if (key.startsWith('voucher_')) {
+              const vId = parseInt(key.split('_')[1]);
+              setVoucherAllocations(p => ({ ...p, [vId]: Math.min(parsedAmount, src.balance) }));
+            } else {
+              setAllocations(p => ({ ...p, [key]: Math.min(parsedAmount, src.balance) }));
+            }
+          }
+        }
+      }
+      return next;
+    });
+  };
+
   const handleAllocationChange = (source: string, value: string) => {
     const numValue = parseFloat(value) || 0;
     setAllocations(prev => ({ ...prev, [source]: numValue }));
   };
-  
+
   const handleVoucherAllocationChange = (voucherId: number, value: string, maxValue: number) => {
     const numValue = Math.min(parseFloat(value) || 0, maxValue);
     setVoucherAllocations(prev => ({ ...prev, [voucherId]: numValue }));
   };
-  
+
   const handleTopUpWithCard = async () => {
     if (!topUpAmount || parseFloat(topUpAmount) <= 0) return;
-    
     setIsLoadingStripe(true);
     setError(null);
-    
     try {
       const token = await getMobileSessionToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      
-      // For native mobile, use Stripe Checkout Session with redirect
       if (Capacitor.isNativePlatform()) {
-        console.log('[TopUp] Creating checkout session for mobile...');
         const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-checkout-session`, {
-          method: 'POST',
-          headers,
-          credentials: 'include',
+          method: 'POST', headers, credentials: 'include',
           body: JSON.stringify({ amount: topUpAmount })
         });
-        
         const data = await response.json();
-        console.log('[TopUp] Response:', response.status, data);
-        
-        if (!response.ok) {
-          throw new Error(data.message || 'Eroare la crearea plății');
-        }
-        
-        // Open Stripe checkout in external browser
+        if (!response.ok) throw new Error(data.message || 'Eroare la crearea plății');
         if (data.url) {
-          console.log('[TopUp] Opening URL:', data.url);
-          // Use window.open for maximum compatibility
           window.open(data.url, '_blank');
           setShowTopUp(false);
           setTopUpAmount('');
@@ -1308,19 +1361,14 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
           throw new Error('Nu s-a putut crea sesiunea de plată');
         }
       } else {
-        // For web, use Payment Intent with embedded Elements
         const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-intent`, {
-          method: 'POST',
-          headers,
-          credentials: 'include',
+          method: 'POST', headers, credentials: 'include',
           body: JSON.stringify({ amount: topUpAmount })
         });
-        
         if (!response.ok) {
           const data = await response.json();
           throw new Error(data.message || 'Eroare la crearea plății');
         }
-        
         const data = await response.json();
         setClientSecret(data.clientSecret);
       }
@@ -1330,39 +1378,44 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
       setIsLoadingStripe(false);
     }
   };
-  
+
   const handleTopUpSuccess = () => {
     setClientSecret(null);
     setShowTopUp(false);
     setTopUpAmount('');
     queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
   };
-  
+
+  const buildFinalAllocations = () => {
+    if (!isMultiSource && selectedSources.size === 1) {
+      const key = Array.from(selectedSources)[0];
+      const src = availableSources.find(s => s.key === key);
+      if (!src) return { allocations: { personal: 0, cashback: 0, credit: 0 }, voucherAllocations: {} };
+      if (key.startsWith('voucher_')) {
+        const vId = parseInt(key.split('_')[1]);
+        return { allocations: { personal: 0, cashback: 0, credit: 0 }, voucherAllocations: { [vId]: Math.min(parsedAmount, src.balance) } };
+      }
+      return { allocations: { personal: 0, cashback: 0, credit: 0, [key]: Math.min(parsedAmount, src.balance) }, voucherAllocations: {} };
+    }
+    return { allocations, voucherAllocations };
+  };
+
   const handleGenerateQR = async () => {
     setIsProcessing(true);
     setError(null);
-    
     try {
       const token = await getMobileSessionToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      
+      const finalData = buildFinalAllocations();
       const response = await fetch(`${API_BASE_URL}/api/wallet/split-payment`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({
-          totalAmount,
-          allocations,
-          voucherAllocations
-        })
+        method: 'POST', headers, credentials: 'include',
+        body: JSON.stringify({ totalAmount, allocations: finalData.allocations, voucherAllocations: finalData.voucherAllocations })
       });
-      
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || 'Eroare la procesarea plății');
       }
-      
       const data = await response.json();
       setPaymentCode(data.paymentCode);
       queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
@@ -1372,12 +1425,9 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
       setIsProcessing(false);
     }
   };
-  
-  const activeVouchers = vouchers.filter(v => v.status === 'active');
-  
+
   if (!isOpen) return null;
-  
-  // Show payment code QR
+
   if (paymentCode) {
     return (
       <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
@@ -1390,37 +1440,29 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
           <div className="bg-gray-100 rounded-xl p-4 mb-4">
             <p className="text-2xl font-mono font-bold tracking-wider">{paymentCode}</p>
           </div>
-          <p className="text-sm text-gray-500 mb-6">
-            Total: {parseFloat(totalAmount).toFixed(2)} RON
-          </p>
-          <button
-            onClick={() => { setPaymentCode(null); onClose(); }}
-            className="w-full bg-primary text-white py-3 rounded-xl font-semibold"
-          >
-            Închide
-          </button>
+          <p className="text-sm text-gray-500 mb-6">Total: {parseFloat(totalAmount).toFixed(2)} RON</p>
+          <button onClick={() => { setPaymentCode(null); onClose(); }} className="w-full bg-primary text-white py-3 rounded-xl font-semibold">Închide</button>
         </div>
       </div>
     );
   }
-  
+
+  const insufficientFunds = parsedAmount > 0 && totalFundsAvailable < parsedAmount;
+  const canGenerate = parsedAmount > 0 && selectedSources.size > 0 && !isProcessing && Math.abs(remaining) < 0.01;
+
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-end">
-      <div className="bg-white w-full rounded-t-3xl max-h-[85vh] overflow-y-auto pb-20">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10 rounded-t-3xl">
+      <div className="bg-white w-full rounded-t-3xl max-h-[80vh] flex flex-col" style={{ marginBottom: '5rem' }}>
+        <div className="flex items-center justify-between p-4 border-b rounded-t-3xl flex-shrink-0">
           <h2 className="text-xl font-bold">Plătește</h2>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100">
             <X className="w-5 h-5" />
           </button>
         </div>
-        
-        <div className="p-4 space-y-6">
-          {/* Total Amount Input */}
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Suma de plată (RON)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Suma de plată (RON)</label>
             <input
               type="number"
               value={totalAmount}
@@ -1429,223 +1471,143 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
               className="w-full px-4 py-3 text-2xl font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary"
             />
           </div>
-          
-          {/* Payment Sources */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-gray-900">Selectează sursa de plată</h3>
-            
-            {/* Personal Balance */}
-            <div className="bg-blue-50 rounded-xl p-4">
-              <div className="flex justify-between items-center mb-2">
-                <div>
-                  <p className="font-medium text-blue-900">Sold Personal</p>
-                  <p className="text-sm text-blue-700">Disponibil: {personalBalance.toFixed(2)} RON</p>
-                </div>
-                <Wallet className="w-6 h-6 text-blue-600" />
-              </div>
-              <input
-                type="number"
-                value={allocations.personal || ''}
-                onChange={(e) => handleAllocationChange('personal', e.target.value)}
-                max={personalBalance}
-                placeholder="0.00"
-                className="w-full px-3 py-2 border border-blue-200 rounded-lg bg-white"
-              />
-              <button 
-                onClick={() => setShowTopUp(true)}
-                className="mt-2 text-sm text-blue-600 font-medium flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                Adaugă fonduri
-              </button>
-            </div>
-            
-            {/* Top-up Card Section */}
-            {showTopUp && (
-              <div className="bg-blue-100 rounded-xl p-4 border-2 border-blue-300">
-                <div className="flex justify-between items-center mb-3">
-                  <p className="font-medium text-blue-900">Alimentează soldul</p>
-                  <button onClick={() => { setShowTopUp(false); setClientSecret(null); }}>
-                    <X className="w-5 h-5 text-blue-700" />
-                  </button>
-                </div>
-                
-                {clientSecret && stripePromise ? (
-                  <Elements stripe={stripePromise} options={{ clientSecret }}>
-                    <TopUpStripeForm 
-                      amount={topUpAmount} 
-                      onSuccess={handleTopUpSuccess}
-                      onCancel={() => setClientSecret(null)}
-                    />
-                  </Elements>
-                ) : (
-                  <>
-                    <div className="flex gap-2 mb-3">
-                      {[200, 300, 500, 1000].map((val) => (
-                        <button
-                          key={val}
-                          onClick={() => setTopUpAmount(val.toString())}
-                          className={cn(
-                            "flex-1 py-2 rounded-lg text-sm font-medium",
-                            topUpAmount === val.toString() 
-                              ? "bg-blue-600 text-white" 
-                              : "bg-white text-blue-700 border border-blue-300"
-                          )}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      type="number"
-                      value={topUpAmount}
-                      onChange={(e) => setTopUpAmount(e.target.value)}
-                      placeholder="Altă sumă..."
-                      className="w-full px-3 py-2 border border-blue-200 rounded-lg bg-white mb-3"
-                    />
-                    <button 
-                      onClick={handleTopUpWithCard}
-                      disabled={!topUpAmount || parseFloat(topUpAmount) <= 0 || isLoadingStripe}
+
+          {parsedAmount > 0 && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-900 text-sm">Selectează sursa de plată</h3>
+
+              {availableSources.map((src) => {
+                const isSelected = selectedSources.has(src.key);
+                const Icon = src.icon;
+                const isVoucher = src.key.startsWith('voucher_');
+                const vId = isVoucher ? parseInt(src.key.split('_')[1]) : 0;
+                return (
+                  <div key={src.key}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSource(src.key)}
                       className={cn(
-                        "w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2",
-                        topUpAmount && parseFloat(topUpAmount) > 0 && !isLoadingStripe
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-200 text-gray-400"
+                        "w-full rounded-xl p-3 flex items-center justify-between transition-all",
+                        src.bg,
+                        isSelected ? `ring-2 ${src.border}` : "ring-0"
                       )}
                     >
-                      {isLoadingStripe ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Se încarcă...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="w-5 h-5" />
-                          Plătește cu cardul
-                        </>
-                      )}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-            
-            {/* Cashback */}
-            {cashbackBalance > 0 && (
-              <div className="bg-green-50 rounded-xl p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <div>
-                    <p className="font-medium text-green-900">Cashback</p>
-                    <p className="text-sm text-green-700">Disponibil: {cashbackBalance.toFixed(2)} RON</p>
-                  </div>
-                  <TrendingUp className="w-6 h-6 text-green-600" />
-                </div>
-                <input
-                  type="number"
-                  value={allocations.cashback || ''}
-                  onChange={(e) => handleAllocationChange('cashback', e.target.value)}
-                  max={cashbackBalance}
-                  placeholder="0.00"
-                  className="w-full px-3 py-2 border border-green-200 rounded-lg bg-white"
-                />
-              </div>
-            )}
-            
-            {/* Credit */}
-            {creditBalance > 0 && (
-              <div className="bg-purple-50 rounded-xl p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <div>
-                    <p className="font-medium text-purple-900">Credit</p>
-                    <p className="text-sm text-purple-700">Disponibil: {creditBalance.toFixed(2)} RON</p>
-                  </div>
-                  <CreditCard className="w-6 h-6 text-purple-600" />
-                </div>
-                <input
-                  type="number"
-                  value={allocations.credit || ''}
-                  onChange={(e) => handleAllocationChange('credit', e.target.value)}
-                  max={creditBalance}
-                  placeholder="0.00"
-                  className="w-full px-3 py-2 border border-purple-200 rounded-lg bg-white"
-                />
-              </div>
-            )}
-            
-            {/* Vouchers */}
-            {activeVouchers.length > 0 && (
-              <div className="space-y-3">
-                <p className="font-medium text-gray-700">Vouchere</p>
-                {activeVouchers.map((voucher: any) => {
-                  const voucherValue = parseFloat(voucher.remainingValue || voucher.value || '0');
-                  return (
-                    <div key={voucher.id} className="bg-orange-50 rounded-xl p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <p className="font-medium text-orange-900">{voucher.restaurantName || 'Voucher'}</p>
-                          <p className="text-sm text-orange-700">Disponibil: {voucherValue.toFixed(2)} RON</p>
+                      <div className="flex items-center gap-3">
+                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", isSelected ? "bg-white" : "bg-white/50")}>
+                          <Icon className={cn("w-5 h-5", src.iconColor)} />
                         </div>
-                        <Gift className="w-6 h-6 text-orange-600" />
+                        <div className="text-left">
+                          <p className={cn("font-medium text-sm", src.text)}>{src.label}</p>
+                          <p className="text-xs text-gray-500">{src.balance.toFixed(2)} RON</p>
+                        </div>
                       </div>
-                      <input
-                        type="number"
-                        value={voucherAllocations[voucher.id] || ''}
-                        onChange={(e) => handleVoucherAllocationChange(voucher.id, e.target.value, voucherValue)}
-                        max={voucherValue}
-                        placeholder="0.00"
-                        className="w-full px-3 py-2 border border-orange-200 rounded-lg bg-white"
-                      />
-                    </div>
-                  );
-                })}
+                      <div className={cn(
+                        "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                        isSelected ? `${src.border} bg-white` : "border-gray-300"
+                      )}>
+                        {isSelected && <CheckCircle className={cn("w-5 h-5", src.iconColor)} />}
+                      </div>
+                    </button>
+                    {isSelected && isMultiSource && (
+                      <div className="mt-2 ml-13 px-3">
+                        <input
+                          type="number"
+                          value={isVoucher ? (voucherAllocations[vId] || '') : (allocations[src.key] || '')}
+                          onChange={(e) => isVoucher
+                            ? handleVoucherAllocationChange(vId, e.target.value, src.balance)
+                            : handleAllocationChange(src.key, e.target.value)
+                          }
+                          max={src.balance}
+                          placeholder="Sumă..."
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {availableSources.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">Nu ai fonduri disponibile.</p>
+              )}
+            </div>
+          )}
+
+          {isMultiSource && parsedAmount > 0 && (
+            <div className="bg-gray-100 rounded-xl p-3">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-gray-600">Total alocat:</span>
+                <span className="font-semibold text-sm">{actualAllocated.toFixed(2)} RON</span>
               </div>
-            )}
-          </div>
-          
-          {/* Error Message */}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Rămâne:</span>
+                <span className={cn("font-bold", remaining > 0.01 ? "text-red-600" : remaining < -0.01 ? "text-amber-600" : "text-green-600")}>
+                  {remaining.toFixed(2)} RON
+                </span>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-red-700">
-              <AlertCircle className="w-5 h-5" />
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>
           )}
-          
-          {/* Summary */}
-          <div className="bg-gray-100 rounded-xl p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-600">Total alocat:</span>
-              <span className="font-semibold">{totalAllocated.toFixed(2)} RON</span>
+
+          {showTopUp && (
+            <div className="bg-blue-100 rounded-xl p-4 border-2 border-blue-300">
+              <div className="flex justify-between items-center mb-3">
+                <p className="font-medium text-blue-900">Alimentează soldul</p>
+                <button onClick={() => { setShowTopUp(false); setClientSecret(null); }}>
+                  <X className="w-5 h-5 text-blue-700" />
+                </button>
+              </div>
+              {clientSecret && stripePromise ? (
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <TopUpStripeForm amount={topUpAmount} onSuccess={handleTopUpSuccess} onCancel={() => setClientSecret(null)} />
+                </Elements>
+              ) : (
+                <>
+                  <div className="flex gap-2 mb-3">
+                    {[200, 300, 500, 1000].map((val) => (
+                      <button key={val} onClick={() => setTopUpAmount(val.toString())}
+                        className={cn("flex-1 py-2 rounded-lg text-sm font-medium",
+                          topUpAmount === val.toString() ? "bg-blue-600 text-white" : "bg-white text-blue-700 border border-blue-300")}>
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)}
+                    placeholder="Altă sumă..." className="w-full px-3 py-2 border border-blue-200 rounded-lg bg-white mb-3" />
+                  <button onClick={handleTopUpWithCard}
+                    disabled={!topUpAmount || parseFloat(topUpAmount) <= 0 || isLoadingStripe}
+                    className={cn("w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2",
+                      topUpAmount && parseFloat(topUpAmount) > 0 && !isLoadingStripe ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400")}>
+                    {isLoadingStripe ? (<><Loader2 className="w-5 h-5 animate-spin" />Se încarcă...</>) : (<><CreditCard className="w-5 h-5" />Plătește cu cardul</>)}
+                  </button>
+                </>
+              )}
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Rămâne de plătit:</span>
-              <span className={cn(
-                "font-bold text-lg",
-                remaining > 0 ? "text-red-600" : remaining < 0 ? "text-amber-600" : "text-green-600"
-              )}>
-                {remaining.toFixed(2)} RON
-              </span>
-            </div>
-          </div>
-          
-          {/* Generate QR Button */}
+          )}
+        </div>
+
+        <div className="p-4 border-t flex-shrink-0 space-y-3">
+          {insufficientFunds && !showTopUp && (
+            <button onClick={() => setShowTopUp(true)}
+              className="w-full py-3 rounded-xl font-semibold text-blue-600 border-2 border-blue-200 bg-blue-50 flex items-center justify-center gap-2">
+              <Plus className="w-5 h-5" />
+              Adaugă fonduri
+            </button>
+          )}
           <button
             onClick={handleGenerateQR}
-            disabled={remaining !== 0 || parseFloat(totalAmount || '0') <= 0 || isProcessing}
+            disabled={!canGenerate}
             className={cn(
               "w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2",
-              remaining === 0 && parseFloat(totalAmount || '0') > 0 && !isProcessing
-                ? "bg-primary text-white"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            )}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Se procesează...
-              </>
-            ) : (
-              'Generează Cod QR'
-            )}
+              canGenerate ? "bg-primary text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            )}>
+            {isProcessing ? (<><Loader2 className="w-5 h-5 animate-spin" />Se procesează...</>) : 'Generează Cod QR'}
           </button>
         </div>
       </div>
