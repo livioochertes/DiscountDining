@@ -764,6 +764,104 @@ export function registerUserAuthRoutes(app: Express) {
     }
   });
 
+  // Customer Forgot Password
+  app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const { db } = await import('./db');
+      const { passwordResetTokens } = await import('@shared/schema');
+      const crypto = await import('crypto');
+
+      const customer = await storage.getCustomerByEmail(email.toLowerCase().trim());
+
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+      await db.insert(passwordResetTokens).values({
+        email: email.toLowerCase().trim(),
+        token,
+        userType: 'customer',
+        expiresAt,
+      });
+
+      if (customer) {
+        console.log(`[Password Reset] Customer reset token for ${email}: ${token}`);
+      }
+
+      res.json({
+        message: 'Dacă emailul există în sistem, un cod de resetare a fost generat.',
+        token: token
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: 'Failed to process request' });
+    }
+  });
+
+  // Customer Reset Password
+  app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: 'Token and new password are required' });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'Parola trebuie să aibă minim 8 caractere' });
+      }
+
+      const { db } = await import('./db');
+      const { passwordResetTokens, customers } = await import('@shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+
+      const [resetToken] = await db
+        .select()
+        .from(passwordResetTokens)
+        .where(
+          and(
+            eq(passwordResetTokens.token, token),
+            eq(passwordResetTokens.userType, 'customer')
+          )
+        )
+        .limit(1);
+
+      if (!resetToken) {
+        return res.status(400).json({ message: 'Token invalid sau expirat' });
+      }
+
+      if (resetToken.usedAt) {
+        return res.status(400).json({ message: 'Acest token a fost deja folosit' });
+      }
+
+      if (new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ message: 'Tokenul a expirat. Solicită un nou cod de resetare.' });
+      }
+
+      const customer = await storage.getCustomerByEmail(resetToken.email);
+      if (!customer) {
+        return res.status(400).json({ message: 'Contul nu a fost găsit' });
+      }
+
+      const newPasswordHash = await hashPassword(newPassword);
+      await storage.updateCustomer(customer.id, { passwordHash: newPasswordHash });
+
+      await db.update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(eq(passwordResetTokens.id, resetToken.id));
+
+      console.log(`[Password Reset] Customer password reset successful for ${resetToken.email}`);
+
+      res.json({ message: 'Parola a fost resetată cu succes!' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ message: 'Failed to reset password' });
+    }
+  });
+
   // Setup 2FA - generate secret and return QR code data
   app.post('/api/auth/2fa/setup', async (req: Request, res: Response) => {
     try {
