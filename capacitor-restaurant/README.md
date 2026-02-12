@@ -9,24 +9,35 @@
 
 ### Setup
 
-1. Build the web app from the root directory:
+1. Install dependencies in the root project:
 ```bash
 cd ..
-npm run build
+npm install
 ```
 
-2. Install dependencies:
+2. Install dependencies in this directory:
 ```bash
 npm install
 ```
 
-3. Add platforms:
+3. Build the restaurant app (builds web + injects restaurant mode):
+```bash
+npm run build
+```
+
+This script:
+- Builds the web app from the root directory
+- Copies the build output to `www/`
+- Injects `window.__EATOFF_APP_MODE__ = "restaurant"` into `index.html`
+- The app will automatically open the Restaurant Sign-in page
+
+4. Add platforms (first time only):
 ```bash
 npx cap add ios
 npx cap add android
 ```
 
-4. Sync the build:
+5. Sync the build:
 ```bash
 npx cap sync
 ```
@@ -36,11 +47,22 @@ npx cap sync
 - **iOS**: `npx cap open ios`
 - **Android**: `npx cap open android`
 
-### App Detection
+### How Restaurant Mode Works
 
-The restaurant app is detected via the `EATOFF_APP_MODE` preference set in `capacitor.config.ts`.
-The web app checks `Capacitor.getPlugins()` or reads from a `window.__EATOFF_APP_MODE__` flag
-injected at build time to determine which UI to show.
+The restaurant app uses the same web codebase as the client app, but with a special flag
+`window.__EATOFF_APP_MODE__ = "restaurant"` injected at build time into the HTML.
+
+This flag tells the React app to:
+- Redirect directly to `/m/restaurant/signin` (Sign-in only, no Sign-up)
+- Show the restaurant dashboard after login
+- Hide client-specific navigation
+
+### Testing in Browser
+
+To test restaurant mode in the browser, add `?mode=restaurant` to the URL:
+```
+https://your-app-url.com/?mode=restaurant
+```
 
 ### Bundle IDs
 - **iOS**: `com.eatoff.restaurant`

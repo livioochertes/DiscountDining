@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.eatoff.restaurant',
   appName: 'EatOff Restaurant',
-  webDir: '../dist/public',
+  webDir: 'www',
   server: {
     androidScheme: 'https',
     allowNavigation: ['eatoff.app', '*.eatoff.app', 'accounts.google.com', 'appleid.apple.com']
