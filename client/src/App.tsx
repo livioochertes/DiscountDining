@@ -347,14 +347,44 @@ function App() {
   
   const [hasRedirected, setHasRedirected] = useState(false);
 
-  if (isRestaurant && !location.startsWith('/m/restaurant') && !hasRedirected) {
-    setHasRedirected(true);
-    const session = localStorage.getItem('restaurantSession');
-    setTimeout(() => setLocation(session ? '/m/restaurant/dashboard' : '/m/restaurant/signin'), 0);
-    return null;
+  if (isRestaurant) {
+    if (!location.startsWith('/m/restaurant/')) {
+      if (!hasRedirected) {
+        setHasRedirected(true);
+      }
+      const session = localStorage.getItem('restaurantSession');
+      const target = session ? '/m/restaurant/dashboard' : '/m/restaurant/signin';
+      if (location !== target) {
+        setTimeout(() => setLocation(target), 0);
+      }
+      return null;
+    }
+
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <LanguageProvider>
+            <MarketplaceProvider>
+              <CartProvider>
+                <Switch>
+                  <Route path="/m/restaurant/signin" component={MobileRestaurantSignIn} />
+                  <Route path="/m/restaurant/dashboard" component={MobileRestaurantDashboard} />
+                  <Route>{() => {
+                    const session = localStorage.getItem('restaurantSession');
+                    setTimeout(() => setLocation(session ? '/m/restaurant/dashboard' : '/m/restaurant/signin'), 0);
+                    return null;
+                  }}</Route>
+                </Switch>
+                <Toaster />
+              </CartProvider>
+            </MarketplaceProvider>
+          </LanguageProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
   }
   
-  if (!isRestaurant && isMobileApp && location === '/' && !hasRedirected) {
+  if (isMobileApp && location === '/' && !hasRedirected) {
     setHasRedirected(true);
     setTimeout(() => setLocation('/m'), 0);
     return null;
