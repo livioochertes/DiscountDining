@@ -346,23 +346,17 @@ function App() {
   const isRestaurant = isRestaurantApp();
   
   const [hasRedirected, setHasRedirected] = useState(false);
-  
-  if (isMobileApp && location === '/' && !hasRedirected) {
+
+  if (isRestaurant && !location.startsWith('/m/restaurant') && !hasRedirected) {
     setHasRedirected(true);
-    if (isRestaurant) {
-      const session = localStorage.getItem('restaurantSession');
-      setTimeout(() => setLocation(session ? '/m/restaurant/dashboard' : '/m/restaurant/signin'), 0);
-    } else {
-      setTimeout(() => setLocation('/m'), 0);
-    }
+    const session = localStorage.getItem('restaurantSession');
+    setTimeout(() => setLocation(session ? '/m/restaurant/dashboard' : '/m/restaurant/signin'), 0);
     return null;
   }
   
-  if (isRestaurant && isMobileApp && !location.startsWith('/m/restaurant')) {
-    setTimeout(() => {
-      const session = localStorage.getItem('restaurantSession');
-      setLocation(session ? '/m/restaurant/dashboard' : '/m/restaurant/signin');
-    }, 0);
+  if (!isRestaurant && isMobileApp && location === '/' && !hasRedirected) {
+    setHasRedirected(true);
+    setTimeout(() => setLocation('/m'), 0);
     return null;
   }
   
