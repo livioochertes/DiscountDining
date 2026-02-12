@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "EatOff Restaurant Mobile App",
   "scripts": {
-    "build": "cd .. && npm run build",
+    "build": "bash build-restaurant.sh",
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
     "cap:sync": "npx cap sync",
