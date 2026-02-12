@@ -4,7 +4,7 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, Loader2 as Loader2Icon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +47,16 @@ export default function MobileSignIn() {
     email: '',
     password: ''
   });
+
+  const [resetStep, setResetStep] = useState<'none' | 'email' | 'token' | 'success'>('none');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [generatedToken, setGeneratedToken] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const isNative = Capacitor.isNativePlatform();
 
@@ -324,6 +334,74 @@ export default function MobileSignIn() {
     setIsLoading(false);
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+
+      if (data.token) setGeneratedToken(data.token);
+      setResetStep('token');
+    } catch (err: any) {
+      setResetError(err.message || 'Eroare la procesarea cererii');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError(null);
+
+    if (newPassword !== confirmPassword) {
+      setResetError('Parolele nu coincid');
+      setResetLoading(false);
+      return;
+    }
+    if (newPassword.length < 8) {
+      setResetError('Parola trebuie să aibă minim 8 caractere');
+      setResetLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken, newPassword }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+
+      setResetStep('success');
+    } catch (err: any) {
+      setResetError(err.message || 'Eroare la resetarea parolei');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const backToLogin = () => {
+    setResetStep('none');
+    setResetError(null);
+    setResetEmail('');
+    setResetToken('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setGeneratedToken('');
+  };
+
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     console.log('[MobileSignIn] handleGoogleSignIn called, isNative:', isNative);
@@ -395,6 +473,152 @@ export default function MobileSignIn() {
 
   const topPadding = isNative ? statusBarHeight : 0;
 
+  if (resetStep === 'success') {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F8F7F4' }}>
+        <div className="flex items-center px-4 py-3" style={{ paddingTop: topPadding + 12 }}>
+          <button onClick={() => setLocation('/m')} className="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors">
+            <ArrowLeft className="w-6 h-6 text-gray-800" />
+          </button>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+            <CheckCircle className="w-10 h-10 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Parolă resetată!</h2>
+          <p className="text-gray-500 mb-8 text-center">Parola a fost schimbată cu succes. Te poți conecta cu noua parolă.</p>
+          <Button onClick={backToLogin} className="w-full h-14 text-base font-semibold rounded-xl text-white" style={{ backgroundColor: '#1A1A1A' }}>
+            Înapoi la conectare
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (resetStep === 'email' || resetStep === 'token') {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F8F7F4' }}>
+        <div className="flex items-center px-4 py-3" style={{ paddingTop: topPadding + 12 }}>
+          <button onClick={backToLogin} className="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors">
+            <ArrowLeft className="w-6 h-6 text-gray-800" />
+          </button>
+          <span className="ml-2 text-lg font-semibold text-gray-900">Resetare parolă</span>
+        </div>
+
+        <div className="flex-1 flex flex-col px-6">
+          <div className="text-center py-8">
+            <img src={eatoffLogo} alt="EatOff" className="h-16 mx-auto mb-6" style={{ mixBlendMode: 'multiply' }} />
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              {resetStep === 'email' ? 'Introdu emailul' : 'Introdu codul de resetare'}
+            </h2>
+            <p className="text-gray-500 text-sm">
+              {resetStep === 'email' ? 'Vei primi un cod de resetare pentru contul tău' : 'Introdu codul primit și noua parolă'}
+            </p>
+          </div>
+
+          {resetError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">
+              {resetError}
+            </div>
+          )}
+
+          {resetStep === 'email' ? (
+            <form onSubmit={handleForgotPassword} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="email@exemplu.com"
+                    className="pl-12 h-14 text-base rounded-xl bg-white border-gray-200"
+                    required
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full h-14 text-base font-semibold rounded-xl text-white"
+                style={{ backgroundColor: '#1A1A1A' }}
+              >
+                {resetLoading ? <Loader2Icon className="w-5 h-5 animate-spin" /> : 'Trimite cod de resetare'}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              {generatedToken && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-xl text-sm">
+                  <p className="font-semibold mb-1">Codul tău de resetare:</p>
+                  <p className="font-mono text-xs break-all select-all">{generatedToken}</p>
+                  <p className="text-xs text-blue-600 mt-1">Copiază și lipește codul mai jos</p>
+                </div>
+              )}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Cod de resetare</label>
+                <Input
+                  type="text"
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value)}
+                  placeholder="Lipește codul de resetare"
+                  className="h-14 text-base rounded-xl bg-white border-gray-200 font-mono text-sm"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Parolă nouă</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minim 8 caractere"
+                    className="pl-12 pr-12 h-14 text-base rounded-xl bg-white border-gray-200"
+                    required
+                    minLength={8}
+                  />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Confirmă parola</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repetă parola nouă"
+                    className="pl-12 h-14 text-base rounded-xl bg-white border-gray-200"
+                    required
+                    minLength={8}
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full h-14 text-base font-semibold rounded-xl text-white"
+                style={{ backgroundColor: '#1A1A1A' }}
+              >
+                {resetLoading ? <Loader2Icon className="w-5 h-5 animate-spin" /> : 'Resetează parola'}
+              </Button>
+            </form>
+          )}
+
+          <button onClick={backToLogin} className="w-full mt-4 text-center text-sm text-gray-500 hover:text-gray-800 transition-colors">
+            Înapoi la conectare
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       className="min-h-screen flex flex-col"
@@ -462,6 +686,17 @@ export default function MobileSignIn() {
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => { setResetStep('email'); setResetError(null); }}
+              className="text-sm font-medium hover:underline"
+              style={{ color: '#F5A623' }}
+            >
+              Am uitat parola
+            </button>
           </div>
 
           <Button

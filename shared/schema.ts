@@ -1060,6 +1060,16 @@ export const restaurantAvailability = pgTable("restaurant_availability", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  email: varchar("email").notNull(),
+  token: varchar("token").notNull().unique(),
+  userType: varchar("user_type").notNull(), // 'customer' or 'restaurant_owner'
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertRestaurantOwnerSchema = createInsertSchema(restaurantOwners).omit({
   id: true,
