@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X, Plus, Loader2, History } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -1239,6 +1240,7 @@ interface PaymentModalProps {
 }
 
 function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, creditBalance, vouchers }: PaymentModalProps) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [totalAmount, setTotalAmount] = useState('');
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
@@ -1259,7 +1261,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
   const activeVouchers = vouchers.filter(v => v.status === 'active');
 
   const availableSources: { key: string; label: string; balance: number; icon: any; bg: string; border: string; text: string; iconColor: string }[] = [];
-  if (personalBalance > 0) availableSources.push({ key: 'personal', label: 'Sold Personal', balance: personalBalance, icon: Wallet, bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-900', iconColor: 'text-blue-600' });
+  if (personalBalance > 0) availableSources.push({ key: 'personal', label: t.walletPersonal || 'Personal', balance: personalBalance, icon: Wallet, bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-900', iconColor: 'text-blue-600' });
   if (cashbackBalance > 0) availableSources.push({ key: 'cashback', label: 'Cashback', balance: cashbackBalance, icon: TrendingUp, bg: 'bg-green-50', border: 'border-green-400', text: 'text-green-900', iconColor: 'text-green-600' });
   if (creditBalance > 0) availableSources.push({ key: 'credit', label: 'Credit', balance: creditBalance, icon: CreditCard, bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-900', iconColor: 'text-purple-600' });
   activeVouchers.forEach(v => {
@@ -1432,16 +1434,17 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
     return (
       <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
         <div className="bg-white w-full max-w-sm rounded-3xl p-6 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-10 h-10 text-amber-600" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Plată procesată!</h2>
-          <p className="text-gray-600 mb-4">Arată acest cod la restaurant:</p>
-          <div className="bg-gray-100 rounded-xl p-4 mb-4">
-            <p className="text-2xl font-mono font-bold tracking-wider">{paymentCode}</p>
+          <h2 className="text-xl font-bold mb-2">{t.paymentInitiated || 'Payment Initiated'}</h2>
+          <p className="text-gray-600 mb-4">{t.showQRToRestaurant || 'Show this QR code at the restaurant:'}</p>
+          <div className="bg-white rounded-xl p-4 mb-4 flex justify-center">
+            <QRCodeSVG value={paymentCode} size={200} level="H" includeMargin />
           </div>
+          <p className="text-xs text-gray-400 font-mono mb-2">{paymentCode}</p>
           <p className="text-sm text-gray-500 mb-6">Total: {parseFloat(totalAmount).toFixed(2)} RON</p>
-          <button onClick={() => { setPaymentCode(null); onClose(); }} className="w-full bg-primary text-white py-3 rounded-xl font-semibold">Închide</button>
+          <button onClick={() => { setPaymentCode(null); onClose(); }} className="w-full bg-primary text-white py-3 rounded-xl font-semibold">{t.close || 'Close'}</button>
         </div>
       </div>
     );
@@ -1454,7 +1457,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-end">
       <div className="bg-white w-full rounded-t-3xl max-h-[75vh] flex flex-col" style={{ marginBottom: '6rem' }}>
         <div className="flex items-center justify-between p-4 border-b rounded-t-3xl flex-shrink-0">
-          <h2 className="text-xl font-bold">Plătește</h2>
+          <h2 className="text-xl font-bold">{t.walletPay || 'Pay'}</h2>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100">
             <X className="w-5 h-5" />
           </button>
@@ -1462,7 +1465,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Suma de plată (RON)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t.paymentAmount || 'Payment amount'} (RON)</label>
             <input
               type="number"
               value={totalAmount}
@@ -1597,7 +1600,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
             <button onClick={() => setShowTopUp(true)}
               className="w-full py-3 rounded-xl font-semibold text-blue-600 border-2 border-blue-200 bg-blue-50 flex items-center justify-center gap-2">
               <Plus className="w-5 h-5" />
-              Adaugă fonduri
+              {t.addFunds || 'Add funds'}
             </button>
           )}
           <button
@@ -1607,7 +1610,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
               "w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2",
               canGenerate ? "bg-primary text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"
             )}>
-            {isProcessing ? (<><Loader2 className="w-5 h-5 animate-spin" />Se procesează...</>) : 'Generează Cod QR'}
+            {isProcessing ? (<><Loader2 className="w-5 h-5 animate-spin" />{t.processing || 'Processing...'}</>) : (t.generateQRCode || 'Generate QR Code')}
           </button>
         </div>
       </div>
