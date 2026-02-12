@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
 
 const API_BASE_URL = Capacitor.isNativePlatform() 
-  ? 'https://0c90c681-c530-48b5-a772-aad7086fccf3-00-225nal1mjdpuu.kirk.replit.dev'
+  ? 'https://eatoff.app'
   : '';
 
 type ResetStep = 'login' | 'forgot-email' | 'forgot-token' | 'forgot-newpass' | 'forgot-success';
