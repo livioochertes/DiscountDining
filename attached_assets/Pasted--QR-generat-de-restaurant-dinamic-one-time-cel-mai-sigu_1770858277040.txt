@@ -1,0 +1,167 @@
+✅ QR generat de restaurant (dinamic, one-time) = cel mai sigur
+
+Clientul doar scanează și confirmă. Restaurantul nu poate “fabrica” locația, iar QR-ul expiră.
+
+⚠️ QR generat de client = posibil, dar mai ușor de abuzat
+
+Poți face, dar doar dacă rămâne server-verified și legat de o sesiune reală (restaurant/staff).
+
+Mai jos îți dau ambele fluxuri, cu reguli clare.
+
+⸻
+
+A) Flux SAFE: QR generat de restaurant (POS/chelner)
+
+1) Restaurant deschide o sesiune de plată
+
+Device B → Server
+POST /v1/restaurant-payment-sessions
+	•	restaurant_id
+	•	staff_id (sau device_id)
+	•	amount (nota fixă)
+	•	currency
+	•	table_id (opțional)
+	•	tip_allowed + tip_max (ex: max 20% sau max X lei)
+	•	expires_in (ex: 120 sec)
+
+Server → Device B
+	•	session_id
+	•	qr_token (JWT/opaque) expiring, one-time
+	•	qr_payload (ce pui în QR, ex: eatoff://pay?token=...)
+
+2) Client scanează QR și cere intenția de plată
+
+Device A → Server
+POST /v1/payment-intents
+	•	session_token
+	•	tip_amount (0..tip_max)
+	•	customer_note (opțional)
+
+Server
+	•	validează token (semnătură, expirare, one-time)
+	•	validează restaurant + sumă + tip range
+	•	verifică sold client
+	•	creează intent: requires_confirmation
+	•	face HOLD în wallet (reserve)
+
+Server → Device A
+	•	payment_intent_id
+	•	total_amount
+	•	status=requires_confirmation
+
+3) Client confirmă (biometric/PIN)
+
+Device A → Server
+POST /v1/payment-intents/{id}/confirm
+Headers:
+	•	X-Request-Id (idempotency)
+	•	X-Timestamp, X-Nonce
+	•	X-Signature (HMAC cu secret din Keychain/Keystore)
+
+Server
+	•	capture: mută din reserved în restaurant_wallet (ledger atomic)
+	•	status succeeded
+	•	emite eveniment către restaurant
+
+4) Restaurant primește confirmarea
+
+Server → Device B
+WebSocket/Push:
+	•	payment_succeeded cu receipt_id, sumă, tip, timestamp
+
+✅ Avantaje:
+	•	one-time token + expirare = anti-replay
+	•	server decide tot
+	•	chelnerul/POS nu poate dubla fără idempotency / nonces
+	•	client nu poate plăti “în altă parte” cu QR vechi
+
+⸻
+
+B) Flux acceptabil: QR generat de client
+
+Aici cheia e: clientul nu are voie să inventeze restaurantul singur. Trebuie să existe o legătură cu restaurantul (staff / POS / masă).
+
+Ai două variante:
+
+B1) Client generează QR, dar restaurantul îl “acceptă” (server-mediated)
+
+1) Client creează o cerere de plată
+
+Device A → Server
+POST /v1/customer-pay-requests
+	•	restaurant_id (selectat din listă / geofence / QR static masă)
+	•	amount
+	•	tip_allowed
+	•	expires_in (ex 5 min)
+
+Server răspunde cu:
+	•	pay_request_id
+	•	pay_request_token (semnat, expiring)
+
+Client afișează QR cu tokenul.
+
+2) Restaurant scanează / introduce codul
+
+Device B → Server
+POST /v1/customer-pay-requests/{id}/accept
+	•	staff_id/device_id
+	•	confirmă amount (afișat, nu editabil decât în limite)
+	•	opțional: table_id
+
+Server:
+	•	verifică restaurant match
+	•	verifică staff authorized
+	•	marchează request ca accepted_by_restaurant
+	•	apoi creează PaymentIntent și notifică clientul
+
+3) Client confirmă (ca în fluxul A)
+
+Totul se finalizează doar cu confirmarea clientului.
+
+✅ Avantaj:
+	•	clientul poate iniția, dar restaurantul validează contextul
+⚠️ Dezavantaj:
+	•	UX mai lung (doi pași)
+
+B2) Client QR fără “accept” de restaurant (NU recomand pentru bani reali)
+
+Asta se poate doar dacă ai:
+	•	QR static pe masă (restaurant-issued) sau
+	•	semnal Wi-Fi/BSSID + geofence + risk scoring
+Tot rămâne mai slab decât A.
+
+⸻
+
+Parametri cheie (pentru FIXED + TIPS)
+
+Tip handling:
+	•	tip_amount separat de bill_amount
+	•	limite server-side:
+	•	0 <= tip_amount <= min(tip_max_abs, bill_amount * tip_max_pct)
+	•	în receipt păstrezi separat:
+	•	bill, tip, total
+
+Idempotency:
+	•	fiecare confirm cu X-Request-Id unic
+	•	server păstrează rezultatul pentru același request-id (nu dublează)
+
+Anti-replay:
+	•	nonce stocat 5–10 minute
+	•	reject dacă nonce repetat
+
+⸻
+
+Ce aș decide eu pentru EatOff
+	1.	Primar: QR dinamic generat de restaurant (POS/tabletă) ✅
+	2.	Opțional: client poate genera QR doar în varianta B1 (restaurant acceptă)
+	3.	Tips: client introduce tip în app, în limite impuse de server
+
+⸻
+
+Endpoints minime (schemă rapidă)
+	•	POST /restaurant-payment-sessions
+	•	POST /payment-intents
+	•	POST /payment-intents/{id}/confirm
+	•	POST /customer-pay-requests (opțional)
+	•	POST /customer-pay-requests/{id}/accept (opțional)
+	•	GET /receipts/{id}
