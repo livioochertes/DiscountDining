@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 interface MobileLayoutProps {
   children: ReactNode;
+  hideNavigation?: boolean;
 }
 
 const tabs = [
@@ -19,7 +20,7 @@ const tabs = [
 
 const DEFAULT_STATUS_BAR_HEIGHT = 40;
 
-export function MobileLayout({ children }: MobileLayoutProps) {
+export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
   const [location, setLocation] = useLocation();
   const [isCompact, setIsCompact] = useState(false);
   const [statusBarHeight, setStatusBarHeight] = useState(DEFAULT_STATUS_BAR_HEIGHT);
@@ -130,8 +131,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
         {children}
       </main>
 
-      {/* Bottom Navigation - Fixed, Dynamic height */}
-      <nav className={cn(
+      {!hideNavigation && <nav className={cn(
         "fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 safe-area-bottom z-50 transition-all duration-300 ease-out",
         isCompact ? "px-6 py-1" : "px-4 py-2"
       )}>
@@ -174,7 +174,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
             );
           })}
         </div>
-      </nav>
+      </nav>}
     </div>
   );
 }

@@ -52,6 +52,15 @@ export default function MobileRestaurantDashboard() {
   const [editingMenuItem, setEditingMenuItem] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState('');
 
+  const [menuCategoryFilter, setMenuCategoryFilter] = useState<string>('all');
+  const [menuSearchQuery, setMenuSearchQuery] = useState('');
+  const [showAddMenuItem, setShowAddMenuItem] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState('');
+  const [newItemDescription, setNewItemDescription] = useState('');
+  const [reservationFilter, setReservationFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
+
   const [qrSessionAmount, setQrSessionAmount] = useState('');
   const [qrSessionTable, setQrSessionTable] = useState('');
   const [qrSessionDescription, setQrSessionDescription] = useState('');
@@ -379,6 +388,30 @@ export default function MobileRestaurantDashboard() {
     onSuccess: () => {
       setEditingMenuItem(null);
       setEditPrice('');
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/menu-items', restaurantId] });
+    },
+  });
+
+  const addMenuItemMutation = useMutation({
+    mutationFn: async (data: { name: string; price: string; category?: string; description?: string }) => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/restaurants/${restaurantId}/menu`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Eroare la adăugare');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setShowAddMenuItem(false);
+      setNewItemName('');
+      setNewItemPrice('');
+      setNewItemCategory('');
+      setNewItemDescription('');
       queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/menu-items', restaurantId] });
     },
   });
@@ -1023,137 +1056,302 @@ export default function MobileRestaurantDashboard() {
             </>
           )}
 
-          {activeTab === 'menu' && (
-            <>
-              <h2 className="font-semibold text-gray-900 text-lg">Managementul Meniului</h2>
-              {menuLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          {activeTab === 'menu' && (() => {
+            const categories = Array.from(new Set(menuItems.map((i: any) => i.category).filter(Boolean)));
+            const filteredItems = menuItems.filter((item: any) => {
+              const matchesCategory = menuCategoryFilter === 'all' || item.category === menuCategoryFilter;
+              const matchesSearch = !menuSearchQuery || item.name?.toLowerCase().includes(menuSearchQuery.toLowerCase());
+              return matchesCategory && matchesSearch;
+            });
+            return (
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold text-gray-900 text-lg">Meniu</h2>
+                  <button
+                    onClick={() => setShowAddMenuItem(!showAddMenuItem)}
+                    className="bg-primary text-white px-3 py-1.5 rounded-xl text-sm font-medium flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" /> Adaugă
+                  </button>
                 </div>
-              ) : menuItems.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-                  <UtensilsCrossed className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">Niciun produs în meniu</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {menuItems.map((item: any) => (
-                    <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-100">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-medium text-gray-900">{item.name}</p>
-                            {item.category && (
-                              <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">{item.category}</span>
+
+                {showAddMenuItem && (
+                  <div className="bg-white rounded-2xl p-4 border border-gray-100 space-y-3">
+                    <h3 className="font-semibold text-gray-900 text-sm">Produs Nou</h3>
+                    <input
+                      type="text"
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      placeholder="Nume produs *"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={newItemPrice}
+                        onChange={(e) => setNewItemPrice(e.target.value)}
+                        placeholder="Preț (RON) *"
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <input
+                        type="text"
+                        value={newItemCategory}
+                        onChange={(e) => setNewItemCategory(e.target.value)}
+                        placeholder="Categorie"
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={newItemDescription}
+                      onChange={(e) => setNewItemDescription(e.target.value)}
+                      placeholder="Descriere (opțional)"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (!newItemName.trim() || !newItemPrice.trim()) return;
+                          addMenuItemMutation.mutate({
+                            name: newItemName.trim(),
+                            price: newItemPrice,
+                            category: newItemCategory.trim() || undefined,
+                            description: newItemDescription.trim() || undefined,
+                          });
+                        }}
+                        disabled={!newItemName.trim() || !newItemPrice.trim() || addMenuItemMutation.isPending}
+                        className="flex-1 bg-primary text-white py-3 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {addMenuItemMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check className="w-5 h-5" /> Salvează</>}
+                      </button>
+                      <button
+                        onClick={() => setShowAddMenuItem(false)}
+                        className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium"
+                      >
+                        Anulează
+                      </button>
+                    </div>
+                    {addMenuItemMutation.isError && (
+                      <p className="text-red-500 text-sm">{(addMenuItemMutation.error as Error)?.message}</p>
+                    )}
+                  </div>
+                )}
+
+                <input
+                  type="text"
+                  value={menuSearchQuery}
+                  onChange={(e) => setMenuSearchQuery(e.target.value)}
+                  placeholder="Caută în meniu..."
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+
+                {categories.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                    <button
+                      onClick={() => setMenuCategoryFilter('all')}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border transition-colors",
+                        menuCategoryFilter === 'all' ? "bg-primary text-white border-primary" : "bg-white text-gray-600 border-gray-200"
+                      )}
+                    >
+                      Toate ({menuItems.length})
+                    </button>
+                    {categories.map((cat: string) => (
+                      <button
+                        key={cat}
+                        onClick={() => setMenuCategoryFilter(cat)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border transition-colors",
+                          menuCategoryFilter === cat ? "bg-primary text-white border-primary" : "bg-white text-gray-600 border-gray-200"
+                        )}
+                      >
+                        {cat} ({menuItems.filter((i: any) => i.category === cat).length})
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {menuLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : filteredItems.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                    <UtensilsCrossed className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500">{menuItems.length === 0 ? 'Niciun produs în meniu' : 'Niciun rezultat'}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredItems.map((item: any) => (
+                      <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-gray-900">{item.name}</p>
+                              {item.category && (
+                                <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">{item.category}</span>
+                              )}
+                            </div>
+                            {item.description && (
+                              <p className="text-sm text-gray-500 truncate">{item.description}</p>
                             )}
                           </div>
-                          {item.description && (
-                            <p className="text-sm text-gray-500 truncate">{item.description}</p>
-                          )}
+                          <button
+                            onClick={() => {
+                              toggleMenuItemMutation.mutate({ id: item.id, isAvailable: !item.isAvailable });
+                            }}
+                            className="ml-3"
+                          >
+                            {item.isAvailable !== false ? (
+                              <ToggleRight className="w-8 h-8 text-green-600" />
+                            ) : (
+                              <ToggleLeft className="w-8 h-8 text-gray-400" />
+                            )}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => {
-                            toggleMenuItemMutation.mutate({ id: item.id, isAvailable: !item.isAvailable });
-                          }}
-                          className="ml-3"
-                        >
-                          {item.isAvailable !== false ? (
-                            <ToggleRight className="w-8 h-8 text-green-600" />
+                        <div className="flex items-center justify-between mt-3">
+                          {editingMenuItem === item.id ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={editPrice}
+                                onChange={(e) => setEditPrice(e.target.value)}
+                                className="w-24 px-3 py-2 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                                placeholder="Preț"
+                              />
+                              <button
+                                onClick={() => updatePriceMutation.mutate({ id: item.id, price: editPrice })}
+                                disabled={updatePriceMutation.isPending}
+                                className="bg-green-600 text-white p-2 rounded-xl"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => { setEditingMenuItem(null); setEditPrice(''); }}
+                                className="bg-gray-200 text-gray-600 p-2 rounded-xl"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
                           ) : (
-                            <ToggleLeft className="w-8 h-8 text-gray-400" />
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900">{parseFloat(item.price || '0').toFixed(2)} RON</span>
+                              <button
+                                onClick={() => { setEditingMenuItem(item.id); setEditPrice(item.price || ''); }}
+                                className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           )}
-                        </button>
+                          <span className={cn(
+                            "text-xs font-medium px-2 py-1 rounded-full",
+                            item.isAvailable !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                          )}>
+                            {item.isAvailable !== false ? 'Disponibil' : 'Indisponibil'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between mt-3">
-                        {editingMenuItem === item.id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              value={editPrice}
-                              onChange={(e) => setEditPrice(e.target.value)}
-                              className="w-24 px-3 py-2 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
-                              placeholder="Preț"
-                            />
-                            <button
-                              onClick={() => updatePriceMutation.mutate({ id: item.id, price: editPrice })}
-                              disabled={updatePriceMutation.isPending}
-                              className="bg-green-600 text-white p-2 rounded-xl"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => { setEditingMenuItem(null); setEditPrice(''); }}
-                              className="bg-gray-200 text-gray-600 p-2 rounded-xl"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900">{parseFloat(item.price || '0').toFixed(2)} RON</span>
-                            <button
-                              onClick={() => { setEditingMenuItem(item.id); setEditPrice(item.price || ''); }}
-                              className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                        <span className={cn(
-                          "text-xs font-medium px-2 py-1 rounded-full",
-                          item.isAvailable !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                        )}>
-                          {item.isAvailable !== false ? 'Disponibil' : 'Indisponibil'}
-                        </span>
-                      </div>
-                    </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+          {activeTab === 'reservations' && (() => {
+            const filteredReservations = reservations.filter((r: any) => {
+              if (reservationFilter === 'all') return true;
+              return r.status === reservationFilter;
+            });
+            const pendingCount = reservations.filter((r: any) => r.status === 'pending').length;
+            const confirmedCount = reservations.filter((r: any) => r.status === 'confirmed').length;
+            return (
+              <>
+                <h2 className="font-semibold text-gray-900 text-lg">Rezervări</h2>
+
+                <div className="flex gap-2">
+                  {([
+                    { key: 'all' as const, label: 'Toate', count: reservations.length },
+                    { key: 'pending' as const, label: 'În așteptare', count: pendingCount },
+                    { key: 'confirmed' as const, label: 'Confirmate', count: confirmedCount },
+                  ]).map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setReservationFilter(f.key)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                        reservationFilter === f.key ? "bg-primary text-white border-primary" : "bg-white text-gray-600 border-gray-200"
+                      )}
+                    >
+                      {f.label} ({f.count})
+                    </button>
                   ))}
                 </div>
-              )}
-            </>
-          )}
 
-          {activeTab === 'reservations' && (
-            <>
-              <h2 className="font-semibold text-gray-900 text-lg">Rezervări</h2>
-              {reservationsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              ) : reservations.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-                  <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500">Nicio rezervare</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {reservations.map((res: any) => {
-                    const status = res.status || 'pending';
-                    const statusColor = status === 'confirmed' ? 'bg-green-100 text-green-700' : status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
-                    const statusLabel = status === 'confirmed' ? 'Confirmat' : status === 'cancelled' ? 'Anulat' : 'În așteptare';
-                    return (
-                      <div key={res.id} className="bg-white rounded-2xl p-4 border border-gray-100">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <p className="font-medium text-gray-900">{res.customerName || res.guestName || `Client #${res.customerId}`}</p>
-                            <p className="text-sm text-gray-500">
-                              {res.reservationDate ? new Date(res.reservationDate).toLocaleDateString('ro-RO') : ''}{' '}
-                              {res.reservationTime || ''}
-                            </p>
+                {reservationsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : filteredReservations.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                    <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500">Nicio rezervare</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredReservations.map((res: any) => {
+                      const status = res.status || 'pending';
+                      const statusColor = status === 'confirmed' ? 'bg-green-100 text-green-700' : status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+                      const statusLabel = status === 'confirmed' ? 'Confirmat' : status === 'cancelled' ? 'Anulat' : 'În așteptare';
+                      return (
+                        <div key={res.id} className="bg-white rounded-2xl p-4 border border-gray-100">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <p className="font-medium text-gray-900">{res.customerName || res.guestName || `Client #${res.customerId}`}</p>
+                              <p className="text-sm text-gray-500">
+                                {res.reservationDate ? new Date(res.reservationDate).toLocaleDateString('ro-RO') : ''}{' '}
+                                {res.reservationTime || ''}
+                              </p>
+                            </div>
+                            <span className={cn("px-2 py-1 rounded-full text-xs font-medium", statusColor)}>{statusLabel}</span>
                           </div>
-                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium", statusColor)}>{statusLabel}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Users className="w-4 h-4" />
-                            <span>{res.partySize || res.guestCount || res.numberOfGuests || '?'} persoane</span>
+
+                          <div className="space-y-1.5 mb-3">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Users className="w-4 h-4 text-gray-400" />
+                              <span>{res.partySize || res.guestCount || res.numberOfGuests || '?'} persoane</span>
+                            </div>
+                            {(res.phone || res.customerPhone) && (
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Phone className="w-4 h-4 text-gray-400" />
+                                <span>{res.phone || res.customerPhone}</span>
+                              </div>
+                            )}
+                            {(res.email || res.customerEmail) && (
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Mail className="w-4 h-4 text-gray-400" />
+                                <span>{res.email || res.customerEmail}</span>
+                              </div>
+                            )}
+                            {res.specialRequests && (
+                              <div className="bg-amber-50 rounded-lg p-2 mt-1">
+                                <p className="text-xs text-amber-700">{res.specialRequests}</p>
+                              </div>
+                            )}
+                            {res.notes && (
+                              <div className="bg-amber-50 rounded-lg p-2 mt-1">
+                                <p className="text-xs text-amber-700">{res.notes}</p>
+                              </div>
+                            )}
                           </div>
+
                           {status === 'pending' && (
                             <div className="flex gap-2">
                               <button
                                 onClick={() => confirmReservationMutation.mutate(res.id)}
                                 disabled={confirmReservationMutation.isPending}
-                                className="bg-green-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium flex items-center gap-1"
+                                className="flex-1 bg-green-600 text-white px-3 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-1"
                               >
                                 <Check className="w-4 h-4" />
                                 Confirmă
@@ -1161,7 +1359,7 @@ export default function MobileRestaurantDashboard() {
                               <button
                                 onClick={() => cancelReservationMutation.mutate(res.id)}
                                 disabled={cancelReservationMutation.isPending}
-                                className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium flex items-center gap-1"
+                                className="flex-1 bg-red-600 text-white px-3 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-1"
                               >
                                 <X className="w-4 h-4" />
                                 Anulează
@@ -1169,13 +1367,13 @@ export default function MobileRestaurantDashboard() {
                             </div>
                           )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {activeTab === 'orders' && (
             <>
