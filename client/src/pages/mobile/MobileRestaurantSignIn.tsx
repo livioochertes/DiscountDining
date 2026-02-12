@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Store, Eye, EyeOff, ChevronLeft, Loader2 } from 'lucide-react';
+import { Store, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
@@ -60,13 +60,7 @@ export default function MobileRestaurantSignIn() {
       <div className="min-h-screen bg-white">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={() => setLocation('/m/signin')}
-            className="p-2 -ml-2 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-semibold">Restaurant Portal</h1>
+          <h1 className="text-lg font-semibold">EatOff Restaurant</h1>
         </div>
 
         <div className="px-6 py-8">
@@ -141,20 +135,6 @@ export default function MobileRestaurantSignIn() {
             </button>
           </form>
 
-          {/* Separator */}
-          <div className="flex items-center gap-4 my-8">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-gray-400 text-sm">sau</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          {/* Switch to Customer Login */}
-          <button
-            onClick={() => setLocation('/m/signin')}
-            className="w-full bg-gray-100 text-gray-700 py-4 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-          >
-            Sunt client EatOff
-          </button>
         </div>
       </div>
     </MobileLayout>
