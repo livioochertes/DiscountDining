@@ -60,32 +60,37 @@ router.post("/login", async (req, res) => {
   try {
     const loginData = loginRestaurantOwnerSchema.parse(req.body);
     
-    // Find owner by email
     const owner = await storage.getRestaurantOwnerByEmail(loginData.email);
     if (!owner) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Email sau parolă incorectă" });
     }
 
-    // Verify password
     const isPasswordValid = await verifyPassword(loginData.password, owner.passwordHash);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Email sau parolă incorectă" });
     }
 
-    // Check if account is active
     if (!owner.isActive) {
-      return res.status(401).json({ message: "Account is inactive" });
+      return res.status(401).json({ message: "Contul este inactiv" });
     }
 
-    // Set session
     req.session.ownerId = owner.id;
+
+    const [restaurant] = await db
+      .select()
+      .from(restaurants)
+      .where(eq(restaurants.ownerId, owner.id))
+      .limit(1);
     
     res.json({
-      id: owner.id,
-      email: owner.email,
-      companyName: owner.companyName,
-      isVerified: owner.isVerified,
-      isActive: owner.isActive
+      owner: {
+        id: owner.id,
+        email: owner.email,
+        companyName: owner.companyName,
+        isVerified: owner.isVerified,
+        isActive: owner.isActive
+      },
+      restaurant: restaurant || null
     });
   } catch (error: any) {
     console.error("Login error:", error);
