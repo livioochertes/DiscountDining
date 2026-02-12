@@ -71,6 +71,7 @@ import MobileRestaurantSignIn from "@/pages/mobile/MobileRestaurantSignIn";
 import MobileRestaurantDashboard from "@/pages/mobile/MobileRestaurantDashboard";
 import MobileDealDetail from "@/pages/mobile/MobileDealDetail";
 import { useIsMobileApp } from "@/hooks/useIsMobile";
+import { isRestaurantApp } from "@/lib/appMode";
 import { useLocation } from "wouter";
 import eatOffLogo from "@assets/EatOff_Logo_1750512988041.png";
 
@@ -342,12 +343,26 @@ function App() {
   const [location, setLocation] = useLocation();
   const isMobileApp = useIsMobileApp();
   
-  // Auto-redirect to mobile layout for Capacitor apps
+  const isRestaurant = isRestaurantApp();
+  
   const [hasRedirected, setHasRedirected] = useState(false);
   
   if (isMobileApp && location === '/' && !hasRedirected) {
     setHasRedirected(true);
-    setTimeout(() => setLocation('/m'), 0);
+    if (isRestaurant) {
+      const session = localStorage.getItem('restaurantSession');
+      setTimeout(() => setLocation(session ? '/m/restaurant/dashboard' : '/m/restaurant/signin'), 0);
+    } else {
+      setTimeout(() => setLocation('/m'), 0);
+    }
+    return null;
+  }
+  
+  if (isRestaurant && isMobileApp && !location.startsWith('/m/restaurant')) {
+    setTimeout(() => {
+      const session = localStorage.getItem('restaurantSession');
+      setLocation(session ? '/m/restaurant/dashboard' : '/m/restaurant/signin');
+    }, 0);
     return null;
   }
   

@@ -30,7 +30,8 @@ import {
   walletTransactions,
   paymentTransactions,
   restaurants,
-  restaurantOwners
+  restaurantOwners,
+  paymentSessions
 } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -3021,6 +3022,307 @@ router.get("/wallet/payment/:transactionId", async (req: Request, res: Response)
   } catch (error: any) {
     console.error("Error fetching transaction:", error);
     res.status(500).json({ message: "Error fetching transaction: " + error.message });
+  }
+});
+
+router.post("/wallet/restaurant-payment-session", async (req: Request, res: Response) => {
+  try {
+    const { restaurantId, staffId, amount, currency, tableId, description, tipAllowed, tipMaxPercent, expiresIn } = req.body;
+    
+    if (!restaurantId || !amount || parseFloat(amount) <= 0) {
+      return res.status(400).json({ message: "Restaurant ID and valid amount required" });
+    }
+    
+    const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, restaurantId));
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+    
+    const crypto = await import('crypto');
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    
+    const expirySeconds = expiresIn || 120;
+    const expiresAt = new Date(Date.now() + expirySeconds * 1000);
+    
+    const [session] = await db.insert(paymentSessions).values({
+      restaurantId,
+      staffId: staffId || null,
+      sessionToken,
+      amount: amount.toString(),
+      currency: currency || 'RON',
+      tableId: tableId || null,
+      description: description || null,
+      tipAllowed: tipAllowed !== false,
+      tipMaxPercent: (tipMaxPercent || 20).toString(),
+      status: 'active',
+      expiresAt,
+    }).returning();
+    
+    const qrPayload = `EATOFF_SESSION:${sessionToken}`;
+    
+    res.json({
+      sessionId: session.id,
+      sessionToken,
+      qrPayload,
+      amount: session.amount,
+      currency: session.currency,
+      expiresAt: session.expiresAt,
+      expiresIn: expirySeconds,
+    });
+  } catch (error) {
+    console.error('Error creating payment session:', error);
+    res.status(500).json({ message: "Failed to create payment session" });
+  }
+});
+
+router.post("/wallet/payment-intent", async (req: Request, res: Response) => {
+  try {
+    const { sessionToken, tipAmount, customerNote } = req.body;
+    
+    if (!sessionToken) {
+      return res.status(400).json({ message: "Session token required" });
+    }
+    
+    const [session] = await db.select().from(paymentSessions).where(eq(paymentSessions.sessionToken, sessionToken));
+    
+    if (!session) {
+      return res.status(404).json({ message: "Payment session not found" });
+    }
+    
+    if (session.status !== 'active') {
+      return res.status(400).json({ message: "Payment session already used or expired" });
+    }
+    
+    if (new Date() > new Date(session.expiresAt)) {
+      await db.update(paymentSessions).set({ status: 'expired', updatedAt: new Date() }).where(eq(paymentSessions.id, session.id));
+      return res.status(400).json({ message: "Payment session expired" });
+    }
+    
+    const customerId = (req as any).user?.id;
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const billAmount = parseFloat(session.amount);
+    const tip = tipAmount ? parseFloat(tipAmount) : 0;
+    const maxTipPercent = parseFloat(session.tipMaxPercent || '20');
+    const maxTip = billAmount * (maxTipPercent / 100);
+    
+    if (tip < 0 || (session.tipAllowed && tip > maxTip)) {
+      return res.status(400).json({ message: `Tip must be between 0 and ${maxTip.toFixed(2)}` });
+    }
+    
+    if (!session.tipAllowed && tip > 0) {
+      return res.status(400).json({ message: "Tips not allowed for this payment" });
+    }
+    
+    const totalAmount = billAmount + tip;
+    
+    const [wallet] = await db.select().from(customerWallets).where(eq(customerWallets.customerId, customerId));
+    const balance = wallet ? parseFloat(wallet.cashBalance) : 0;
+    
+    if (balance < totalAmount) {
+      return res.status(400).json({ message: "Insufficient balance", required: totalAmount, available: balance });
+    }
+    
+    await db.update(paymentSessions).set({
+      status: 'claimed',
+      customerId,
+      claimedAt: new Date(),
+      updatedAt: new Date(),
+    }).where(eq(paymentSessions.id, session.id));
+    
+    const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, session.restaurantId));
+    const commissionRate = restaurant?.participatesInCashback ? 0.075 : (parseFloat(restaurant?.commissionRate || '6') / 100);
+    const platformCommission = totalAmount * commissionRate;
+    const restaurantReceives = totalAmount - platformCommission;
+    
+    const [transaction] = await db.insert(paymentTransactions).values({
+      customerId,
+      restaurantId: session.restaurantId,
+      transactionType: 'session_payment',
+      amount: totalAmount.toString(),
+      paymentMethod: 'cash_balance',
+      cashUsed: totalAmount.toString(),
+      platformCommission: platformCommission.toFixed(2),
+      restaurantReceives: restaurantReceives.toFixed(2),
+      transactionStatus: 'requires_confirmation',
+      qrCodeScanned: session.sessionToken,
+    }).returning();
+    
+    await db.update(paymentSessions).set({
+      paymentIntentId: transaction.id,
+      updatedAt: new Date(),
+    }).where(eq(paymentSessions.id, session.id));
+    
+    res.json({
+      paymentIntentId: transaction.id,
+      sessionId: session.id,
+      billAmount: session.amount,
+      tipAmount: tip.toFixed(2),
+      totalAmount: totalAmount.toFixed(2),
+      restaurantName: restaurant?.name || 'Restaurant',
+      status: 'requires_confirmation',
+    });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    res.status(500).json({ message: "Failed to create payment intent" });
+  }
+});
+
+router.post("/wallet/payment-intent/:id/confirm", async (req: Request, res: Response) => {
+  try {
+    const transactionId = parseInt(req.params.id);
+    const idempotencyKey = req.headers['x-request-id'] as string;
+    
+    if (idempotencyKey) {
+      const [existingSession] = await db.select().from(paymentSessions).where(eq(paymentSessions.idempotencyKey, idempotencyKey));
+      if (existingSession && existingSession.status === 'completed') {
+        return res.json({ status: 'already_completed', transactionId });
+      }
+    }
+    
+    const [transaction] = await db.select().from(paymentTransactions).where(eq(paymentTransactions.id, transactionId));
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+    
+    if (transaction.transactionStatus !== 'requires_confirmation') {
+      return res.status(400).json({ message: `Transaction status is ${transaction.transactionStatus}, cannot confirm` });
+    }
+    
+    const customerId = (req as any).user?.id;
+    if (!customerId || transaction.customerId !== customerId) {
+      return res.status(403).json({ message: "Not authorized to confirm this payment" });
+    }
+    
+    const totalAmount = parseFloat(transaction.amount);
+    
+    const [wallet] = await db.select().from(customerWallets).where(eq(customerWallets.customerId, customerId));
+    const currentBalance = wallet ? parseFloat(wallet.cashBalance) : 0;
+    
+    if (currentBalance < totalAmount) {
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+    
+    const newBalance = currentBalance - totalAmount;
+    
+    await db.update(customerWallets).set({
+      cashBalance: newBalance.toFixed(2),
+      updatedAt: new Date(),
+    }).where(eq(customerWallets.customerId, customerId));
+    
+    await db.update(paymentTransactions).set({
+      transactionStatus: 'completed',
+      processedAt: new Date(),
+      updatedAt: new Date(),
+    }).where(eq(paymentTransactions.id, transactionId));
+    
+    const sessionToken = transaction.qrCodeScanned;
+    if (sessionToken) {
+      await db.update(paymentSessions).set({
+        status: 'completed',
+        completedAt: new Date(),
+        idempotencyKey: idempotencyKey || null,
+        updatedAt: new Date(),
+      }).where(eq(paymentSessions.sessionToken, sessionToken));
+    }
+    
+    await db.insert(walletTransactions).values({
+      customerId,
+      transactionType: 'session_payment',
+      amount: totalAmount.toString(),
+      description: `Payment to restaurant #${transaction.restaurantId}`,
+      balanceBefore: currentBalance.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      restaurantId: transaction.restaurantId,
+      paymentTransactionId: transactionId,
+    });
+    
+    res.json({
+      status: 'succeeded',
+      transactionId,
+      amount: transaction.amount,
+      newBalance: newBalance.toFixed(2),
+    });
+  } catch (error) {
+    console.error('Error confirming payment:', error);
+    res.status(500).json({ message: "Failed to confirm payment" });
+  }
+});
+
+router.get("/wallet/payment-session/:token/status", async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    const [session] = await db.select().from(paymentSessions).where(eq(paymentSessions.sessionToken, token));
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+    
+    if (session.status === 'active' && new Date() > new Date(session.expiresAt)) {
+      await db.update(paymentSessions).set({ status: 'expired', updatedAt: new Date() }).where(eq(paymentSessions.id, session.id));
+      return res.json({ status: 'expired', sessionId: session.id });
+    }
+    
+    let transactionDetails = null;
+    if (session.paymentIntentId) {
+      const [tx] = await db.select().from(paymentTransactions).where(eq(paymentTransactions.id, session.paymentIntentId));
+      if (tx) {
+        const [customer] = await db.select().from(customers).where(eq(customers.id, tx.customerId));
+        transactionDetails = {
+          transactionId: tx.id,
+          amount: tx.amount,
+          status: tx.transactionStatus,
+          customerName: customer?.name || 'Customer',
+          processedAt: tx.processedAt,
+        };
+      }
+    }
+    
+    res.json({
+      status: session.status,
+      sessionId: session.id,
+      amount: session.amount,
+      currency: session.currency,
+      expiresAt: session.expiresAt,
+      transaction: transactionDetails,
+    });
+  } catch (error) {
+    console.error('Error checking session status:', error);
+    res.status(500).json({ message: "Failed to check session status" });
+  }
+});
+
+router.post("/wallet/payment-session/:token/cancel", async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    const [session] = await db.select().from(paymentSessions).where(eq(paymentSessions.sessionToken, token));
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+    
+    if (session.status === 'completed') {
+      return res.status(400).json({ message: "Cannot cancel a completed session" });
+    }
+    
+    await db.update(paymentSessions).set({
+      status: 'cancelled',
+      updatedAt: new Date(),
+    }).where(eq(paymentSessions.id, session.id));
+    
+    if (session.paymentIntentId) {
+      await db.update(paymentTransactions).set({
+        transactionStatus: 'cancelled',
+        updatedAt: new Date(),
+      }).where(eq(paymentTransactions.id, session.paymentIntentId));
+    }
+    
+    res.json({ status: 'cancelled', sessionId: session.id });
+  } catch (error) {
+    console.error('Error cancelling session:', error);
+    res.status(500).json({ message: "Failed to cancel session" });
   }
 });
 

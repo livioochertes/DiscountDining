@@ -6,8 +6,10 @@ import {
   TrendingUp, BadgePercent, Scan, X, Check, UserPlus, Camera,
   CreditCard, UtensilsCrossed, Calendar, ClipboardList, Wallet,
   Send, Printer, ToggleLeft, ToggleRight, Edit2, Loader2,
-  Clock, CheckCircle, XCircle, AlertCircle
+  Clock, CheckCircle, XCircle, AlertCircle, Phone, Mail, MapPin,
+  RefreshCw, DollarSign
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
@@ -49,6 +51,20 @@ export default function MobileRestaurantDashboard() {
 
   const [editingMenuItem, setEditingMenuItem] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState('');
+
+  const [qrSessionAmount, setQrSessionAmount] = useState('');
+  const [qrSessionTable, setQrSessionTable] = useState('');
+  const [qrSessionDescription, setQrSessionDescription] = useState('');
+  const [activeQrSession, setActiveQrSession] = useState<{
+    sessionId: number;
+    sessionToken: string;
+    qrPayload: string;
+    amount: string;
+    expiresAt: string;
+  } | null>(null);
+  const [qrSessionStatus, setQrSessionStatus] = useState<string>('active');
+  const [qrSessionTransaction, setQrSessionTransaction] = useState<any>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
 
   const startQRScanner = async (onScan?: (value: string) => void) => {
     if (!Capacitor.isNativePlatform()) {
@@ -411,6 +427,73 @@ export default function MobileRestaurantDashboard() {
     },
   });
 
+  const createQrSessionMutation = useMutation({
+    mutationFn: async (data: { amount: number; tableId?: string; description?: string }) => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/restaurant-payment-session`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurantId,
+          amount: data.amount,
+          tableId: data.tableId,
+          description: data.description,
+          expiresIn: 300,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Eroare la crearea sesiunii');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setActiveQrSession(data);
+      setQrSessionStatus('active');
+      setQrSessionTransaction(null);
+      setQrSessionAmount('');
+      setQrSessionTable('');
+      setQrSessionDescription('');
+    },
+  });
+
+  useEffect(() => {
+    if (!activeQrSession || qrSessionStatus === 'completed' || qrSessionStatus === 'expired') return;
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/wallet/payment-session/${activeQrSession.sessionToken}/status`, { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setQrSessionStatus(data.status);
+          if (data.transaction) setQrSessionTransaction(data.transaction);
+          if (data.status === 'completed' || data.status === 'expired' || data.status === 'cancelled') {
+            clearInterval(interval);
+            if (data.status === 'completed') {
+              queryClient.invalidateQueries({ queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'] });
+            }
+          }
+        }
+      } catch (e) {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [activeQrSession, qrSessionStatus]);
+
+  const handleCreateQrSession = () => {
+    const amount = parseFloat(qrSessionAmount);
+    if (isNaN(amount) || amount <= 0) return;
+    createQrSessionMutation.mutate({
+      amount,
+      tableId: qrSessionTable || undefined,
+      description: qrSessionDescription || undefined,
+    });
+  };
+
+  const handleCollectPaymentForOrder = (order: any) => {
+    setActiveTab('payments');
+    setCustomerCode('');
+    setRequestAmount(parseFloat(order.totalAmount || order.total || '0').toFixed(2));
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('restaurantSession');
     setLocation('/m/restaurant/signin');
@@ -622,6 +705,121 @@ export default function MobileRestaurantDashboard() {
 
           {activeTab === 'payments' && (
             <>
+              <section className="bg-white rounded-2xl p-4 border border-gray-100 space-y-4">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <QrCode className="w-5 h-5 text-primary" />
+                  Generează QR pentru Încasare
+                </h3>
+
+                {activeQrSession && qrSessionStatus !== 'expired' && qrSessionStatus !== 'cancelled' ? (
+                  <div className="space-y-4">
+                    {qrSessionStatus === 'completed' ? (
+                      <div className="text-center py-4">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <CheckCircle className="w-8 h-8 text-green-600" />
+                        </div>
+                        <p className="font-bold text-green-700 text-lg mb-1">Plată Confirmată!</p>
+                        {qrSessionTransaction && (
+                          <p className="text-gray-600">{qrSessionTransaction.customerName} - {parseFloat(qrSessionTransaction.amount).toFixed(2)} RON</p>
+                        )}
+                        <button
+                          onClick={() => { setActiveQrSession(null); setQrSessionStatus('active'); }}
+                          className="mt-4 bg-primary text-white px-6 py-2.5 rounded-xl font-semibold"
+                        >
+                          Încasare Nouă
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="bg-gray-50 rounded-2xl p-4 flex flex-col items-center">
+                          <QRCodeSVG
+                            value={activeQrSession.qrPayload}
+                            size={200}
+                            level="H"
+                            includeMargin
+                          />
+                          <p className="mt-3 font-bold text-xl text-gray-900">{parseFloat(activeQrSession.amount).toFixed(2)} RON</p>
+                          <p className="text-sm text-gray-500 mt-1">Clientul scanează acest cod pentru a plăti</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            {qrSessionStatus === 'active' && (
+                              <span className="flex items-center gap-1 text-amber-600 text-sm">
+                                <Clock className="w-4 h-4 animate-pulse" />
+                                Se așteaptă scanarea...
+                              </span>
+                            )}
+                            {qrSessionStatus === 'claimed' && (
+                              <span className="flex items-center gap-1 text-blue-600 text-sm">
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                Client confirmă plata...
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await fetch(`${API_BASE_URL}/api/wallet/payment-session/${activeQrSession.sessionToken}/cancel`, {
+                                method: 'POST', credentials: 'include',
+                              });
+                            } catch (e) {}
+                            setActiveQrSession(null);
+                            setQrSessionStatus('active');
+                          }}
+                          className="w-full py-2.5 rounded-xl font-medium text-red-600 bg-red-50 border border-red-200"
+                        >
+                          Anulează
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="number"
+                      value={qrSessionAmount}
+                      onChange={(e) => setQrSessionAmount(e.target.value)}
+                      placeholder="Sumă de încasat (RON)"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={qrSessionTable}
+                        onChange={(e) => setQrSessionTable(e.target.value)}
+                        placeholder="Nr. masă (opțional)"
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <input
+                        type="text"
+                        value={qrSessionDescription}
+                        onChange={(e) => setQrSessionDescription(e.target.value)}
+                        placeholder="Descriere (opțional)"
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <button
+                      onClick={handleCreateQrSession}
+                      disabled={!qrSessionAmount || parseFloat(qrSessionAmount) <= 0 || createQrSessionMutation.isPending}
+                      className="w-full bg-primary text-white py-3 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {createQrSessionMutation.isPending ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <QrCode className="w-5 h-5" />
+                          Generează QR de Plată
+                        </>
+                      )}
+                    </button>
+                    {createQrSessionMutation.isError && (
+                      <div className="bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-xl text-sm">
+                        {(createQrSessionMutation.error as Error)?.message}
+                      </div>
+                    )}
+                  </>
+                )}
+              </section>
+
               <section className="bg-white rounded-2xl p-4 border border-gray-100 space-y-4">
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Scan className="w-5 h-5 text-primary" />
@@ -997,56 +1195,100 @@ export default function MobileRestaurantDashboard() {
                     const status = order.status || 'pending';
                     const statusColor = status === 'ready' ? 'bg-green-100 text-green-700' : status === 'preparing' ? 'bg-blue-100 text-blue-700' : status === 'completed' ? 'bg-gray-100 text-gray-700' : 'bg-amber-100 text-amber-700';
                     const statusLabel = status === 'ready' ? 'Gata' : status === 'preparing' ? 'Se pregătește' : status === 'completed' ? 'Finalizat' : 'Nouă';
+                    const isExpanded = expandedOrderId === order.id;
                     return (
-                      <div key={order.id} className="bg-white rounded-2xl p-4 border border-gray-100">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <p className="font-semibold text-gray-900">Comandă #{order.orderNumber || order.id}</p>
-                            <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString('ro-RO')}</p>
+                      <div key={order.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                        <button
+                          onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                          className="w-full p-4 flex items-start justify-between text-left"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-gray-900">#{order.orderNumber || order.id}</p>
+                              <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", statusColor)}>{statusLabel}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5">{new Date(order.createdAt).toLocaleString('ro-RO')}</p>
                           </div>
-                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium", statusColor)}>{statusLabel}</span>
-                        </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-900">{parseFloat(order.total || order.totalAmount || '0').toFixed(2)} RON</span>
+                            <ChevronRight className={cn("w-4 h-4 text-gray-400 transition-transform", isExpanded && "rotate-90")} />
+                          </div>
+                        </button>
 
-                        {order.items && order.items.length > 0 && (
-                          <div className="bg-gray-50 rounded-xl p-3 mb-3 space-y-1">
-                            {order.items.map((item: any, idx: number) => (
-                              <div key={idx} className="flex justify-between text-sm">
-                                <span className="text-gray-700">{item.quantity}x {item.name}</span>
-                                <span className="text-gray-500">{item.price} RON</span>
+                        {isExpanded && (
+                          <div className="px-4 pb-4 space-y-3 border-t border-gray-50">
+                            {(order.customerName || order.customerEmail || order.customerPhone || order.deliveryAddress) && (
+                              <div className="bg-blue-50 rounded-xl p-3 mt-3 space-y-1.5">
+                                <p className="text-xs font-semibold text-blue-700 uppercase">Detalii Client</p>
+                                {order.customerName && (
+                                  <p className="text-sm text-gray-700 flex items-center gap-2"><Users className="w-3.5 h-3.5 text-blue-500" />{order.customerName}</p>
+                                )}
+                                {order.customerPhone && (
+                                  <p className="text-sm text-gray-700 flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-blue-500" />{order.customerPhone}</p>
+                                )}
+                                {order.customerEmail && (
+                                  <p className="text-sm text-gray-700 flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-blue-500" />{order.customerEmail}</p>
+                                )}
+                                {order.deliveryAddress && (
+                                  <p className="text-sm text-gray-700 flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-blue-500" />{order.deliveryAddress}</p>
+                                )}
                               </div>
-                            ))}
+                            )}
+
+                            {order.items && order.items.length > 0 && (
+                              <div className="bg-gray-50 rounded-xl p-3 space-y-1">
+                                {order.items.map((item: any, idx: number) => (
+                                  <div key={idx} className="flex justify-between text-sm">
+                                    <span className="text-gray-700">{item.quantity}x {item.name}</span>
+                                    <span className="text-gray-500">{item.price} RON</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {order.notes && (
+                              <div className="bg-amber-50 rounded-xl p-3">
+                                <p className="text-xs font-semibold text-amber-700 mb-1">Note</p>
+                                <p className="text-sm text-gray-700">{order.notes}</p>
+                              </div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2">
+                              {status === 'pending' && (
+                                <button
+                                  onClick={() => updateOrderStatusMutation.mutate({ id: order.id, status: 'preparing' })}
+                                  disabled={updateOrderStatusMutation.isPending}
+                                  className="bg-blue-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium flex items-center gap-1"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5" /> Se pregătește
+                                </button>
+                              )}
+                              {status === 'preparing' && (
+                                <button
+                                  onClick={() => updateOrderStatusMutation.mutate({ id: order.id, status: 'ready' })}
+                                  disabled={updateOrderStatusMutation.isPending}
+                                  className="bg-green-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium flex items-center gap-1"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Gata
+                                </button>
+                              )}
+                              {(status === 'ready' || status === 'preparing') && (
+                                <button
+                                  onClick={() => handleCollectPaymentForOrder(order)}
+                                  className="bg-primary text-white px-3 py-1.5 rounded-xl text-sm font-medium flex items-center gap-1"
+                                >
+                                  <DollarSign className="w-3.5 h-3.5" /> Încasează
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handlePrintOrder(order)}
+                                className="bg-gray-100 text-gray-700 p-2 rounded-xl"
+                              >
+                                <Printer className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         )}
-
-                        <div className="flex items-center justify-between">
-                          <p className="font-bold text-gray-900">{parseFloat(order.total || order.totalAmount || '0').toFixed(2)} RON</p>
-                          <div className="flex gap-2">
-                            {status === 'pending' && (
-                              <button
-                                onClick={() => updateOrderStatusMutation.mutate({ id: order.id, status: 'preparing' })}
-                                disabled={updateOrderStatusMutation.isPending}
-                                className="bg-blue-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium"
-                              >
-                                Se pregătește
-                              </button>
-                            )}
-                            {status === 'preparing' && (
-                              <button
-                                onClick={() => updateOrderStatusMutation.mutate({ id: order.id, status: 'ready' })}
-                                disabled={updateOrderStatusMutation.isPending}
-                                className="bg-green-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium"
-                              >
-                                Gata
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handlePrintOrder(order)}
-                              className="bg-gray-100 text-gray-700 p-2 rounded-xl"
-                            >
-                              <Printer className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
                       </div>
                     );
                   })}
