@@ -2414,12 +2414,13 @@ router.post("/wallet/split-payment", async (req: Request, res: Response) => {
 
     // Fetch current balances
     const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
+    const [walletRecord] = await db.select().from(customerWallets).where(eq(customerWallets.customerId, customerId)).limit(1);
     const [cashbackBalance] = await db.select().from(customerCashbackBalance).where(eq(customerCashbackBalance.customerId, customerId)).limit(1);
     const [creditAccount] = await db.select().from(customerCreditAccount).where(eq(customerCreditAccount.customerId, customerId)).limit(1);
 
-    // Validate personal balance
-    const currentPersonalBalance = parseFloat(customer?.balance || "0");
-    if (personalAmount > currentPersonalBalance) {
+    // Validate personal balance - use customerWallets.cashBalance first, fallback to customers.balance
+    const currentPersonalBalance = parseFloat(walletRecord?.cashBalance || customer?.balance || "0");
+    if (personalAmount > currentPersonalBalance + 0.01) {
       return res.status(400).json({ message: "Insufficient personal balance" });
     }
 
@@ -2449,10 +2450,11 @@ router.post("/wallet/split-payment", async (req: Request, res: Response) => {
 
     // Process deductions
     if (personalAmount > 0) {
-      await db
-        .update(customers)
-        .set({ balance: (currentPersonalBalance - personalAmount).toFixed(2) })
-        .where(eq(customers.id, customerId));
+      const newBalance = (currentPersonalBalance - personalAmount).toFixed(2);
+      if (walletRecord) {
+        await db.update(customerWallets).set({ cashBalance: newBalance }).where(eq(customerWallets.customerId, customerId));
+      }
+      await db.update(customers).set({ balance: newBalance }).where(eq(customers.id, customerId));
     }
 
     if (cashbackAmount > 0) {

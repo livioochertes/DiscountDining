@@ -1452,7 +1452,7 @@ function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, credi
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-end">
-      <div className="bg-white w-full rounded-t-3xl max-h-[80vh] flex flex-col" style={{ marginBottom: '5rem' }}>
+      <div className="bg-white w-full rounded-t-3xl max-h-[75vh] flex flex-col" style={{ marginBottom: '6rem' }}>
         <div className="flex items-center justify-between p-4 border-b rounded-t-3xl flex-shrink-0">
           <h2 className="text-xl font-bold">Plătește</h2>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100">
