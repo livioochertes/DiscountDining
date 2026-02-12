@@ -692,6 +692,37 @@ export const qrCodes = pgTable("qr_codes", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const paymentSessions = pgTable("payment_sessions", {
+  id: serial("id").primaryKey(),
+  
+  restaurantId: integer("restaurant_id").references(() => restaurants.id).notNull(),
+  staffId: integer("staff_id"),
+  
+  sessionToken: text("session_token").notNull().unique(),
+  
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("RON"),
+  tableId: text("table_id"),
+  description: text("description"),
+  
+  tipAllowed: boolean("tip_allowed").default(true),
+  tipMaxPercent: decimal("tip_max_percent", { precision: 5, scale: 2 }).default("20.00"),
+  
+  status: text("status").notNull().default("active"), // active, claimed, completed, expired, cancelled
+  
+  customerId: integer("customer_id").references(() => customers.id),
+  paymentIntentId: integer("payment_intent_id"),
+  
+  expiresAt: timestamp("expires_at").notNull(),
+  claimedAt: timestamp("claimed_at"),
+  completedAt: timestamp("completed_at"),
+  
+  idempotencyKey: text("idempotency_key"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas using Zod
 export const insertCustomerWalletSchema = createInsertSchema(customerWallets).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertGeneralVoucherSchema = createInsertSchema(generalVouchers).omit({ id: true, createdAt: true, updatedAt: true });
@@ -699,6 +730,9 @@ export const insertCustomerGeneralVoucherSchema = createInsertSchema(customerGen
 export const insertPaymentTransactionSchema = createInsertSchema(paymentTransactions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({ id: true, createdAt: true });
 export const insertQrCodeSchema = createInsertSchema(qrCodes).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPaymentSessionSchema = createInsertSchema(paymentSessions).omit({ id: true, createdAt: true, updatedAt: true });
+export type PaymentSession = typeof paymentSessions.$inferSelect;
+export type InsertPaymentSession = z.infer<typeof insertPaymentSessionSchema>;
 
 // Type exports
 export type CustomerWallet = typeof customerWallets.$inferSelect;
