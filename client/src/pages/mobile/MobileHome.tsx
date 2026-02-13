@@ -5,6 +5,7 @@ import { useLocation } from 'wouter';
 import { Search, Bell, Store, ChevronRight, Star, MapPin, Loader2, Navigation, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
+import { getMobileSessionToken } from '@/lib/queryClient';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { WalletCard, ActionRow } from '@/components/mobile/WalletCard';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
@@ -494,9 +495,28 @@ export default function MobileHome() {
     enabled: !!user?.id
   });
 
-  const { data: userStats } = useQuery<any>({
-    queryKey: ['/api/users/stats'],
+  const { data: walletOverview } = useQuery<any>({
+    queryKey: ['/api/wallet/overview'],
+    queryFn: async () => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      const response = await fetch(`${API_BASE_URL}/api/wallet/overview`, {
+        credentials: 'include',
+        headers,
+      });
+      if (!response.ok) return null;
+      return response.json();
+    },
     enabled: !!user,
+    refetchOnWindowFocus: true,
+    staleTime: 10000,
   });
 
   const { data: marketingDeals = [] } = useQuery<any[]>({
@@ -707,10 +727,10 @@ export default function MobileHome() {
 
         {/* Wallet Card Hero */}
         <WalletCard
-          balance={userStats?.walletBalance || 0}
-          cashback={userStats?.totalCashback || 0}
-          activeVouchers={userStats?.activeVouchers || 0}
-          creditAvailable={userStats?.creditLimit || 0}
+          balance={parseFloat(walletOverview?.personalBalance || '0')}
+          cashback={parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0')}
+          activeVouchers={vouchers.filter(v => v.isActive).length}
+          creditAvailable={parseFloat(walletOverview?.credit?.creditLimit || '0')}
           onBuyVoucher={handleBuyVoucher}
           onUseVoucher={handleUseVoucher}
           isGuest={!user}
