@@ -20,7 +20,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useRestaurantAuth } from "@/hooks/useRestaurantAuth";
 import RestaurantNotificationSystem from "@/components/RestaurantNotificationSystem";
-import NotificationTestButton from "@/components/NotificationTestButton";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
 
@@ -1084,14 +1083,6 @@ export default function RestaurantPortal() {
                   {t.pendingVerification}
                 </Badge>
               )}
-              <NotificationTestButton 
-                onCreateTestReservation={() => {
-                  queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/reservations"] });
-                }}
-                onCreateTestOrder={() => {
-                  queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/orders"] });
-                }}
-              />
               <RestaurantNotificationSystem 
                 onNavigateToReservation={handleNavigateToReservation}
                 onNavigateToOrder={handleNavigateToOrder}
@@ -1785,10 +1776,6 @@ export default function RestaurantPortal() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Order Management</h2>
               <div className="flex gap-2">
-                <NotificationTestButton 
-                  onCreateTestReservation={() => queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/reservations"] })}
-                  onCreateTestOrder={() => queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/orders"] })}
-                />
               </div>
             </div>
 
