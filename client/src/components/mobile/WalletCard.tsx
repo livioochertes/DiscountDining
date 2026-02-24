@@ -52,7 +52,10 @@ export function WalletCard({
 }: WalletCardProps) {
   const [showLoyaltyCard, setShowLoyaltyCard] = useState(false);
   
-  // Generate a display code if none exists
+  const formatAmount = (amount: number) => {
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  
   const displayCode = customerCode || 'CLI-000000';
   const displayName = userName || 'Member';
 
@@ -84,7 +87,7 @@ export function WalletCard({
         {!isGuest && (
           <div className="mb-6">
             <p className="text-white/70 text-sm font-medium mb-1">Available Balance</p>
-            <p className="text-4xl font-bold tracking-tight">{currencySymbol}{balance.toFixed(2)}</p>
+            <p className="text-4xl font-bold tracking-tight">{currencySymbol} {formatAmount(balance)}</p>
           </div>
         )}
 
@@ -93,7 +96,7 @@ export function WalletCard({
           <div className="flex items-center gap-6 mb-6">
             <div>
               <p className="text-white/60 text-xs">Cashback</p>
-              <p className="text-lg font-semibold">{currencySymbol}{cashback.toFixed(2)}</p>
+              <p className="text-lg font-semibold">{currencySymbol} {formatAmount(cashback)}</p>
             </div>
             <div className="h-8 w-px bg-white/20" />
             <div>
@@ -105,7 +108,7 @@ export function WalletCard({
                 <div className="h-8 w-px bg-white/20" />
                 <div>
                   <p className="text-white/60 text-xs">Credit</p>
-                  <p className="text-lg font-semibold">{currencySymbol}{creditAvailable.toFixed(2)}</p>
+                  <p className="text-lg font-semibold">{currencySymbol} {formatAmount(creditAvailable)}</p>
                 </div>
               </>
             )}
