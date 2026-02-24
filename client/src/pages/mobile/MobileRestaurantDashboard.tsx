@@ -222,13 +222,19 @@ export default function MobileRestaurantDashboard() {
 
   const scanEnrollMutation = useMutation({
     mutationFn: async (params: { customerCode?: string; customerId?: string }) => {
-      const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/scan-enroll`, {
+      const storedSession = localStorage.getItem('restaurantSession');
+      const currentSession = storedSession ? JSON.parse(storedSession) : session;
+      const currentRestaurantId = currentSession?.restaurant?.id;
+      if (!currentRestaurantId) {
+        throw new Error('Sesiunea restaurantului nu este disponibilă. Te rog să te autentifici din nou.');
+      }
+      const response = await fetch(`${API_BASE_URL}/api/restaurant/${currentRestaurantId}/scan-enroll`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...params,
-          enrolledByUserId: session?.owner?.id,
+          enrolledByUserId: currentSession?.owner?.id,
         }),
       });
       const data = await response.json();
