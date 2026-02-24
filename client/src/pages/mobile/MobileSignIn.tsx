@@ -8,7 +8,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, Loader2 as Loader2Icon
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { queryClient, setMobileSessionToken } from '@/lib/queryClient';
+import { queryClient, setMobileSessionToken, getMobileSessionToken } from '@/lib/queryClient';
 import { useLanguage } from '@/contexts/LanguageContext';
 import eatoffLogo from '@assets/EatOff_Logo_1769386471015.png';
 
@@ -75,14 +75,49 @@ export default function MobileSignIn() {
       const data = await result.json();
 
       if (result.ok) {
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        // Store mobile session token if provided
+        if (data.sessionToken) {
+          setMobileSessionToken(data.sessionToken);
+        }
+        
+        queryClient.clear();
+        
+        // Prefetch wallet and user data at sign-in
+        const prefetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        const storedToken = getMobileSessionToken();
+        if (storedToken) {
+          prefetchHeaders['Authorization'] = `Bearer ${storedToken}`;
+        }
+        
+        try {
+          const [walletRes, userRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/wallet/overview`, {
+              credentials: 'include',
+              headers: prefetchHeaders,
+            }),
+            fetch(`${API_BASE_URL}/api/auth/user`, {
+              credentials: 'include',
+              headers: prefetchHeaders,
+            }),
+          ]);
+          
+          if (walletRes.ok) {
+            const walletData = await walletRes.json();
+            queryClient.setQueryData(['/api/wallet/overview'], walletData);
+          }
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            queryClient.setQueryData(['/api/auth/user'], userData);
+          }
+        } catch (prefetchErr) {
+          console.warn('[MobileSignIn] Google prefetch failed:', prefetchErr);
+        }
+        
         toast({
           title: t.authSuccess,
           description: "Welcome!",
         });
-        setTimeout(() => {
-          setLocation('/m');
-        }, 100);
+        setLocation('/m');
       } else {
         toast({
           title: t.authFailed,
@@ -305,15 +340,45 @@ export default function MobileSignIn() {
           description: "Welcome back!",
         });
         
-        // Clear cache and redirect - the new page will fetch with the token
-        console.log('[MobileSignIn] Clearing cache and redirecting to /m');
+        // Clear cache then prefetch wallet data before redirecting
+        console.log('[MobileSignIn] Clearing cache and prefetching wallet data');
         queryClient.clear();
         
-        // Small delay to ensure token is persisted before navigation
-        setTimeout(() => {
-          console.log('[MobileSignIn] Navigating to /m');
-          setLocation('/m');
-        }, 100);
+        // Prefetch wallet overview and user data so MobileHome has it ready
+        const prefetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        const token = getMobileSessionToken();
+        if (token) {
+          prefetchHeaders['Authorization'] = `Bearer ${token}`;
+        }
+        
+        try {
+          const [walletRes, userRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/wallet/overview`, {
+              credentials: 'include',
+              headers: prefetchHeaders,
+            }),
+            fetch(`${API_BASE_URL}/api/auth/user`, {
+              credentials: 'include',
+              headers: prefetchHeaders,
+            }),
+          ]);
+          
+          if (walletRes.ok) {
+            const walletData = await walletRes.json();
+            queryClient.setQueryData(['/api/wallet/overview'], walletData);
+            console.log('[MobileSignIn] Wallet prefetched, balance:', walletData.personalBalance);
+          }
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            queryClient.setQueryData(['/api/auth/user'], userData);
+            console.log('[MobileSignIn] User data prefetched');
+          }
+        } catch (prefetchErr) {
+          console.warn('[MobileSignIn] Prefetch failed (non-critical):', prefetchErr);
+        }
+        
+        console.log('[MobileSignIn] Navigating to /m');
+        setLocation('/m');
       } else {
         console.error('[MobileSignIn] Login failed:', data.message);
         toast({

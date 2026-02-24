@@ -515,8 +515,9 @@ export default function MobileHome() {
       return response.json();
     },
     enabled: !!user,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
-    staleTime: 10000,
+    staleTime: 0,
   });
 
   const { data: marketingDeals = [] } = useQuery<any[]>({

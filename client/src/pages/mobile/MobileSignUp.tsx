@@ -8,7 +8,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { queryClient, setMobileSessionToken } from '@/lib/queryClient';
+import { queryClient, setMobileSessionToken, getMobileSessionToken } from '@/lib/queryClient';
 import { useLanguage } from '@/contexts/LanguageContext';
 import eatoffLogo from '@assets/EatOff_Logo_1769386471015.png';
 
@@ -73,13 +73,33 @@ export default function MobileSignUp() {
           console.log('[MobileSignUp] Session token stored from Google native');
         }
         queryClient.clear();
+        
+        // Prefetch wallet and user data at sign-in
+        const prefetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        const storedToken = getMobileSessionToken();
+        if (storedToken) {
+          prefetchHeaders['Authorization'] = `Bearer ${storedToken}`;
+        }
+        try {
+          const [walletRes, userRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/wallet/overview`, { credentials: 'include', headers: prefetchHeaders }),
+            fetch(`${API_BASE_URL}/api/auth/user`, { credentials: 'include', headers: prefetchHeaders }),
+          ]);
+          if (walletRes.ok) {
+            queryClient.setQueryData(['/api/wallet/overview'], await walletRes.json());
+          }
+          if (userRes.ok) {
+            queryClient.setQueryData(['/api/auth/user'], await userRes.json());
+          }
+        } catch (prefetchErr) {
+          console.warn('[MobileSignUp] Prefetch failed:', prefetchErr);
+        }
+        
         toast({
           title: t.authSuccess,
           description: "Welcome!",
         });
-        setTimeout(() => {
-          setLocation('/m');
-        }, 100);
+        setLocation('/m');
       } else {
         toast({
           title: t.authFailed,
@@ -167,7 +187,22 @@ export default function MobileSignUp() {
                 
                 queryClient.clear();
                 
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Prefetch wallet data at sign-in
+                const pfHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+                const pfToken = getMobileSessionToken();
+                if (pfToken) {
+                  pfHeaders['Authorization'] = `Bearer ${pfToken}`;
+                }
+                try {
+                  const [wRes, uRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/wallet/overview`, { credentials: 'include', headers: pfHeaders }),
+                    fetch(`${API_BASE_URL}/api/auth/user`, { credentials: 'include', headers: pfHeaders }),
+                  ]);
+                  if (wRes.ok) queryClient.setQueryData(['/api/wallet/overview'], await wRes.json());
+                  if (uRes.ok) queryClient.setQueryData(['/api/auth/user'], await uRes.json());
+                } catch (e) {
+                  console.warn('[MobileSignUp] Prefetch failed:', e);
+                }
                 
                 console.log('[MobileSignUp] Navigating to /m');
                 setLocation('/m');
