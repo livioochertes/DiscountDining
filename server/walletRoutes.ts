@@ -1501,7 +1501,8 @@ router.get("/restaurant/:restaurantId/customer/:customerId", async (req: Request
 router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: Response) => {
   try {
     const restaurantId = parseInt(req.params.restaurantId);
-    const { customerCode, customerId: rawCustomerId } = req.body;
+    const { customerCode, customerId: rawCustomerId, enrolledByUserId: rawEnrolledBy } = req.body;
+    const enrolledByUserId = rawEnrolledBy && !isNaN(parseInt(rawEnrolledBy)) ? parseInt(rawEnrolledBy) : null;
     
     let customer: any = null;
     
@@ -1682,8 +1683,7 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
         tierLevel: enrolledLoyalty.tierLevel,
         status: loyaltyStatus
       } : null,
-      totalSpent: totalSpent.toFixed(2),
-      visitCount
+      totalSpent: totalSpent.toFixed(2)
     });
   } catch (error: any) {
     console.error("Error in scan-enroll:", error);
