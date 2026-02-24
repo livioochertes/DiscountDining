@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import {
@@ -14,7 +14,7 @@ import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
-import { Html5Qrcode } from 'html5-qrcode';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (Capacitor.isNativePlatform() ? 'https://eatoff.app' : '');
 

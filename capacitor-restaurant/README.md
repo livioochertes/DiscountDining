@@ -37,10 +37,19 @@ npx cap add ios
 npx cap add android
 ```
 
-5. Sync the build:
+5. Sync the build (this installs native plugins including barcode scanner):
 ```bash
 npx cap sync
 ```
+
+6. **iOS only - Camera Permission for QR Scanner**:
+   After `cap sync`, open `ios/App/App/Info.plist` in Xcode and ensure this key exists:
+   ```xml
+   <key>NSCameraUsageDescription</key>
+   <string>Camera is needed to scan customer QR codes for enrollment</string>
+   ```
+   The `@capacitor-mlkit/barcode-scanning` plugin should add this automatically during sync,
+   but verify it's present if scanning doesn't work.
 
 ### Opening in IDE
 

@@ -25,6 +25,9 @@ const config: CapacitorConfig = {
       lensFacing: 'back'
     }
   },
+  ios: {
+    contentInset: 'always'
+  },
   android: {
     allowMixedContent: true
   }
