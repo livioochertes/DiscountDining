@@ -1501,16 +1501,19 @@ router.get("/restaurant/:restaurantId/customer/:customerId", async (req: Request
 router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: Response) => {
   try {
     const restaurantId = parseInt(req.params.restaurantId);
+    if (isNaN(restaurantId)) {
+      return res.status(400).json({ message: "ID restaurant invalid" });
+    }
     const { customerCode, customerId: rawCustomerId, enrolledByUserId: rawEnrolledBy } = req.body;
-    const enrolledByUserId = rawEnrolledBy && !isNaN(parseInt(rawEnrolledBy)) ? parseInt(rawEnrolledBy) : null;
+    const enrolledByUserId = (rawEnrolledBy !== undefined && rawEnrolledBy !== null && !isNaN(Number(rawEnrolledBy))) ? Number(rawEnrolledBy) : null;
     
     let customer: any = null;
     
     if (customerCode) {
       const [found] = await db.select().from(customers).where(eq(customers.customerCode, customerCode)).limit(1);
       customer = found;
-    } else if (rawCustomerId) {
-      const [found] = await db.select().from(customers).where(eq(customers.id, parseInt(rawCustomerId))).limit(1);
+    } else if (rawCustomerId && !isNaN(Number(rawCustomerId))) {
+      const [found] = await db.select().from(customers).where(eq(customers.id, Number(rawCustomerId))).limit(1);
       customer = found;
     }
     
@@ -1586,7 +1589,7 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
             customerId: customer.id,
             groupId: bestGroup.id,
             enrolledBy: "restaurant_scan",
-            enrolledByUserId: req.body.enrolledByUserId || null,
+            enrolledByUserId,
             isActive: true,
             totalCashbackEarned: "0.00",
             totalSpendInGroup: "0.00"
@@ -1629,7 +1632,7 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
             groupId: bestTier.id,
             restaurantId,
             enrolledBy: "auto_upgrade",
-            enrolledByUserId: req.body.enrolledByUserId || null,
+            enrolledByUserId,
             isActive: true,
             totalSpentAtRestaurant: totalSpent.toFixed(2),
             totalDiscountReceived: "0.00",
@@ -1653,7 +1656,7 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
             groupId: bestTier.id,
             restaurantId,
             enrolledBy: "restaurant_scan",
-            enrolledByUserId: req.body.enrolledByUserId || null,
+            enrolledByUserId,
             isActive: true,
             totalSpentAtRestaurant: totalSpent.toFixed(2),
             totalDiscountReceived: "0.00",
