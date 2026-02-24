@@ -74,12 +74,12 @@ export function WalletCard({
               e.stopPropagation();
               setShowLoyaltyCard(true);
             }}
-            className="absolute top-3 right-3 flex items-center gap-2 bg-gray-800/90 hover:bg-gray-900/95 rounded-2xl px-4 py-2.5 transition-colors shadow-lg z-20 cursor-pointer"
+            className="absolute top-3 right-3 flex flex-col items-center gap-1 bg-gray-800/90 hover:bg-gray-900/95 rounded-2xl px-3 py-2 transition-colors shadow-lg z-20 cursor-pointer"
             title="View Loyalty Card"
             type="button"
           >
-            <Crown className="w-5 h-5 text-amber-400 pointer-events-none" />
-            <span className="text-xs font-semibold text-white pointer-events-none">Member card</span>
+            <Crown className="w-6 h-6 text-amber-400 pointer-events-none" />
+            <span className="text-[10px] font-semibold text-white pointer-events-none">Member card</span>
           </button>
         )}
 
