@@ -35,10 +35,7 @@ export default function MobileRestaurantDashboard() {
 
   const [showScanner, setShowScanner] = useState(false);
   const [manualCustomerId, setManualCustomerId] = useState('');
-  const [selectedGroupType, setSelectedGroupType] = useState<'cashback' | 'loyalty'>('cashback');
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [scannedCustomer, setScannedCustomer] = useState<any>(null);
-  const [enrollmentSuccess, setEnrollmentSuccess] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
@@ -75,6 +72,25 @@ export default function MobileRestaurantDashboard() {
   const [qrSessionTransaction, setQrSessionTransaction] = useState<any>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
 
+  const parseQRValue = (scannedValue: string): { customerCode?: string; customerId?: string } | null => {
+    if (!scannedValue) return null;
+    const eatoffPrefixMatch = scannedValue.match(/^EATOFF:(.+)$/i);
+    if (eatoffPrefixMatch) {
+      return { customerCode: eatoffPrefixMatch[1] };
+    }
+    const urlMatch = scannedValue.match(/eatoff:\/\/customer\/(\d+)/);
+    if (urlMatch) {
+      return { customerId: urlMatch[1] };
+    }
+    if (/^EO[A-Z0-9]{6,10}$/i.test(scannedValue)) {
+      return { customerCode: scannedValue };
+    }
+    if (/^\d+$/.test(scannedValue)) {
+      return { customerId: scannedValue };
+    }
+    return null;
+  };
+
   const startQRScanner = async (onScan?: (value: string) => void) => {
     if (!Capacitor.isNativePlatform()) {
       setScanError('Scanarea QR este disponibilă doar în aplicația mobilă. Folosește introducerea manuală.');
@@ -98,13 +114,10 @@ export default function MobileRestaurantDashboard() {
         if (onScan && scannedValue) {
           onScan(scannedValue);
         } else {
-          const customerIdMatch = scannedValue?.match(/eatoff:\/\/customer\/(\d+)/);
-          if (customerIdMatch) {
-            setManualCustomerId(customerIdMatch[1]);
-            lookupCustomerMutation.mutate(customerIdMatch[1]);
-          } else if (scannedValue && /^\d+$/.test(scannedValue)) {
-            setManualCustomerId(scannedValue);
-            lookupCustomerMutation.mutate(scannedValue);
+          const parsed = parseQRValue(scannedValue || '');
+          if (parsed) {
+            setManualCustomerId(parsed.customerCode || parsed.customerId || '');
+            scanEnrollMutation.mutate(parsed);
           } else {
             setScanError('Cod QR invalid. Scanează codul din profilul clientului.');
           }
@@ -205,77 +218,33 @@ export default function MobileRestaurantDashboard() {
     enabled: !!restaurantId && activeTab === 'orders',
   });
 
-  const lookupCustomerMutation = useMutation({
-    mutationFn: async (customerId: string) => {
-      const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/customer/${customerId}`, {
+  const [noGroupsError, setNoGroupsError] = useState(false);
+
+  const scanEnrollMutation = useMutation({
+    mutationFn: async (params: { customerCode?: string; customerId?: string }) => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/scan-enroll`, {
+        method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...params,
+          enrolledByUserId: session?.owner?.id,
+        }),
       });
-      if (!response.ok) throw new Error('Customer not found');
-      return response.json();
+      const data = await response.json();
+      if (!response.ok) {
+        if (data.noGroups) {
+          setNoGroupsError(true);
+        }
+        throw new Error(data.message || 'Enrollment failed');
+      }
+      return data;
     },
     onSuccess: (data) => {
       setScannedCustomer(data);
+      setNoGroupsError(false);
     },
-  });
-
-  const enrollCashbackMutation = useMutation({
-    mutationFn: async ({ customerId, groupId }: { customerId: number; groupId: number }) => {
-      const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/enroll-customer/cashback`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerId,
-          groupId,
-          enrolledByUserId: session?.owner?.id,
-        }),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Enrollment failed');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      setEnrollmentSuccess(true);
-      setTimeout(() => {
-        setEnrollmentSuccess(false);
-        setScannedCustomer(null);
-        setSelectedGroupId(null);
-        setShowScanner(false);
-        setManualCustomerId('');
-      }, 2000);
-    },
-  });
-
-  const enrollLoyaltyMutation = useMutation({
-    mutationFn: async ({ customerId, groupId }: { customerId: number; groupId: number }) => {
-      const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/enroll-customer/loyalty`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerId,
-          groupId,
-          enrolledByUserId: session?.owner?.id,
-        }),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Enrollment failed');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      setEnrollmentSuccess(true);
-      setTimeout(() => {
-        setEnrollmentSuccess(false);
-        setScannedCustomer(null);
-        setSelectedGroupId(null);
-        setShowScanner(false);
-        setManualCustomerId('');
-      }, 2000);
-    },
+    onError: () => {},
   });
 
   const fetchPaymentMutation = useMutation({
@@ -540,16 +509,13 @@ export default function MobileRestaurantDashboard() {
 
   const handleLookupCustomer = () => {
     if (manualCustomerId) {
-      lookupCustomerMutation.mutate(manualCustomerId);
-    }
-  };
-
-  const handleEnroll = () => {
-    if (!scannedCustomer?.customer?.id || !selectedGroupId) return;
-    if (selectedGroupType === 'cashback') {
-      enrollCashbackMutation.mutate({ customerId: scannedCustomer.customer.id, groupId: selectedGroupId });
-    } else {
-      enrollLoyaltyMutation.mutate({ customerId: scannedCustomer.customer.id, groupId: selectedGroupId });
+      setNoGroupsError(false);
+      const parsed = parseQRValue(manualCustomerId);
+      if (parsed) {
+        scanEnrollMutation.mutate(parsed);
+      } else {
+        scanEnrollMutation.mutate({ customerCode: manualCustomerId });
+      }
     }
   };
 
@@ -593,7 +559,6 @@ export default function MobileRestaurantDashboard() {
     );
   }
 
-  const groups = selectedGroupType === 'cashback' ? cashbackGroups : loyaltyGroups;
 
   const todayTransactions = transactions.filter((tx: any) => {
     const d = new Date(tx.createdAt || tx.processedAt);
@@ -1505,18 +1470,10 @@ export default function MobileRestaurantDashboard() {
         {showScanner && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
             <div className="bg-white w-full rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
-              {enrollmentSuccess ? (
-                <div className="text-center py-8">
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Check className="w-10 h-10 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Înrolare reușită!</h3>
-                  <p className="text-gray-500">Clientul a fost adăugat în grup</p>
-                </div>
-              ) : scannedCustomer ? (
+              {scannedCustomer ? (
                 <>
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-gray-900">Înrolează Client</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Rezultat Înrolare</h3>
                     <button
                       onClick={() => {
                         setScannedCustomer(null);
@@ -1529,7 +1486,13 @@ export default function MobileRestaurantDashboard() {
                     </button>
                   </div>
 
-                  <div className="bg-gray-50 rounded-2xl p-4 mb-6 flex items-center gap-4">
+                  <div className="text-center mb-6">
+                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Check className="w-10 h-10 text-green-600" />
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex items-center gap-4">
                     <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
                       <Users className="w-7 h-7 text-primary" />
                     </div>
@@ -1539,92 +1502,78 @@ export default function MobileRestaurantDashboard() {
                     </div>
                   </div>
 
-                  <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-                    <button
-                      onClick={() => {
-                        setSelectedGroupType('cashback');
-                        setSelectedGroupId(null);
-                      }}
-                      className={cn(
-                        "flex-1 py-2.5 rounded-lg font-medium transition-all",
-                        selectedGroupType === 'cashback' ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
-                      )}
-                    >
-                      Cashback
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedGroupType('loyalty');
-                        setSelectedGroupId(null);
-                      }}
-                      className={cn(
-                        "flex-1 py-2.5 rounded-lg font-medium transition-all",
-                        selectedGroupType === 'loyalty' ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
-                      )}
-                    >
-                      Fidelizare
-                    </button>
-                  </div>
+                  {scannedCustomer.cashback && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-emerald-600 font-medium mb-1">Cashback</p>
+                          <p className="font-semibold text-gray-900">{scannedCustomer.cashback.groupName}</p>
+                          <p className="text-sm text-gray-500">{parseFloat(scannedCustomer.cashback.cashbackPercentage).toFixed(0)}% cashback</p>
+                        </div>
+                        <span className={cn(
+                          "px-3 py-1 rounded-full text-xs font-medium",
+                          scannedCustomer.cashback.status === 'newly_enrolled' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                        )}>
+                          {scannedCustomer.cashback.status === 'newly_enrolled' ? 'Nou înrolat' : 'Deja înrolat'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="space-y-2 mb-6">
-                    {groups.length === 0 ? (
-                      <p className="text-center text-gray-500 py-4">Niciun grup disponibil</p>
-                    ) : (
-                      groups.map((group: any) => (
-                        <button
-                          key={group.id}
-                          onClick={() => setSelectedGroupId(group.id)}
-                          className={cn(
-                            "w-full p-4 rounded-xl border-2 text-left transition-all flex items-center justify-between",
-                            selectedGroupId === group.id
-                              ? "border-primary bg-primary/5"
-                              : "border-gray-100 bg-white"
-                          )}
-                        >
-                          <div>
-                            <p className="font-medium text-gray-900">{group.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {selectedGroupType === 'cashback'
-                                ? `${parseFloat(group.cashbackPercentage).toFixed(0)}% cashback`
-                                : `${parseFloat(group.discountPercentage).toFixed(0)}% discount`
-                              }
-                            </p>
-                          </div>
-                          {selectedGroupId === group.id && (
-                            <Check className="w-5 h-5 text-primary" />
-                          )}
-                        </button>
-                      ))
-                    )}
+                  {scannedCustomer.loyalty && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-amber-600 font-medium mb-1">Fidelizare</p>
+                          <p className="font-semibold text-gray-900">{scannedCustomer.loyalty.tierName}</p>
+                          <p className="text-sm text-gray-500">{parseFloat(scannedCustomer.loyalty.discountPercentage).toFixed(0)}% discount</p>
+                        </div>
+                        <span className={cn(
+                          "px-3 py-1 rounded-full text-xs font-medium",
+                          scannedCustomer.loyalty.status === 'newly_enrolled' ? "bg-green-100 text-green-700" :
+                          scannedCustomer.loyalty.status === 'upgraded' ? "bg-blue-100 text-blue-700" :
+                          "bg-gray-100 text-gray-600"
+                        )}>
+                          {scannedCustomer.loyalty.status === 'newly_enrolled' ? 'Nou înrolat' :
+                           scannedCustomer.loyalty.status === 'upgraded' ? 'Nivel ridicat' :
+                           'Deja înrolat'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Total cheltuit</span>
+                      <span className="font-medium text-gray-900">{scannedCustomer.totalSpent}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-gray-500">Vizite</span>
+                      <span className="font-medium text-gray-900">{scannedCustomer.visitCount}</span>
+                    </div>
                   </div>
 
                   <button
-                    onClick={handleEnroll}
-                    disabled={!selectedGroupId || enrollCashbackMutation.isPending || enrollLoyaltyMutation.isPending}
-                    className="w-full bg-primary text-white py-4 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                    onClick={() => {
+                      setScannedCustomer(null);
+                      setManualCustomerId('');
+                      setScanError(null);
+                      if (Capacitor.isNativePlatform()) {
+                        startQRScanner();
+                      }
+                    }}
+                    className="w-full bg-primary text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2"
                   >
-                    {(enrollCashbackMutation.isPending || enrollLoyaltyMutation.isPending) ? (
-                      <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                    ) : (
-                      <>
-                        <UserPlus className="w-5 h-5" />
-                        Înrolează în Grup
-                      </>
-                    )}
+                    <Camera className="w-5 h-5" />
+                    Scanează alt client
                   </button>
-
-                  {(enrollCashbackMutation.isError || enrollLoyaltyMutation.isError) && (
-                    <p className="text-red-500 text-sm text-center mt-3">
-                      {(enrollCashbackMutation.error as Error)?.message || (enrollLoyaltyMutation.error as Error)?.message}
-                    </p>
-                  )}
                 </>
               ) : (
                 <>
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-gray-900">Caută Client</h3>
+                    <h3 className="text-lg font-bold text-gray-900">Scanează Client</h3>
                     <button
-                      onClick={() => setShowScanner(false)}
+                      onClick={() => { setShowScanner(false); setNoGroupsError(false); setScanError(null); }}
                       className="p-2 text-gray-400 hover:text-gray-600"
                     >
                       <X className="w-5 h-5" />
@@ -1656,14 +1605,34 @@ export default function MobileRestaurantDashboard() {
                       <div className="text-center">
                         <Camera className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                         <p className="font-medium">Scanarea QR este disponibilă în aplicația mobilă</p>
-                        <p className="text-gray-400 text-xs mt-1">Introdu ID-ul clientului manual mai jos</p>
+                        <p className="text-gray-400 text-xs mt-1">Introdu codul clientului manual mai jos</p>
                       </div>
                     </div>
                   )}
 
-                  {scanError && (
+                  {noGroupsError && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <X className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-orange-800 mb-1">Grupuri lipsă</p>
+                          <p className="text-sm text-orange-700">Restaurantul nu are grupuri de fidelizare definite. Creează cel puțin un grup din setări pentru a putea înrola clienți.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {scanError && !noGroupsError && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">
                       {scanError}
+                    </div>
+                  )}
+
+                  {scanEnrollMutation.isError && !noGroupsError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">
+                      {(scanEnrollMutation.error as Error)?.message || 'Clientul nu a fost găsit'}
                     </div>
                   )}
 
@@ -1672,27 +1641,21 @@ export default function MobileRestaurantDashboard() {
                       type="text"
                       value={manualCustomerId}
                       onChange={(e) => setManualCustomerId(e.target.value)}
-                      placeholder="ID Client (ex: 123)"
+                      placeholder="Cod client (ex: EOTDZK2M92)"
                       className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <button
                       onClick={handleLookupCustomer}
-                      disabled={!manualCustomerId || lookupCustomerMutation.isPending}
+                      disabled={!manualCustomerId || scanEnrollMutation.isPending}
                       className="bg-primary text-white px-6 py-3 rounded-xl font-medium disabled:opacity-50"
                     >
-                      {lookupCustomerMutation.isPending ? (
+                      {scanEnrollMutation.isPending ? (
                         <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                       ) : (
                         'Caută'
                       )}
                     </button>
                   </div>
-
-                  {lookupCustomerMutation.isError && (
-                    <p className="text-red-500 text-sm text-center">
-                      Clientul nu a fost găsit
-                    </p>
-                  )}
                 </>
               )}
             </div>

@@ -1497,6 +1497,201 @@ router.get("/restaurant/:restaurantId/customer/:customerId", async (req: Request
   }
 });
 
+// Scan & Auto-Enroll customer (handles customerCode or customerId)
+router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    const { customerCode, customerId: rawCustomerId } = req.body;
+    
+    let customer: any = null;
+    
+    if (customerCode) {
+      const [found] = await db.select().from(customers).where(eq(customers.customerCode, customerCode)).limit(1);
+      customer = found;
+    } else if (rawCustomerId) {
+      const [found] = await db.select().from(customers).where(eq(customers.id, parseInt(rawCustomerId))).limit(1);
+      customer = found;
+    }
+    
+    if (!customer) {
+      return res.status(404).json({ message: "Clientul nu a fost găsit" });
+    }
+    
+    const activeCashbackGroups = await db.select().from(cashbackGroups)
+      .where(and(eq(cashbackGroups.restaurantId, restaurantId), eq(cashbackGroups.isActive, true)));
+    
+    const activeLoyaltyGroups = await db.select().from(loyaltyGroups)
+      .where(and(eq(loyaltyGroups.restaurantId, restaurantId), eq(loyaltyGroups.isActive, true)));
+    
+    if (activeCashbackGroups.length === 0 && activeLoyaltyGroups.length === 0) {
+      return res.status(400).json({ 
+        message: "Restaurantul nu are grupuri de fidelizare definite. Creează cel puțin un grup din setări.",
+        noGroups: true
+      });
+    }
+    
+    const [existingTracking] = await db.select().from(customerRestaurantCashback)
+      .where(and(
+        eq(customerRestaurantCashback.customerId, customer.id),
+        eq(customerRestaurantCashback.restaurantId, restaurantId)
+      )).limit(1);
+    
+    if (!existingTracking) {
+      await db.insert(customerRestaurantCashback).values({
+        customerId: customer.id,
+        restaurantId,
+        cashbackBalance: "0.00",
+        totalEarned: "0.00",
+        totalUsed: "0.00",
+        totalSpent: "0.00"
+      });
+    }
+    
+    const totalSpent = parseFloat(existingTracking?.totalSpent || "0");
+    const visitCount = existingTracking?.visitCount || 0;
+    
+    let enrolledCashback: any = null;
+    let cashbackStatus = "none";
+    
+    if (activeCashbackGroups.length > 0) {
+      const [existingCashbackEnrollment] = await db.select({
+        enrollment: customerCashbackEnrollments,
+        group: cashbackGroups
+      })
+        .from(customerCashbackEnrollments)
+        .leftJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+        .where(and(
+          eq(customerCashbackEnrollments.customerId, customer.id),
+          eq(customerCashbackEnrollments.isActive, true),
+          eq(cashbackGroups.restaurantId, restaurantId)
+        )).limit(1);
+      
+      if (existingCashbackEnrollment) {
+        enrolledCashback = existingCashbackEnrollment.group;
+        cashbackStatus = "already_enrolled";
+      } else {
+        const qualifyingGroups = activeCashbackGroups
+          .filter(g => {
+            const minSpend = parseFloat(g.minSpendToJoin || "0");
+            const minOrders = g.minOrdersToJoin || 0;
+            return totalSpent >= minSpend && visitCount >= minOrders;
+          })
+          .sort((a, b) => (b.priority || 1) - (a.priority || 1));
+        
+        const bestGroup = qualifyingGroups[0] || activeCashbackGroups
+          .sort((a, b) => (a.priority || 1) - (b.priority || 1))[0];
+        
+        if (bestGroup) {
+          await db.insert(customerCashbackEnrollments).values({
+            customerId: customer.id,
+            groupId: bestGroup.id,
+            enrolledBy: "restaurant_scan",
+            enrolledByUserId: req.body.enrolledByUserId || null,
+            isActive: true,
+            totalCashbackEarned: "0.00",
+            totalSpendInGroup: "0.00"
+          });
+          enrolledCashback = bestGroup;
+          cashbackStatus = "newly_enrolled";
+        }
+      }
+    }
+    
+    let enrolledLoyalty: any = null;
+    let loyaltyStatus = "none";
+    
+    if (activeLoyaltyGroups.length > 0) {
+      const [existingLoyaltyEnrollment] = await db.select({
+        enrollment: customerLoyaltyEnrollments,
+        group: loyaltyGroups
+      })
+        .from(customerLoyaltyEnrollments)
+        .leftJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
+        .where(and(
+          eq(customerLoyaltyEnrollments.customerId, customer.id),
+          eq(customerLoyaltyEnrollments.restaurantId, restaurantId),
+          eq(customerLoyaltyEnrollments.isActive, true)
+        )).limit(1);
+      
+      if (existingLoyaltyEnrollment) {
+        const sortedTiers = activeLoyaltyGroups.sort((a, b) => (b.tierLevel || 1) - (a.tierLevel || 1));
+        const bestTier = sortedTiers.find(g => totalSpent >= parseFloat(g.minSpendThreshold || "0")) || sortedTiers[sortedTiers.length - 1];
+        
+        const currentTierLevel = existingLoyaltyEnrollment.group?.tierLevel || 1;
+        
+        if (bestTier && (bestTier.tierLevel || 1) > currentTierLevel) {
+          await db.update(customerLoyaltyEnrollments)
+            .set({ isActive: false, deactivatedAt: new Date() })
+            .where(eq(customerLoyaltyEnrollments.id, existingLoyaltyEnrollment.enrollment.id));
+          
+          await db.insert(customerLoyaltyEnrollments).values({
+            customerId: customer.id,
+            groupId: bestTier.id,
+            restaurantId,
+            enrolledBy: "auto_upgrade",
+            enrolledByUserId: req.body.enrolledByUserId || null,
+            isActive: true,
+            totalSpentAtRestaurant: totalSpent.toFixed(2),
+            totalDiscountReceived: "0.00",
+            orderCount: visitCount,
+            upgradedFromGroupId: existingLoyaltyEnrollment.group?.id || null,
+            upgradedAt: new Date()
+          });
+          enrolledLoyalty = bestTier;
+          loyaltyStatus = "upgraded";
+        } else {
+          enrolledLoyalty = existingLoyaltyEnrollment.group;
+          loyaltyStatus = "already_enrolled";
+        }
+      } else {
+        const sortedTiers = activeLoyaltyGroups.sort((a, b) => (b.tierLevel || 1) - (a.tierLevel || 1));
+        const bestTier = sortedTiers.find(g => totalSpent >= parseFloat(g.minSpendThreshold || "0")) || sortedTiers[sortedTiers.length - 1];
+        
+        if (bestTier) {
+          await db.insert(customerLoyaltyEnrollments).values({
+            customerId: customer.id,
+            groupId: bestTier.id,
+            restaurantId,
+            enrolledBy: "restaurant_scan",
+            enrolledByUserId: req.body.enrolledByUserId || null,
+            isActive: true,
+            totalSpentAtRestaurant: totalSpent.toFixed(2),
+            totalDiscountReceived: "0.00",
+            orderCount: visitCount
+          });
+          enrolledLoyalty = bestTier;
+          loyaltyStatus = "newly_enrolled";
+        }
+      }
+    }
+    
+    res.json({
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        profilePicture: customer.profilePicture
+      },
+      cashback: enrolledCashback ? {
+        groupName: enrolledCashback.name,
+        cashbackPercentage: enrolledCashback.cashbackPercentage,
+        status: cashbackStatus
+      } : null,
+      loyalty: enrolledLoyalty ? {
+        tierName: enrolledLoyalty.name,
+        discountPercentage: enrolledLoyalty.discountPercentage,
+        tierLevel: enrolledLoyalty.tierLevel,
+        status: loyaltyStatus
+      } : null,
+      totalSpent: totalSpent.toFixed(2),
+      visitCount
+    });
+  } catch (error: any) {
+    console.error("Error in scan-enroll:", error);
+    res.status(500).json({ message: "Eroare la înrolarea clientului: " + error.message });
+  }
+});
+
 // ============================================================
 // ADMIN ENDPOINTS FOR WALLET MANAGEMENT
 // ============================================================
