@@ -495,6 +495,30 @@ export default function MobileHome() {
     enabled: !!user?.id
   });
 
+  const { data: purchasedVouchers = [] } = useQuery<any[]>({
+    queryKey: ['/api/user-vouchers'],
+    queryFn: async () => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      const response = await fetch(`${API_BASE_URL}/api/user-vouchers`, {
+        credentials: 'include',
+        headers,
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!user,
+    refetchOnMount: 'always',
+    staleTime: 0,
+  });
+
   const { data: walletOverview } = useQuery<any>({
     queryKey: ['/api/wallet/overview'],
     queryFn: async () => {
@@ -730,8 +754,9 @@ export default function MobileHome() {
         <WalletCard
           balance={parseFloat(walletOverview?.personalBalance || '0')}
           cashback={parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0')}
-          activeVouchers={vouchers.filter(v => v.isActive).length}
+          activeVouchers={purchasedVouchers.filter((v: any) => v.status === 'active').length}
           creditAvailable={parseFloat(walletOverview?.credit?.creditLimit || '0')}
+          currencySymbol={marketplace?.currencySymbol || '€'}
           onBuyVoucher={handleBuyVoucher}
           onUseVoucher={handleUseVoucher}
           isGuest={!user}

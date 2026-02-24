@@ -219,6 +219,53 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
     detectLocationAndSetMarketplace();
   }, [detectLocationAndSetMarketplace]);
 
+  const checkLocationMismatch = useCallback(async (currentMarketplace: Marketplace, marketplaces: Marketplace[]) => {
+    try {
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+
+      if (isNativePlatform) {
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000
+        });
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } else if ('geolocation' in navigator) {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 300000
+          });
+        });
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      }
+
+      if (latitude !== null && longitude !== null) {
+        const geoResult = await reverseGeocode(latitude, longitude);
+        if (geoResult) {
+          setDetectedCountry(geoResult.country);
+          setDetectedCountryCode(geoResult.countryCode);
+          localStorage.setItem(COUNTRY_STORAGE_KEY, JSON.stringify(geoResult));
+
+          if (geoResult.countryCode.toUpperCase() !== currentMarketplace.countryCode.toUpperCase()) {
+            const newMarketplace = findMarketplaceByCountry(geoResult.countryCode, marketplaces);
+            if (newMarketplace && newMarketplace.id !== currentMarketplace.id) {
+              console.log('[Marketplace] Location mismatch detected, switching from', currentMarketplace.name, 'to', newMarketplace.name);
+              setMarketplace(newMarketplace);
+              localStorage.setItem(MARKETPLACE_STORAGE_KEY, JSON.stringify(newMarketplace));
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.log('[Marketplace] Location check skipped:', err);
+    }
+  }, [findMarketplaceByCountry]);
+
   useEffect(() => {
     const storedMarketplace = localStorage.getItem(MARKETPLACE_STORAGE_KEY);
     
@@ -227,14 +274,18 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(storedMarketplace);
         setMarketplace(parsed);
         setIsLoading(false);
-        fetchMarketplaces();
+        fetchMarketplaces().then((mps) => {
+          if (mps.length > 0 && parsed) {
+            checkLocationMismatch(parsed, mps);
+          }
+        });
       } catch {
         detectLocationAndSetMarketplace();
       }
     } else {
       detectLocationAndSetMarketplace();
     }
-  }, [detectLocationAndSetMarketplace, fetchMarketplaces]);
+  }, [detectLocationAndSetMarketplace, fetchMarketplaces, checkLocationMismatch]);
 
   return (
     <MarketplaceContext.Provider value={{
