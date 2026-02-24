@@ -77,7 +77,7 @@ export default function MobileRestaurantDashboard() {
 
   const startQRScanner = async (onScan?: (value: string) => void) => {
     if (!Capacitor.isNativePlatform()) {
-      setScanError('Scanarea QR este disponibilă doar în aplicația mobilă');
+      setScanError('Scanarea QR este disponibilă doar în aplicația mobilă. Folosește introducerea manuală.');
       return;
     }
     try {
@@ -115,6 +115,12 @@ export default function MobileRestaurantDashboard() {
       setScanError(error.message || 'Eroare la scanare');
     }
   };
+
+  useEffect(() => {
+    if (showScanner && !scannedCustomer && !isScanning && Capacitor.isNativePlatform()) {
+      startQRScanner();
+    }
+  }, [showScanner]);
 
   useEffect(() => {
     const storedSession = localStorage.getItem('restaurantSession');
@@ -1625,26 +1631,35 @@ export default function MobileRestaurantDashboard() {
                     </button>
                   </div>
 
-                  <button
-                    onClick={() => startQRScanner()}
-                    disabled={isScanning}
-                    className="w-full bg-gray-900 text-white rounded-2xl aspect-video flex items-center justify-center mb-4 hover:bg-gray-800 transition-colors disabled:opacity-50"
-                  >
-                    <div className="text-center">
-                      {isScanning ? (
-                        <>
-                          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                          <p className="text-white font-medium">Se scanează...</p>
-                        </>
-                      ) : (
-                        <>
-                          <Camera className="w-16 h-16 text-white mx-auto mb-3" />
-                          <p className="text-white font-medium">Apasă pentru a scana codul QR</p>
-                          <p className="text-white/60 text-xs mt-1">sau introdu ID-ul manual mai jos</p>
-                        </>
-                      )}
+                  {Capacitor.isNativePlatform() ? (
+                    <div className="w-full bg-gray-900 text-white rounded-2xl aspect-video flex items-center justify-center mb-4">
+                      <div className="text-center">
+                        {isScanning ? (
+                          <>
+                            <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                            <p className="text-white font-medium">Se scanează...</p>
+                            <p className="text-white/60 text-xs mt-1">Îndreaptă camera spre codul QR al clientului</p>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => startQRScanner()}
+                            className="text-center hover:opacity-80 transition-opacity"
+                          >
+                            <Camera className="w-16 h-16 text-white mx-auto mb-3" />
+                            <p className="text-white font-medium">Scanează din nou</p>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </button>
+                  ) : (
+                    <div className="w-full bg-gray-100 text-gray-600 rounded-2xl p-6 flex items-center justify-center mb-4">
+                      <div className="text-center">
+                        <Camera className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="font-medium">Scanarea QR este disponibilă în aplicația mobilă</p>
+                        <p className="text-gray-400 text-xs mt-1">Introdu ID-ul clientului manual mai jos</p>
+                      </div>
+                    </div>
+                  )}
 
                   {scanError && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">
