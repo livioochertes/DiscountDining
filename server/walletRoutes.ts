@@ -1548,7 +1548,6 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
     }
     
     const totalSpent = parseFloat(existingTracking?.totalSpent || "0");
-    const visitCount = existingTracking?.visitCount || 0;
     
     let enrolledCashback: any = null;
     let cashbackStatus = "none";
@@ -1574,7 +1573,7 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
           .filter(g => {
             const minSpend = parseFloat(g.minSpendToJoin || "0");
             const minOrders = g.minOrdersToJoin || 0;
-            return totalSpent >= minSpend && visitCount >= minOrders;
+            return totalSpent >= minSpend;
           })
           .sort((a, b) => (b.priority || 1) - (a.priority || 1));
         
@@ -1621,7 +1620,7 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
         
         if (bestTier && (bestTier.tierLevel || 1) > currentTierLevel) {
           await db.update(customerLoyaltyEnrollments)
-            .set({ isActive: false, deactivatedAt: new Date() })
+            .set({ isActive: false })
             .where(eq(customerLoyaltyEnrollments.id, existingLoyaltyEnrollment.enrollment.id));
           
           await db.insert(customerLoyaltyEnrollments).values({
@@ -1633,7 +1632,7 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
             isActive: true,
             totalSpentAtRestaurant: totalSpent.toFixed(2),
             totalDiscountReceived: "0.00",
-            orderCount: visitCount,
+            orderCount: 0,
             upgradedFromGroupId: existingLoyaltyEnrollment.group?.id || null,
             upgradedAt: new Date()
           });
@@ -1657,7 +1656,7 @@ router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: R
             isActive: true,
             totalSpentAtRestaurant: totalSpent.toFixed(2),
             totalDiscountReceived: "0.00",
-            orderCount: visitCount
+            orderCount: 0
           });
           enrolledLoyalty = bestTier;
           loyaltyStatus = "newly_enrolled";
