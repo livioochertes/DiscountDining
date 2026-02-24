@@ -234,6 +234,7 @@ export default function MobileRestaurantDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...params,
+          restaurantId: currentRestaurantId,
           enrolledByUserId: currentSession?.owner?.id,
         }),
       });

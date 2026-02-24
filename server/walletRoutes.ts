@@ -1500,11 +1500,14 @@ router.get("/restaurant/:restaurantId/customer/:customerId", async (req: Request
 // Scan & Auto-Enroll customer (handles customerCode or customerId)
 router.post("/restaurant/:restaurantId/scan-enroll", async (req: Request, res: Response) => {
   try {
-    const restaurantId = parseInt(req.params.restaurantId);
+    let restaurantId = parseInt(req.params.restaurantId);
+    const { customerCode, customerId: rawCustomerId, enrolledByUserId: rawEnrolledBy, restaurantId: bodyRestaurantId } = req.body;
+    if (isNaN(restaurantId) && bodyRestaurantId) {
+      restaurantId = Number(bodyRestaurantId);
+    }
     if (isNaN(restaurantId)) {
       return res.status(400).json({ message: "ID restaurant invalid" });
     }
-    const { customerCode, customerId: rawCustomerId, enrolledByUserId: rawEnrolledBy } = req.body;
     const enrolledByUserId = (rawEnrolledBy !== undefined && rawEnrolledBy !== null && !isNaN(Number(rawEnrolledBy))) ? Number(rawEnrolledBy) : null;
     
     let customer: any = null;
