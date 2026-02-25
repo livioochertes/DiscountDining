@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon, ChefHat, Sparkles, X } from "lucide-react";
+import { PlusCircle, Store, Package, Menu, BarChart3, Settings, LogOut, Building2, Calendar, CheckCircle, XCircle, Clock, Eye, Phone, Mail, MessageSquare, CalendarDays, ChevronLeft, ChevronRight, Trash2, Edit, AlertTriangle, Users, CreditCard, TrendingUp, Plus, Loader2, Upload, ImageIcon, ChefHat, Sparkles, X, Search } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ChefForm from "@/components/ChefForm";
 import { useLocation } from "wouter";
@@ -58,6 +59,9 @@ export default function RestaurantPortal() {
   const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
   const [isChefFormOpen, setIsChefFormOpen] = useState(false);
   const [editingChef, setEditingChef] = useState<any>(null);
+  const [clientiGroupFilter, setClientiGroupFilter] = useState("all");
+  const [clientiSearch, setClientiSearch] = useState("");
+  const [clientiSearchDebounced, setClientiSearchDebounced] = useState("");
   const [menuRestaurantId, setMenuRestaurantId] = useState<number | null>(null);
   const [menuCategory, setMenuCategory] = useState<string>("all");
   const [isMenuItemFormOpen, setIsMenuItemFormOpen] = useState(false);
@@ -596,6 +600,52 @@ export default function RestaurantPortal() {
     }
   }, [activeTab, restaurants, menuRestaurantId]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setClientiSearchDebounced(clientiSearch), 400);
+    return () => clearTimeout(timer);
+  }, [clientiSearch]);
+
+  const clientiRestaurantId = restaurants.length > 0 ? restaurants[0]?.id : null;
+
+  const clientiQueryParams = new URLSearchParams();
+  if (clientiGroupFilter !== "all") {
+    const [type, id] = clientiGroupFilter.split(":");
+    clientiQueryParams.set("group", type);
+    if (id) clientiQueryParams.set("groupId", id);
+  }
+  if (clientiSearchDebounced) clientiQueryParams.set("search", clientiSearchDebounced);
+
+  const { data: enrolledCustomers = [], isLoading: isLoadingCustomers } = useQuery<any[]>({
+    queryKey: ["/api/restaurant", clientiRestaurantId, "enrolled-customers", clientiGroupFilter, clientiSearchDebounced],
+    queryFn: async () => {
+      const qs = clientiQueryParams.toString();
+      const response = await fetch(`/api/restaurant/${clientiRestaurantId}/enrolled-customers${qs ? `?${qs}` : ""}`);
+      if (!response.ok) throw new Error("Failed to fetch customers");
+      return response.json();
+    },
+    enabled: activeTab === "clienti" && !!clientiRestaurantId
+  });
+
+  const { data: cashbackGroupsList = [] } = useQuery<any[]>({
+    queryKey: ["/api/restaurant", clientiRestaurantId, "cashback-groups"],
+    queryFn: async () => {
+      const response = await fetch(`/api/restaurant/${clientiRestaurantId}/cashback-groups`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: activeTab === "clienti" && !!clientiRestaurantId
+  });
+
+  const { data: loyaltyGroupsList = [] } = useQuery<any[]>({
+    queryKey: ["/api/restaurant", clientiRestaurantId, "loyalty-groups"],
+    queryFn: async () => {
+      const response = await fetch(`/api/restaurant/${clientiRestaurantId}/loyalty-groups`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: activeTab === "clienti" && !!clientiRestaurantId
+  });
+
   const filteredMenuItems = allMenuItems.filter((item: any) => {
     if (menuRestaurantId && item.restaurantId !== menuRestaurantId) return false;
     if (menuCategory !== "all" && item.category !== menuCategory) return false;
@@ -1099,7 +1149,7 @@ export default function RestaurantPortal() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-10 h-auto">
+          <TabsList className="grid w-full grid-cols-11 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-1 text-xs px-2">
               <BarChart3 className="w-3 h-3" />
               {t.overview}
@@ -1119,6 +1169,10 @@ export default function RestaurantPortal() {
             <TabsTrigger value="packages" className="flex items-center gap-1 text-xs px-2">
               <Package className="w-3 h-3" />
               {t.packages}
+            </TabsTrigger>
+            <TabsTrigger value="clienti" className="flex items-center gap-1 text-xs px-2">
+              <Users className="w-3 h-3" />
+              Clienți
             </TabsTrigger>
             <TabsTrigger value="loyalty" className="flex items-center gap-1 text-xs px-2">
               <Users className="w-3 h-3" />
@@ -2034,6 +2088,162 @@ export default function RestaurantPortal() {
                     <p className="text-sm text-gray-500">
                       Contact your administrator to create voucher packages for your restaurants.
                     </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Clienți Tab */}
+          <TabsContent value="clienti" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Clienți Înrolați
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                  <Select value={clientiGroupFilter} onValueChange={setClientiGroupFilter}>
+                    <SelectTrigger className="w-full sm:w-[250px]">
+                      <SelectValue placeholder="Filtrează după grup" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toate grupurile</SelectItem>
+                      {cashbackGroupsList.map((g: any) => (
+                        <SelectItem key={`cb-${g.id}`} value={`cashback:${g.id}`}>
+                          Cashback: {g.name} ({g.cashbackPercentage}%)
+                        </SelectItem>
+                      ))}
+                      {loyaltyGroupsList.map((g: any) => (
+                        <SelectItem key={`ly-${g.id}`} value={`loyalty:${g.id}`}>
+                          Fidelizare: {g.name} ({g.discountPercentage}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Caută după nume sau email..."
+                      value={clientiSearch}
+                      onChange={(e) => setClientiSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {isLoadingCustomers ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                    <span className="ml-2 text-gray-500">Se încarcă clienții...</span>
+                  </div>
+                ) : enrolledCustomers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium">Niciun client înrolat</p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      {clientiSearch || clientiGroupFilter !== "all"
+                        ? "Încercați să modificați filtrele de căutare"
+                        : "Clienții vor apărea aici după ce sunt înrolați în grupuri cashback sau fidelizare"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Grup Cashback</TableHead>
+                          <TableHead>Grup Fidelizare</TableHead>
+                          <TableHead className="text-right">Total Cheltuit</TableHead>
+                          <TableHead>Data Înrolare</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {enrolledCustomers.map((customer: any) => {
+                          const enrollDate = customer.latestEnrollmentAt
+                            ? new Date(customer.latestEnrollmentAt)
+                            : null;
+                          const isNew = enrollDate && (Date.now() - enrollDate.getTime()) < 7 * 24 * 60 * 60 * 1000;
+                          return (
+                            <TableRow key={customer.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  {customer.profilePicture ? (
+                                    <img src={customer.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-semibold text-sm">
+                                      {(customer.name || "?")[0].toUpperCase()}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-medium text-sm">{customer.name || "—"}</p>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                      {customer.email && (
+                                        <span className="flex items-center gap-1">
+                                          <Mail className="h-3 w-3" />
+                                          {customer.email}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {customer.phone && (
+                                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                                        <Phone className="h-3 w-3" />
+                                        {customer.phone}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {customer.cashback ? (
+                                  <div>
+                                    <p className="text-sm font-medium">{customer.cashback.groupName}</p>
+                                    <p className="text-xs text-gray-500">{customer.cashback.cashbackPercentage}% cashback</p>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-400">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {customer.loyalty ? (
+                                  <div>
+                                    <p className="text-sm font-medium">{customer.loyalty.groupName}</p>
+                                    <p className="text-xs text-gray-500">
+                                      {customer.loyalty.tierLevel && `Nivel ${customer.loyalty.tierLevel} · `}
+                                      {customer.loyalty.discountPercentage}% discount
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-400">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span className="font-medium">€{parseFloat(customer.totalSpent || "0").toFixed(2)}</span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm">
+                                  {enrollDate ? enrollDate.toLocaleDateString("ro-RO") : "—"}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {isNew ? (
+                                  <Badge className="bg-green-100 text-green-700">Nou înrolat</Badge>
+                                ) : (
+                                  <Badge variant="secondary">Activ</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                    <div className="mt-4 text-sm text-gray-500">
+                      {enrolledCustomers.length} {enrolledCustomers.length === 1 ? "client" : "clienți"} găsiți
+                    </div>
                   </div>
                 )}
               </CardContent>

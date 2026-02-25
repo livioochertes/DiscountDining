@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import * as qr from "qr-image";
 import Stripe from "stripe";
 import { db } from "./db";
-import { eq, and, isNull, desc, sql } from "drizzle-orm";
+import { eq, and, isNull, desc, sql, or, ilike, asc } from "drizzle-orm";
 import { 
   insertCustomerWalletSchema,
   insertGeneralVoucherSchema,
@@ -1494,6 +1494,180 @@ router.get("/restaurant/:restaurantId/customer/:customerId", async (req: Request
   } catch (error) {
     console.error("Error fetching customer info:", error);
     res.status(500).json({ message: "Failed to fetch customer info" });
+  }
+});
+
+// Get enrolled customers for a restaurant
+router.get("/restaurant/:restaurantId/enrolled-customers", async (req: Request, res: Response) => {
+  try {
+    const restaurantId = parseInt(req.params.restaurantId);
+    if (isNaN(restaurantId)) {
+      return res.status(400).json({ message: "ID restaurant invalid" });
+    }
+    const { group, groupId, search, limit: rawLimit } = req.query;
+    const resultLimit = rawLimit ? parseInt(rawLimit as string) : 200;
+
+    const cashbackEnrollments = await db.select({
+      customerId: customerCashbackEnrollments.customerId,
+      enrolledAt: customerCashbackEnrollments.enrolledAt,
+      enrolledBy: customerCashbackEnrollments.enrolledBy,
+      groupId: customerCashbackEnrollments.groupId,
+      groupName: cashbackGroups.name,
+      cashbackPercentage: cashbackGroups.cashbackPercentage,
+      isActive: customerCashbackEnrollments.isActive,
+      customerName: customers.name,
+      customerEmail: customers.email,
+      customerPhone: customers.phone,
+      customerCode: customers.customerCode,
+      profilePicture: customers.profilePicture,
+    })
+      .from(customerCashbackEnrollments)
+      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .innerJoin(customers, eq(customerCashbackEnrollments.customerId, customers.id))
+      .where(and(
+        eq(cashbackGroups.restaurantId, restaurantId),
+        eq(customerCashbackEnrollments.isActive, true),
+        ...(group === 'loyalty' ? [sql`false`] : []),
+        ...(groupId && group === 'cashback' ? [eq(cashbackGroups.id, parseInt(groupId as string))] : []),
+        ...(search ? [or(
+          ilike(customers.name, `%${search}%`),
+          ilike(customers.email, `%${search}%`)
+        )] : [])
+      ))
+      .orderBy(desc(customerCashbackEnrollments.enrolledAt))
+      .limit(resultLimit);
+
+    const loyaltyEnrollments = await db.select({
+      customerId: customerLoyaltyEnrollments.customerId,
+      enrolledAt: customerLoyaltyEnrollments.enrolledAt,
+      enrolledBy: customerLoyaltyEnrollments.enrolledBy,
+      groupId: customerLoyaltyEnrollments.groupId,
+      groupName: loyaltyGroups.name,
+      discountPercentage: loyaltyGroups.discountPercentage,
+      tierLevel: loyaltyGroups.tierLevel,
+      isActive: customerLoyaltyEnrollments.isActive,
+      customerName: customers.name,
+      customerEmail: customers.email,
+      customerPhone: customers.phone,
+      customerCode: customers.customerCode,
+      profilePicture: customers.profilePicture,
+    })
+      .from(customerLoyaltyEnrollments)
+      .innerJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
+      .innerJoin(customers, eq(customerLoyaltyEnrollments.customerId, customers.id))
+      .where(and(
+        eq(customerLoyaltyEnrollments.restaurantId, restaurantId),
+        eq(customerLoyaltyEnrollments.isActive, true),
+        ...(group === 'cashback' ? [sql`false`] : []),
+        ...(groupId && group === 'loyalty' ? [eq(loyaltyGroups.id, parseInt(groupId as string))] : []),
+        ...(search ? [or(
+          ilike(customers.name, `%${search}%`),
+          ilike(customers.email, `%${search}%`)
+        )] : [])
+      ))
+      .orderBy(desc(customerLoyaltyEnrollments.enrolledAt))
+      .limit(resultLimit);
+
+    const customerIds = [...new Set([
+      ...cashbackEnrollments.map(e => e.customerId),
+      ...loyaltyEnrollments.map(e => e.customerId)
+    ])];
+
+    let spendingMap: Record<number, any> = {};
+    let txCountMap: Record<number, number> = {};
+
+    if (customerIds.length > 0) {
+      const spendingData = await db.select().from(customerRestaurantCashback)
+        .where(and(
+          eq(customerRestaurantCashback.restaurantId, restaurantId),
+          sql`${customerRestaurantCashback.customerId} = ANY(ARRAY[${sql.raw(customerIds.join(','))}])`
+        ));
+      spendingData.forEach(s => { spendingMap[s.customerId] = s; });
+
+      const txCounts = await db.select({
+        customerId: paymentTransactions.customerId,
+        count: sql<number>`count(*)::int`
+      })
+        .from(paymentTransactions)
+        .where(and(
+          eq(paymentTransactions.restaurantId, restaurantId),
+          sql`${paymentTransactions.customerId} = ANY(ARRAY[${sql.raw(customerIds.join(','))}])`
+        ))
+        .groupBy(paymentTransactions.customerId);
+      txCounts.forEach(t => { txCountMap[t.customerId!] = t.count; });
+    }
+
+    const customerMap: Record<number, any> = {};
+
+    cashbackEnrollments.forEach(e => {
+      if (!customerMap[e.customerId]) {
+        customerMap[e.customerId] = {
+          id: e.customerId,
+          name: e.customerName,
+          email: e.customerEmail,
+          phone: e.customerPhone,
+          customerCode: e.customerCode,
+          profilePicture: e.profilePicture,
+          cashback: null,
+          loyalty: null,
+          totalSpent: spendingMap[e.customerId]?.totalSpent || "0.00",
+          cashbackBalance: spendingMap[e.customerId]?.cashbackBalance || "0.00",
+          transactionCount: txCountMap[e.customerId] || 0,
+          latestEnrollmentAt: e.enrolledAt,
+        };
+      }
+      customerMap[e.customerId].cashback = {
+        groupId: e.groupId,
+        groupName: e.groupName,
+        cashbackPercentage: e.cashbackPercentage,
+        enrolledAt: e.enrolledAt,
+        enrolledBy: e.enrolledBy,
+      };
+      if (e.enrolledAt && (!customerMap[e.customerId].latestEnrollmentAt || e.enrolledAt > customerMap[e.customerId].latestEnrollmentAt)) {
+        customerMap[e.customerId].latestEnrollmentAt = e.enrolledAt;
+      }
+    });
+
+    loyaltyEnrollments.forEach(e => {
+      if (!customerMap[e.customerId]) {
+        customerMap[e.customerId] = {
+          id: e.customerId,
+          name: e.customerName,
+          email: e.customerEmail,
+          phone: e.customerPhone,
+          customerCode: e.customerCode,
+          profilePicture: e.profilePicture,
+          cashback: null,
+          loyalty: null,
+          totalSpent: spendingMap[e.customerId]?.totalSpent || "0.00",
+          cashbackBalance: spendingMap[e.customerId]?.cashbackBalance || "0.00",
+          transactionCount: txCountMap[e.customerId] || 0,
+          latestEnrollmentAt: e.enrolledAt,
+        };
+      }
+      customerMap[e.customerId].loyalty = {
+        groupId: e.groupId,
+        groupName: e.groupName,
+        discountPercentage: e.discountPercentage,
+        tierLevel: e.tierLevel,
+        enrolledAt: e.enrolledAt,
+        enrolledBy: e.enrolledBy,
+      };
+      if (e.enrolledAt && (!customerMap[e.customerId].latestEnrollmentAt || e.enrolledAt > customerMap[e.customerId].latestEnrollmentAt)) {
+        customerMap[e.customerId].latestEnrollmentAt = e.enrolledAt;
+      }
+    });
+
+    const result = Object.values(customerMap).sort((a: any, b: any) => {
+      const dateA = a.latestEnrollmentAt ? new Date(a.latestEnrollmentAt).getTime() : 0;
+      const dateB = b.latestEnrollmentAt ? new Date(b.latestEnrollmentAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    res.json(result.slice(0, resultLimit));
+  } catch (error: any) {
+    console.error("Error fetching enrolled customers:", error);
+    res.status(500).json({ message: "Eroare la încărcarea clienților: " + error.message });
   }
 });
 

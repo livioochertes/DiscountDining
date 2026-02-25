@@ -203,7 +203,7 @@ export default function MobileRestaurantDashboard() {
       if (!response.ok) throw new Error('Failed to fetch reservations');
       return response.json();
     },
-    enabled: !!restaurantId && activeTab === 'reservations',
+    enabled: !!restaurantId && (activeTab === 'reservations' || activeTab === 'home'),
   });
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery<any[]>({
@@ -215,7 +215,19 @@ export default function MobileRestaurantDashboard() {
       if (!response.ok) throw new Error('Failed to fetch orders');
       return response.json();
     },
-    enabled: !!restaurantId && activeTab === 'orders',
+    enabled: !!restaurantId && (activeTab === 'orders' || activeTab === 'home'),
+  });
+
+  const { data: enrolledCustomers = [], isLoading: enrolledCustomersLoading } = useQuery<any[]>({
+    queryKey: ['/api/restaurant', restaurantId, 'enrolled-customers', { limit: 3 }],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/enrolled-customers?limit=3`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch enrolled customers');
+      return response.json();
+    },
+    enabled: !!restaurantId && activeTab === 'home',
   });
 
   const [noGroupsError, setNoGroupsError] = useState(false);
@@ -658,57 +670,174 @@ export default function MobileRestaurantDashboard() {
 
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-gray-900">Grupuri Cashback</h2>
-                  <button className="text-primary text-sm font-medium flex items-center gap-1">
-                    <Plus className="w-4 h-4" />
-                    Adaugă
+                  <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4 text-amber-600" />
+                    Comenzi noi
+                  </h2>
+                  <button
+                    onClick={() => setActiveTab('orders')}
+                    className="text-primary text-sm font-medium flex items-center gap-1"
+                  >
+                    Vezi toate <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-                {cashbackGroups.length === 0 ? (
-                  <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-                    <TrendingUp className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500">Niciun grup cashback creat</p>
+                {ordersLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
                   </div>
-                ) : (
-                  cashbackGroups.map((group: any) => (
-                    <div key={group.id} className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">{group.name}</p>
-                        <p className="text-sm text-gray-500">{group.description}</p>
-                      </div>
-                      <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
-                        {parseFloat(group.cashbackPercentage).toFixed(0)}%
-                      </div>
+                ) : (() => {
+                  const recentOrders = orders
+                    .filter((o: any) => o.status === 'pending' || o.status === 'preparing')
+                    .slice(0, 3);
+                  return recentOrders.length === 0 ? (
+                    <div className="bg-white rounded-2xl p-4 text-center border border-gray-100">
+                      <p className="text-gray-500 text-sm">Nicio comandă nouă</p>
                     </div>
-                  ))
-                )}
+                  ) : (
+                    recentOrders.map((order: any) => {
+                      const status = order.status || 'pending';
+                      const statusColor = status === 'preparing' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700';
+                      const statusLabel = status === 'preparing' ? 'Se pregătește' : 'Nouă';
+                      return (
+                        <button
+                          key={order.id}
+                          onClick={() => setActiveTab('orders')}
+                          className="w-full bg-white rounded-2xl p-3 border border-gray-100 flex items-center justify-between text-left"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-gray-900 text-sm">#{order.orderNumber || order.id}</p>
+                              <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium", statusColor)}>{statusLabel}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5">{order.customerName || `Client #${order.customerId}`}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <p className="font-bold text-gray-900 text-sm">{parseFloat(order.total || order.totalAmount || '0').toFixed(2)} RON</p>
+                              <p className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-gray-300" />
+                          </div>
+                        </button>
+                      );
+                    })
+                  );
+                })()}
               </section>
 
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-gray-900">Grupuri Fidelizare</h2>
-                  <button className="text-primary text-sm font-medium flex items-center gap-1">
-                    <Plus className="w-4 h-4" />
-                    Adaugă
+                  <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-purple-600" />
+                    Rezervări noi
+                  </h2>
+                  <button
+                    onClick={() => setActiveTab('reservations')}
+                    className="text-primary text-sm font-medium flex items-center gap-1"
+                  >
+                    Vezi toate <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-                {loyaltyGroups.length === 0 ? (
-                  <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-                    <BadgePercent className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500">Niciun grup fidelizare creat</p>
+                {reservationsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                ) : (() => {
+                  const pendingReservations = reservations
+                    .filter((r: any) => r.status === 'pending')
+                    .slice(0, 3);
+                  return pendingReservations.length === 0 ? (
+                    <div className="bg-white rounded-2xl p-4 text-center border border-gray-100">
+                      <p className="text-gray-500 text-sm">Nicio rezervare nouă</p>
+                    </div>
+                  ) : (
+                    pendingReservations.map((res: any) => (
+                      <button
+                        key={res.id}
+                        onClick={() => setActiveTab('reservations')}
+                        className="w-full bg-white rounded-2xl p-3 border border-gray-100 flex items-center justify-between text-left"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm">{res.customerName || res.guestName || `Client #${res.customerId}`}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {res.reservationDate ? new Date(res.reservationDate).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' }) : ''}{' '}
+                            {res.reservationTime || ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <div className="flex items-center gap-1 text-gray-600">
+                              <Users className="w-3.5 h-3.5" />
+                              <span className="text-sm font-medium">{res.partySize || res.guestCount || res.numberOfGuests || '?'}</span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">În așteptare</span>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300" />
+                        </div>
+                      </button>
+                    ))
+                  );
+                })()}
+              </section>
+
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-green-600" />
+                    Clienți noi înrolați
+                  </h2>
+                  <button
+                    onClick={() => setShowScanner(true)}
+                    className="text-primary text-sm font-medium flex items-center gap-1"
+                  >
+                    Înrolează <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+                {enrolledCustomersLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                ) : enrolledCustomers.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-4 text-center border border-gray-100">
+                    <p className="text-gray-500 text-sm">Niciun client înrolat</p>
                   </div>
                 ) : (
-                  loyaltyGroups.map((group: any) => (
-                    <div key={group.id} className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">{group.name}</p>
-                        <p className="text-sm text-gray-500">Tier {group.tierLevel}</p>
+                  enrolledCustomers.slice(0, 3).map((customer: any, idx: number) => {
+                    const enrolledDate = customer.enrolledAt ? new Date(customer.enrolledAt) : null;
+                    const isRecent = enrolledDate && (Date.now() - enrolledDate.getTime()) < 7 * 24 * 60 * 60 * 1000;
+                    const groupLabel = customer.groupType === 'cashback'
+                      ? `${customer.groupName} (${parseFloat(customer.cashbackPercentage || '0').toFixed(0)}%)`
+                      : customer.groupType === 'loyalty'
+                      ? `${customer.groupName} (${parseFloat(customer.discountPercentage || '0').toFixed(0)}% discount)`
+                      : customer.groupName || 'Grup';
+                    return (
+                      <div
+                        key={`${customer.groupType}-${customer.customerId}-${idx}`}
+                        className="bg-white rounded-2xl p-3 border border-gray-100 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-9 h-9 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Users className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 text-sm truncate">{customer.customerName}</p>
+                            <p className="text-xs text-gray-500 truncate">{groupLabel}</p>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0 ml-2">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[10px] font-medium",
+                            isRecent ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                          )}>
+                            {isRecent ? 'Nou înrolat' : 'Deja înrolat'}
+                          </span>
+                          {enrolledDate && (
+                            <p className="text-[10px] text-gray-400 mt-0.5">{enrolledDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">
-                        {parseFloat(group.discountPercentage).toFixed(0)}% discount
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </section>
             </>

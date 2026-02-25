@@ -27,7 +27,8 @@ The mobile app features a "Bright Clean" design system with a dual-layout approa
 - **Multi-Language System**: Supports 6 languages (en, es, fr, de, it, ro) with auto-detection and persistence.
 - **AI Support System**: AI-powered customer support chat widget with RAG-based knowledge base, automatic escalation for critical issues, and multi-language responses.
 - **Recipe Sharing System**: Allows users to discover, share, like, save, and comment on recipes. Recipes can be associated with restaurants and include dietary tags and difficulty levels.
-- **Cashback & Loyalty System**: Comprehensive system for managing EatOff-wide and restaurant-specific cashback groups, customer credit accounts with an approval flow, and loyalty tiers with automatic upgrades based on spending.
+- **Cashback & Loyalty System**: Comprehensive system for managing EatOff-wide and restaurant-specific cashback groups, customer credit accounts with an approval flow, and loyalty tiers with automatic upgrades based on spending. QR code scanning auto-enrolls customers in the best matching group.
+- **Restaurant Customer Management**: Web portal "Clienți" tab with full enrolled customer list, group filters, search, contact info, and spending stats. Mobile Home tab shows operational alerts (recent orders, reservations, newly enrolled customers).
 - **Marketplace System**: Supports multiple countries and currencies, with dynamic Stripe top-up based on the marketplace's currency.
 - **Financial Management System**: Complete admin panel for restaurant commissions, user wallet management, and settlement processing.
 
