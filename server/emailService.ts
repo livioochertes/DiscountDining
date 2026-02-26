@@ -272,8 +272,12 @@ export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Prom
       html: emailHtml,
       text: `${senderName} ți-a trimis ${giftType === 'value' ? `un cadou valoric de ${amount} ${currency}` : `produsul ${menuItemName} de la ${restaurantName}`} pe EatOff! Codul tău de revendicare: ${redeemCode}. Deschide aplicația EatOff pentru a revendica cadoul.`,
       mailSettings: {
-        bypassBounceManagement: { enable: true },
-        bypassUnsubscribeManagement: { enable: true },
+        bypassListManagement: { enable: true },
+      },
+      trackingSettings: {
+        clickTracking: { enable: false, enableText: false },
+        openTracking: { enable: false },
+        subscriptionTracking: { enable: false },
       },
     });
     console.log(`✅ Gift voucher email sent to ${recipientEmail}`);
