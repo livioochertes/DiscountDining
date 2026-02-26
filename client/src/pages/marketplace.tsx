@@ -208,7 +208,8 @@ export default function Marketplace() {
 
   const { data: restaurants = [], isLoading } = useQuery({
     queryKey: ['/api/restaurants', filters],
-    queryFn: () => api.getRestaurants(filters)
+    queryFn: () => api.getRestaurants(filters),
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch AI recommendations when user is authenticated
@@ -327,7 +328,6 @@ export default function Marketplace() {
 
   // Simple modal close - no scroll manipulation
   const handleCloseModal = useCallback(() => {
-    console.log('Modal close requested');
     setShowRecommendationModal(false);
     setSelectedRecommendation(null);
   }, []);
@@ -509,11 +509,6 @@ export default function Marketplace() {
     return true;
   });
   
-  console.log('AI recommendations data:', { 
-    allRecommendations: allRecommendations.length, 
-    filteredRecommendations: filteredRecommendations.length,
-    showRecommendationModal 
-  });
 
   // Portal-based modal effect - no page interference
   useEffect(() => {
@@ -604,10 +599,12 @@ export default function Marketplace() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [autoDetectAttempt, setAutoDetectAttempt] = useState(0);
 
-  // Auto-detect location using browser geolocation
+  const locationDetectedRef = useRef(false);
+
   useEffect(() => {
+    if (locationDetectedRef.current) return;
     if (!autoDetectLocation || availableLocations.length === 0 || isDetectingLocation) return;
-    if (detectedLocation) return; // Already detected
+    if (detectedLocation) return;
     
     if (!navigator.geolocation) {
       setLocationError("Location not supported by browser");
@@ -617,6 +614,7 @@ export default function Marketplace() {
 
     setIsDetectingLocation(true);
     setLocationError(null);
+    locationDetectedRef.current = true;
     
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -644,24 +642,18 @@ export default function Marketplace() {
               handleFilterChange('location', matchedLocation);
             } else {
               setLocationError(`No restaurants in ${city}`);
-              handleFilterChange('location', undefined);
             }
           } else {
             setLocationError("Could not determine city");
-            handleFilterChange('location', undefined);
           }
-        } catch (error) {
-          console.error("Error detecting location:", error);
+        } catch {
           setLocationError("Location detection failed");
-          handleFilterChange('location', undefined);
         } finally {
           setIsDetectingLocation(false);
         }
       },
       (error) => {
-        console.error("Geolocation error:", error);
         setIsDetectingLocation(false);
-        handleFilterChange('location', undefined);
         setDetectedLocation(null);
         if (error.code === error.PERMISSION_DENIED) {
           setLocationError("Location access denied");

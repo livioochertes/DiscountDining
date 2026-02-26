@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 
@@ -31,6 +31,7 @@ const MarketplaceContext = createContext<MarketplaceContextType | null>(null);
 
 const MARKETPLACE_STORAGE_KEY = 'eatoff_marketplace';
 const COUNTRY_STORAGE_KEY = 'eatoff_detected_country';
+const LOCATION_CHECK_INTERVAL = 10 * 60 * 1000;
 
 async function reverseGeocode(lat: number, lng: number): Promise<{ country: string; countryCode: string } | null> {
   try {
@@ -43,8 +44,11 @@ async function reverseGeocode(lat: number, lng: number): Promise<{ country: stri
       }
     );
     
+    if (response.status === 429) {
+      return null;
+    }
+    
     if (!response.ok) {
-      console.error('[Marketplace] Reverse geocode failed:', response.status);
       return null;
     }
     
@@ -53,13 +57,11 @@ async function reverseGeocode(lat: number, lng: number): Promise<{ country: stri
     const countryCode = data.address?.country_code?.toUpperCase();
     
     if (country && countryCode) {
-      console.log('[Marketplace] Detected country:', country, countryCode);
       return { country, countryCode };
     }
     
     return null;
-  } catch (error) {
-    console.error('[Marketplace] Reverse geocode error:', error);
+  } catch {
     return null;
   }
 }
@@ -93,6 +95,9 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
+
+  const initializedRef = useRef(false);
+  const lastLocationCheckRef = useRef(0);
 
   const fetchMarketplaces = useCallback(async () => {
     try {
@@ -138,7 +143,6 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
 
       try {
         if (isNativePlatform) {
-          console.log('[Marketplace] Using native Capacitor Geolocation');
           const position = await Geolocation.getCurrentPosition({
             enableHighAccuracy: false,
             timeout: 10000,
@@ -147,7 +151,6 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
           latitude = position.coords.latitude;
           longitude = position.coords.longitude;
         } else if ('geolocation' in navigator) {
-          console.log('[Marketplace] Using browser geolocation');
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
               enableHighAccuracy: false,
@@ -158,8 +161,7 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
           latitude = position.coords.latitude;
           longitude = position.coords.longitude;
         }
-      } catch (gpsError) {
-        console.log('[Marketplace] GPS error, using default marketplace:', gpsError);
+      } catch {
       }
 
       let selectedMarketplace: Marketplace | null = null;
@@ -197,7 +199,6 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
       if (selectedMarketplace) {
         setMarketplace(selectedMarketplace);
         localStorage.setItem(MARKETPLACE_STORAGE_KEY, JSON.stringify(selectedMarketplace));
-        console.log('[Marketplace] Selected marketplace:', selectedMarketplace.name, selectedMarketplace.currencyCode);
       }
 
     } catch (err) {
@@ -216,10 +217,18 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
   const refreshLocation = useCallback(() => {
     localStorage.removeItem(MARKETPLACE_STORAGE_KEY);
     localStorage.removeItem(COUNTRY_STORAGE_KEY);
+    lastLocationCheckRef.current = 0;
+    initializedRef.current = false;
     detectLocationAndSetMarketplace();
   }, [detectLocationAndSetMarketplace]);
 
   const checkLocationMismatch = useCallback(async (currentMarketplace: Marketplace, marketplaces: Marketplace[]) => {
+    const now = Date.now();
+    if (now - lastLocationCheckRef.current < LOCATION_CHECK_INTERVAL) {
+      return;
+    }
+    lastLocationCheckRef.current = now;
+
     try {
       let latitude: number | null = null;
       let longitude: number | null = null;
@@ -254,19 +263,20 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
           if (geoResult.countryCode.toUpperCase() !== currentMarketplace.countryCode.toUpperCase()) {
             const newMarketplace = findMarketplaceByCountry(geoResult.countryCode, marketplaces);
             if (newMarketplace && newMarketplace.id !== currentMarketplace.id) {
-              console.log('[Marketplace] Location mismatch detected, switching from', currentMarketplace.name, 'to', newMarketplace.name);
               setMarketplace(newMarketplace);
               localStorage.setItem(MARKETPLACE_STORAGE_KEY, JSON.stringify(newMarketplace));
             }
           }
         }
       }
-    } catch (err) {
-      console.log('[Marketplace] Location check skipped:', err);
+    } catch {
     }
   }, [findMarketplaceByCountry]);
 
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     const storedMarketplace = localStorage.getItem(MARKETPLACE_STORAGE_KEY);
     
     if (storedMarketplace) {
