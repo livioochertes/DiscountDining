@@ -261,8 +261,8 @@ export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Prom
     });
     console.log(`✅ Gift voucher email sent to ${recipientEmail}`);
     return true;
-  } catch (error) {
-    console.error('Failed to send gift voucher email:', error);
+  } catch (error: any) {
+    console.error('Failed to send gift voucher email:', error?.response?.body || error?.message || error);
     return false;
   }
 }

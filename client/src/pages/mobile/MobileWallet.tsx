@@ -1746,7 +1746,7 @@ interface GiftSendFlowProps {
   personalBalance: number;
 }
 
-type GiftStep = 'choose' | 'value' | 'product-restaurant' | 'product-menu' | 'success';
+type GiftStep = 'choose' | 'value' | 'product-restaurant' | 'product-menu' | 'product-recipient' | 'success';
 
 function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
   const { t } = useLanguage();
@@ -1877,6 +1877,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
               <button onClick={() => {
                 if (step === 'value' || step === 'product-restaurant') setStep('choose');
                 else if (step === 'product-menu') setStep('product-restaurant');
+                else if (step === 'product-recipient') setStep('product-menu');
               }} className="p-1.5 rounded-full bg-gray-100">
                 <ArrowLeft className="w-4 h-4" />
               </button>
@@ -1885,7 +1886,8 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
               {step === 'choose' ? (t.giftSendTitle || 'Send Gift') :
                step === 'value' ? (t.giftValueTitle || 'Value Gift') :
                step === 'product-restaurant' ? (t.giftChooseRestaurant || 'Choose Restaurant') :
-               (t.giftChooseProduct || 'Choose Product')}
+               step === 'product-menu' ? (t.giftChooseProduct || 'Choose Product') :
+               (t.giftRecipientDetails || 'Recipient Details')}
             </h2>
           </div>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100">
@@ -1994,6 +1996,30 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                   rows={2}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 resize-none"
                 />
+                <p className="text-xs text-gray-400 mt-2">{t.giftSelectPresetMessage || 'Or choose a message:'}</p>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {[
+                    t.giftPresetBirthday || 'Happy Birthday!',
+                    t.giftPresetThankYou || 'Thank you for everything!',
+                    t.giftPresetCongrats || 'Congratulations!',
+                    t.giftPresetLove || 'With love!',
+                    t.giftPresetEnjoy || 'Enjoy your meal!',
+                    t.giftPresetSurprise || 'A little surprise for you!',
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => setMessage(preset)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-medium transition-colors border",
+                        message === preset
+                          ? "bg-teal-100 border-teal-300 text-teal-700"
+                          : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-teal-50"
+                      )}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {error && (
@@ -2086,58 +2112,105 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                   );
                 })}
               </div>
+            </div>
+          )}
 
-              {selectedMenuItem && (
-                <div className="space-y-3 pt-2 border-t">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                      <Mail className="w-4 h-4" /> {t.giftRecipientEmail || 'Recipient email'}
-                    </label>
-                    <input
-                      type="email"
-                      value={recipientEmail}
-                      onChange={(e) => setRecipientEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                      <Phone className="w-4 h-4" /> {t.giftRecipientPhone || 'Recipient phone (optional)'}
-                    </label>
-                    <input
-                      type="tel"
-                      value={recipientPhone}
-                      onChange={(e) => setRecipientPhone(e.target.value)}
-                      placeholder="+40..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                      <MessageSquare className="w-4 h-4" /> {t.giftPersonalMessage || 'Personal message (optional)'}
-                    </label>
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="..."
-                      rows={2}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
-                    />
-                  </div>
-                  {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-red-700">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm">{error}</span>
-                    </div>
-                  )}
+          {step === 'product-recipient' && (
+            <div className="space-y-4">
+              <div className="bg-orange-50 rounded-2xl p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Store className="w-4 h-4 text-orange-600" />
+                  <span className="text-sm font-medium text-orange-800">{selectedRestaurant?.name}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-700 font-semibold">{selectedMenuItem?.name}</span>
+                  <span className="text-sm font-bold text-orange-600">{parsedAmount.toFixed(2)} RON</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Mail className="w-4 h-4" /> {t.giftRecipientEmail || 'Recipient email'}
+                </label>
+                <input
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Phone className="w-4 h-4" /> {t.giftRecipientPhone || 'Recipient phone (optional)'}
+                </label>
+                <input
+                  type="tel"
+                  value={recipientPhone}
+                  onChange={(e) => setRecipientPhone(e.target.value)}
+                  placeholder="+40..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <MessageSquare className="w-4 h-4" /> {t.giftPersonalMessage || 'Personal message (optional)'}
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="..."
+                  rows={2}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-2">{t.giftSelectPresetMessage || 'Or choose a message:'}</p>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {[
+                    t.giftPresetBirthday || 'Happy Birthday!',
+                    t.giftPresetThankYou || 'Thank you for everything!',
+                    t.giftPresetCongrats || 'Congratulations!',
+                    t.giftPresetLove || 'With love!',
+                    t.giftPresetEnjoy || 'Enjoy your meal!',
+                    t.giftPresetSurprise || 'A little surprise for you!',
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => setMessage(preset)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-medium transition-colors border",
+                        message === preset
+                          ? "bg-orange-100 border-orange-300 text-orange-700"
+                          : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-orange-50"
+                      )}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-red-700">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{error}</span>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {(step === 'value' || (step === 'product-menu' && selectedMenuItem)) && (
+        {step === 'product-menu' && selectedMenuItem && (
+          <div className="p-4 border-t flex-shrink-0">
+            <button
+              onClick={() => setStep('product-recipient')}
+              className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 bg-orange-500 text-white"
+            >
+              <Package className="w-5 h-5" />
+              {t.giftConfirmProduct || 'Confirm Product'} · {parsedAmount.toFixed(2)} RON
+            </button>
+          </div>
+        )}
+
+        {(step === 'value' || step === 'product-recipient') && (
           <div className="p-4 border-t flex-shrink-0">
             {parsedAmount > personalBalance && (
               <p className="text-xs text-red-500 mb-2 text-center">{t.giftInsufficientFunds || 'Insufficient funds. Balance'}: {personalBalance.toFixed(2)} RON</p>
@@ -2148,7 +2221,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
               className={cn(
                 "w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2",
                 canSend && !isSending
-                  ? giftType === 'value' ? "bg-teal-600 text-white" : "bg-orange-500 text-white"
+                  ? step === 'value' ? "bg-teal-600 text-white" : "bg-orange-500 text-white"
                   : "bg-gray-200 text-gray-400 cursor-not-allowed"
               )}
             >
