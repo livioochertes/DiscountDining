@@ -87,7 +87,7 @@ export function WalletCard({
         {!isGuest && (
           <div className="mb-6">
             <p className="text-white/70 text-sm font-medium mb-1">Available Balance</p>
-            <p className="text-4xl font-bold tracking-tight">{currencySymbol} {formatAmount(balance)}</p>
+            <p className="text-4xl font-bold tracking-tight">{formatAmount(balance)} RON</p>
           </div>
         )}
 
@@ -96,7 +96,7 @@ export function WalletCard({
           <div className="flex items-center gap-6 mb-6">
             <div>
               <p className="text-white/60 text-xs">Cashback</p>
-              <p className="text-lg font-semibold">{currencySymbol} {formatAmount(cashback)}</p>
+              <p className="text-lg font-semibold">{formatAmount(cashback)} RON</p>
             </div>
             <div className="h-8 w-px bg-white/20" />
             <div>
@@ -108,7 +108,7 @@ export function WalletCard({
                 <div className="h-8 w-px bg-white/20" />
                 <div>
                   <p className="text-white/60 text-xs">Credit</p>
-                  <p className="text-lg font-semibold">{currencySymbol} {formatAmount(creditAvailable)}</p>
+                  <p className="text-lg font-semibold">{formatAmount(creditAvailable)} RON</p>
                 </div>
               </>
             )}

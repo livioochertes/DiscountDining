@@ -427,14 +427,14 @@ export default function MobileWallet() {
               parseFloat(walletOverview?.personalBalance || '0') +
               parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0') +
               (walletOverview?.credit?.status === 'approved' ? parseFloat(walletOverview?.credit?.availableCredit || '0') : 0)
-            ).toFixed(2)} RON
+            ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RON
           </p>
           
           <div className="grid grid-cols-4 gap-3">
             <div>
               <p className="text-white/50 text-xs">{t.walletPersonal || 'Personal'}</p>
               <p className="text-lg font-semibold text-blue-400">
-                {parseFloat(walletOverview?.personalBalance || '0').toFixed(0)} RON
+                {parseFloat(walletOverview?.personalBalance || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} RON
               </p>
             </div>
             <div>
@@ -444,7 +444,7 @@ export default function MobileWallet() {
             <div>
               <p className="text-white/50 text-xs">{t.walletCashback || 'Cashback'}</p>
               <p className="text-lg font-semibold text-green-400">
-                {parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(0)} RON
+                {parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} RON
               </p>
             </div>
             <div>
@@ -454,7 +454,7 @@ export default function MobileWallet() {
                 walletOverview?.credit?.status === 'approved' ? "text-white" : "text-red-400"
               )}>
                 {walletOverview?.credit?.status === 'approved' 
-                  ? `${parseFloat(walletOverview?.credit?.availableCredit || '0').toFixed(0)} RON`
+                  ? `${parseFloat(walletOverview?.credit?.availableCredit || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} RON`
                   : walletOverview?.credit?.status === 'pending'
                     ? (t.walletPending || 'Așteptare')
                     : (t.walletNotRequested || 'N/A')
