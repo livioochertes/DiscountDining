@@ -8,13 +8,24 @@ export function usePendingPayments() {
   const { user } = useAuth();
   const [location] = useLocation();
   const [newRequestAlert, setNewRequestAlert] = useState<any | null>(null);
+  const [newGiftAlert, setNewGiftAlert] = useState<any | null>(null);
   const previousIdsRef = useRef<Set<number>>(new Set());
+  const previousGiftIdsRef = useRef<Set<number>>(new Set());
   const initialLoadRef = useRef(true);
+  const initialGiftLoadRef = useRef(true);
 
   const isOnWalletPage = location.startsWith('/m/wallet');
 
   const { data: pendingRequests = [] } = useQuery<any[]>({
     queryKey: ['/api/wallet/pending-requests'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: pendingGifts = [] } = useQuery<any[]>({
+    queryKey: ['/api/gifts/received'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
     refetchInterval: 5000,
@@ -54,17 +65,55 @@ export function usePendingPayments() {
   }, [pendingRequests, isOnWalletPage]);
 
   useEffect(() => {
-    if (isOnWalletPage && newRequestAlert) {
-      setNewRequestAlert(null);
+    if (!pendingGifts || pendingGifts.length === 0) {
+      previousGiftIdsRef.current = new Set();
+      initialGiftLoadRef.current = true;
+      return;
     }
-  }, [isOnWalletPage, newRequestAlert]);
+
+    const currentIds = new Set(pendingGifts.map((g: any) => g.id));
+
+    if (initialGiftLoadRef.current) {
+      previousGiftIdsRef.current = currentIds;
+      initialGiftLoadRef.current = false;
+      if (!isOnWalletPage && pendingGifts.length > 0) {
+        setNewGiftAlert(pendingGifts[0]);
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]);
+        }
+      }
+      return;
+    }
+
+    const newGifts = pendingGifts.filter((g: any) => !previousGiftIdsRef.current.has(g.id));
+    previousGiftIdsRef.current = currentIds;
+
+    if (newGifts.length > 0 && !isOnWalletPage) {
+      setNewGiftAlert(newGifts[0]);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+      }
+    }
+  }, [pendingGifts, isOnWalletPage]);
+
+  useEffect(() => {
+    if (isOnWalletPage) {
+      if (newRequestAlert) setNewRequestAlert(null);
+      if (newGiftAlert) setNewGiftAlert(null);
+    }
+  }, [isOnWalletPage, newRequestAlert, newGiftAlert]);
 
   const dismissAlert = useCallback(() => setNewRequestAlert(null), []);
+  const dismissGiftAlert = useCallback(() => setNewGiftAlert(null), []);
 
   return {
-    pendingCount: pendingRequests?.length || 0,
+    pendingCount: (pendingRequests?.length || 0) + (pendingGifts?.length || 0),
     pendingRequests: pendingRequests || [],
+    pendingGifts: pendingGifts || [],
+    pendingGiftsCount: pendingGifts?.length || 0,
     newRequestAlert,
+    newGiftAlert,
     dismissAlert,
+    dismissGiftAlert,
   };
 }

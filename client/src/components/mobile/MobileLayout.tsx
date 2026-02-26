@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
-import { Home, Search, Brain, Wallet, User, CreditCard, X } from 'lucide-react';
+import { Home, Search, Brain, Wallet, User, CreditCard, Gift, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePendingPayments } from '@/hooks/usePendingPayments';
 
@@ -28,7 +28,7 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
   const mainRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { pendingCount, newRequestAlert, dismissAlert } = usePendingPayments();
+  const { pendingCount, newRequestAlert, newGiftAlert, dismissAlert, dismissGiftAlert } = usePendingPayments();
 
   const isNative = Capacitor.isNativePlatform();
   const isAndroid = Capacitor.getPlatform() === 'android';
@@ -121,6 +121,11 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
     setLocation('/m/wallet');
   };
 
+  const handleGiftAlertTap = () => {
+    dismissGiftAlert();
+    setLocation('/m/wallet');
+  };
+
   return (
     <div 
       className={cn(
@@ -154,6 +159,40 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); dismissAlert(); }}
+                className="absolute top-1/2 right-3 -translate-y-1/2 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {newGiftAlert && !isOnWalletPage && !newRequestAlert && (
+        <div 
+          className="fixed top-0 left-0 right-0 z-[100] animate-in slide-in-from-top duration-300"
+          style={isAndroid ? { paddingTop: statusBarHeight } : undefined}
+        >
+          <div className={cn(!isAndroid && "pt-[env(safe-area-inset-top,40px)]")}>
+            <div className="mx-3 mt-2 rounded-2xl shadow-lg shadow-teal-600/40 overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 50%, #0F766E 100%)' }}>
+              <div
+                onClick={handleGiftAlertTap}
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
+              >
+                <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Gift className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0 pr-10">
+                  <p className="font-bold text-sm text-amber-300">Cadou primit!</p>
+                  <p className="text-white/90 text-xs truncate">
+                    {newGiftAlert.senderName || 'Cineva'} ți-a trimis {parseFloat(newGiftAlert.amount || 0).toFixed(2)} {newGiftAlert.currency || 'RON'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); dismissGiftAlert(); }}
                 className="absolute top-1/2 right-3 -translate-y-1/2 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"
               >
                 <X className="w-4 h-4 text-white" />

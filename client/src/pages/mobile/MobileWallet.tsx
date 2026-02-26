@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X, Plus, Loader2, History, Store } from 'lucide-react';
+import { Wallet, CreditCard, Gift, TrendingUp, ArrowUpRight, ArrowDownLeft, ChevronRight, Star, MapPin, Users, AlertCircle, CheckCircle, Clock, BadgePercent, ArrowLeft, X, Plus, Loader2, History, Store, Banknote, Package, Mail, Phone, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
@@ -120,8 +120,7 @@ export default function MobileWallet() {
     };
   }, [queryClient, toast]);
   
-  // Payment modal state
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showGiftFlow, setShowGiftFlow] = useState(false);
   
   // Top-up modal state (for Add Money button)
   const [showTopUpModal, setShowTopUpModal] = useState(false);
@@ -217,6 +216,22 @@ export default function MobileWallet() {
         if (token) headers['Authorization'] = `Bearer ${token}`;
       }
       const response = await fetch(`${API_BASE_URL}/api/wallet/pending-requests`, { credentials: 'include', headers });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!user,
+    refetchInterval: 10000,
+  });
+
+  const { data: receivedGifts = [] } = useQuery<any[]>({
+    queryKey: ['/api/gifts/received'],
+    queryFn: async () => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_BASE_URL}/api/gifts/received`, { credentials: 'include', headers });
       if (!response.ok) return [];
       return response.json();
     },
@@ -485,13 +500,27 @@ export default function MobileWallet() {
             {t.walletBuyVoucher || 'Cumpără Voucher'}
           </button>
           <button 
-            onClick={() => setShowPaymentModal(true)}
+            onClick={() => setShowGiftFlow(true)}
             className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-900 py-3.5 rounded-2xl font-semibold"
           >
-            <CreditCard className="w-5 h-5" />
-            {t.walletPay || 'Plătește'}
+            <Gift className="w-5 h-5" />
+            {t.walletSendGift || 'Trimite Cadou'}
           </button>
         </div>
+
+        {/* Received Gifts */}
+        {receivedGifts.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Gift className="w-4 h-4 text-teal-500" />
+              <h3 className="font-semibold text-gray-900 text-sm">Cadouri primite</h3>
+              <span className="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-0.5 rounded-full">{receivedGifts.length}</span>
+            </div>
+            {receivedGifts.map((gift: any) => (
+              <ReceivedGiftCard key={gift.id} gift={gift} />
+            ))}
+          </div>
+        )}
 
         {/* Pending Payment Requests */}
         {pendingRequests.length > 0 && (
@@ -1158,15 +1187,12 @@ export default function MobileWallet() {
         )}
       </div>
       
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <PaymentModal 
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
+      {/* Gift Send Flow */}
+      {showGiftFlow && (
+        <GiftSendFlow
+          isOpen={showGiftFlow}
+          onClose={() => setShowGiftFlow(false)}
           personalBalance={parseFloat(walletOverview?.personalBalance || '0')}
-          cashbackBalance={parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0')}
-          creditBalance={walletOverview?.credit?.status === 'approved' ? parseFloat(walletOverview?.credit?.availableCredit || '0') : 0}
-          vouchers={vouchers}
         />
       )}
       
@@ -1617,389 +1643,500 @@ function PendingPaymentCard({ request }: { request: any }) {
   );
 }
 
-interface PaymentModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  personalBalance: number;
-  cashbackBalance: number;
-  creditBalance: number;
-  vouchers: any[];
-}
-
-function PaymentModal({ isOpen, onClose, personalBalance, cashbackBalance, creditBalance, vouchers }: PaymentModalProps) {
-  const { t } = useLanguage();
+function ReceivedGiftCard({ gift }: { gift: any }) {
   const queryClient = useQueryClient();
-  const [totalAmount, setTotalAmount] = useState('');
-  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
-  const [allocations, setAllocations] = useState<Record<string, number>>({
-    personal: 0,
-    cashback: 0,
-    credit: 0
-  });
-  const [voucherAllocations, setVoucherAllocations] = useState<Record<number, number>>({});
-  const [showTopUp, setShowTopUp] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState('');
-  const [paymentCode, setPaymentCode] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [isLoadingStripe, setIsLoadingStripe] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
 
-  const activeVouchers = vouchers.filter(v => v.status === 'active');
-
-  const availableSources: { key: string; label: string; balance: number; icon: any; bg: string; border: string; text: string; iconColor: string }[] = [];
-  if (personalBalance > 0) availableSources.push({ key: 'personal', label: t.walletPersonal || 'Personal', balance: personalBalance, icon: Wallet, bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-900', iconColor: 'text-blue-600' });
-  if (cashbackBalance > 0) availableSources.push({ key: 'cashback', label: 'Cashback', balance: cashbackBalance, icon: TrendingUp, bg: 'bg-green-50', border: 'border-green-400', text: 'text-green-900', iconColor: 'text-green-600' });
-  if (creditBalance > 0) availableSources.push({ key: 'credit', label: 'Credit', balance: creditBalance, icon: CreditCard, bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-900', iconColor: 'text-purple-600' });
-  activeVouchers.forEach(v => {
-    const val = parseFloat(v.remainingValue || v.value || '0');
-    if (val > 0) availableSources.push({ key: `voucher_${v.id}`, label: v.restaurantName || 'Voucher', balance: val, icon: Gift, bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-900', iconColor: 'text-orange-600' });
-  });
-
-  const totalFundsAvailable = availableSources.reduce((s, src) => s + src.balance, 0);
-  const parsedAmount = parseFloat(totalAmount || '0');
-  const isMultiSource = selectedSources.size > 1;
-
-  const actualAllocated = allocations.personal + allocations.cashback + allocations.credit + Object.values(voucherAllocations).reduce((sum, val) => sum + val, 0);
-  const remaining = parsedAmount - actualAllocated;
-
-  useEffect(() => {
-    if (parsedAmount <= 0) {
-      setSelectedSources(new Set());
-      setAllocations({ personal: 0, cashback: 0, credit: 0 });
-      setVoucherAllocations({});
-      return;
-    }
-
-    const sourcesWithFunds = availableSources.filter(s => s.balance > 0);
-    if (sourcesWithFunds.length === 1) {
-      const src = sourcesWithFunds[0];
-      setSelectedSources(new Set([src.key]));
-      if (src.key.startsWith('voucher_')) {
-        const vId = parseInt(src.key.split('_')[1]);
-        setVoucherAllocations({ [vId]: Math.min(parsedAmount, src.balance) });
-        setAllocations({ personal: 0, cashback: 0, credit: 0 });
-      } else {
-        setAllocations(prev => ({ personal: 0, cashback: 0, credit: 0, [src.key]: Math.min(parsedAmount, src.balance) }));
-        setVoucherAllocations({});
-      }
-    } else if (sourcesWithFunds.length === 0) {
-      setSelectedSources(new Set());
-    }
-  }, [totalAmount]);
-
-  const toggleSource = (key: string) => {
-    setSelectedSources(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-        if (key.startsWith('voucher_')) {
-          const vId = parseInt(key.split('_')[1]);
-          setVoucherAllocations(p => { const n = { ...p }; delete n[vId]; return n; });
-        } else {
-          setAllocations(p => ({ ...p, [key]: 0 }));
-        }
-      } else {
-        next.add(key);
-        if (next.size === 1) {
-          const src = availableSources.find(s => s.key === key);
-          if (src) {
-            if (key.startsWith('voucher_')) {
-              const vId = parseInt(key.split('_')[1]);
-              setVoucherAllocations(p => ({ ...p, [vId]: Math.min(parsedAmount, src.balance) }));
-            } else {
-              setAllocations(p => ({ ...p, [key]: Math.min(parsedAmount, src.balance) }));
-            }
-          }
-        }
-      }
-      return next;
-    });
-  };
-
-  const handleAllocationChange = (source: string, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setAllocations(prev => ({ ...prev, [source]: numValue }));
-  };
-
-  const handleVoucherAllocationChange = (voucherId: number, value: string, maxValue: number) => {
-    const numValue = Math.min(parseFloat(value) || 0, maxValue);
-    setVoucherAllocations(prev => ({ ...prev, [voucherId]: numValue }));
-  };
-
-  const handleTopUpWithCard = async () => {
-    if (!topUpAmount || parseFloat(topUpAmount) <= 0) return;
-    setIsLoadingStripe(true);
-    setError(null);
+  const handleAccept = async () => {
+    setIsAccepting(true);
     try {
       const token = await getMobileSessionToken();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (Capacitor.isNativePlatform()) {
-        const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-checkout-session`, {
-          method: 'POST', headers, credentials: 'include',
-          body: JSON.stringify({ amount: topUpAmount })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Eroare la crearea plății');
-        if (data.url) {
-          window.open(data.url, '_blank');
-          setShowTopUp(false);
-          setTopUpAmount('');
-        } else {
-          throw new Error('Nu s-a putut crea sesiunea de plată');
-        }
-      } else {
-        const response = await fetch(`${API_BASE_URL}/api/wallet/topup/create-intent`, {
-          method: 'POST', headers, credentials: 'include',
-          body: JSON.stringify({ amount: topUpAmount })
-        });
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.message || 'Eroare la crearea plății');
-        }
-        const data = await response.json();
-        setClientSecret(data.clientSecret);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoadingStripe(false);
-    }
-  };
-
-  const handleTopUpSuccess = () => {
-    setClientSecret(null);
-    setShowTopUp(false);
-    setTopUpAmount('');
-    queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
-  };
-
-  const buildFinalAllocations = () => {
-    if (!isMultiSource && selectedSources.size === 1) {
-      const key = Array.from(selectedSources)[0];
-      const src = availableSources.find(s => s.key === key);
-      if (!src) return { allocations: { personal: 0, cashback: 0, credit: 0 }, voucherAllocations: {} };
-      if (key.startsWith('voucher_')) {
-        const vId = parseInt(key.split('_')[1]);
-        return { allocations: { personal: 0, cashback: 0, credit: 0 }, voucherAllocations: { [vId]: Math.min(parsedAmount, src.balance) } };
-      }
-      return { allocations: { personal: 0, cashback: 0, credit: 0, [key]: Math.min(parsedAmount, src.balance) }, voucherAllocations: {} };
-    }
-    return { allocations, voucherAllocations };
-  };
-
-  const handleGenerateQR = async () => {
-    setIsProcessing(true);
-    setError(null);
-    try {
-      const token = await getMobileSessionToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const finalData = buildFinalAllocations();
-      const response = await fetch(`${API_BASE_URL}/api/wallet/split-payment`, {
+      const response = await fetch(`${API_BASE_URL}/api/gifts/${gift.id}/accept`, {
         method: 'POST', headers, credentials: 'include',
-        body: JSON.stringify({ totalAmount, allocations: finalData.allocations, voucherAllocations: finalData.voucherAllocations })
       });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Eroare la procesarea plății');
+        throw new Error(data.message || 'Eroare');
       }
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/gifts/received'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user-vouchers'] });
+    } catch (err: any) {
+      console.error('Accept gift error:', err);
+    } finally {
+      setIsAccepting(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    setIsDeclining(true);
+    try {
+      const token = await getMobileSessionToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`${API_BASE_URL}/api/gifts/${gift.id}/decline`, {
+        method: 'POST', headers, credentials: 'include',
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Eroare');
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/gifts/received'] });
+    } catch (err: any) {
+      console.error('Decline gift error:', err);
+    } finally {
+      setIsDeclining(false);
+    }
+  };
+
+  const amount = parseFloat(gift.amount || '0');
+  const isValue = gift.giftType === 'value';
+  const timeAgo = gift.createdAt ? new Date(gift.createdAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+  return (
+    <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl p-4">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+          {isValue ? <Banknote className="w-5 h-5 text-teal-600" /> : <Package className="w-5 h-5 text-teal-600" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-gray-900 text-sm">{gift.senderName || 'Cineva'}</p>
+          <p className="text-xs text-gray-500">{timeAgo}</p>
+          <p className="text-lg font-bold text-teal-700 mt-1">
+            {isValue ? `${amount.toFixed(2)} ${gift.currency || 'RON'}` : gift.menuItemName}
+          </p>
+          {!isValue && gift.restaurantName && (
+            <p className="text-xs text-gray-500">{gift.restaurantName}</p>
+          )}
+          {gift.message && (
+            <div className="mt-2 bg-white/60 rounded-xl px-3 py-2">
+              <p className="text-xs text-gray-600 italic">"{gift.message}"</p>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleAccept}
+          disabled={isAccepting || isDeclining}
+          className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-teal-600 text-white flex items-center justify-center gap-1.5"
+        >
+          {isAccepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+          Acceptă
+        </button>
+        <button
+          onClick={handleDecline}
+          disabled={isAccepting || isDeclining}
+          className="px-4 py-2.5 rounded-xl font-medium text-sm text-red-600 bg-red-50 border border-red-200"
+        >
+          {isDeclining ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refuză'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface GiftSendFlowProps {
+  isOpen: boolean;
+  onClose: () => void;
+  personalBalance: number;
+}
+
+type GiftStep = 'choose' | 'value' | 'product-restaurant' | 'product-menu' | 'success';
+
+function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
+  const queryClient = useQueryClient();
+  const [step, setStep] = useState<GiftStep>('choose');
+  const [giftType, setGiftType] = useState<'value' | 'product'>('value');
+  const [amount, setAmount] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [message, setMessage] = useState('');
+  const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+  const [selectedMenuItem, setSelectedMenuItem] = useState<any>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successData, setSuccessData] = useState<any>(null);
+  const [restaurantSearch, setRestaurantSearch] = useState('');
+
+  const { data: allRestaurants = [] } = useQuery<any[]>({
+    queryKey: ['/api/restaurants'],
+    enabled: step === 'product-restaurant',
+  });
+
+  const { data: restaurantMenu } = useQuery<any>({
+    queryKey: ['/api/restaurants', selectedRestaurant?.id, 'menu'],
+    queryFn: async () => {
+      if (!selectedRestaurant?.id) return null;
+      const response = await fetch(`${API_BASE_URL}/api/restaurants/${selectedRestaurant.id}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!selectedRestaurant?.id && step === 'product-menu',
+  });
+
+  const menuItems = restaurantMenu?.menuItems || restaurantMenu?.menu || [];
+
+  const filteredRestaurants = allRestaurants.filter((r: any) =>
+    !restaurantSearch || r.name?.toLowerCase().includes(restaurantSearch.toLowerCase()) ||
+    r.city?.toLowerCase().includes(restaurantSearch.toLowerCase())
+  );
+
+  const parsedAmount = parseFloat(amount || '0');
+  const canSend = parsedAmount > 0 && parsedAmount <= personalBalance && (recipientEmail || recipientPhone);
+
+  const handleSend = async () => {
+    setIsSending(true);
+    setError(null);
+    try {
+      const token = await getMobileSessionToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const body: any = {
+        giftType,
+        amount: parsedAmount.toFixed(2),
+        recipientEmail: recipientEmail || undefined,
+        recipientPhone: recipientPhone || undefined,
+        message: message || undefined,
+      };
+      if (giftType === 'product' && selectedRestaurant && selectedMenuItem) {
+        body.restaurantId = selectedRestaurant.id;
+        body.menuItemId = selectedMenuItem.id;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/gifts/send`, {
+        method: 'POST', headers, credentials: 'include',
+        body: JSON.stringify(body),
+      });
       const data = await response.json();
-      setPaymentCode(data.paymentCode);
+      if (!response.ok) throw new Error(data.message || 'Eroare la trimiterea cadoului');
+
+      setSuccessData(data);
+      setStep('success');
       queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setIsProcessing(false);
+      setIsSending(false);
     }
   };
 
   if (!isOpen) return null;
 
-  if (paymentCode) {
+  if (step === 'success') {
     return (
       <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
         <div className="bg-white w-full max-w-sm rounded-3xl p-6 text-center">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Clock className="w-10 h-10 text-amber-600" />
+          <div className="w-20 h-20 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-10 h-10 text-teal-600" />
           </div>
-          <h2 className="text-xl font-bold mb-2">{t.paymentInitiated || 'Payment Initiated'}</h2>
-          <p className="text-gray-600 mb-4">{t.showQRToRestaurant || 'Show this QR code at the restaurant:'}</p>
-          <div className="bg-white rounded-xl p-4 mb-4 flex justify-center">
-            <QRCodeSVG value={paymentCode} size={200} level="H" includeMargin />
+          <h2 className="text-xl font-bold mb-2 text-gray-900">Cadoul a fost trimis!</h2>
+          <p className="text-gray-500 text-sm mb-4">
+            {successData?.message || 'Destinatarul va primi o notificare.'}
+          </p>
+          <div className="bg-teal-50 rounded-2xl p-4 mb-6 text-left">
+            <div className="flex justify-between mb-2">
+              <span className="text-sm text-gray-500">Tip</span>
+              <span className="text-sm font-medium">{giftType === 'value' ? 'Cadou Valoric' : 'Cadou Produs'}</span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-sm text-gray-500">Sumă</span>
+              <span className="text-sm font-bold text-teal-700">{parsedAmount.toFixed(2)} RON</span>
+            </div>
+            {recipientEmail && (
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Destinatar</span>
+                <span className="text-sm font-medium truncate ml-2">{recipientEmail}</span>
+              </div>
+            )}
           </div>
-          <p className="text-xs text-gray-400 font-mono mb-2">{paymentCode}</p>
-          <p className="text-sm text-gray-500 mb-6">Total: {parseFloat(totalAmount).toFixed(2)} RON</p>
-          <button onClick={() => { setPaymentCode(null); onClose(); }} className="w-full bg-primary text-white py-3 rounded-xl font-semibold">{t.close || 'Close'}</button>
+          <button onClick={onClose} className="w-full bg-teal-600 text-white py-3.5 rounded-2xl font-semibold">
+            Închide
+          </button>
         </div>
       </div>
     );
   }
 
-  const insufficientFunds = parsedAmount > 0 && totalFundsAvailable < parsedAmount;
-  const canGenerate = parsedAmount > 0 && selectedSources.size > 0 && !isProcessing && Math.abs(remaining) < 0.01;
-
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-end">
-      <div className="bg-white w-full rounded-t-3xl max-h-[75vh] flex flex-col" style={{ marginBottom: '6rem' }}>
+      <div className="bg-white w-full rounded-t-3xl max-h-[80vh] flex flex-col" style={{ marginBottom: '6rem' }}>
         <div className="flex items-center justify-between p-4 border-b rounded-t-3xl flex-shrink-0">
-          <h2 className="text-xl font-bold">{t.walletPay || 'Pay'}</h2>
+          <div className="flex items-center gap-2">
+            {step !== 'choose' && (
+              <button onClick={() => {
+                if (step === 'value' || step === 'product-restaurant') setStep('choose');
+                else if (step === 'product-menu') setStep('product-restaurant');
+              }} className="p-1.5 rounded-full bg-gray-100">
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+            <h2 className="text-lg font-bold">
+              {step === 'choose' ? 'Trimite Cadou' :
+               step === 'value' ? 'Cadou Valoric' :
+               step === 'product-restaurant' ? 'Alege Restaurant' :
+               'Alege Produs'}
+            </h2>
+          </div>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t.paymentAmount || 'Payment amount'} (RON)</label>
-            <input
-              type="number"
-              value={totalAmount}
-              onChange={(e) => setTotalAmount(e.target.value)}
-              placeholder="0.00"
-              className="w-full px-4 py-3 text-2xl font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary"
-            />
-          </div>
-
-          {parsedAmount > 0 && (
+          {step === 'choose' && (
             <div className="space-y-3">
-              <h3 className="font-semibold text-gray-900 text-sm">Selectează sursa de plată</h3>
+              <p className="text-sm text-gray-500">Ce tip de cadou vrei să trimiți?</p>
+              <button
+                onClick={() => { setGiftType('value'); setStep('value'); }}
+                className="w-full bg-gradient-to-r from-teal-50 to-emerald-50 border-2 border-teal-200 rounded-2xl p-5 flex items-center gap-4 text-left hover:border-teal-400 transition-all"
+              >
+                <div className="w-14 h-14 bg-teal-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <Banknote className="w-7 h-7 text-teal-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">Cadou Valoric</p>
+                  <p className="text-sm text-gray-500 mt-0.5">Trimite o sumă de bani, utilizabilă la orice restaurant EatOff</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              </button>
 
-              {availableSources.map((src) => {
-                const isSelected = selectedSources.has(src.key);
-                const Icon = src.icon;
-                const isVoucher = src.key.startsWith('voucher_');
-                const vId = isVoucher ? parseInt(src.key.split('_')[1]) : 0;
-                return (
-                  <div key={src.key}>
+              <button
+                onClick={() => { setGiftType('product'); setStep('product-restaurant'); }}
+                className="w-full bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-2xl p-5 flex items-center gap-4 text-left hover:border-orange-400 transition-all"
+              >
+                <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <Package className="w-7 h-7 text-orange-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">Cadou Produs</p>
+                  <p className="text-sm text-gray-500 mt-0.5">Trimite un produs specific de la un restaurant</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              </button>
+            </div>
+          )}
+
+          {step === 'value' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sumă (RON)</label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-4 py-3 text-2xl font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-center"
+                />
+                <div className="flex gap-2 mt-3">
+                  {[50, 100, 200, 500].map((val) => (
                     <button
-                      type="button"
-                      onClick={() => toggleSource(src.key)}
-                      className={cn(
-                        "w-full rounded-xl p-3 flex items-center justify-between transition-all",
-                        src.bg,
-                        isSelected ? `ring-2 ${src.border}` : "ring-0"
+                      key={val}
+                      onClick={() => setAmount(val.toString())}
+                      className={cn("flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors",
+                        amount === val.toString() ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-700"
                       )}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", isSelected ? "bg-white" : "bg-white/50")}>
-                          <Icon className={cn("w-5 h-5", src.iconColor)} />
-                        </div>
-                        <div className="text-left">
-                          <p className={cn("font-medium text-sm", src.text)}>{src.label}</p>
-                          <p className="text-xs text-gray-500">{src.balance.toFixed(2)} RON</p>
-                        </div>
-                      </div>
-                      <div className={cn(
-                        "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                        isSelected ? `${src.border} bg-white` : "border-gray-300"
-                      )}>
-                        {isSelected && <CheckCircle className={cn("w-5 h-5", src.iconColor)} />}
-                      </div>
+                      {val}
                     </button>
-                    {isSelected && isMultiSource && (
-                      <div className="mt-2 ml-13 px-3">
-                        <input
-                          type="number"
-                          value={isVoucher ? (voucherAllocations[vId] || '') : (allocations[src.key] || '')}
-                          onChange={(e) => isVoucher
-                            ? handleVoucherAllocationChange(vId, e.target.value, src.balance)
-                            : handleAllocationChange(src.key, e.target.value)
-                          }
-                          max={src.balance}
-                          placeholder="Sumă..."
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-xs text-gray-500">Sold disponibil: {personalBalance.toFixed(2)} RON</span>
+                </div>
+              </div>
 
-              {availableSources.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">Nu ai fonduri disponibile.</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Mail className="w-4 h-4" /> Email destinatar
+                </label>
+                <input
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  placeholder="email@exemplu.com"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Phone className="w-4 h-4" /> Telefon destinatar (opțional)
+                </label>
+                <input
+                  type="tel"
+                  value={recipientPhone}
+                  onChange={(e) => setRecipientPhone(e.target.value)}
+                  placeholder="+40..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                  <MessageSquare className="w-4 h-4" /> Mesaj personal (opțional)
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="La mulți ani!..."
+                  rows={2}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 resize-none"
+                />
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-red-700">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{error}</span>
+                </div>
               )}
             </div>
           )}
 
-          {isMultiSource && parsedAmount > 0 && (
-            <div className="bg-gray-100 rounded-xl p-3">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm text-gray-600">Total alocat:</span>
-                <span className="font-semibold text-sm">{actualAllocated.toFixed(2)} RON</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Rămâne:</span>
-                <span className={cn("font-bold", remaining > 0.01 ? "text-red-600" : remaining < -0.01 ? "text-amber-600" : "text-green-600")}>
-                  {remaining.toFixed(2)} RON
-                </span>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-red-700">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          {showTopUp && (
-            <div className="bg-blue-100 rounded-xl p-4 border-2 border-blue-300">
-              <div className="flex justify-between items-center mb-3">
-                <p className="font-medium text-blue-900">Alimentează soldul</p>
-                <button onClick={() => { setShowTopUp(false); setClientSecret(null); }}>
-                  <X className="w-5 h-5 text-blue-700" />
+          {step === 'product-restaurant' && (
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={restaurantSearch}
+                onChange={(e) => setRestaurantSearch(e.target.value)}
+                placeholder="Caută restaurant..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+              {filteredRestaurants.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-8">Nu s-au găsit restaurante.</p>
+              )}
+              {filteredRestaurants.slice(0, 20).map((restaurant: any) => (
+                <button
+                  key={restaurant.id}
+                  onClick={() => { setSelectedRestaurant(restaurant); setStep('product-menu'); }}
+                  className="w-full bg-white border border-gray-200 rounded-2xl p-4 flex items-center gap-3 text-left hover:border-orange-300 transition-all"
+                >
+                  <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Store className="w-6 h-6 text-orange-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{restaurant.name}</p>
+                    {restaurant.city && <p className="text-xs text-gray-500">{restaurant.city}</p>}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 </button>
+              ))}
+            </div>
+          )}
+
+          {step === 'product-menu' && (
+            <div className="space-y-4">
+              <div className="bg-orange-50 rounded-xl p-3 flex items-center gap-2">
+                <Store className="w-4 h-4 text-orange-600" />
+                <span className="text-sm font-medium text-orange-800">{selectedRestaurant?.name}</span>
               </div>
-              {clientSecret && stripePromise ? (
-                <Elements stripe={stripePromise} options={{ clientSecret }}>
-                  <TopUpStripeForm amount={topUpAmount} onSuccess={handleTopUpSuccess} onCancel={() => setClientSecret(null)} />
-                </Elements>
-              ) : (
-                <>
-                  <div className="flex gap-2 mb-3">
-                    {[200, 300, 500, 1000].map((val) => (
-                      <button key={val} onClick={() => setTopUpAmount(val.toString())}
-                        className={cn("flex-1 py-2 rounded-lg text-sm font-medium",
-                          topUpAmount === val.toString() ? "bg-blue-600 text-white" : "bg-white text-blue-700 border border-blue-300")}>
-                        {val}
-                      </button>
-                    ))}
+
+              {menuItems.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-8">Nu există produse disponibile.</p>
+              )}
+              
+              <div className="grid grid-cols-1 gap-3">
+                {menuItems.map((item: any) => {
+                  const itemPrice = parseFloat(item.price || '0');
+                  const isSelected = selectedMenuItem?.id === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => { setSelectedMenuItem(item); setAmount(itemPrice.toFixed(2)); }}
+                      className={cn(
+                        "w-full rounded-2xl p-4 flex items-center gap-3 text-left transition-all border-2",
+                        isSelected ? "border-orange-400 bg-orange-50" : "border-gray-200 bg-white"
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
+                        {item.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{item.description}</p>}
+                      </div>
+                      <span className="text-sm font-bold text-orange-600 flex-shrink-0">{itemPrice.toFixed(2)} RON</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {selectedMenuItem && (
+                <div className="space-y-3 pt-2 border-t">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                      <Mail className="w-4 h-4" /> Email destinatar
+                    </label>
+                    <input
+                      type="email"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      placeholder="email@exemplu.com"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
                   </div>
-                  <input type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)}
-                    placeholder="Altă sumă..." className="w-full px-3 py-2 border border-blue-200 rounded-lg bg-white mb-3" />
-                  <button onClick={handleTopUpWithCard}
-                    disabled={!topUpAmount || parseFloat(topUpAmount) <= 0 || isLoadingStripe}
-                    className={cn("w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2",
-                      topUpAmount && parseFloat(topUpAmount) > 0 && !isLoadingStripe ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400")}>
-                    {isLoadingStripe ? (<><Loader2 className="w-5 h-5 animate-spin" />Se încarcă...</>) : (<><CreditCard className="w-5 h-5" />Plătește cu cardul</>)}
-                  </button>
-                </>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                      <Phone className="w-4 h-4" /> Telefon (opțional)
+                    </label>
+                    <input
+                      type="tel"
+                      value={recipientPhone}
+                      onChange={(e) => setRecipientPhone(e.target.value)}
+                      placeholder="+40..."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4" /> Mesaj personal (opțional)
+                    </label>
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="La mulți ani!..."
+                      rows={2}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                    />
+                  </div>
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-red-700">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm">{error}</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t flex-shrink-0 space-y-3">
-          {insufficientFunds && !showTopUp && (
-            <button onClick={() => setShowTopUp(true)}
-              className="w-full py-3 rounded-xl font-semibold text-blue-600 border-2 border-blue-200 bg-blue-50 flex items-center justify-center gap-2">
-              <Plus className="w-5 h-5" />
-              {t.addFunds || 'Add funds'}
+        {(step === 'value' || (step === 'product-menu' && selectedMenuItem)) && (
+          <div className="p-4 border-t flex-shrink-0">
+            {parsedAmount > personalBalance && (
+              <p className="text-xs text-red-500 mb-2 text-center">Fonduri insuficiente. Sold: {personalBalance.toFixed(2)} RON</p>
+            )}
+            <button
+              onClick={handleSend}
+              disabled={!canSend || isSending}
+              className={cn(
+                "w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2",
+                canSend && !isSending
+                  ? giftType === 'value' ? "bg-teal-600 text-white" : "bg-orange-500 text-white"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              )}
+            >
+              {isSending ? (
+                <><Loader2 className="w-5 h-5 animate-spin" />Se trimite...</>
+              ) : (
+                <><Send className="w-5 h-5" />Trimite Cadou · {parsedAmount.toFixed(2)} RON</>
+              )}
             </button>
-          )}
-          <button
-            onClick={handleGenerateQR}
-            disabled={!canGenerate}
-            className={cn(
-              "w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2",
-              canGenerate ? "bg-primary text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            )}>
-            {isProcessing ? (<><Loader2 className="w-5 h-5 animate-spin" />{t.processing || 'Processing...'}</>) : (t.generateQRCode || 'Generate QR Code')}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
