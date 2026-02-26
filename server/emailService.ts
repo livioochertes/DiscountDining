@@ -1,10 +1,21 @@
 import { MailService } from '@sendgrid/mail';
+import { Client } from '@sendgrid/client';
 import type { Order, OrderItem, Restaurant, MenuItem } from '@shared/schema';
 
 const mailService = new MailService();
+const sgClient = new Client();
 
 if (process.env.SENDGRID_API_KEY) {
   mailService.setApiKey(process.env.SENDGRID_API_KEY);
+  sgClient.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+async function clearSuppressions(email: string): Promise<void> {
+  try {
+    await sgClient.request({ url: `/v3/suppression/bounces/${email}`, method: 'DELETE' }).catch(() => {});
+    await sgClient.request({ url: `/v3/suppression/blocks/${email}`, method: 'DELETE' }).catch(() => {});
+    await sgClient.request({ url: `/v3/suppression/invalid_emails/${email}`, method: 'DELETE' }).catch(() => {});
+  } catch (e) {}
 }
 
 interface OrderWithDetails extends Order {
@@ -252,12 +263,18 @@ export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Prom
   `;
 
   try {
+    await clearSuppressions(recipientEmail);
     await mailService.send({
       to: recipientEmail,
-      from: 'no-replay@eatoff.app',
+      from: { email: 'no-replay@eatoff.app', name: 'EatOff' },
+      replyTo: { email: 'info@eatoff.app', name: 'EatOff Support' },
       subject: `🎁 ${senderName} ți-a trimis un cadou pe EatOff!`,
       html: emailHtml,
       text: `${senderName} ți-a trimis ${giftType === 'value' ? `un cadou valoric de ${amount} ${currency}` : `produsul ${menuItemName} de la ${restaurantName}`} pe EatOff! Codul tău de revendicare: ${redeemCode}. Deschide aplicația EatOff pentru a revendica cadoul.`,
+      mailSettings: {
+        bypassBounceManagement: { enable: true },
+        bypassUnsubscribeManagement: { enable: true },
+      },
     });
     console.log(`✅ Gift voucher email sent to ${recipientEmail}`);
     return true;
