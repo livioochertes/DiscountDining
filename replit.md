@@ -80,5 +80,5 @@ The financial management system provides comprehensive control over platform eco
 - **wouter**: Client-side routing library for React.
 
 ## Known Configuration Notes
-- **SendGrid**: The `SENDGRID_API_KEY` environment variable is configured. The email service (`server/emailService.ts`) uses `noreply@sendgrid.net` as the sender address. If SendGrid rejects emails, the sender address may need to be changed to a verified sender domain in the SendGrid account. All email functions (`sendGiftVoucherEmail`, `sendVerificationEmail`, `sendOrderConfirmationToCustomer`) use this same sender.
+- **SendGrid**: The `SENDGRID_API_KEY` environment variable is configured. The email service (`server/emailService.ts`) uses `no-replay@eatoff.app` as the sender address. All email functions (`sendGiftVoucherEmail`, `sendVerificationEmail`, `sendOrderConfirmationToCustomer`) use this same sender.
 - **wouter**: Client-side routing library for React.

@@ -24,7 +24,7 @@ export async function sendVerificationEmail(email: string, code: string, firstNa
 
     const msg = {
       to: email,
-      from: 'noreply@sendgrid.net',
+      from: 'no-replay@eatoff.app',
       subject: 'EatOff - Verify Your Account',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -162,7 +162,7 @@ export async function sendOrderNotificationToRestaurant(order: OrderWithDetails)
   try {
     await mailService.send({
       to: order.restaurant.email,
-      from: 'noreply@sendgrid.net', // Use SendGrid's verified sender for testing
+      from: 'no-replay@eatoff.app', // Use SendGrid's verified sender for testing
       subject: `New Order #${order.orderNumber} - ${order.restaurant.name}`,
       html: emailHtml,
     });
@@ -254,7 +254,7 @@ export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Prom
   try {
     await mailService.send({
       to: recipientEmail,
-      from: 'noreply@sendgrid.net',
+      from: 'no-replay@eatoff.app',
       subject: `🎁 ${senderName} ți-a trimis un cadou pe EatOff!`,
       html: emailHtml,
       text: `${senderName} ți-a trimis ${giftType === 'value' ? `un cadou valoric de ${amount} ${currency}` : `produsul ${menuItemName} de la ${restaurantName}`} pe EatOff! Codul tău de revendicare: ${redeemCode}. Deschide aplicația EatOff pentru a revendica cadoul.`,
@@ -342,7 +342,7 @@ export async function sendOrderConfirmationToCustomer(order: OrderWithDetails): 
   try {
     await mailService.send({
       to: order.customerEmail,
-      from: 'noreply@sendgrid.net',
+      from: 'no-replay@eatoff.app',
       subject: `Order Confirmation #${order.orderNumber} - ${order.restaurant.name}`,
       html: customerEmailHtml,
     });
