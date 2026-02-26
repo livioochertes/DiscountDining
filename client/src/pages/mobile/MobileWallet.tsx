@@ -513,7 +513,7 @@ export default function MobileWallet() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Gift className="w-4 h-4 text-teal-500" />
-              <h3 className="font-semibold text-gray-900 text-sm">Cadouri primite</h3>
+              <h3 className="font-semibold text-gray-900 text-sm">{t.giftReceivedTitle || 'Received Gifts'}</h3>
               <span className="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-0.5 rounded-full">{receivedGifts.length}</span>
             </div>
             {receivedGifts.map((gift: any) => (
@@ -1644,6 +1644,7 @@ function PendingPaymentCard({ request }: { request: any }) {
 }
 
 function ReceivedGiftCard({ gift }: { gift: any }) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
@@ -1725,14 +1726,14 @@ function ReceivedGiftCard({ gift }: { gift: any }) {
           className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-teal-600 text-white flex items-center justify-center gap-1.5"
         >
           {isAccepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-          Acceptă
+          {t.giftAccept || 'Accept'}
         </button>
         <button
           onClick={handleDecline}
           disabled={isAccepting || isDeclining}
           className="px-4 py-2.5 rounded-xl font-medium text-sm text-red-600 bg-red-50 border border-red-200"
         >
-          {isDeclining ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refuză'}
+          {isDeclining ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.giftDecline || 'Decline')}
         </button>
       </div>
     </div>
@@ -1748,6 +1749,7 @@ interface GiftSendFlowProps {
 type GiftStep = 'choose' | 'value' | 'product-restaurant' | 'product-menu' | 'success';
 
 function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<GiftStep>('choose');
   const [giftType, setGiftType] = useState<'value' | 'product'>('value');
@@ -1761,6 +1763,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
   const [error, setError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<any>(null);
   const [restaurantSearch, setRestaurantSearch] = useState('');
+  const [selectedCity, setSelectedCity] = useState<string>('');
 
   const { data: allRestaurants = [] } = useQuery<any[]>({
     queryKey: ['/api/restaurants'],
@@ -1780,10 +1783,13 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
 
   const menuItems = restaurantMenu?.menuItems || restaurantMenu?.menu || [];
 
-  const filteredRestaurants = allRestaurants.filter((r: any) =>
-    !restaurantSearch || r.name?.toLowerCase().includes(restaurantSearch.toLowerCase()) ||
-    r.city?.toLowerCase().includes(restaurantSearch.toLowerCase())
-  );
+  const availableCities = [...new Set(allRestaurants.map((r: any) => r.city).filter(Boolean))].sort() as string[];
+
+  const filteredRestaurants = allRestaurants.filter((r: any) => {
+    const matchesCity = !selectedCity || r.city === selectedCity;
+    const matchesSearch = !restaurantSearch || r.name?.toLowerCase().includes(restaurantSearch.toLowerCase());
+    return matchesCity && matchesSearch;
+  });
 
   const parsedAmount = parseFloat(amount || '0');
   const canSend = parsedAmount > 0 && parsedAmount <= personalBalance && (recipientEmail || recipientPhone);
@@ -1813,7 +1819,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
         body: JSON.stringify(body),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Eroare la trimiterea cadoului');
+      if (!response.ok) throw new Error(data.message);
 
       setSuccessData(data);
       setStep('success');
@@ -1834,28 +1840,28 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
           <div className="w-20 h-20 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Sparkles className="w-10 h-10 text-teal-600" />
           </div>
-          <h2 className="text-xl font-bold mb-2 text-gray-900">Cadoul a fost trimis!</h2>
+          <h2 className="text-xl font-bold mb-2 text-gray-900">{t.giftSentSuccess || 'Gift sent!'}</h2>
           <p className="text-gray-500 text-sm mb-4">
-            {successData?.message || 'Destinatarul va primi o notificare.'}
+            {successData?.message}
           </p>
           <div className="bg-teal-50 rounded-2xl p-4 mb-6 text-left">
             <div className="flex justify-between mb-2">
-              <span className="text-sm text-gray-500">Tip</span>
-              <span className="text-sm font-medium">{giftType === 'value' ? 'Cadou Valoric' : 'Cadou Produs'}</span>
+              <span className="text-sm text-gray-500">{t.type || 'Type'}</span>
+              <span className="text-sm font-medium">{giftType === 'value' ? (t.giftValueTitle || 'Value Gift') : (t.giftProductTitle || 'Product Gift')}</span>
             </div>
             <div className="flex justify-between mb-2">
-              <span className="text-sm text-gray-500">Sumă</span>
+              <span className="text-sm text-gray-500">{t.giftAmount || 'Amount'}</span>
               <span className="text-sm font-bold text-teal-700">{parsedAmount.toFixed(2)} RON</span>
             </div>
             {recipientEmail && (
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Destinatar</span>
+                <span className="text-sm text-gray-500">{t.recipient || 'Recipient'}</span>
                 <span className="text-sm font-medium truncate ml-2">{recipientEmail}</span>
               </div>
             )}
           </div>
           <button onClick={onClose} className="w-full bg-teal-600 text-white py-3.5 rounded-2xl font-semibold">
-            Închide
+            {t.giftClose || 'Close'}
           </button>
         </div>
       </div>
@@ -1876,10 +1882,10 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
               </button>
             )}
             <h2 className="text-lg font-bold">
-              {step === 'choose' ? 'Trimite Cadou' :
-               step === 'value' ? 'Cadou Valoric' :
-               step === 'product-restaurant' ? 'Alege Restaurant' :
-               'Alege Produs'}
+              {step === 'choose' ? (t.giftSendTitle || 'Send Gift') :
+               step === 'value' ? (t.giftValueTitle || 'Value Gift') :
+               step === 'product-restaurant' ? (t.giftChooseRestaurant || 'Choose Restaurant') :
+               (t.giftChooseProduct || 'Choose Product')}
             </h2>
           </div>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100">
@@ -1890,7 +1896,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {step === 'choose' && (
             <div className="space-y-3">
-              <p className="text-sm text-gray-500">Ce tip de cadou vrei să trimiți?</p>
+              <p className="text-sm text-gray-500">{t.giftChooseType || 'What type of gift would you like to send?'}</p>
               <button
                 onClick={() => { setGiftType('value'); setStep('value'); }}
                 className="w-full bg-gradient-to-r from-teal-50 to-emerald-50 border-2 border-teal-200 rounded-2xl p-5 flex items-center gap-4 text-left hover:border-teal-400 transition-all"
@@ -1899,8 +1905,8 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                   <Banknote className="w-7 h-7 text-teal-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900">Cadou Valoric</p>
-                  <p className="text-sm text-gray-500 mt-0.5">Trimite o sumă de bani, utilizabilă la orice restaurant EatOff</p>
+                  <p className="font-bold text-gray-900">{t.giftValueTitle || 'Value Gift'}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{t.giftValueDesc || 'Send a money amount, usable at any EatOff restaurant'}</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
               </button>
@@ -1913,8 +1919,8 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                   <Package className="w-7 h-7 text-orange-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900">Cadou Produs</p>
-                  <p className="text-sm text-gray-500 mt-0.5">Trimite un produs specific de la un restaurant</p>
+                  <p className="font-bold text-gray-900">{t.giftProductTitle || 'Product Gift'}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{t.giftProductDesc || 'Send a specific product from a restaurant'}</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
               </button>
@@ -1924,7 +1930,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
           {step === 'value' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sumă (RON)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t.giftAmount || 'Amount'} (RON)</label>
                 <input
                   type="number"
                   value={amount}
@@ -1947,26 +1953,26 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                 </div>
                 <div className="mt-2 flex items-center gap-1.5">
                   <Wallet className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-xs text-gray-500">Sold disponibil: {personalBalance.toFixed(2)} RON</span>
+                  <span className="text-xs text-gray-500">{t.giftAvailableBalance || 'Available balance'}: {personalBalance.toFixed(2)} RON</span>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                  <Mail className="w-4 h-4" /> Email destinatar
+                  <Mail className="w-4 h-4" /> {t.giftRecipientEmail || 'Recipient email'}
                 </label>
                 <input
                   type="email"
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="email@exemplu.com"
+                  placeholder="email@example.com"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                  <Phone className="w-4 h-4" /> Telefon destinatar (opțional)
+                  <Phone className="w-4 h-4" /> {t.giftRecipientPhone || 'Recipient phone (optional)'}
                 </label>
                 <input
                   type="tel"
@@ -1979,12 +1985,12 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                  <MessageSquare className="w-4 h-4" /> Mesaj personal (opțional)
+                  <MessageSquare className="w-4 h-4" /> {t.giftPersonalMessage || 'Personal message (optional)'}
                 </label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="La mulți ani!..."
+                  placeholder="..."
                   rows={2}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 resize-none"
                 />
@@ -2001,15 +2007,32 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
 
           {step === 'product-restaurant' && (
             <div className="space-y-3">
+              {availableCities.length > 1 && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                    <MapPin className="w-3.5 h-3.5 inline mr-1" />{t.giftFilterByCity || 'Filter by city'}
+                  </label>
+                  <select
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+                  >
+                    <option value="">{t.giftAllCities || 'All cities'}</option>
+                    {availableCities.map((city) => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <input
                 type="text"
                 value={restaurantSearch}
                 onChange={(e) => setRestaurantSearch(e.target.value)}
-                placeholder="Caută restaurant..."
+                placeholder={t.giftSearchRestaurant || 'Search restaurant...'}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               />
               {filteredRestaurants.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-8">Nu s-au găsit restaurante.</p>
+                <p className="text-sm text-gray-500 text-center py-8">{t.giftNoRestaurants || 'No restaurants found.'}</p>
               )}
               {filteredRestaurants.slice(0, 20).map((restaurant: any) => (
                 <button
@@ -2038,7 +2061,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
               </div>
 
               {menuItems.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-8">Nu există produse disponibile.</p>
+                <p className="text-sm text-gray-500 text-center py-8">{t.giftNoProducts || 'No products available.'}</p>
               )}
               
               <div className="grid grid-cols-1 gap-3">
@@ -2068,19 +2091,19 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                 <div className="space-y-3 pt-2 border-t">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                      <Mail className="w-4 h-4" /> Email destinatar
+                      <Mail className="w-4 h-4" /> {t.giftRecipientEmail || 'Recipient email'}
                     </label>
                     <input
                       type="email"
                       value={recipientEmail}
                       onChange={(e) => setRecipientEmail(e.target.value)}
-                      placeholder="email@exemplu.com"
+                      placeholder="email@example.com"
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                      <Phone className="w-4 h-4" /> Telefon (opțional)
+                      <Phone className="w-4 h-4" /> {t.giftRecipientPhone || 'Recipient phone (optional)'}
                     </label>
                     <input
                       type="tel"
@@ -2092,12 +2115,12 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                      <MessageSquare className="w-4 h-4" /> Mesaj personal (opțional)
+                      <MessageSquare className="w-4 h-4" /> {t.giftPersonalMessage || 'Personal message (optional)'}
                     </label>
                     <textarea
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="La mulți ani!..."
+                      placeholder="..."
                       rows={2}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
                     />
@@ -2117,7 +2140,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
         {(step === 'value' || (step === 'product-menu' && selectedMenuItem)) && (
           <div className="p-4 border-t flex-shrink-0">
             {parsedAmount > personalBalance && (
-              <p className="text-xs text-red-500 mb-2 text-center">Fonduri insuficiente. Sold: {personalBalance.toFixed(2)} RON</p>
+              <p className="text-xs text-red-500 mb-2 text-center">{t.giftInsufficientFunds || 'Insufficient funds. Balance'}: {personalBalance.toFixed(2)} RON</p>
             )}
             <button
               onClick={handleSend}
@@ -2130,9 +2153,9 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
               )}
             >
               {isSending ? (
-                <><Loader2 className="w-5 h-5 animate-spin" />Se trimite...</>
+                <><Loader2 className="w-5 h-5 animate-spin" />{t.giftSending || 'Sending...'}</>
               ) : (
-                <><Send className="w-5 h-5" />Trimite Cadou · {parsedAmount.toFixed(2)} RON</>
+                <><Send className="w-5 h-5" />{t.giftSendButton || 'Send Gift'} · {parsedAmount.toFixed(2)} RON</>
               )}
             </button>
           </div>
