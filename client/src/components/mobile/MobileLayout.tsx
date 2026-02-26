@@ -146,7 +146,7 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
                   <CreditCard className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0 pr-10">
-                  <p className="text-white font-bold text-sm">Solicitare de plată</p>
+                  <p className="font-bold text-sm" style={{ color: '#10B981' }}>Solicitare de plată</p>
                   <p className="text-white/90 text-xs truncate">
                     {newRequestAlert.restaurantName || 'Restaurant'} — {parseFloat(newRequestAlert.amount || 0).toFixed(2)} {newRequestAlert.currency || '€'}
                   </p>
