@@ -124,8 +124,9 @@ router.post("/gifts/send", async (req: Request, res: Response) => {
     });
 
     if (!recipientCustomerId && recipientEmail) {
+      console.log(`📧 Attempting to send gift email to non-EatOff user: ${recipientEmail.trim()}`);
       try {
-        await sendGiftVoucherEmail({
+        const emailSent = await sendGiftVoucherEmail({
           recipientEmail: recipientEmail.trim(),
           senderName: sender.name || 'Un prieten',
           giftType,
@@ -136,9 +137,12 @@ router.post("/gifts/send", async (req: Request, res: Response) => {
           message: message || undefined,
           redeemCode,
         });
-      } catch (emailErr) {
-        console.error('Failed to send gift email:', emailErr);
+        console.log(`📧 Gift email result for ${recipientEmail.trim()}: ${emailSent ? 'SENT' : 'FAILED'}`);
+      } catch (emailErr: any) {
+        console.error('Failed to send gift email:', emailErr?.response?.body || emailErr?.message || emailErr);
       }
+    } else if (recipientCustomerId) {
+      console.log(`🔔 Gift notification for existing EatOff user (customerId: ${recipientCustomerId}), no email needed`);
     }
 
     res.json({
