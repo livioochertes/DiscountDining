@@ -2451,3 +2451,32 @@ export const insertMarketingDealRestaurantSchema = createInsertSchema(marketingD
 
 export type MarketingDealRestaurant = typeof marketingDealRestaurants.$inferSelect;
 export type InsertMarketingDealRestaurant = z.infer<typeof insertMarketingDealRestaurantSchema>;
+
+export const giftVouchers = pgTable("gift_vouchers", {
+  id: serial("id").primaryKey(),
+  senderId: integer("sender_id").references(() => customers.id).notNull(),
+  senderName: text("sender_name").notNull(),
+  recipientEmail: text("recipient_email"),
+  recipientPhone: text("recipient_phone"),
+  recipientCustomerId: integer("recipient_customer_id").references(() => customers.id),
+  giftType: text("gift_type").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("RON").notNull(),
+  restaurantId: integer("restaurant_id").references(() => restaurants.id),
+  menuItemId: integer("menu_item_id").references(() => menuItems.id),
+  menuItemName: text("menu_item_name"),
+  restaurantName: text("restaurant_name"),
+  message: text("message"),
+  status: text("status").default("pending").notNull(),
+  redeemCode: text("redeem_code").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+export const insertGiftVoucherSchema = createInsertSchema(giftVouchers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type GiftVoucher = typeof giftVouchers.$inferSelect;
+export type InsertGiftVoucher = z.infer<typeof insertGiftVoucherSchema>;

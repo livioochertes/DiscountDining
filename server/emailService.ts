@@ -173,6 +173,100 @@ export async function sendOrderNotificationToRestaurant(order: OrderWithDetails)
   }
 }
 
+interface GiftVoucherEmailParams {
+  recipientEmail: string;
+  senderName: string;
+  giftType: 'value' | 'product';
+  amount: number;
+  currency: string;
+  menuItemName?: string;
+  restaurantName?: string;
+  message?: string;
+  redeemCode: string;
+}
+
+export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Promise<boolean> {
+  const { recipientEmail, senderName, giftType, amount, currency, menuItemName, restaurantName, message, redeemCode } = params;
+
+  const giftDescription = giftType === 'value'
+    ? `un cadou valoric de <strong>${amount} ${currency}</strong> utilizabil la orice restaurant EatOff`
+    : `produsul <strong>${menuItemName}</strong> de la <strong>${restaurantName}</strong> (în valoare de ${amount} ${currency})`;
+
+  const giftTitle = giftType === 'value' ? 'Cadou Valoric' : 'Cadou Produs';
+
+  console.log(`🎁 Gift voucher email for ${recipientEmail}: ${giftTitle} - ${amount} ${currency}, code: ${redeemCode}`);
+
+  if (!process.env.SENDGRID_API_KEY) {
+    console.log('SendGrid API key not configured, gift email logged to console');
+    return true;
+  }
+
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); padding: 40px 30px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold;">🎁 EatOff</h1>
+        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Ai primit un cadou!</p>
+      </div>
+
+      <div style="padding: 40px 30px; background: white;">
+        <h2 style="color: #333; margin-bottom: 10px; font-size: 22px;">Salut!</h2>
+        <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+          <strong>${senderName}</strong> ți-a trimis ${giftDescription}.
+        </p>
+
+        ${message ? `
+        <div style="background: #fef9f0; border-left: 4px solid #ff8c42; padding: 15px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+          <p style="color: #888; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">Mesaj personal</p>
+          <p style="color: #555; font-size: 15px; margin: 0; font-style: italic;">"${message}"</p>
+        </div>
+        ` : ''}
+
+        <div style="background: #f8f9fa; border: 2px solid #ff6b35; border-radius: 12px; padding: 25px; text-align: center; margin: 30px 0;">
+          <p style="color: #888; margin: 0 0 5px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">${giftTitle}</p>
+          <h1 style="color: #ff6b35; font-size: 40px; margin: 5px 0; font-weight: bold;">${amount} ${currency}</h1>
+          ${giftType === 'product' ? `<p style="color: #555; margin: 5px 0 0 0; font-size: 14px;">${menuItemName} — ${restaurantName}</p>` : ''}
+        </div>
+
+        <div style="background: #f0f0f0; border-radius: 8px; padding: 15px; text-align: center; margin: 25px 0;">
+          <p style="color: #888; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Codul tău de revendicare</p>
+          <h2 style="color: #333; font-size: 28px; letter-spacing: 3px; margin: 0; font-family: monospace;">${redeemCode}</h2>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://eatoff.app" style="display: inline-block; background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: bold;">
+            Deschide EatOff
+          </a>
+        </div>
+
+        <p style="color: #999; font-size: 13px; line-height: 1.6; text-align: center;">
+          Descarcă aplicația EatOff sau accesează contul tău pentru a revendica cadoul. Cadoul expiră în 30 de zile.
+        </p>
+
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+          <p style="color: #bbb; font-size: 11px; margin: 0;">
+            EatOff — Descoperă restaurante, vouchere și experiențe culinare unice
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  try {
+    await mailService.send({
+      to: recipientEmail,
+      from: 'noreply@sendgrid.net',
+      subject: `🎁 ${senderName} ți-a trimis un cadou pe EatOff!`,
+      html: emailHtml,
+      text: `${senderName} ți-a trimis ${giftType === 'value' ? `un cadou valoric de ${amount} ${currency}` : `produsul ${menuItemName} de la ${restaurantName}`} pe EatOff! Codul tău de revendicare: ${redeemCode}. Deschide aplicația EatOff pentru a revendica cadoul.`,
+    });
+    console.log(`✅ Gift voucher email sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send gift voucher email:', error);
+    return false;
+  }
+}
+
 export async function sendOrderConfirmationToCustomer(order: OrderWithDetails): Promise<boolean> {
   if (!process.env.SENDGRID_API_KEY) {
     console.log('SendGrid API key not configured, skipping customer email');
