@@ -1,0 +1,105 @@
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Bon Appetit","voucherType":"discount","bonusPercentage":"0","discountPercentage":"22.00","isPayLater":false,"bonusPercent":0,"discountPercent":22}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Petit Dejeuner","voucherType":"discount","bonusPercentage":"0","discountPercentage":"12.00","isPayLater":false,"bonusPercent":0,"discountPercent":12}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Off -10% EatOff Professional","voucherType":"immediate","bonusPercentage":"0.00","discountPercentage":"10.00","isPayLater":false,"bonusPercent":0,"discountPercent":10}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 30 days ","voucherType":"pay_later","bonusPercentage":"5.00","discountPercentage":"5.00","isPayLater":true,"bonusPercent":5,"discountPercent":5}
+⚡️  [log] - [VoucherChipHome] Rendering: {"name":"Credit for 60 days","voucherType":"pay_later","bonusPercentage":"10.00","discountPercentage":"10.00","isPayLater":true,"bonusPercent":10,"discountPercent":10}
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  To Native ->  App addListener 92835182
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x11af5ea30 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11acbe000.width == _UIButtonBarButton:0x11aeba080.width   (active)>",
+    "<NSLayoutConstraint:0x11af5eb70 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11ae2b480]   (active, names: '|':_UIButtonBarButton:0x11aeba080 )>",
+    "<NSLayoutConstraint:0x11af5ebc0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11ae2b480]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11aeba080 )>",
+    "<NSLayoutConstraint:0x11af5f110 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11acbe000.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11af5ebc0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11ae2b480]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11aeba080 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x11af5f570 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11acbe400.width == _UIButtonBarButton:0x11aed0280.width   (active)>",
+    "<NSLayoutConstraint:0x11af5f660 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11ae2b800]   (active, names: '|':_UIButtonBarButton:0x11aed0280 )>",
+    "<NSLayoutConstraint:0x11af5f6b0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11ae2b800]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11aed0280 )>",
+    "<NSLayoutConstraint:0x11af5fb60 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11acbe400.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11af5f6b0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11ae2b800]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11aed0280 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+(
+    "<NSLayoutConstraint:0x11af5ff70 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11acbe800.width == _UIButtonBarButton:0x11aed0780.width   (active)>",
+    "<NSLayoutConstraint:0x11ae1e3a0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11ae2bb80]   (active, names: '|':_UIButtonBarButton:0x11aed0780 )>",
+    "<NSLayoutConstraint:0x11ae1e3f0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11ae2bb80]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11aed0780 )>",
+    "<NSLayoutConstraint:0x1320782d0 'UIView-Encapsulated-Layout-Width' _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11acbe800.width == 0   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11ae1e3f0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11ae2bb80]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11aed0780 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+<0x107a426c0> Gesture: System gesture gate timed out.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  To Native ->  CapacitorHttp request 92835183
+⚡️  TO JS {"data":{"message":"Cadoul a fost trimis! Destinatarul va primi un email cu detaliile.","gift":{"id":11,"restaurantName":null,"expiresAt":"2026-03-28T23:10:01.797Z","recipientEmail":"info@namarteccl.com","recipientPhone":null,"recipientCustomerId":null,"cu
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token: f6e8c38fde...
+⚡️  [log] - [QueryClient] Using auth token:
