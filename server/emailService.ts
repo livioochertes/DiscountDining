@@ -220,8 +220,8 @@ export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Prom
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
       <div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); padding: 40px 30px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold;">🎁 EatOff</h1>
-        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Ai primit un cadou!</p>
+        <img src="https://eatoff.app/eatoff-logo.png" alt="EatOff" width="160" height="auto" style="display: block; margin: 0 auto 10px auto; max-width: 160px;" />
+        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9; font-size: 18px;">🎁 Ai primit un cadou!</p>
       </div>
 
       <div style="padding: 40px 30px; background: white;">
