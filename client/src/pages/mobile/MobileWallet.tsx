@@ -1770,18 +1770,18 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
     enabled: step === 'product-restaurant',
   });
 
-  const { data: restaurantMenu } = useQuery<any>({
+  const { data: restaurantMenuItems = [] } = useQuery<any[]>({
     queryKey: ['/api/restaurants', selectedRestaurant?.id, 'menu'],
     queryFn: async () => {
-      if (!selectedRestaurant?.id) return null;
-      const response = await fetch(`${API_BASE_URL}/api/restaurants/${selectedRestaurant.id}`);
-      if (!response.ok) return null;
+      if (!selectedRestaurant?.id) return [];
+      const response = await fetch(`${API_BASE_URL}/api/restaurants/${selectedRestaurant.id}/menu`);
+      if (!response.ok) return [];
       return response.json();
     },
     enabled: !!selectedRestaurant?.id && step === 'product-menu',
   });
 
-  const menuItems = restaurantMenu?.menuItems || restaurantMenu?.menu || [];
+  const menuItems = restaurantMenuItems;
 
   const availableCities = [...new Set(allRestaurants.map((r: any) => r.city).filter(Boolean))].sort() as string[];
 
