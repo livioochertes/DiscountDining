@@ -80,5 +80,5 @@ The financial management system provides comprehensive control over platform eco
 - **wouter**: Client-side routing library for React.
 
 ## Known Configuration Notes
-- **SendGrid**: The `SENDGRID_API_KEY` environment variable is NOT configured. The email service (`server/emailService.ts`) falls back to console logging when no key is present. Gift voucher emails to non-EatOff users will only be logged, not actually sent. To enable real email delivery, set `SENDGRID_API_KEY` as an environment secret.
+- **SendGrid**: The `SENDGRID_API_KEY` environment variable is configured. The email service (`server/emailService.ts`) uses `noreply@sendgrid.net` as the sender address. If SendGrid rejects emails, the sender address may need to be changed to a verified sender domain in the SendGrid account. All email functions (`sendGiftVoucherEmail`, `sendVerificationEmail`, `sendOrderConfirmationToCustomer`) use this same sender.
 - **wouter**: Client-side routing library for React.
