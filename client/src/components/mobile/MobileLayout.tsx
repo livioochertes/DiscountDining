@@ -2,8 +2,9 @@ import { ReactNode, useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
-import { Home, Search, Brain, Wallet, User } from 'lucide-react';
+import { Home, Search, Brain, Wallet, User, CreditCard, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePendingPayments } from '@/hooks/usePendingPayments';
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -27,9 +28,11 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
   const mainRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { pendingCount, newRequestAlert, dismissAlert } = usePendingPayments();
 
   const isNative = Capacitor.isNativePlatform();
   const isAndroid = Capacitor.getPlatform() === 'android';
+  const isOnWalletPage = location.startsWith('/m/wallet');
 
   useEffect(() => {
     async function getStatusBarHeight() {
@@ -59,6 +62,7 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
       window.removeEventListener('orientationchange', handleResize);
     };
   }, [isAndroid, isNative]);
+
 
   const isActive = (path: string) => {
     if (path === '/m') return location === '/m' || location === '/m/';
@@ -112,6 +116,11 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
     };
   }, [handleScroll]);
 
+  const handleAlertTap = () => {
+    dismissAlert();
+    setLocation('/m/wallet');
+  };
+
   return (
     <div 
       className={cn(
@@ -120,7 +129,40 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
       )}
       style={isAndroid ? { paddingTop: statusBarHeight } : undefined}
     >
-      {/* Main Content - Scrollable, starts below system status bar */}
+      {newRequestAlert && !isOnWalletPage && (
+        <div 
+          className="fixed top-0 left-0 right-0 z-[100] animate-in slide-in-from-top duration-300"
+          style={isAndroid ? { paddingTop: statusBarHeight } : undefined}
+        >
+          <div className={cn(!isAndroid && "pt-[env(safe-area-inset-top,40px)]")}>
+            <div className="mx-3 mt-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl shadow-lg shadow-amber-500/30 overflow-hidden relative">
+              <div
+                onClick={handleAlertTap}
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
+              >
+                <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0 pr-10">
+                  <p className="text-white font-bold text-sm">Solicitare de plată</p>
+                  <p className="text-white/90 text-xs truncate">
+                    {newRequestAlert.restaurantName || 'Restaurant'} — {parseFloat(newRequestAlert.amount || 0).toFixed(2)} {newRequestAlert.currency || '€'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); dismissAlert(); }}
+                className="absolute top-1/2 right-3 -translate-y-1/2 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main 
         ref={mainRef}
         className={cn(
@@ -139,13 +181,14 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = isActive(tab.path);
+            const showBadge = tab.id === 'wallet' && pendingCount > 0;
             
             return (
               <button
                 key={tab.id}
                 onClick={() => setLocation(tab.path)}
                 className={cn(
-                  "flex flex-col items-center justify-center transition-all duration-300",
+                  "flex flex-col items-center justify-center transition-all duration-300 relative",
                   isCompact ? "p-2" : "py-1 px-3 min-w-[56px]",
                   active 
                     ? "text-primary" 
@@ -153,7 +196,7 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
                 )}
               >
                 <div className={cn(
-                  "rounded-full transition-all duration-300",
+                  "rounded-full transition-all duration-300 relative",
                   isCompact ? "p-1.5" : "p-2",
                   active && "bg-primary/10"
                 )}>
@@ -162,6 +205,11 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
                     isCompact ? "w-5 h-5" : "w-6 h-6",
                     active && "stroke-[2.5px]"
                   )} />
+                  {showBadge && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
+                      {pendingCount}
+                    </span>
+                  )}
                 </div>
                 <span className={cn(
                   "text-[11px] font-medium transition-all duration-300 overflow-hidden",
