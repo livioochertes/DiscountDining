@@ -3841,7 +3841,7 @@ function getLoyaltyTier(totalSpent: number) {
   };
 }
 
-router.post("/pos-payment-preview", async (req: Request, res: Response) => {
+router.post("/wallet/pos-payment-preview", async (req: Request, res: Response) => {
   try {
     const { restaurantId, customerCode: rawCode, amount } = req.body;
     if (!restaurantId || !rawCode || !amount) {
@@ -3963,7 +3963,7 @@ router.post("/pos-payment-preview", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/pos-payment-confirm", async (req: Request, res: Response) => {
+router.post("/wallet/pos-payment-confirm", async (req: Request, res: Response) => {
   try {
     const ownerId = getRestaurantOwnerId(req);
     if (!ownerId) {
@@ -4029,7 +4029,7 @@ router.post("/pos-payment-confirm", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/pos-payment-request/:requestId/status", async (req: Request, res: Response) => {
+router.get("/wallet/pos-payment-request/:requestId/status", async (req: Request, res: Response) => {
   try {
     const ownerId = getRestaurantOwnerId(req);
     if (!ownerId) {
@@ -4101,7 +4101,7 @@ router.get("/pos-payment-request/:requestId/status", async (req: Request, res: R
   }
 });
 
-router.post("/pos-payment-request/:requestId/cancel", async (req: Request, res: Response) => {
+router.post("/wallet/pos-payment-request/:requestId/cancel", async (req: Request, res: Response) => {
   try {
     const ownerId = getRestaurantOwnerId(req);
     if (!ownerId) {
