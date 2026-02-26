@@ -135,7 +135,7 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
           style={isAndroid ? { paddingTop: statusBarHeight } : undefined}
         >
           <div className={cn(!isAndroid && "pt-[env(safe-area-inset-top,40px)]")}>
-            <div className="mx-3 mt-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl shadow-lg shadow-amber-500/30 overflow-hidden relative">
+            <div className="mx-3 mt-2 rounded-2xl shadow-lg shadow-orange-600/40 overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #FF6B00 0%, #FF8C00 50%, #FF5500 100%)' }}>
               <div
                 onClick={handleAlertTap}
                 role="button"

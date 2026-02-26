@@ -1582,7 +1582,8 @@ function PendingPaymentCard({ request }: { request: any }) {
           <button
             onClick={handleConfirm}
             disabled={isConfirming}
-            className="w-full py-3.5 rounded-2xl font-bold text-white bg-green-600 hover:bg-green-700 flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-3.5 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/30 active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
           >
             {isConfirming ? (
               <Loader2 className="w-5 h-5 animate-spin" />
