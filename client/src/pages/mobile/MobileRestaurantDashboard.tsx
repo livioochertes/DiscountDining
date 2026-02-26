@@ -10,7 +10,6 @@ import {
   RefreshCw, DollarSign, Lock, ArrowLeft, Download, FileText,
   Star, Shield, Receipt, Delete
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
@@ -59,35 +58,29 @@ export default function MobileRestaurantDashboard() {
   const [newItemDescription, setNewItemDescription] = useState('');
   const [reservationFilter, setReservationFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
 
-  const [qrSessionAmount, setQrSessionAmount] = useState('');
-  const [qrSessionTable, setQrSessionTable] = useState('');
-  const [qrSessionDescription, setQrSessionDescription] = useState('');
-  const [activeQrSession, setActiveQrSession] = useState<{
-    sessionId: number;
-    sessionToken: string;
-    qrPayload: string;
-    amount: string;
-    expiresAt: string;
-  } | null>(null);
-  const [qrSessionStatus, setQrSessionStatus] = useState<string>('active');
-  const [qrSessionTransaction, setQrSessionTransaction] = useState<any>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
 
-  type PosStep = 'input' | 'scanning' | 'client-preview' | 'processing' | 'success' | 'history' | 'settlement';
+  type PosStep = 'input' | 'scanning' | 'client-preview' | 'processing' | 'waiting-approval' | 'success' | 'history' | 'settlement';
   const [posStep, setPosStep] = useState<PosStep>('input');
   const [posAmount, setPosAmount] = useState('0');
-  const [posTipPercent, setPosTipPercent] = useState<number | null>(null);
-  const [posTipCustom, setPosTipCustom] = useState('');
-  const [showTipBar, setShowTipBar] = useState(false);
   const [posCustomerPreview, setPosCustomerPreview] = useState<any>(null);
   const [posConfirmResult, setPosConfirmResult] = useState<any>(null);
   const [posError, setPosError] = useState<string | null>(null);
+  const [posRequestId, setPosRequestId] = useState<number | null>(null);
+  const [posWaitingElapsed, setPosWaitingElapsed] = useState(0);
   const [settlementDate, setSettlementDate] = useState(new Date().toISOString().split('T')[0]);
   const [historyFilter, setHistoryFilter] = useState<'today' | 'week' | 'month'>('today');
   const [posManualCode, setPosManualCode] = useState('');
 
-  const parseQRValue = (scannedValue: string): { customerCode?: string; customerId?: string } | null => {
+  const parseQRValue = (scannedValue: string): { customerCode?: string; customerId?: string; error?: string } | null => {
     if (!scannedValue) return null;
+    if (/^EATOFF_SESSION:/i.test(scannedValue)) {
+      return { error: 'Acesta este un cod de restaurant, nu de client. Scanează codul QR al clientului.' };
+    }
+    const payMatch = scannedValue.match(/^PAY:(\d+):/i);
+    if (payMatch) {
+      return { customerId: payMatch[1] };
+    }
     const eatoffPrefixMatch = scannedValue.match(/^EATOFF:(.+)$/i);
     if (eatoffPrefixMatch) {
       return { customerCode: eatoffPrefixMatch[1] };
@@ -102,7 +95,7 @@ export default function MobileRestaurantDashboard() {
     if (/^\d+$/.test(scannedValue)) {
       return { customerId: scannedValue };
     }
-    return null;
+    return { error: 'Cod QR nerecunoscut. Asigură-te că scanezi codul QR al clientului.' };
   };
 
   const startQRScanner = async (onScan?: (value: string) => void) => {
@@ -468,66 +461,6 @@ export default function MobileRestaurantDashboard() {
     },
   });
 
-  const createQrSessionMutation = useMutation({
-    mutationFn: async (data: { amount: number; tableId?: string; description?: string }) => {
-      const response = await fetch(`${API_BASE_URL}/api/wallet/restaurant-payment-session`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          restaurantId,
-          amount: data.amount,
-          tableId: data.tableId,
-          description: data.description,
-          expiresIn: 300,
-        }),
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || 'Eroare la crearea sesiunii');
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setActiveQrSession(data);
-      setQrSessionStatus('active');
-      setQrSessionTransaction(null);
-      setQrSessionAmount('');
-      setQrSessionTable('');
-      setQrSessionDescription('');
-    },
-  });
-
-  useEffect(() => {
-    if (!activeQrSession || qrSessionStatus === 'completed' || qrSessionStatus === 'expired') return;
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/wallet/payment-session/${activeQrSession.sessionToken}/status`, { credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
-          setQrSessionStatus(data.status);
-          if (data.transaction) setQrSessionTransaction(data.transaction);
-          if (data.status === 'completed' || data.status === 'expired' || data.status === 'cancelled') {
-            clearInterval(interval);
-            if (data.status === 'completed') {
-              queryClient.invalidateQueries({ queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'] });
-            }
-          }
-        }
-      } catch (e) {}
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [activeQrSession, qrSessionStatus]);
-
-  const handleCreateQrSession = () => {
-    const amount = parseFloat(qrSessionAmount);
-    if (isNaN(amount) || amount <= 0) return;
-    createQrSessionMutation.mutate({
-      amount,
-      tableId: qrSessionTable || undefined,
-      description: qrSessionDescription || undefined,
-    });
-  };
 
   const handleCollectPaymentForOrder = (order: any) => {
     setActiveTab('payments');
@@ -595,7 +528,7 @@ export default function MobileRestaurantDashboard() {
   });
 
   const posConfirmMutation = useMutation({
-    mutationFn: async (data: { customerId: number; amount: number; tipAmount: number }) => {
+    mutationFn: async (data: { customerId: number; amount: number }) => {
       const response = await fetch(`${API_BASE_URL}/api/wallet/pos-payment-confirm`, {
         method: 'POST',
         credentials: 'include',
@@ -604,15 +537,15 @@ export default function MobileRestaurantDashboard() {
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || 'Eroare la procesarea plății');
+        throw new Error(err.message || 'Eroare la trimiterea cererii');
       }
       return response.json();
     },
     onSuccess: (data) => {
-      setPosConfirmResult(data);
-      setPosStep('success');
-      queryClient.invalidateQueries({ queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'] });
-      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      setPosRequestId(data.requestId);
+      setPosStep('waiting-approval');
+      setPosWaitingElapsed(0);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
     },
     onError: (err: Error) => {
       setPosError(err.message);
@@ -621,9 +554,6 @@ export default function MobileRestaurantDashboard() {
   });
 
   const posAmountNum = parseFloat(posAmount) || 0;
-  const posTipAmount = showTipBar
-    ? (posTipPercent !== null ? posAmountNum * (posTipPercent / 100) : parseFloat(posTipCustom) || 0)
-    : 0;
 
   const handlePosKeyPress = (key: string) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
@@ -650,7 +580,14 @@ export default function MobileRestaurantDashboard() {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
     setPosStep('scanning');
     startQRScanner((scannedValue) => {
-      posPreviewMutation.mutate({ customerCode: scannedValue, amount: posAmountNum });
+      const parsed = parseQRValue(scannedValue);
+      if (!parsed || parsed.error) {
+        setPosError(parsed?.error || 'Cod QR invalid');
+        setPosStep('input');
+        return;
+      }
+      const code = parsed.customerCode || parsed.customerId || scannedValue;
+      posPreviewMutation.mutate({ customerCode: code, amount: posAmountNum });
     });
   };
 
@@ -660,28 +597,65 @@ export default function MobileRestaurantDashboard() {
     posConfirmMutation.mutate({
       customerId: posCustomerPreview.customerId,
       amount: posAmountNum,
-      tipAmount: Math.round(posTipAmount * 100) / 100,
     });
   };
 
   const handlePosReset = () => {
     setPosStep('input');
     setPosAmount('0');
-    setPosTipPercent(null);
-    setPosTipCustom('');
-    setShowTipBar(false);
     setPosCustomerPreview(null);
     setPosConfirmResult(null);
     setPosError(null);
     setPosManualCode('');
+    setPosRequestId(null);
+    setPosWaitingElapsed(0);
+  };
+
+  const handlePosCancelRequest = async () => {
+    if (!posRequestId) return;
+    try {
+      await fetch(`${API_BASE_URL}/api/wallet/pos-payment-request/${posRequestId}/cancel`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (e) {}
+    handlePosReset();
   };
 
   useEffect(() => {
     if (posStep === 'success') {
-      const timer = setTimeout(handlePosReset, 3000);
+      const timer = setTimeout(handlePosReset, 5000);
       return () => clearTimeout(timer);
     }
   }, [posStep]);
+
+  useEffect(() => {
+    if (posStep !== 'waiting-approval' || !posRequestId) return;
+    const interval = setInterval(async () => {
+      try {
+        setPosWaitingElapsed(prev => prev + 3);
+        const response = await fetch(`${API_BASE_URL}/api/wallet/pos-payment-request/${posRequestId}/status`, { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.status === 'completed') {
+          setPosConfirmResult(data);
+          setPosStep('success');
+          queryClient.invalidateQueries({ queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'] });
+          if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          clearInterval(interval);
+        } else if (data.status === 'declined') {
+          setPosError('Clientul a refuzat plata');
+          setPosStep('input');
+          clearInterval(interval);
+        } else if (data.status === 'expired' || data.status === 'cancelled') {
+          setPosError('Cererea de plată a expirat');
+          setPosStep('input');
+          clearInterval(interval);
+        }
+      } catch (e) {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [posStep, posRequestId]);
 
   const { data: settlementReport } = useQuery<any>({
     queryKey: ['/api/wallet/pos-settlement-report', restaurantId, settlementDate],
@@ -946,10 +920,10 @@ export default function MobileRestaurantDashboard() {
                     const enrolledDate = customer.enrolledAt ? new Date(customer.enrolledAt) : null;
                     const isRecent = enrolledDate && (Date.now() - enrolledDate.getTime()) < 7 * 24 * 60 * 60 * 1000;
                     const groupLabel = customer.groupType === 'cashback'
-                      ? `${customer.groupName} (${parseFloat(customer.cashbackPercentage || '0').toFixed(0)}%)`
+                      ? `${customer.groupName || 'Cashback'} (${parseFloat(customer.cashbackPercentage || '0').toFixed(0)}%)`
                       : customer.groupType === 'loyalty'
-                      ? `${customer.groupName} (${parseFloat(customer.discountPercentage || '0').toFixed(0)}% discount)`
-                      : customer.groupName || 'Grup';
+                      ? `${customer.groupName || 'Fidelizare'} (${parseFloat(customer.discountPercentage || '0').toFixed(0)}% discount)`
+                      : customer.groupName || 'Fidelizare';
                     return (
                       <div
                         key={`${customer.groupType}-${customer.customerId}-${idx}`}
@@ -985,6 +959,41 @@ export default function MobileRestaurantDashboard() {
 
           {activeTab === 'payments' && (
             <>
+              {posStep === 'waiting-approval' && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-blue-500 to-indigo-600 px-6">
+                  <div className="animate-[scale-in_0.4s_ease-out] text-center">
+                    <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                      <Clock className="w-14 h-14 text-white" />
+                    </div>
+                    <p className="text-white text-2xl font-bold mb-2">Așteptăm aprobarea clientului</p>
+                    {posCustomerPreview && (
+                      <p className="text-white/80 text-lg mb-2">{posCustomerPreview.customerName}</p>
+                    )}
+                    <p className="text-white/90 text-3xl font-bold mb-4">
+                      {posAmountNum.toFixed(2)} RON
+                    </p>
+                    <p className="text-white/60 text-sm mb-2">
+                      Clientul poate adăuga tips înainte de aprobare
+                    </p>
+                    <p className="text-white/50 text-xs mb-6">
+                      Timp scurs: {posWaitingElapsed}s / 120s
+                    </p>
+                    <div className="w-48 h-2 bg-white/20 rounded-full mx-auto mb-6 overflow-hidden">
+                      <div
+                        className="h-full bg-white/60 rounded-full transition-all duration-1000"
+                        style={{ width: `${Math.min(100, (posWaitingElapsed / 120) * 100)}%` }}
+                      />
+                    </div>
+                    <button
+                      onClick={handlePosCancelRequest}
+                      className="bg-white/20 text-white px-8 py-3 rounded-2xl font-semibold text-base border border-white/30"
+                    >
+                      Anulează cererea
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {posStep === 'success' && posConfirmResult && (
                 <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-emerald-500 to-green-600 px-6">
                   <div className="animate-[scale-in_0.4s_ease-out] text-center">
@@ -996,19 +1005,14 @@ export default function MobileRestaurantDashboard() {
                       {posConfirmResult.amountPaid?.toFixed(2)} RON
                     </p>
                     {posConfirmResult.tipAmount > 0 && (
-                      <p className="text-white/80 text-sm mb-1">Tip: +{posConfirmResult.tipAmount.toFixed(2)} RON</p>
+                      <p className="text-white/80 text-sm mb-1">Tip: +{posConfirmResult.tipAmount?.toFixed(2)} RON</p>
                     )}
-                    <p className="text-white/80 text-sm mb-4">
-                      Cashback acordat: {posConfirmResult.cashbackEarned?.toFixed(2)} RON
-                    </p>
-                    {posConfirmResult.tierUpgraded && (
-                      <div className="bg-white/20 rounded-2xl px-4 py-3 mb-4 animate-bounce">
-                        <p className="text-white font-bold text-sm">
-                          Clientul a avansat la {posConfirmResult.newLoyaltyTier}!
-                        </p>
-                      </div>
+                    {posConfirmResult.cashbackEarned > 0 && (
+                      <p className="text-white/80 text-sm mb-4">
+                        Cashback acordat: {posConfirmResult.cashbackEarned?.toFixed(2)} RON
+                      </p>
                     )}
-                    <p className="text-white/50 text-xs mb-6">ID: #{posConfirmResult.transactionId}</p>
+                    <p className="text-white/50 text-xs mb-6">ID: #{posConfirmResult.requestId || posConfirmResult.transactionId}</p>
                     <button
                       onClick={handlePosReset}
                       className="bg-white text-green-700 px-8 py-3 rounded-2xl font-semibold text-lg"
@@ -1016,7 +1020,7 @@ export default function MobileRestaurantDashboard() {
                       Tranzacție nouă
                     </button>
                     <div className="mt-4 w-32 h-1 bg-white/30 rounded-full mx-auto overflow-hidden">
-                      <div className="h-full bg-white rounded-full animate-[shrink_3s_linear]" />
+                      <div className="h-full bg-white rounded-full animate-[shrink_5s_linear]" />
                     </div>
                   </div>
                 </div>
@@ -1061,15 +1065,13 @@ export default function MobileRestaurantDashboard() {
                           <span className="text-green-600 font-semibold">-{posCustomerPreview.discountAmount?.toFixed(2)} RON</span>
                         </div>
                       )}
-                      {showTipBar && posTipAmount > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-blue-600">Tip</span>
-                          <span className="text-blue-600 font-semibold">+{posTipAmount.toFixed(2)} RON</span>
-                        </div>
-                      )}
+                      <div className="flex justify-between text-sm text-blue-600">
+                        <span>Tip</span>
+                        <span className="font-medium">Clientul adaugă de pe telefon</span>
+                      </div>
                       <div className="flex justify-between text-base font-bold border-t border-gray-100 pt-2">
                         <span>De plată</span>
-                        <span>{(posCustomerPreview.amountAfterDiscount + posTipAmount).toFixed(2)} RON</span>
+                        <span>{posCustomerPreview.amountAfterDiscount?.toFixed(2)} RON</span>
                       </div>
                       <div className="flex justify-between text-sm mt-1">
                         <span className="text-emerald-600">Cashback (+{posCustomerPreview.cashbackPercent}%)</span>
@@ -1125,7 +1127,7 @@ export default function MobileRestaurantDashboard() {
                       disabled={posConfirmMutation.isPending}
                       className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:bg-green-700 disabled:opacity-50"
                     >
-                      {posConfirmMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check className="w-5 h-5" /> Confirmă Plata</>}
+                      {posConfirmMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" /> Trimite cererea</>}
                     </button>
                     <button
                       onClick={() => { setPosStep('input'); setPosCustomerPreview(null); }}
@@ -1350,44 +1352,18 @@ export default function MobileRestaurantDashboard() {
                       {posAmountNum > 0 ? posAmountNum.toFixed(2) : '0.00'}
                     </p>
                     <p className="text-lg text-gray-400 font-medium mt-1">RON</p>
-                    <p className="text-xs text-gray-400 mt-1">Tip (opțional) · Cashback aplicabil automat</p>
-                    {showTipBar && posTipAmount > 0 && (
-                      <p className="text-sm text-blue-600 font-medium mt-1">+ Tip: {posTipAmount.toFixed(2)} RON</p>
-                    )}
+                    <p className="text-xs text-gray-400 mt-1">Clientul adaugă tips de pe telefon · Cashback automat</p>
                   </div>
 
                   <div className="flex gap-2 px-1">
                     <button onClick={() => handlePosQuickAdd(5)} className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-medium text-sm active:bg-gray-200">+5</button>
                     <button onClick={() => handlePosQuickAdd(10)} className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-medium text-sm active:bg-gray-200">+10</button>
-                    <button onClick={() => setShowTipBar(!showTipBar)}
-                      className={cn("flex-1 py-2.5 rounded-xl font-medium text-sm", showTipBar ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700")}>
-                      +Tip
-                    </button>
-                    <button onClick={() => { handlePosKeyPress('C'); setPosTipPercent(null); setPosTipCustom(''); setShowTipBar(false); }}
+                    <button onClick={() => handlePosQuickAdd(20)} className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-medium text-sm active:bg-gray-200">+20</button>
+                    <button onClick={() => handlePosKeyPress('C')}
                       className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-600 font-medium text-sm active:bg-red-100">
                       Reset
                     </button>
                   </div>
-
-                  {showTipBar && (
-                    <div className="flex gap-2 px-1">
-                      {[5, 10, 15].map(p => (
-                        <button key={p} onClick={() => { setPosTipPercent(p); setPosTipCustom(''); }}
-                          className={cn("flex-1 py-2 rounded-xl text-sm font-medium",
-                            posTipPercent === p ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700")}>
-                          {p}%
-                        </button>
-                      ))}
-                      <input
-                        type="number"
-                        value={posTipCustom}
-                        onChange={(e) => { setPosTipCustom(e.target.value); setPosTipPercent(null); }}
-                        placeholder="Altul"
-                        className="flex-1 px-3 py-2 rounded-xl border border-blue-200 text-sm text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
-                        style={{ fontSize: '16px' }}
-                      />
-                    </div>
-                  )}
 
                   <div className="grid grid-cols-3 gap-2 px-1">
                     {['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(key => (
@@ -1414,7 +1390,7 @@ export default function MobileRestaurantDashboard() {
                         <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
                         <>
-                          <Camera className="w-5 h-5" /> Încasează {posAmountNum > 0 ? `${(posAmountNum + posTipAmount).toFixed(2)} RON` : ''}
+                          <Camera className="w-5 h-5" /> Încasează {posAmountNum > 0 ? `${posAmountNum.toFixed(2)} RON` : ''}
                         </>
                       )}
                     </button>

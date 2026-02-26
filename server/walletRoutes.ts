@@ -3368,7 +3368,24 @@ router.get("/wallet/pending-requests", async (req: Request, res: Response) => {
       ))
       .orderBy(desc(paymentTransactions.createdAt));
 
-    res.json(pendingRequests);
+    const now = Date.now();
+    const expiredIds: number[] = [];
+    const validRequests = pendingRequests.filter(req => {
+      const createdAt = req.createdAt ? new Date(req.createdAt).getTime() : now;
+      if (now - createdAt > 120000) {
+        expiredIds.push(req.id);
+        return false;
+      }
+      return true;
+    });
+
+    if (expiredIds.length > 0) {
+      await db.update(paymentTransactions)
+        .set({ transactionStatus: 'expired' })
+        .where(sql`${paymentTransactions.id} IN (${sql.join(expiredIds.map(id => sql`${id}`), sql`, `)})`);
+    }
+
+    res.json(validRequests);
   } catch (error: any) {
     console.error("Error fetching pending requests:", error);
     res.status(500).json({ message: "Error fetching pending requests: " + error.message });
@@ -3475,6 +3492,7 @@ router.get("/wallet/payment/:transactionId", async (req: Request, res: Response)
   }
 });
 
+// DEPRECATED: Reverse payment flow (restaurant shows QR, customer scans). Use POS flow instead.
 router.post("/wallet/restaurant-payment-session", async (req: Request, res: Response) => {
   try {
     const { restaurantId, staffId, amount, currency, tableId, description, tipAllowed, tipMaxPercent, expiresIn } = req.body;
@@ -3780,8 +3798,13 @@ router.post("/wallet/payment-session/:token/cancel", async (req: Request, res: R
 // SMART POS ENDPOINTS
 // ============================================
 
-function parseCustomerIdentifier(code: string): { customerCode?: string; customerId?: number } {
-  if (!code) return {};
+function parseCustomerIdentifier(code: string): { customerCode?: string; customerId?: number; error?: string } {
+  if (!code) return { error: 'Cod client lipsă' };
+  if (/^EATOFF_SESSION:/i.test(code)) {
+    return { error: 'Acesta este un cod de restaurant, nu de client' };
+  }
+  const payMatch = code.match(/^PAY:(\d+):/i);
+  if (payMatch) return { customerId: parseInt(payMatch[1]) };
   const eatoffMatch = code.match(/^EATOFF:(.+)$/i);
   if (eatoffMatch) return { customerCode: eatoffMatch[1] };
   const urlMatch = code.match(/eatoff:\/\/customer\/(\d+)/i);
@@ -3835,6 +3858,9 @@ router.post("/pos-payment-preview", async (req: Request, res: Response) => {
     }
 
     const parsed = parseCustomerIdentifier(rawCode);
+    if (parsed.error) {
+      return res.status(400).json({ message: parsed.error });
+    }
     let customer: any = null;
     if (parsed.customerId) {
       customer = await db.select().from(customers).where(eq(customers.id, parsed.customerId)).then(r => r[0]);
@@ -3939,26 +3965,26 @@ router.post("/pos-payment-preview", async (req: Request, res: Response) => {
 
 router.post("/pos-payment-confirm", async (req: Request, res: Response) => {
   try {
-    const { restaurantId, customerId, amount, tipAmount = 0 } = req.body;
+    const ownerId = getRestaurantOwnerId(req);
+    if (!ownerId) {
+      return res.status(401).json({ message: "Restaurant authentication required" });
+    }
+
+    const { restaurantId, customerId, amount } = req.body;
     if (!restaurantId || !customerId || !amount) {
       return res.status(400).json({ message: "restaurantId, customerId, and amount are required" });
     }
     const parsedAmount = parseFloat(amount);
-    const parsedTip = parseFloat(tipAmount) || 0;
     const rId = parseInt(restaurantId);
     const cId = parseInt(customerId);
 
     const customer = await db.select().from(customers).where(eq(customers.id, cId)).then(r => r[0]);
     if (!customer) return res.status(404).json({ message: "Client negăsit" });
 
-    const restaurant = await db.select().from(restaurants).where(eq(restaurants.id, rId)).then(r => r[0]);
-    if (!restaurant) return res.status(404).json({ message: "Restaurant negăsit" });
-
-    const wallet = await db.select().from(customerWallets).where(eq(customerWallets.customerId, cId)).then(r => r[0]);
-    const cashbackBal = await db.select().from(customerCashbackBalance).where(eq(customerCashbackBalance.customerId, cId)).then(r => r[0]);
-
-    const walletBalance = parseFloat(wallet?.cashBalance || customer.balance || '0');
-    const cashbackBalanceAvail = parseFloat(cashbackBal?.totalCashbackBalance || '0');
+    const [restaurant] = await db.select().from(restaurants)
+      .where(and(eq(restaurants.id, rId), eq(restaurants.ownerId, ownerId)))
+      .limit(1);
+    if (!restaurant) return res.status(403).json({ message: "Nu aveți acces la acest restaurant" });
 
     const loyaltyEnrollment = await db.select({
       discountPercentage: loyaltyGroups.discountPercentage,
@@ -3975,137 +4001,142 @@ router.post("/pos-payment-confirm", async (req: Request, res: Response) => {
     const discountPercent = loyaltyEnrollment ? parseFloat(loyaltyEnrollment.discountPercentage || '0') : 0;
     const discountAmount = parsedAmount * (discountPercent / 100);
     const amountAfterDiscount = parsedAmount - discountAmount;
-    const totalToPay = amountAfterDiscount + parsedTip;
-
-    const cashbackEnrollment = await db.select({
-      cashbackPercentage: cashbackGroups.cashbackPercentage,
-    }).from(customerCashbackEnrollments)
-      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
-      .where(and(
-        eq(customerCashbackEnrollments.customerId, cId),
-        eq(customerCashbackEnrollments.isActive, true),
-      ))
-      .orderBy(desc(cashbackGroups.cashbackPercentage))
-      .limit(1)
-      .then(r => r[0]);
-
-    const totalSpentBefore = parseFloat(customer.balance || '0');
-    const tierBefore = getLoyaltyTier(totalSpentBefore);
-
-    const cashbackPercent = cashbackEnrollment ? parseFloat(cashbackEnrollment.cashbackPercentage || '0') : tierBefore.cashbackPercent;
-    const cashbackEarned = amountAfterDiscount * (cashbackPercent / 100);
-
-    const totalAvailable = walletBalance + cashbackBalanceAvail;
-    if (totalAvailable < totalToPay) {
-      return res.status(400).json({ 
-        message: `Fonduri insuficiente. Disponibil: ${totalAvailable.toFixed(2)} RON, necesar: ${totalToPay.toFixed(2)} RON` 
-      });
-    }
-
-    let cashFromWallet = 0;
-    let cashFromCashback = 0;
-    let paymentMethod = 'cash_balance';
-
-    if (walletBalance >= totalToPay) {
-      cashFromWallet = totalToPay;
-    } else {
-      cashFromWallet = walletBalance;
-      const remaining = totalToPay - walletBalance;
-      cashFromCashback = Math.min(cashbackBalanceAvail, remaining);
-      paymentMethod = 'mixed';
-    }
-
-    const commissionRate = restaurant.participatesInCashback
-      ? 7.5
-      : parseFloat(restaurant.commissionRate || "6.00");
-    const platformCommission = totalToPay * (commissionRate / 100);
-    const restaurantReceives = totalToPay - platformCommission;
-
-    if (cashFromWallet > 0 && wallet) {
-      const newBal = Math.max(0, walletBalance - cashFromWallet);
-      await db.update(customerWallets).set({
-        cashBalance: newBal.toFixed(2),
-        updatedAt: new Date(),
-      }).where(eq(customerWallets.customerId, cId));
-    }
-
-    if (cashFromCashback > 0 && cashbackBal) {
-      const newCBBal = Math.max(0, cashbackBalanceAvail - cashFromCashback);
-      await db.update(customerCashbackBalance).set({
-        totalCashbackBalance: newCBBal.toFixed(2),
-        totalCashbackUsed: (parseFloat(cashbackBal.totalCashbackUsed || '0') + cashFromCashback).toFixed(2),
-        updatedAt: new Date(),
-      }).where(eq(customerCashbackBalance.customerId, cId));
-    }
 
     const [transaction] = await db.insert(paymentTransactions).values({
       customerId: cId,
       restaurantId: rId,
       transactionType: 'pos_payment',
-      amount: totalToPay.toFixed(2),
-      paymentMethod,
-      cashUsed: cashFromWallet.toFixed(2),
-      tipAmount: parsedTip.toFixed(2),
-      platformCommission: platformCommission.toFixed(2),
-      restaurantReceives: restaurantReceives.toFixed(2),
-      transactionStatus: 'completed',
-      processedAt: new Date(),
+      amount: amountAfterDiscount.toFixed(2),
+      paymentMethod: 'pending',
+      tipAmount: '0.00',
+      platformCommission: '0.00',
+      restaurantReceives: '0.00',
+      transactionStatus: 'payment_request',
     }).returning();
-
-    await db.insert(walletTransactions).values({
-      customerId: cId,
-      transactionType: 'payment',
-      amount: (-totalToPay).toFixed(2),
-      description: `Plată POS la ${restaurant.name}`,
-      balanceBefore: walletBalance.toFixed(2),
-      balanceAfter: Math.max(0, walletBalance - cashFromWallet).toFixed(2),
-      restaurantId: rId,
-      paymentTransactionId: transaction.id,
-    });
-
-    if (restaurant.pendingSettlementAmount !== undefined) {
-      const currentPending = parseFloat(restaurant.pendingSettlementAmount || '0');
-      await db.update(restaurants).set({
-        pendingSettlementAmount: (currentPending + restaurantReceives).toFixed(2),
-      }).where(eq(restaurants.id, rId));
-    }
-
-    if (cashbackEarned > 0) {
-      if (cashbackBal) {
-        await db.update(customerCashbackBalance).set({
-          totalCashbackBalance: (parseFloat(cashbackBal.totalCashbackBalance || '0') - cashFromCashback + cashbackEarned).toFixed(2),
-          totalCashbackEarned: (parseFloat(cashbackBal.totalCashbackEarned || '0') + cashbackEarned).toFixed(2),
-          updatedAt: new Date(),
-        }).where(eq(customerCashbackBalance.customerId, cId));
-      } else {
-        await db.insert(customerCashbackBalance).values({
-          customerId: cId,
-          totalCashbackBalance: cashbackEarned.toFixed(2),
-          totalCashbackEarned: cashbackEarned.toFixed(2),
-          eatoffCashbackBalance: cashbackEarned.toFixed(2),
-        });
-      }
-    }
-
-    const totalSpentAfter = totalSpentBefore + totalToPay;
-    const tierAfter = getLoyaltyTier(totalSpentAfter);
-    const tierUpgraded = tierAfter.tierLevel > tierBefore.tierLevel;
 
     res.json({
       success: true,
-      transactionId: transaction.id,
-      amountPaid: totalToPay,
-      tipAmount: parsedTip,
-      discountAmount,
-      cashbackEarned: Math.round(cashbackEarned * 100) / 100,
-      tierUpgraded,
-      newLoyaltyTier: tierUpgraded ? tierAfter.tierName : null,
-      newLoyaltyColor: tierUpgraded ? tierAfter.tierColor : null,
-      restaurantReceives,
+      requestId: transaction.id,
+      status: 'payment_request',
+      customerName: customer.name,
+      amount: amountAfterDiscount,
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      message: 'Cerere de plată trimisă clientului',
     });
   } catch (error) {
     console.error('POS confirm error:', error);
-    res.status(500).json({ message: "Failed to process payment" });
+    res.status(500).json({ message: "Eroare la trimiterea cererii de plată" });
+  }
+});
+
+router.get("/pos-payment-request/:requestId/status", async (req: Request, res: Response) => {
+  try {
+    const ownerId = getRestaurantOwnerId(req);
+    if (!ownerId) {
+      return res.status(401).json({ message: "Restaurant authentication required" });
+    }
+
+    const requestId = parseInt(req.params.requestId);
+    if (isNaN(requestId)) {
+      return res.status(400).json({ message: "ID invalid" });
+    }
+
+    const [transaction] = await db.select({
+      id: paymentTransactions.id,
+      transactionStatus: paymentTransactions.transactionStatus,
+      amount: paymentTransactions.amount,
+      tipAmount: paymentTransactions.tipAmount,
+      platformCommission: paymentTransactions.platformCommission,
+      restaurantReceives: paymentTransactions.restaurantReceives,
+      restaurantId: paymentTransactions.restaurantId,
+      customerId: paymentTransactions.customerId,
+      createdAt: paymentTransactions.createdAt,
+    }).from(paymentTransactions).where(eq(paymentTransactions.id, requestId)).limit(1);
+
+    if (!transaction) {
+      return res.status(404).json({ message: "Cerere negăsită" });
+    }
+
+    const [restaurant] = await db.select().from(restaurants)
+      .where(and(eq(restaurants.id, transaction.restaurantId), eq(restaurants.ownerId, ownerId)))
+      .limit(1);
+    if (!restaurant) {
+      return res.status(403).json({ message: "Nu aveți acces la această cerere" });
+    }
+
+    const createdAt = transaction.createdAt ? new Date(transaction.createdAt).getTime() : Date.now();
+    const elapsed = Date.now() - createdAt;
+    const expired = elapsed > 120000;
+
+    if (transaction.transactionStatus === 'payment_request' && expired) {
+      await db.update(paymentTransactions).set({
+        transactionStatus: 'expired',
+      }).where(eq(paymentTransactions.id, requestId));
+      return res.json({ status: 'expired', requestId });
+    }
+
+    if (transaction.transactionStatus === 'completed') {
+      return res.json({
+        status: 'completed',
+        requestId,
+        amountPaid: parseFloat(transaction.amount || '0'),
+        tipAmount: parseFloat(transaction.tipAmount || '0'),
+        cashbackEarned: 0,
+        restaurantReceives: parseFloat(transaction.restaurantReceives || '0'),
+      });
+    }
+
+    if (transaction.transactionStatus === 'declined') {
+      return res.json({ status: 'declined', requestId });
+    }
+
+    res.json({
+      status: transaction.transactionStatus,
+      requestId,
+      elapsed: Math.round(elapsed / 1000),
+    });
+  } catch (error) {
+    console.error('POS payment request status error:', error);
+    res.status(500).json({ message: "Eroare la verificarea statusului" });
+  }
+});
+
+router.post("/pos-payment-request/:requestId/cancel", async (req: Request, res: Response) => {
+  try {
+    const ownerId = getRestaurantOwnerId(req);
+    if (!ownerId) {
+      return res.status(401).json({ message: "Restaurant authentication required" });
+    }
+
+    const requestId = parseInt(req.params.requestId);
+    if (isNaN(requestId)) {
+      return res.status(400).json({ message: "ID invalid" });
+    }
+
+    const [transaction] = await db.select().from(paymentTransactions).where(eq(paymentTransactions.id, requestId)).limit(1);
+    if (!transaction) {
+      return res.status(404).json({ message: "Cerere negăsită" });
+    }
+
+    const [restaurant] = await db.select().from(restaurants)
+      .where(and(eq(restaurants.id, transaction.restaurantId), eq(restaurants.ownerId, ownerId)))
+      .limit(1);
+    if (!restaurant) {
+      return res.status(403).json({ message: "Nu aveți acces la această cerere" });
+    }
+
+    if (transaction.transactionStatus !== 'payment_request') {
+      return res.status(400).json({ message: `Cererea nu mai poate fi anulată (status: ${transaction.transactionStatus})` });
+    }
+
+    await db.update(paymentTransactions).set({
+      transactionStatus: 'cancelled',
+    }).where(eq(paymentTransactions.id, requestId));
+
+    res.json({ success: true, message: 'Cerere anulată' });
+  } catch (error) {
+    console.error('POS cancel error:', error);
+    res.status(500).json({ message: "Eroare la anularea cererii" });
   }
 });
 
