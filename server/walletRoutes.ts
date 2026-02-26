@@ -3155,6 +3155,9 @@ router.post("/wallet/payment-request/:transactionId/confirm", async (req: Reques
       return res.status(400).json({ message: "Invalid transaction ID" });
     }
 
+    const { tipAmount: rawTip } = req.body;
+    const tipAmount = parseFloat(rawTip) || 0;
+
     const [transaction] = await db.select().from(paymentTransactions).where(eq(paymentTransactions.id, transactionId)).limit(1);
     if (!transaction) {
       return res.status(404).json({ message: "Transaction not found" });
@@ -3168,28 +3171,96 @@ router.post("/wallet/payment-request/:transactionId/confirm", async (req: Reques
       return res.status(400).json({ message: `Transaction is already ${transaction.transactionStatus}` });
     }
 
-    const paymentAmount = parseFloat(transaction.amount);
+    const baseAmount = parseFloat(transaction.amount);
+    const totalToPay = baseAmount + tipAmount;
 
     const [walletRecord] = await db.select().from(customerWallets).where(eq(customerWallets.customerId, customerId)).limit(1);
     const [customer] = await db.select().from(customers).where(eq(customers.id, customerId)).limit(1);
+    const cashbackBal = await db.select().from(customerCashbackBalance).where(eq(customerCashbackBalance.customerId, customerId)).then(r => r[0]);
 
-    const currentBalance = parseFloat(walletRecord?.cashBalance || customer?.balance || "0");
-    if (currentBalance < paymentAmount - 0.01) {
-      return res.status(400).json({ message: "Insufficient balance" });
+    const walletBalance = parseFloat(walletRecord?.cashBalance || customer?.balance || "0");
+    const cashbackAvail = parseFloat(cashbackBal?.totalCashbackBalance || '0');
+    const totalAvailable = walletBalance + cashbackAvail;
+
+    if (totalAvailable < totalToPay - 0.01) {
+      return res.status(400).json({ message: "Fonduri insuficiente" });
     }
 
-    const newBalance = (currentBalance - paymentAmount).toFixed(2);
+    let cashFromWallet = 0;
+    let cashFromCashback = 0;
+    if (walletBalance >= totalToPay) {
+      cashFromWallet = totalToPay;
+    } else {
+      cashFromWallet = walletBalance;
+      cashFromCashback = Math.min(totalToPay - walletBalance, cashbackAvail);
+    }
+
+    const newWalletBalance = Math.max(0, walletBalance - cashFromWallet).toFixed(2);
     if (walletRecord) {
-      await db.update(customerWallets).set({ cashBalance: newBalance }).where(eq(customerWallets.customerId, customerId));
+      await db.update(customerWallets).set({ cashBalance: newWalletBalance }).where(eq(customerWallets.customerId, customerId));
     }
-    await db.update(customers).set({ balance: newBalance }).where(eq(customers.id, customerId));
+    await db.update(customers).set({ balance: newWalletBalance }).where(eq(customers.id, customerId));
 
-    await db.update(paymentTransactions)
-      .set({ transactionStatus: "completed", processedAt: new Date(), updatedAt: new Date() })
-      .where(eq(paymentTransactions.id, transactionId));
+    if (cashFromCashback > 0 && cashbackBal) {
+      const newCBBal = Math.max(0, cashbackAvail - cashFromCashback);
+      await db.update(customerCashbackBalance).set({
+        totalCashbackBalance: newCBBal.toFixed(2),
+        totalCashbackUsed: (parseFloat(cashbackBal.totalCashbackUsed || '0') + cashFromCashback).toFixed(2),
+        updatedAt: new Date(),
+      }).where(eq(customerCashbackBalance.customerId, customerId));
+    }
 
     const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, transaction.restaurantId)).limit(1);
-    const restaurantReceives = parseFloat(transaction.restaurantReceives || "0");
+    const commissionRate = restaurant?.participatesInCashback
+      ? 7.5
+      : parseFloat(restaurant?.commissionRate || "6.00");
+    const platformCommission = totalToPay * (commissionRate / 100);
+    const restaurantReceives = totalToPay - platformCommission;
+
+    const cashbackEnrollment = await db.select({
+      cashbackPercentage: cashbackGroups.cashbackPercentage,
+    }).from(customerCashbackEnrollments)
+      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(and(
+        eq(customerCashbackEnrollments.customerId, customerId),
+        eq(customerCashbackEnrollments.isActive, true),
+      ))
+      .orderBy(desc(cashbackGroups.cashbackPercentage))
+      .limit(1)
+      .then(r => r[0]);
+
+    const cashbackPercent = cashbackEnrollment ? parseFloat(cashbackEnrollment.cashbackPercentage || '0') : 2;
+    const cashbackEarned = baseAmount * (cashbackPercent / 100);
+
+    if (cashbackEarned > 0) {
+      if (cashbackBal) {
+        await db.update(customerCashbackBalance).set({
+          totalCashbackBalance: (parseFloat(cashbackBal.totalCashbackBalance || '0') - cashFromCashback + cashbackEarned).toFixed(2),
+          totalCashbackEarned: (parseFloat(cashbackBal.totalCashbackEarned || '0') + cashbackEarned).toFixed(2),
+          updatedAt: new Date(),
+        }).where(eq(customerCashbackBalance.customerId, customerId));
+      } else {
+        await db.insert(customerCashbackBalance).values({
+          customerId,
+          totalCashbackBalance: cashbackEarned.toFixed(2),
+          totalCashbackEarned: cashbackEarned.toFixed(2),
+          eatoffCashbackBalance: cashbackEarned.toFixed(2),
+        });
+      }
+    }
+
+    await db.update(paymentTransactions)
+      .set({
+        transactionStatus: "completed",
+        processedAt: new Date(),
+        updatedAt: new Date(),
+        amount: totalToPay.toFixed(2),
+        tipAmount: tipAmount.toFixed(2),
+        platformCommission: platformCommission.toFixed(2),
+        restaurantReceives: restaurantReceives.toFixed(2),
+      })
+      .where(eq(paymentTransactions.id, transactionId));
+
     if (restaurant) {
       const currentPending = parseFloat(restaurant.pendingSettlementAmount || "0");
       await db.update(restaurants)
@@ -3200,10 +3271,10 @@ router.post("/wallet/payment-request/:transactionId/confirm", async (req: Reques
     await db.insert(walletTransactions).values({
       customerId,
       transactionType: "payment",
-      amount: `-${paymentAmount.toFixed(2)}`,
-      description: `Payment to ${restaurant?.name || "Restaurant"}`,
-      balanceBefore: currentBalance.toFixed(2),
-      balanceAfter: newBalance,
+      amount: `-${totalToPay.toFixed(2)}`,
+      description: `Plată la ${restaurant?.name || "Restaurant"}${tipAmount > 0 ? ` (incl. bacșiș ${tipAmount.toFixed(2)} RON)` : ''}`,
+      balanceBefore: walletBalance.toFixed(2),
+      balanceAfter: newWalletBalance,
       restaurantId: transaction.restaurantId,
       paymentTransactionId: transactionId,
     });
@@ -3212,8 +3283,13 @@ router.post("/wallet/payment-request/:transactionId/confirm", async (req: Reques
       success: true,
       message: "Payment confirmed and processed",
       transactionId,
-      amount: transaction.amount,
-      newBalance,
+      amount: totalToPay.toFixed(2),
+      baseAmount: baseAmount.toFixed(2),
+      tipAmount: tipAmount.toFixed(2),
+      cashbackEarned: Math.round(cashbackEarned * 100) / 100,
+      newBalance: newWalletBalance,
+      restaurantName: restaurant?.name,
+      restaurantId: transaction.restaurantId,
     });
   } catch (error: any) {
     console.error("Error confirming payment request:", error);
@@ -3697,6 +3773,463 @@ router.post("/wallet/payment-session/:token/cancel", async (req: Request, res: R
   } catch (error) {
     console.error('Error cancelling session:', error);
     res.status(500).json({ message: "Failed to cancel session" });
+  }
+});
+
+// ============================================
+// SMART POS ENDPOINTS
+// ============================================
+
+function parseCustomerIdentifier(code: string): { customerCode?: string; customerId?: number } {
+  if (!code) return {};
+  const eatoffMatch = code.match(/^EATOFF:(.+)$/i);
+  if (eatoffMatch) return { customerCode: eatoffMatch[1] };
+  const urlMatch = code.match(/eatoff:\/\/customer\/(\d+)/i);
+  if (urlMatch) return { customerId: parseInt(urlMatch[1]) };
+  const eoMatch = code.match(/^EO[A-Z0-9]{6,10}$/i);
+  if (eoMatch) return { customerCode: code };
+  const numMatch = code.match(/^\d+$/);
+  if (numMatch) return { customerId: parseInt(code) };
+  return { customerCode: code };
+}
+
+const LOYALTY_TIERS = [
+  { name: 'Bronze', minSpend: 0, maxSpend: 500, cashback: 1, color: '#CD7F32', level: 1 },
+  { name: 'Silver', minSpend: 500, maxSpend: 2000, cashback: 2, color: '#C0C0C0', level: 2 },
+  { name: 'Gold', minSpend: 2000, maxSpend: 5000, cashback: 3, color: '#FFD700', level: 3 },
+  { name: 'Platinum', minSpend: 5000, maxSpend: 15000, cashback: 4, color: '#1B365D', level: 4 },
+  { name: 'Black', minSpend: 15000, maxSpend: Infinity, cashback: 5, color: '#111111', level: 5 },
+];
+
+function getLoyaltyTier(totalSpent: number) {
+  const tier = LOYALTY_TIERS.find(t => totalSpent >= t.minSpend && totalSpent < t.maxSpend) || LOYALTY_TIERS[0];
+  const nextTier = LOYALTY_TIERS.find(t => t.level === tier.level + 1);
+  const progress = nextTier
+    ? Math.min(100, ((totalSpent - tier.minSpend) / (nextTier.minSpend - tier.minSpend)) * 100)
+    : 100;
+  return {
+    tierName: tier.name,
+    tierColor: tier.color,
+    tierLevel: tier.level,
+    cashbackPercent: tier.cashback,
+    progress: Math.round(progress),
+    nextTierName: nextTier?.name || null,
+    spendingToNextTier: nextTier ? Math.max(0, nextTier.minSpend - totalSpent) : 0,
+  };
+}
+
+router.post("/pos-payment-preview", async (req: Request, res: Response) => {
+  try {
+    const { restaurantId, customerCode: rawCode, amount } = req.body;
+    if (!restaurantId || !rawCode || !amount) {
+      return res.status(400).json({ message: "restaurantId, customerCode, and amount are required" });
+    }
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, parseInt(restaurantId)));
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant negăsit" });
+    }
+
+    const parsed = parseCustomerIdentifier(rawCode);
+    let customer: any = null;
+    if (parsed.customerId) {
+      customer = await db.select().from(customers).where(eq(customers.id, parsed.customerId)).then(r => r[0]);
+    } else if (parsed.customerCode) {
+      customer = await db.select().from(customers).where(eq(customers.customerCode, parsed.customerCode)).then(r => r[0]);
+    }
+    if (!customer) {
+      return res.status(404).json({ message: "Client negăsit" });
+    }
+
+    const wallet = await db.select().from(customerWallets).where(eq(customerWallets.customerId, customer.id)).then(r => r[0]);
+    const cashbackBal = await db.select().from(customerCashbackBalance).where(eq(customerCashbackBalance.customerId, customer.id)).then(r => r[0]);
+    const creditAcct = await db.select().from(customerCreditAccount).where(
+      and(eq(customerCreditAccount.customerId, customer.id), eq(customerCreditAccount.status, 'active'))
+    ).then(r => r[0]);
+
+    const walletBalance = parseFloat(wallet?.cashBalance || customer.balance || '0');
+    const cashbackBalance = parseFloat(cashbackBal?.totalCashbackBalance || '0');
+    const creditBalance = parseFloat(creditAcct?.remainingCredit || '0');
+
+    const totalSpent = parseFloat(customer.balance || '0');
+    const loyaltyInfo = getLoyaltyTier(totalSpent);
+
+    const cashbackEnrollment = await db.select({
+      groupName: cashbackGroups.name,
+      cashbackPercentage: cashbackGroups.cashbackPercentage,
+    }).from(customerCashbackEnrollments)
+      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(and(
+        eq(customerCashbackEnrollments.customerId, customer.id),
+        eq(customerCashbackEnrollments.isActive, true),
+      ))
+      .orderBy(desc(cashbackGroups.cashbackPercentage))
+      .limit(1)
+      .then(r => r[0]);
+
+    const loyaltyEnrollment = await db.select({
+      groupName: loyaltyGroups.name,
+      discountPercentage: loyaltyGroups.discountPercentage,
+      tierLevel: loyaltyGroups.tierLevel,
+      totalSpentAtRestaurant: customerLoyaltyEnrollments.totalSpentAtRestaurant,
+    }).from(customerLoyaltyEnrollments)
+      .innerJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
+      .where(and(
+        eq(customerLoyaltyEnrollments.customerId, customer.id),
+        eq(customerLoyaltyEnrollments.restaurantId, parseInt(restaurantId)),
+        eq(customerLoyaltyEnrollments.isActive, true),
+      ))
+      .limit(1)
+      .then(r => r[0]);
+
+    const discountPercent = loyaltyEnrollment ? parseFloat(loyaltyEnrollment.discountPercentage || '0') : 0;
+    const discountAmount = parsedAmount * (discountPercent / 100);
+    const amountAfterDiscount = parsedAmount - discountAmount;
+
+    const cashbackPercent = cashbackEnrollment ? parseFloat(cashbackEnrollment.cashbackPercentage || '0') : loyaltyInfo.cashbackPercent;
+    const cashbackAmount = amountAfterDiscount * (cashbackPercent / 100);
+
+    const totalAvailable = walletBalance + cashbackBalance + creditBalance;
+    const hasSufficientFunds = totalAvailable >= amountAfterDiscount;
+
+    const txCount = await db.select({ count: sql<number>`count(*)` })
+      .from(paymentTransactions)
+      .where(and(
+        eq(paymentTransactions.customerId, customer.id),
+        eq(paymentTransactions.restaurantId, parseInt(restaurantId)),
+        eq(paymentTransactions.transactionStatus, 'completed'),
+      )).then(r => Number(r[0]?.count || 0));
+
+    res.json({
+      customerId: customer.id,
+      customerName: customer.name,
+      customerEmail: customer.email,
+      customerCode: customer.customerCode,
+      memberSince: customer.createdAt,
+      loyaltyTier: loyaltyInfo.tierName,
+      loyaltyColor: loyaltyInfo.tierColor,
+      loyaltyLevel: loyaltyInfo.tierLevel,
+      loyaltyProgress: loyaltyInfo.progress,
+      nextTierName: loyaltyInfo.nextTierName,
+      spendingToNextTier: loyaltyInfo.spendingToNextTier,
+      walletBalance,
+      cashbackBalance,
+      creditBalance,
+      totalAvailable,
+      hasSufficientFunds,
+      discountPercent,
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      cashbackPercent,
+      cashbackAmount: Math.round(cashbackAmount * 100) / 100,
+      amountAfterDiscount: Math.round(amountAfterDiscount * 100) / 100,
+      cashbackGroupName: cashbackEnrollment?.groupName || null,
+      loyaltyGroupName: loyaltyEnrollment?.groupName || null,
+      visitCount: txCount,
+      amount: parsedAmount,
+    });
+  } catch (error) {
+    console.error('POS preview error:', error);
+    res.status(500).json({ message: "Failed to get customer preview" });
+  }
+});
+
+router.post("/pos-payment-confirm", async (req: Request, res: Response) => {
+  try {
+    const { restaurantId, customerId, amount, tipAmount = 0 } = req.body;
+    if (!restaurantId || !customerId || !amount) {
+      return res.status(400).json({ message: "restaurantId, customerId, and amount are required" });
+    }
+    const parsedAmount = parseFloat(amount);
+    const parsedTip = parseFloat(tipAmount) || 0;
+    const rId = parseInt(restaurantId);
+    const cId = parseInt(customerId);
+
+    const customer = await db.select().from(customers).where(eq(customers.id, cId)).then(r => r[0]);
+    if (!customer) return res.status(404).json({ message: "Client negăsit" });
+
+    const restaurant = await db.select().from(restaurants).where(eq(restaurants.id, rId)).then(r => r[0]);
+    if (!restaurant) return res.status(404).json({ message: "Restaurant negăsit" });
+
+    const wallet = await db.select().from(customerWallets).where(eq(customerWallets.customerId, cId)).then(r => r[0]);
+    const cashbackBal = await db.select().from(customerCashbackBalance).where(eq(customerCashbackBalance.customerId, cId)).then(r => r[0]);
+
+    const walletBalance = parseFloat(wallet?.cashBalance || customer.balance || '0');
+    const cashbackBalanceAvail = parseFloat(cashbackBal?.totalCashbackBalance || '0');
+
+    const loyaltyEnrollment = await db.select({
+      discountPercentage: loyaltyGroups.discountPercentage,
+    }).from(customerLoyaltyEnrollments)
+      .innerJoin(loyaltyGroups, eq(customerLoyaltyEnrollments.groupId, loyaltyGroups.id))
+      .where(and(
+        eq(customerLoyaltyEnrollments.customerId, cId),
+        eq(customerLoyaltyEnrollments.restaurantId, rId),
+        eq(customerLoyaltyEnrollments.isActive, true),
+      ))
+      .limit(1)
+      .then(r => r[0]);
+
+    const discountPercent = loyaltyEnrollment ? parseFloat(loyaltyEnrollment.discountPercentage || '0') : 0;
+    const discountAmount = parsedAmount * (discountPercent / 100);
+    const amountAfterDiscount = parsedAmount - discountAmount;
+    const totalToPay = amountAfterDiscount + parsedTip;
+
+    const cashbackEnrollment = await db.select({
+      cashbackPercentage: cashbackGroups.cashbackPercentage,
+    }).from(customerCashbackEnrollments)
+      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(and(
+        eq(customerCashbackEnrollments.customerId, cId),
+        eq(customerCashbackEnrollments.isActive, true),
+      ))
+      .orderBy(desc(cashbackGroups.cashbackPercentage))
+      .limit(1)
+      .then(r => r[0]);
+
+    const totalSpentBefore = parseFloat(customer.balance || '0');
+    const tierBefore = getLoyaltyTier(totalSpentBefore);
+
+    const cashbackPercent = cashbackEnrollment ? parseFloat(cashbackEnrollment.cashbackPercentage || '0') : tierBefore.cashbackPercent;
+    const cashbackEarned = amountAfterDiscount * (cashbackPercent / 100);
+
+    const totalAvailable = walletBalance + cashbackBalanceAvail;
+    if (totalAvailable < totalToPay) {
+      return res.status(400).json({ 
+        message: `Fonduri insuficiente. Disponibil: ${totalAvailable.toFixed(2)} RON, necesar: ${totalToPay.toFixed(2)} RON` 
+      });
+    }
+
+    let cashFromWallet = 0;
+    let cashFromCashback = 0;
+    let paymentMethod = 'cash_balance';
+
+    if (walletBalance >= totalToPay) {
+      cashFromWallet = totalToPay;
+    } else {
+      cashFromWallet = walletBalance;
+      const remaining = totalToPay - walletBalance;
+      cashFromCashback = Math.min(cashbackBalanceAvail, remaining);
+      paymentMethod = 'mixed';
+    }
+
+    const commissionRate = restaurant.participatesInCashback
+      ? 7.5
+      : parseFloat(restaurant.commissionRate || "6.00");
+    const platformCommission = totalToPay * (commissionRate / 100);
+    const restaurantReceives = totalToPay - platformCommission;
+
+    if (cashFromWallet > 0 && wallet) {
+      const newBal = Math.max(0, walletBalance - cashFromWallet);
+      await db.update(customerWallets).set({
+        cashBalance: newBal.toFixed(2),
+        updatedAt: new Date(),
+      }).where(eq(customerWallets.customerId, cId));
+    }
+
+    if (cashFromCashback > 0 && cashbackBal) {
+      const newCBBal = Math.max(0, cashbackBalanceAvail - cashFromCashback);
+      await db.update(customerCashbackBalance).set({
+        totalCashbackBalance: newCBBal.toFixed(2),
+        totalCashbackUsed: (parseFloat(cashbackBal.totalCashbackUsed || '0') + cashFromCashback).toFixed(2),
+        updatedAt: new Date(),
+      }).where(eq(customerCashbackBalance.customerId, cId));
+    }
+
+    const [transaction] = await db.insert(paymentTransactions).values({
+      customerId: cId,
+      restaurantId: rId,
+      transactionType: 'pos_payment',
+      amount: totalToPay.toFixed(2),
+      paymentMethod,
+      cashUsed: cashFromWallet.toFixed(2),
+      tipAmount: parsedTip.toFixed(2),
+      platformCommission: platformCommission.toFixed(2),
+      restaurantReceives: restaurantReceives.toFixed(2),
+      transactionStatus: 'completed',
+      processedAt: new Date(),
+    }).returning();
+
+    await db.insert(walletTransactions).values({
+      customerId: cId,
+      transactionType: 'payment',
+      amount: (-totalToPay).toFixed(2),
+      description: `Plată POS la ${restaurant.name}`,
+      balanceBefore: walletBalance.toFixed(2),
+      balanceAfter: Math.max(0, walletBalance - cashFromWallet).toFixed(2),
+      restaurantId: rId,
+      paymentTransactionId: transaction.id,
+    });
+
+    if (restaurant.pendingSettlementAmount !== undefined) {
+      const currentPending = parseFloat(restaurant.pendingSettlementAmount || '0');
+      await db.update(restaurants).set({
+        pendingSettlementAmount: (currentPending + restaurantReceives).toFixed(2),
+      }).where(eq(restaurants.id, rId));
+    }
+
+    if (cashbackEarned > 0) {
+      if (cashbackBal) {
+        await db.update(customerCashbackBalance).set({
+          totalCashbackBalance: (parseFloat(cashbackBal.totalCashbackBalance || '0') - cashFromCashback + cashbackEarned).toFixed(2),
+          totalCashbackEarned: (parseFloat(cashbackBal.totalCashbackEarned || '0') + cashbackEarned).toFixed(2),
+          updatedAt: new Date(),
+        }).where(eq(customerCashbackBalance.customerId, cId));
+      } else {
+        await db.insert(customerCashbackBalance).values({
+          customerId: cId,
+          totalCashbackBalance: cashbackEarned.toFixed(2),
+          totalCashbackEarned: cashbackEarned.toFixed(2),
+          eatoffCashbackBalance: cashbackEarned.toFixed(2),
+        });
+      }
+    }
+
+    const totalSpentAfter = totalSpentBefore + totalToPay;
+    const tierAfter = getLoyaltyTier(totalSpentAfter);
+    const tierUpgraded = tierAfter.tierLevel > tierBefore.tierLevel;
+
+    res.json({
+      success: true,
+      transactionId: transaction.id,
+      amountPaid: totalToPay,
+      tipAmount: parsedTip,
+      discountAmount,
+      cashbackEarned: Math.round(cashbackEarned * 100) / 100,
+      tierUpgraded,
+      newLoyaltyTier: tierUpgraded ? tierAfter.tierName : null,
+      newLoyaltyColor: tierUpgraded ? tierAfter.tierColor : null,
+      restaurantReceives,
+    });
+  } catch (error) {
+    console.error('POS confirm error:', error);
+    res.status(500).json({ message: "Failed to process payment" });
+  }
+});
+
+router.get("/pos-settlement-report/:restaurantId", async (req: Request, res: Response) => {
+  try {
+    const rId = parseInt(req.params.restaurantId);
+    const dateParam = req.query.date as string;
+    const targetDate = dateParam ? new Date(dateParam) : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const txs = await db.select({
+      id: paymentTransactions.id,
+      amount: paymentTransactions.amount,
+      tipAmount: paymentTransactions.tipAmount,
+      cashUsed: paymentTransactions.cashUsed,
+      platformCommission: paymentTransactions.platformCommission,
+      restaurantReceives: paymentTransactions.restaurantReceives,
+      paymentMethod: paymentTransactions.paymentMethod,
+      transactionStatus: paymentTransactions.transactionStatus,
+      transactionType: paymentTransactions.transactionType,
+      customerId: paymentTransactions.customerId,
+      createdAt: paymentTransactions.createdAt,
+    })
+      .from(paymentTransactions)
+      .where(and(
+        eq(paymentTransactions.restaurantId, rId),
+        eq(paymentTransactions.transactionStatus, 'completed'),
+        sql`${paymentTransactions.createdAt} >= ${startOfDay}`,
+        sql`${paymentTransactions.createdAt} <= ${endOfDay}`,
+      ))
+      .orderBy(desc(paymentTransactions.createdAt));
+
+    const completedTxs = txs;
+    const totalSales = completedTxs.reduce((s, t) => s + parseFloat(t.amount || '0'), 0);
+    const totalTips = completedTxs.reduce((s, t) => s + parseFloat(t.tipAmount || '0'), 0);
+    const totalCommission = completedTxs.reduce((s, t) => s + parseFloat(t.platformCommission || '0'), 0);
+    const totalNet = completedTxs.reduce((s, t) => s + parseFloat(t.restaurantReceives || '0'), 0);
+
+    const methodBreakdown: Record<string, { count: number; total: number }> = {};
+    for (const tx of completedTxs) {
+      const m = tx.paymentMethod || 'unknown';
+      if (!methodBreakdown[m]) methodBreakdown[m] = { count: 0, total: 0 };
+      methodBreakdown[m].count++;
+      methodBreakdown[m].total += parseFloat(tx.amount || '0');
+    }
+
+    const hourly: Record<number, number> = {};
+    for (const tx of completedTxs) {
+      const h = tx.createdAt ? new Date(tx.createdAt).getHours() : 0;
+      hourly[h] = (hourly[h] || 0) + 1;
+    }
+
+    res.json({
+      date: targetDate.toISOString().split('T')[0],
+      totalSales: Math.round(totalSales * 100) / 100,
+      transactionCount: completedTxs.length,
+      totalTips: Math.round(totalTips * 100) / 100,
+      totalCommission: Math.round(totalCommission * 100) / 100,
+      totalNet: Math.round(totalNet * 100) / 100,
+      averageTransaction: completedTxs.length > 0 ? Math.round((totalSales / completedTxs.length) * 100) / 100 : 0,
+      paymentMethodBreakdown: methodBreakdown,
+      hourlyDistribution: hourly,
+      transactions: completedTxs,
+    });
+  } catch (error) {
+    console.error('Settlement report error:', error);
+    res.status(500).json({ message: "Failed to generate report" });
+  }
+});
+
+router.get("/pos-settlement-report/:restaurantId/csv", async (req: Request, res: Response) => {
+  try {
+    const rId = parseInt(req.params.restaurantId);
+    const dateParam = req.query.date as string;
+    const targetDate = dateParam ? new Date(dateParam) : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const txs = await db.select({
+      id: paymentTransactions.id,
+      amount: paymentTransactions.amount,
+      tipAmount: paymentTransactions.tipAmount,
+      platformCommission: paymentTransactions.platformCommission,
+      restaurantReceives: paymentTransactions.restaurantReceives,
+      paymentMethod: paymentTransactions.paymentMethod,
+      customerId: paymentTransactions.customerId,
+      createdAt: paymentTransactions.createdAt,
+    })
+      .from(paymentTransactions)
+      .where(and(
+        eq(paymentTransactions.restaurantId, rId),
+        eq(paymentTransactions.transactionStatus, 'completed'),
+        sql`${paymentTransactions.createdAt} >= ${startOfDay}`,
+        sql`${paymentTransactions.createdAt} <= ${endOfDay}`,
+      ))
+      .orderBy(asc(paymentTransactions.createdAt));
+
+    const customerIds = [...new Set(txs.map(t => t.customerId))];
+    const customerMap: Record<number, string> = {};
+    if (customerIds.length > 0) {
+      const custs = await db.select({ id: customers.id, name: customers.name })
+        .from(customers)
+        .where(sql`${customers.id} IN (${sql.join(customerIds.map(id => sql`${id}`), sql`, `)})`);
+      for (const c of custs) customerMap[c.id] = c.name;
+    }
+
+    let csv = 'Ora,Client,Suma,Tip,Comision,Net,Metoda Plata,ID Tranzactie\n';
+    for (const tx of txs) {
+      const time = tx.createdAt ? new Date(tx.createdAt).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '';
+      const name = customerMap[tx.customerId] || `Client #${tx.customerId}`;
+      csv += `${time},"${name}",${tx.amount},${tx.tipAmount || '0.00'},${tx.platformCommission},${tx.restaurantReceives},${tx.paymentMethod},${tx.id}\n`;
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="raport_${targetDate.toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('CSV export error:', error);
+    res.status(500).json({ message: "Failed to export CSV" });
   }
 });
 

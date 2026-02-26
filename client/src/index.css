@@ -606,3 +606,13 @@ input::-webkit-credentials-auto-fill-button {
     font-size: 16px;
   }
 }
+
+@keyframes scale-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shrink {
+  0% { width: 100%; }
+  100% { width: 0%; }
+}

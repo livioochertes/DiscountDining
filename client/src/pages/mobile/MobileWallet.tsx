@@ -1259,13 +1259,34 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
   );
 }
 
-// Payment Modal Component
+// Enhanced POS Payment Approval Card
 function PendingPaymentCard({ request }: { request: any }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [selectedTipPercent, setSelectedTipPercent] = useState<number | null>(null);
+  const [customTipInput, setCustomTipInput] = useState('');
+  const [showCustomTip, setShowCustomTip] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<any>(null);
+  const [ratingScore, setRatingScore] = useState(0);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
+  const baseAmount = parseFloat(request.amount);
+  const tipPresets = [5, 10, 15];
+
+  const tipAmount = showCustomTip
+    ? (parseFloat(customTipInput) || 0)
+    : selectedTipPercent
+      ? Math.round(baseAmount * (selectedTipPercent / 100) * 100) / 100
+      : 0;
+
+  const totalAmount = baseAmount + tipAmount;
+
+  const cashbackPercent = 2;
+  const cashbackToEarn = Math.round(baseAmount * (cashbackPercent / 100) * 100) / 100;
 
   const handleConfirm = async () => {
     setIsConfirming(true);
@@ -1276,13 +1297,16 @@ function PendingPaymentCard({ request }: { request: any }) {
         if (token) headers['Authorization'] = `Bearer ${token}`;
       }
       const response = await fetch(`${API_BASE_URL}/api/wallet/payment-request/${request.id}/confirm`, {
-        method: 'POST', headers, credentials: 'include', body: JSON.stringify({})
+        method: 'POST', headers, credentials: 'include',
+        body: JSON.stringify({ tipAmount })
       });
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || 'Failed to confirm');
       }
-      toast({ title: t.paymentConfirmed || 'Plata confirmată!' });
+      const result = await response.json();
+      setPaymentResult(result);
+      toast({ title: 'Plata confirmată!' });
       queryClient.invalidateQueries({ queryKey: ['/api/wallet/pending-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
       queryClient.invalidateQueries({ queryKey: ['/api/wallet/transactions'] });
@@ -1305,7 +1329,7 @@ function PendingPaymentCard({ request }: { request: any }) {
         method: 'POST', headers, credentials: 'include', body: JSON.stringify({})
       });
       if (!response.ok) throw new Error('Failed to decline');
-      toast({ title: t.paymentDeclined || 'Solicitare respinsă' });
+      toast({ title: 'Solicitare respinsă' });
       queryClient.invalidateQueries({ queryKey: ['/api/wallet/pending-requests'] });
     } catch (err: any) {
       toast({ title: err.message, variant: 'destructive' });
@@ -1314,37 +1338,268 @@ function PendingPaymentCard({ request }: { request: any }) {
     }
   };
 
-  return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-            <Store className="w-5 h-5 text-amber-600" />
+  const handleSubmitRating = async () => {
+    if (ratingScore < 1 || !paymentResult) return;
+    setIsSubmittingRating(true);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (Capacitor.isNativePlatform()) {
+        const token = await getMobileSessionToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      }
+      const restaurantId = paymentResult.restaurantId || request.restaurantId;
+      await fetch(`${API_BASE_URL}/api/restaurants/${restaurantId}/reviews`, {
+        method: 'POST', headers, credentials: 'include',
+        body: JSON.stringify({
+          customerId: request.customerId,
+          rating: ratingScore,
+          comment: '',
+        })
+      });
+      toast({ title: 'Mulțumim pentru recenzie!' });
+      setPaymentResult(null);
+      setExpanded(false);
+    } catch {
+      setPaymentResult(null);
+      setExpanded(false);
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
+
+  const handleSkipRating = () => {
+    setPaymentResult(null);
+    setExpanded(false);
+  };
+
+  if (paymentResult) {
+    return (
+      <div className="bg-white border border-green-200 rounded-2xl p-5 space-y-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <div>
-            <p className="font-semibold text-gray-900">{request.restaurantName || 'Restaurant'}</p>
-            <p className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleString()}</p>
+          <p className="text-lg font-bold text-green-700">Plată aprobată!</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{parseFloat(paymentResult.amount).toFixed(2)} RON</p>
+          {parseFloat(paymentResult.tipAmount || '0') > 0 && (
+            <p className="text-sm text-gray-500 mt-0.5">incl. bacșiș {parseFloat(paymentResult.tipAmount).toFixed(2)} RON</p>
+          )}
+          {paymentResult.cashbackEarned > 0 && (
+            <div className="mt-2 inline-flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+              <TrendingUp className="w-3.5 h-3.5" />
+              +{paymentResult.cashbackEarned.toFixed(2)} RON cashback
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-gray-100 pt-4">
+          <p className="text-center text-sm font-medium text-gray-700 mb-3">
+            Cum a fost experiența la {paymentResult.restaurantName || request.restaurantName || 'restaurant'}?
+          </p>
+          <div className="flex justify-center gap-2 mb-4">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onClick={() => setRatingScore(star)}
+                className="p-1 transition-transform active:scale-90"
+              >
+                <Star
+                  className={cn(
+                    "w-9 h-9 transition-colors",
+                    star <= ratingScore
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "fill-gray-200 text-gray-200"
+                  )}
+                />
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSkipRating}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium text-gray-500"
+            >
+              Mai târziu
+            </button>
+            <button
+              onClick={handleSubmitRating}
+              disabled={ratingScore < 1 || isSubmittingRating}
+              className={cn(
+                "flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1",
+                ratingScore >= 1
+                  ? "bg-primary text-white"
+                  : "bg-gray-100 text-gray-400"
+              )}
+            >
+              {isSubmittingRating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Trimite recenzia
+            </button>
           </div>
         </div>
-        <p className="text-xl font-bold text-gray-900">{parseFloat(request.amount).toFixed(2)} RON</p>
       </div>
-      <div className="flex gap-2">
-        <button
-          onClick={handleDecline}
-          disabled={isDeclining}
-          className="flex-1 py-2.5 rounded-xl font-semibold text-red-600 bg-red-50 border border-red-200 flex items-center justify-center gap-1"
-        >
-          {isDeclining ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-          {t.decline || 'Respinge'}
-        </button>
-        <button
-          onClick={handleConfirm}
-          disabled={isConfirming}
-          className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-green-600 flex items-center justify-center gap-1"
-        >
-          {isConfirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-          {t.confirmPayment || 'Confirmă Plata'}
-        </button>
+    );
+  }
+
+  if (!expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 text-left"
+      >
+        <div className="flex items-start justify-between mb-1">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+              <Store className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">{request.restaurantName || 'Restaurant'}</p>
+              <p className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleString('ro-RO')}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-bold text-gray-900">{baseAmount.toFixed(2)} RON</p>
+            <p className="text-xs text-amber-600 font-medium">Apasă pentru detalii</p>
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+            <Store className="w-6 h-6 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="font-bold text-gray-900 text-lg">{request.restaurantName || 'Restaurant'}</p>
+            <p className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleString('ro-RO')}</p>
+          </div>
+          <button onClick={() => setExpanded(false)} className="p-1">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-4">
+        <div className="text-center">
+          <p className="text-sm text-gray-500">Sumă de plată</p>
+          <p className="text-3xl font-bold text-gray-900">{baseAmount.toFixed(2)} RON</p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-gray-700">Adaugă bacșiș</p>
+          <div className="flex gap-2">
+            {tipPresets.map((pct) => {
+              const tipVal = Math.round(baseAmount * (pct / 100) * 100) / 100;
+              const isSelected = !showCustomTip && selectedTipPercent === pct;
+              return (
+                <button
+                  key={pct}
+                  onClick={() => {
+                    setShowCustomTip(false);
+                    setSelectedTipPercent(isSelected ? null : pct);
+                    setCustomTipInput('');
+                  }}
+                  className={cn(
+                    "flex-1 py-2 rounded-xl text-center border transition-all",
+                    isSelected
+                      ? "bg-primary/10 border-primary text-primary font-semibold"
+                      : "bg-gray-50 border-gray-200 text-gray-700"
+                  )}
+                >
+                  <span className="text-sm font-medium">{pct}%</span>
+                  <span className="block text-[10px] text-gray-500">{tipVal.toFixed(2)}</span>
+                </button>
+              );
+            })}
+            <button
+              onClick={() => {
+                setShowCustomTip(!showCustomTip);
+                setSelectedTipPercent(null);
+              }}
+              className={cn(
+                "flex-1 py-2 rounded-xl text-center border transition-all text-sm",
+                showCustomTip
+                  ? "bg-primary/10 border-primary text-primary font-semibold"
+                  : "bg-gray-50 border-gray-200 text-gray-700"
+              )}
+            >
+              Altul
+            </button>
+          </div>
+          {showCustomTip && (
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={customTipInput}
+                onChange={(e) => setCustomTipInput(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <span className="text-sm text-gray-500 font-medium">RON</span>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs font-medium text-green-700">Cashback la această plată</p>
+            <p className="text-sm font-bold text-green-700">+{cashbackToEarn.toFixed(2)} RON</p>
+          </div>
+          <div className="w-full bg-green-200 rounded-full h-1.5">
+            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '35%' }} />
+          </div>
+          <p className="text-[10px] text-green-600 mt-1">35% către nivelul Silver</p>
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Subtotal</span>
+            <span className="text-gray-900 font-medium">{baseAmount.toFixed(2)} RON</span>
+          </div>
+          {tipAmount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Bacșiș</span>
+              <span className="text-gray-900 font-medium">+{tipAmount.toFixed(2)} RON</span>
+            </div>
+          )}
+          <div className="border-t border-gray-200 pt-1.5 flex justify-between">
+            <span className="text-sm font-bold text-gray-900">Total</span>
+            <span className="text-lg font-bold text-gray-900">{totalAmount.toFixed(2)} RON</span>
+          </div>
+          {cashbackToEarn > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-green-600">Cashback de primit</span>
+              <span className="text-green-600 font-medium">+{cashbackToEarn.toFixed(2)} RON</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <button
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            className="w-full py-3.5 rounded-2xl font-bold text-white bg-green-600 hover:bg-green-700 flex items-center justify-center gap-2 transition-colors"
+          >
+            {isConfirming ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <CheckCircle className="w-5 h-5" />
+            )}
+            Aprobă plata · {totalAmount.toFixed(2)} RON
+          </button>
+          <button
+            onClick={handleDecline}
+            disabled={isDeclining}
+            className="w-full py-2 text-center text-red-500 font-medium text-sm flex items-center justify-center gap-1"
+          >
+            {isDeclining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            Refuză
+          </button>
+        </div>
       </div>
     </div>
   );

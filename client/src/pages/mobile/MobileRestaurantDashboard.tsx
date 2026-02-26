@@ -7,7 +7,8 @@ import {
   CreditCard, UtensilsCrossed, Calendar, ClipboardList, Wallet,
   Send, Printer, ToggleLeft, ToggleRight, Edit2, Loader2,
   Clock, CheckCircle, XCircle, AlertCircle, Phone, Mail, MapPin,
-  RefreshCw, DollarSign
+  RefreshCw, DollarSign, Lock, ArrowLeft, Download, FileText,
+  Star, Shield, Receipt, Delete
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
@@ -71,6 +72,19 @@ export default function MobileRestaurantDashboard() {
   const [qrSessionStatus, setQrSessionStatus] = useState<string>('active');
   const [qrSessionTransaction, setQrSessionTransaction] = useState<any>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+
+  type PosStep = 'input' | 'scanning' | 'client-preview' | 'processing' | 'success' | 'history' | 'settlement';
+  const [posStep, setPosStep] = useState<PosStep>('input');
+  const [posAmount, setPosAmount] = useState('0');
+  const [posTipPercent, setPosTipPercent] = useState<number | null>(null);
+  const [posTipCustom, setPosTipCustom] = useState('');
+  const [showTipBar, setShowTipBar] = useState(false);
+  const [posCustomerPreview, setPosCustomerPreview] = useState<any>(null);
+  const [posConfirmResult, setPosConfirmResult] = useState<any>(null);
+  const [posError, setPosError] = useState<string | null>(null);
+  const [settlementDate, setSettlementDate] = useState(new Date().toISOString().split('T')[0]);
+  const [historyFilter, setHistoryFilter] = useState<'today' | 'week' | 'month'>('today');
+  const [posManualCode, setPosManualCode] = useState('');
 
   const parseQRValue = (scannedValue: string): { customerCode?: string; customerId?: string } | null => {
     if (!scannedValue) return null;
@@ -555,6 +569,132 @@ export default function MobileRestaurantDashboard() {
     sendPaymentRequestMutation.mutate({ customerCode: customerCode.trim(), amount, restaurantId });
   };
 
+  const posPreviewMutation = useMutation({
+    mutationFn: async (data: { customerCode: string; amount: number }) => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/pos-payment-preview`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId, customerCode: data.customerCode, amount: data.amount }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Eroare la identificarea clientului');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setPosCustomerPreview(data);
+      setPosStep('client-preview');
+      setPosError(null);
+    },
+    onError: (err: Error) => {
+      setPosError(err.message);
+      setPosStep('input');
+    },
+  });
+
+  const posConfirmMutation = useMutation({
+    mutationFn: async (data: { customerId: number; amount: number; tipAmount: number }) => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/pos-payment-confirm`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId, ...data }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Eroare la procesarea plății');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setPosConfirmResult(data);
+      setPosStep('success');
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/restaurant', restaurantId, 'transactions'] });
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    },
+    onError: (err: Error) => {
+      setPosError(err.message);
+      setPosStep('client-preview');
+    },
+  });
+
+  const posAmountNum = parseFloat(posAmount) || 0;
+  const posTipAmount = showTipBar
+    ? (posTipPercent !== null ? posAmountNum * (posTipPercent / 100) : parseFloat(posTipCustom) || 0)
+    : 0;
+
+  const handlePosKeyPress = (key: string) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+    setPosAmount(prev => {
+      if (key === 'C') return '0';
+      if (key === '⌫') return prev.length <= 1 ? '0' : prev.slice(0, -1);
+      if (key === '.') return prev.includes('.') ? prev : prev + '.';
+      if (prev === '0' && key !== '.') return key;
+      if (prev.includes('.') && prev.split('.')[1].length >= 2) return prev;
+      return prev + key;
+    });
+  };
+
+  const handlePosQuickAdd = (val: number) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+    setPosAmount(prev => {
+      const current = parseFloat(prev) || 0;
+      return (current + val).toFixed(2);
+    });
+  };
+
+  const handlePosCollect = () => {
+    if (posAmountNum <= 0) return;
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+    setPosStep('scanning');
+    startQRScanner((scannedValue) => {
+      posPreviewMutation.mutate({ customerCode: scannedValue, amount: posAmountNum });
+    });
+  };
+
+  const handlePosConfirm = () => {
+    if (!posCustomerPreview) return;
+    setPosStep('processing');
+    posConfirmMutation.mutate({
+      customerId: posCustomerPreview.customerId,
+      amount: posAmountNum,
+      tipAmount: Math.round(posTipAmount * 100) / 100,
+    });
+  };
+
+  const handlePosReset = () => {
+    setPosStep('input');
+    setPosAmount('0');
+    setPosTipPercent(null);
+    setPosTipCustom('');
+    setShowTipBar(false);
+    setPosCustomerPreview(null);
+    setPosConfirmResult(null);
+    setPosError(null);
+    setPosManualCode('');
+  };
+
+  useEffect(() => {
+    if (posStep === 'success') {
+      const timer = setTimeout(handlePosReset, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [posStep]);
+
+  const { data: settlementReport } = useQuery<any>({
+    queryKey: ['/api/wallet/pos-settlement-report', restaurantId, settlementDate],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/pos-settlement-report/${restaurantId}?date=${settlementDate}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed');
+      return response.json();
+    },
+    enabled: !!restaurantId && posStep === 'settlement',
+  });
+
   const handlePrintOrder = (order: any) => {
     const printContent = `
       <html><head><title>Comandă #${order.orderNumber || order.id}</title>
@@ -845,321 +985,488 @@ export default function MobileRestaurantDashboard() {
 
           {activeTab === 'payments' && (
             <>
-              <section className="bg-white rounded-2xl p-4 border border-gray-100 space-y-4">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <QrCode className="w-5 h-5 text-primary" />
-                  Generează QR pentru Încasare
-                </h3>
-
-                {activeQrSession && qrSessionStatus !== 'expired' && qrSessionStatus !== 'cancelled' ? (
-                  <div className="space-y-4">
-                    {qrSessionStatus === 'completed' ? (
-                      <div className="text-center py-4">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <CheckCircle className="w-8 h-8 text-green-600" />
-                        </div>
-                        <p className="font-bold text-green-700 text-lg mb-1">Plată Confirmată!</p>
-                        {qrSessionTransaction && (
-                          <p className="text-gray-600">{qrSessionTransaction.customerName} - {parseFloat(qrSessionTransaction.amount).toFixed(2)} RON</p>
-                        )}
-                        <button
-                          onClick={() => { setActiveQrSession(null); setQrSessionStatus('active'); }}
-                          className="mt-4 bg-primary text-white px-6 py-2.5 rounded-xl font-semibold"
-                        >
-                          Încasare Nouă
-                        </button>
+              {posStep === 'success' && posConfirmResult && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-emerald-500 to-green-600 px-6">
+                  <div className="animate-[scale-in_0.4s_ease-out] text-center">
+                    <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <CheckCircle className="w-14 h-14 text-white" />
+                    </div>
+                    <p className="text-white text-3xl font-bold mb-2">Plată aprobată</p>
+                    <p className="text-white/90 text-4xl font-bold mb-4">
+                      {posConfirmResult.amountPaid?.toFixed(2)} RON
+                    </p>
+                    {posConfirmResult.tipAmount > 0 && (
+                      <p className="text-white/80 text-sm mb-1">Tip: +{posConfirmResult.tipAmount.toFixed(2)} RON</p>
+                    )}
+                    <p className="text-white/80 text-sm mb-4">
+                      Cashback acordat: {posConfirmResult.cashbackEarned?.toFixed(2)} RON
+                    </p>
+                    {posConfirmResult.tierUpgraded && (
+                      <div className="bg-white/20 rounded-2xl px-4 py-3 mb-4 animate-bounce">
+                        <p className="text-white font-bold text-sm">
+                          Clientul a avansat la {posConfirmResult.newLoyaltyTier}!
+                        </p>
                       </div>
-                    ) : (
-                      <>
-                        <div className="bg-gray-50 rounded-2xl p-4 flex flex-col items-center">
-                          <QRCodeSVG
-                            value={activeQrSession.qrPayload}
-                            size={200}
-                            level="H"
-                            includeMargin
-                          />
-                          <p className="mt-3 font-bold text-xl text-gray-900">{parseFloat(activeQrSession.amount).toFixed(2)} RON</p>
-                          <p className="text-sm text-gray-500 mt-1">Clientul scanează acest cod pentru a plăti</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            {qrSessionStatus === 'active' && (
-                              <span className="flex items-center gap-1 text-amber-600 text-sm">
-                                <Clock className="w-4 h-4 animate-pulse" />
-                                Se așteaptă scanarea...
-                              </span>
-                            )}
-                            {qrSessionStatus === 'claimed' && (
-                              <span className="flex items-center gap-1 text-blue-600 text-sm">
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                Client confirmă plata...
-                              </span>
-                            )}
-                          </div>
+                    )}
+                    <p className="text-white/50 text-xs mb-6">ID: #{posConfirmResult.transactionId}</p>
+                    <button
+                      onClick={handlePosReset}
+                      className="bg-white text-green-700 px-8 py-3 rounded-2xl font-semibold text-lg"
+                    >
+                      Tranzacție nouă
+                    </button>
+                    <div className="mt-4 w-32 h-1 bg-white/30 rounded-full mx-auto overflow-hidden">
+                      <div className="h-full bg-white rounded-full animate-[shrink_3s_linear]" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {posStep === 'client-preview' && posCustomerPreview && (
+                <div className="space-y-4 -mx-4 -mt-2 px-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => setPosStep('input')} className="flex items-center gap-1 text-gray-600">
+                      <ArrowLeft className="w-5 h-5" /> Înapoi
+                    </button>
+                    <span className="text-sm text-gray-500 font-medium">Detalii Client</span>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="p-4 flex items-center gap-3 border-b border-gray-50">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold"
+                        style={{ backgroundColor: posCustomerPreview.loyaltyColor }}>
+                        {posCustomerPreview.customerName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-900 text-lg">{posCustomerPreview.customerName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white"
+                            style={{ backgroundColor: posCustomerPreview.loyaltyColor }}>
+                            {posCustomerPreview.loyaltyTier}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Membru din {posCustomerPreview.memberSince ? new Date(posCustomerPreview.memberSince).getFullYear() : '?'}
+                          </span>
                         </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await fetch(`${API_BASE_URL}/api/wallet/payment-session/${activeQrSession.sessionToken}/cancel`, {
-                                method: 'POST', credentials: 'include',
-                              });
-                            } catch (e) {}
-                            setActiveQrSession(null);
-                            setQrSessionStatus('active');
-                          }}
-                          className="w-full py-2.5 rounded-xl font-medium text-red-600 bg-red-50 border border-red-200"
-                        >
-                          Anulează
-                        </button>
-                      </>
+                      </div>
+                    </div>
+
+                    <div className="p-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Subtotal</span>
+                        <span className="font-semibold">{posCustomerPreview.amount?.toFixed(2)} RON</span>
+                      </div>
+                      {posCustomerPreview.discountPercent > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-600">Discount (-{posCustomerPreview.discountPercent}%)</span>
+                          <span className="text-green-600 font-semibold">-{posCustomerPreview.discountAmount?.toFixed(2)} RON</span>
+                        </div>
+                      )}
+                      {showTipBar && posTipAmount > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-blue-600">Tip</span>
+                          <span className="text-blue-600 font-semibold">+{posTipAmount.toFixed(2)} RON</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-base font-bold border-t border-gray-100 pt-2">
+                        <span>De plată</span>
+                        <span>{(posCustomerPreview.amountAfterDiscount + posTipAmount).toFixed(2)} RON</span>
+                      </div>
+                      <div className="flex justify-between text-sm mt-1">
+                        <span className="text-emerald-600">Cashback (+{posCustomerPreview.cashbackPercent}%)</span>
+                        <span className="text-emerald-600 font-semibold">+{posCustomerPreview.cashbackAmount?.toFixed(2)} RON</span>
+                      </div>
+                    </div>
+
+                    <div className="px-4 pb-3">
+                      <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>Sold portofel</span>
+                          <span className="font-medium">{posCustomerPreview.walletBalance?.toFixed(2)} RON</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>Cashback disponibil</span>
+                          <span className="font-medium">{posCustomerPreview.cashbackBalance?.toFixed(2)} RON</span>
+                        </div>
+                        {!posCustomerPreview.hasSufficientFunds && (
+                          <div className="flex items-center gap-1.5 text-red-600 text-xs font-medium mt-1">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Fonduri insuficiente - clientul trebuie să facă top-up
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {posCustomerPreview.nextTierName && (
+                      <div className="px-4 pb-4">
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                          <span>{posCustomerPreview.loyaltyProgress}% către {posCustomerPreview.nextTierName}</span>
+                          <span>-{posCustomerPreview.spendingToNextTier?.toFixed(0)} RON</span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${posCustomerPreview.loyaltyProgress}%`,
+                              backgroundColor: posCustomerPreview.loyaltyColor,
+                            }} />
+                        </div>
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <>
-                    <input
-                      type="number"
-                      value={qrSessionAmount}
-                      onChange={(e) => setQrSessionAmount(e.target.value)}
-                      placeholder="Sumă de încasat (RON)"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <div className="flex gap-2">
+
+                  {posError && (
+                    <div className="bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                      <XCircle className="w-4 h-4" /> {posError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handlePosConfirm}
+                      disabled={posConfirmMutation.isPending}
+                      className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:bg-green-700 disabled:opacity-50"
+                    >
+                      {posConfirmMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check className="w-5 h-5" /> Confirmă Plata</>}
+                    </button>
+                    <button
+                      onClick={() => { setPosStep('input'); setPosCustomerPreview(null); }}
+                      className="px-6 py-4 rounded-2xl font-semibold text-red-600 border-2 border-red-200 bg-red-50 active:bg-red-100"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {posStep === 'scanning' && (
+                <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center animate-pulse">
+                    <Camera className="w-10 h-10 text-primary" />
+                  </div>
+                  <p className="text-gray-700 font-semibold text-lg">Scanează codul clientului</p>
+                  <p className="text-gray-400 text-sm">Se deschide camera...</p>
+                  {!Capacitor.isNativePlatform() && (
+                    <div className="w-full space-y-3 mt-4">
+                      <p className="text-amber-600 text-sm text-center">Scanare QR disponibilă doar pe mobil. Introdu codul manual:</p>
                       <input
                         type="text"
-                        value={qrSessionTable}
-                        onChange={(e) => setQrSessionTable(e.target.value)}
-                        placeholder="Nr. masă (opțional)"
-                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                        value={posManualCode}
+                        onChange={(e) => setPosManualCode(e.target.value)}
+                        placeholder="Cod client (ex: EO123ABC sau CLI-ABC123)"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && posManualCode.trim()) {
+                            posPreviewMutation.mutate({ customerCode: posManualCode.trim(), amount: posAmountNum });
+                          }
+                        }}
                       />
+                      <button
+                        onClick={() => {
+                          if (posManualCode.trim()) posPreviewMutation.mutate({ customerCode: posManualCode.trim(), amount: posAmountNum });
+                        }}
+                        disabled={!posManualCode.trim() || posPreviewMutation.isPending}
+                        className="w-full bg-primary text-white py-3 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {posPreviewMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Caută Client'}
+                      </button>
+                    </div>
+                  )}
+                  <button onClick={() => setPosStep('input')} className="text-gray-400 text-sm mt-2">Anulează</button>
+                </div>
+              )}
+
+              {posStep === 'history' && (
+                <div className="space-y-4 -mx-4 -mt-2 px-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => setPosStep('input')} className="flex items-center gap-1 text-gray-600">
+                      <ArrowLeft className="w-5 h-5" /> POS
+                    </button>
+                    <span className="font-semibold text-gray-900">Istoric Tranzacții</span>
+                    <div className="w-10" />
+                  </div>
+
+                  <div className="flex gap-2">
+                    {(['today', 'week', 'month'] as const).map(f => (
+                      <button key={f} onClick={() => setHistoryFilter(f)}
+                        className={cn("flex-1 py-2 rounded-xl text-sm font-medium", historyFilter === f ? "bg-primary text-white" : "bg-gray-100 text-gray-600")}>
+                        {f === 'today' ? 'Azi' : f === 'week' ? 'Săptămâna' : 'Luna'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const now = new Date();
+                    const filtered = transactions.filter((tx: any) => {
+                      const d = new Date(tx.createdAt || tx.processedAt);
+                      if (historyFilter === 'today') return d.toDateString() === now.toDateString();
+                      if (historyFilter === 'week') return (now.getTime() - d.getTime()) < 7 * 86400000;
+                      return (now.getTime() - d.getTime()) < 30 * 86400000;
+                    });
+                    const totalFiltered = filtered.reduce((s: number, t: any) => s + parseFloat(t.amount || '0'), 0);
+                    const totalTips = filtered.reduce((s: number, t: any) => s + parseFloat(t.tipAmount || '0'), 0);
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white rounded-xl p-3 border border-gray-100">
+                            <p className="text-xs text-gray-500">Total încasat</p>
+                            <p className="font-bold text-lg text-gray-900">{totalFiltered.toFixed(2)} RON</p>
+                          </div>
+                          <div className="bg-white rounded-xl p-3 border border-gray-100">
+                            <p className="text-xs text-gray-500">Nr. tranzacții</p>
+                            <p className="font-bold text-lg text-gray-900">{filtered.length}</p>
+                          </div>
+                          <div className="bg-white rounded-xl p-3 border border-gray-100">
+                            <p className="text-xs text-gray-500">Total tips</p>
+                            <p className="font-bold text-lg text-gray-900">{totalTips.toFixed(2)} RON</p>
+                          </div>
+                          <div className="bg-white rounded-xl p-3 border border-gray-100">
+                            <p className="text-xs text-gray-500">Media/tranzacție</p>
+                            <p className="font-bold text-lg text-gray-900">{filtered.length > 0 ? (totalFiltered / filtered.length).toFixed(2) : '0.00'} RON</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {filtered.length === 0 ? (
+                            <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
+                              <Receipt className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                              <p className="text-gray-500">Nicio tranzacție în această perioadă</p>
+                            </div>
+                          ) : filtered.map((tx: any) => {
+                            const st = tx.transactionStatus || 'pending';
+                            return (
+                              <div key={tx.id} className="bg-white rounded-xl p-3 border border-gray-100 flex items-center justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 text-sm truncate">{tx.customerName || `Client #${tx.customerId}`}</p>
+                                  <p className="text-xs text-gray-400">{new Date(tx.createdAt).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className={cn("w-2 h-2 rounded-full", st === 'completed' ? 'bg-green-500' : st === 'rejected' ? 'bg-red-500' : 'bg-amber-500')} />
+                                  <span className="font-bold text-gray-900 text-sm">{parseFloat(tx.amount || '0').toFixed(2)}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {posStep === 'settlement' && (
+                <div className="space-y-4 -mx-4 -mt-2 px-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => setPosStep('input')} className="flex items-center gap-1 text-gray-600">
+                      <ArrowLeft className="w-5 h-5" /> POS
+                    </button>
+                    <span className="font-semibold text-gray-900">Raport Închidere</span>
+                    <div className="w-10" />
+                  </div>
+
+                  <input
+                    type="date"
+                    value={settlementDate}
+                    onChange={(e) => setSettlementDate(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+
+                  {settlementReport ? (
+                    <div className="space-y-4">
+                      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+                        <h4 className="font-semibold text-gray-900">Sumar - {new Date(settlementReport.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-green-50 rounded-xl p-3">
+                            <p className="text-xs text-green-600">Total vânzări</p>
+                            <p className="font-bold text-xl text-green-800">{settlementReport.totalSales?.toFixed(2)} RON</p>
+                          </div>
+                          <div className="bg-blue-50 rounded-xl p-3">
+                            <p className="text-xs text-blue-600">Nr. tranzacții</p>
+                            <p className="font-bold text-xl text-blue-800">{settlementReport.transactionCount}</p>
+                          </div>
+                          <div className="bg-purple-50 rounded-xl p-3">
+                            <p className="text-xs text-purple-600">Total tips</p>
+                            <p className="font-bold text-xl text-purple-800">{settlementReport.totalTips?.toFixed(2)} RON</p>
+                          </div>
+                          <div className="bg-amber-50 rounded-xl p-3">
+                            <p className="text-xs text-amber-600">Media/tranzacție</p>
+                            <p className="font-bold text-xl text-amber-800">{settlementReport.averageTransaction?.toFixed(2)} RON</p>
+                          </div>
+                        </div>
+                        <div className="border-t border-gray-100 pt-3 space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Comision platformă</span>
+                            <span className="text-red-600 font-medium">-{settlementReport.totalCommission?.toFixed(2)} RON</span>
+                          </div>
+                          <div className="flex justify-between text-base font-bold">
+                            <span>Total net restaurant</span>
+                            <span className="text-green-700">{settlementReport.totalNet?.toFixed(2)} RON</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {Object.keys(settlementReport.paymentMethodBreakdown || {}).length > 0 && (
+                        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-2">
+                          <h4 className="font-semibold text-gray-900 text-sm">Breakdown metodă de plată</h4>
+                          {Object.entries(settlementReport.paymentMethodBreakdown).map(([method, data]: [string, any]) => (
+                            <div key={method} className="flex justify-between text-sm py-1 border-b border-gray-50 last:border-0">
+                              <span className="text-gray-600 capitalize">{method.replace('_', ' ')}</span>
+                              <span className="font-medium">{data.count} tx · {data.total?.toFixed(2)} RON</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          window.open(`${API_BASE_URL}/api/wallet/pos-settlement-report/${restaurantId}/csv?date=${settlementDate}`, '_blank');
+                        }}
+                        className="w-full bg-gray-900 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-5 h-5" /> Descarcă CSV
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {posStep === 'input' && (
+                <div className="space-y-3 -mx-4 -mt-2 px-2">
+                  <div className="flex items-center justify-between px-2">
+                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">EatOff Smart POS</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => setPosStep('history')} className="p-2 rounded-xl bg-gray-100 text-gray-600 active:bg-gray-200">
+                        <Receipt className="w-4.5 h-4.5" />
+                      </button>
+                      <button onClick={() => setPosStep('settlement')} className="p-2 rounded-xl bg-gray-100 text-gray-600 active:bg-gray-200">
+                        <FileText className="w-4.5 h-4.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+                    <p className="text-5xl font-bold text-gray-900 tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {posAmountNum > 0 ? posAmountNum.toFixed(2) : '0.00'}
+                    </p>
+                    <p className="text-lg text-gray-400 font-medium mt-1">RON</p>
+                    <p className="text-xs text-gray-400 mt-1">Tip (opțional) · Cashback aplicabil automat</p>
+                    {showTipBar && posTipAmount > 0 && (
+                      <p className="text-sm text-blue-600 font-medium mt-1">+ Tip: {posTipAmount.toFixed(2)} RON</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 px-1">
+                    <button onClick={() => handlePosQuickAdd(5)} className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-medium text-sm active:bg-gray-200">+5</button>
+                    <button onClick={() => handlePosQuickAdd(10)} className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-medium text-sm active:bg-gray-200">+10</button>
+                    <button onClick={() => setShowTipBar(!showTipBar)}
+                      className={cn("flex-1 py-2.5 rounded-xl font-medium text-sm", showTipBar ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700")}>
+                      +Tip
+                    </button>
+                    <button onClick={() => { handlePosKeyPress('C'); setPosTipPercent(null); setPosTipCustom(''); setShowTipBar(false); }}
+                      className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-600 font-medium text-sm active:bg-red-100">
+                      Reset
+                    </button>
+                  </div>
+
+                  {showTipBar && (
+                    <div className="flex gap-2 px-1">
+                      {[5, 10, 15].map(p => (
+                        <button key={p} onClick={() => { setPosTipPercent(p); setPosTipCustom(''); }}
+                          className={cn("flex-1 py-2 rounded-xl text-sm font-medium",
+                            posTipPercent === p ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700")}>
+                          {p}%
+                        </button>
+                      ))}
                       <input
-                        type="text"
-                        value={qrSessionDescription}
-                        onChange={(e) => setQrSessionDescription(e.target.value)}
-                        placeholder="Descriere (opțional)"
-                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
+                        type="number"
+                        value={posTipCustom}
+                        onChange={(e) => { setPosTipCustom(e.target.value); setPosTipPercent(null); }}
+                        placeholder="Altul"
+                        className="flex-1 px-3 py-2 rounded-xl border border-blue-200 text-sm text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        style={{ fontSize: '16px' }}
                       />
                     </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 px-1">
+                    {['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(key => (
+                      <button
+                        key={key}
+                        onClick={() => handlePosKeyPress(key)}
+                        className={cn(
+                          "py-4 rounded-2xl text-xl font-semibold active:scale-95 transition-transform",
+                          key === '⌫' ? "bg-gray-200 text-gray-700" : "bg-gray-100 text-gray-900"
+                        )}
+                      >
+                        {key === '⌫' ? <Delete className="w-5 h-5 mx-auto" /> : key}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="px-1 space-y-2">
                     <button
-                      onClick={handleCreateQrSession}
-                      disabled={!qrSessionAmount || parseFloat(qrSessionAmount) <= 0 || createQrSessionMutation.isPending}
-                      className="w-full bg-primary text-white py-3 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                      onClick={handlePosCollect}
+                      disabled={posAmountNum <= 0 || posPreviewMutation.isPending}
+                      className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:bg-green-700 disabled:opacity-50 disabled:active:bg-green-600"
                     >
-                      {createQrSessionMutation.isPending ? (
+                      {posPreviewMutation.isPending ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
                         <>
-                          <QrCode className="w-5 h-5" />
-                          Generează QR de Plată
+                          <Camera className="w-5 h-5" /> Încasează {posAmountNum > 0 ? `${(posAmountNum + posTipAmount).toFixed(2)} RON` : ''}
                         </>
                       )}
                     </button>
-                    {createQrSessionMutation.isError && (
-                      <div className="bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-xl text-sm">
-                        {(createQrSessionMutation.error as Error)?.message}
-                      </div>
-                    )}
-                  </>
-                )}
-              </section>
 
-              <section className="bg-white rounded-2xl p-4 border border-gray-100 space-y-4">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <Scan className="w-5 h-5 text-primary" />
-                  Scanează & Acceptă Plata
-                </h3>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={paymentCode}
-                    onChange={(e) => setPaymentCode(e.target.value)}
-                    placeholder="Cod plată (ex: EATOFF_PAY:123)"
-                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <button
-                    onClick={() => startQRScanner((val) => {
-                      setPaymentCode(val);
-                      const match = val.match(/EATOFF_PAY:(\S+)/);
-                      const txId = match ? match[1] : val.trim();
-                      fetchPaymentMutation.mutate(txId);
-                    })}
-                    className="bg-gray-900 text-white p-3 rounded-xl"
-                  >
-                    <Camera className="w-5 h-5" />
-                  </button>
-                </div>
-                <button
-                  onClick={handleLookupPayment}
-                  disabled={!paymentCode.trim() || fetchPaymentMutation.isPending}
-                  className="w-full bg-primary text-white py-3 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {fetchPaymentMutation.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <QrCode className="w-5 h-5" />
-                      Caută Tranzacția
-                    </>
+                    <button
+                      onClick={handlePosReset}
+                      className="w-full py-2.5 rounded-xl text-red-500 font-medium text-sm"
+                    >
+                      Anulează
+                    </button>
+                  </div>
+
+                  {posError && (
+                    <div className="mx-1 bg-red-50 text-red-700 border border-red-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                      <XCircle className="w-4 h-4 flex-shrink-0" /> {posError}
+                    </div>
                   )}
-                </button>
 
-                {paymentActionResult && (
-                  <div className={cn(
-                    "px-4 py-3 rounded-xl text-sm flex items-center gap-2",
-                    paymentActionResult.type === 'success' ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
-                  )}>
-                    {paymentActionResult.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                    {paymentActionResult.message}
+                  <div className="px-1 flex items-center justify-center gap-2 text-xs text-gray-400 pt-2">
+                    <Lock className="w-3 h-3" />
+                    <span>Dispozitiv conectat securizat</span>
+                    <span>·</span>
+                    <span>Ultima sincronizare: {new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                )}
 
-                {paymentDetails && (
-                  <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Users className="w-6 h-6 text-primary" />
+                  {transactions.length > 0 && (
+                    <div className="px-1 space-y-2 pt-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-500 font-medium">Ultimele tranzacții</p>
+                        <button onClick={() => setPosStep('history')} className="text-xs text-primary font-medium">
+                          Vezi toate
+                        </button>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{paymentDetails.customerName || 'Client'}</p>
-                        <p className="text-xs text-gray-500">{paymentDetails.timestamp ? new Date(paymentDetails.timestamp).toLocaleString('ro-RO') : ''}</p>
-                      </div>
+                      {transactions.slice(0, 5).map((tx: any) => {
+                        const st = tx.transactionStatus || 'pending';
+                        return (
+                          <div key={tx.id} className="flex items-center justify-between py-1.5">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", st === 'completed' ? 'bg-green-500' : st === 'rejected' ? 'bg-red-500' : 'bg-amber-500')} />
+                              <span className="text-xs text-gray-600 truncate">{tx.customerName || `#${tx.customerId}`}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400">{new Date(tx.createdAt).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-xs font-semibold text-gray-900">{parseFloat(tx.amount || '0').toFixed(2)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="bg-white rounded-xl p-3 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 text-sm">Sumă totală</span>
-                        <span className="font-bold text-gray-900">{paymentDetails.amount} RON</span>
-                      </div>
-                      {paymentDetails.paymentMethod && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 text-sm">Metodă</span>
-                          <span className="text-gray-700 text-sm">{paymentDetails.paymentMethod}</span>
-                        </div>
-                      )}
-                      {paymentDetails.voucherValue && parseFloat(paymentDetails.voucherValue) > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 text-sm">Voucher</span>
-                          <span className="text-green-600 text-sm">-{paymentDetails.voucherValue} RON</span>
-                        </div>
-                      )}
-                      {paymentDetails.cashUsed && parseFloat(paymentDetails.cashUsed) > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 text-sm">Cash</span>
-                          <span className="text-gray-700 text-sm">{paymentDetails.cashUsed} RON</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          const match = paymentCode.match(/EATOFF_PAY:(\S+)/);
-                          const txId = match ? match[1] : paymentCode.trim();
-                          acceptPaymentMutation.mutate(txId);
-                        }}
-                        disabled={acceptPaymentMutation.isPending}
-                        className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-green-700 disabled:opacity-50"
-                      >
-                        {acceptPaymentMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check className="w-5 h-5" /> Acceptă Plata</>}
-                      </button>
-                      <button
-                        onClick={() => {
-                          const match = paymentCode.match(/EATOFF_PAY:(\S+)/);
-                          const txId = match ? match[1] : paymentCode.trim();
-                          rejectPaymentMutation.mutate(txId);
-                        }}
-                        disabled={rejectPaymentMutation.isPending}
-                        className="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-red-700 disabled:opacity-50"
-                      >
-                        {rejectPaymentMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><X className="w-5 h-5" /> Respinge</>}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              <section className="bg-white rounded-2xl p-4 border border-gray-100 space-y-4">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <Send className="w-5 h-5 text-primary" />
-                  Solicită Plată de la Client
-                </h3>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customerCode}
-                    onChange={(e) => setCustomerCode(e.target.value)}
-                    placeholder="Cod client (ex: CLI-ABC123)"
-                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <button
-                    onClick={() => startQRScanner((val) => setCustomerCode(val))}
-                    className="bg-gray-900 text-white p-3 rounded-xl"
-                  >
-                    <Camera className="w-5 h-5" />
-                  </button>
-                </div>
-                <input
-                  type="number"
-                  value={requestAmount}
-                  onChange={(e) => setRequestAmount(e.target.value)}
-                  placeholder="Sumă (RON)"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                <button
-                  onClick={handleSendPaymentRequest}
-                  disabled={!customerCode.trim() || !requestAmount.trim() || sendPaymentRequestMutation.isPending}
-                  className="w-full bg-primary text-white py-3 rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {sendPaymentRequestMutation.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      Trimite Solicitare de Plată
-                    </>
                   )}
-                </button>
-
-                {requestResult && (
-                  <div className={cn(
-                    "px-4 py-3 rounded-xl text-sm flex items-center gap-2",
-                    requestResult.type === 'success' ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
-                  )}>
-                    {requestResult.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                    {requestResult.message}
-                  </div>
-                )}
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" />
-                  Istoric Tranzacții
-                </h3>
-                {transactionsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  </div>
-                ) : transactions.length === 0 ? (
-                  <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-                    <CreditCard className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500">Nicio tranzacție încă</p>
-                  </div>
-                ) : (
-                  transactions.slice(0, 20).map((tx: any) => {
-                    const status = tx.transactionStatus || tx.status || 'pending';
-                    const statusColor = status === 'completed' ? 'bg-green-100 text-green-700' : status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
-                    const statusLabel = status === 'completed' ? 'Finalizat' : status === 'rejected' ? 'Respins' : 'În așteptare';
-                    return (
-                      <div key={tx.id} className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{tx.customerName || `Client #${tx.customerId}`}</p>
-                          <p className="text-xs text-gray-500">{new Date(tx.createdAt || tx.processedAt).toLocaleString('ro-RO')}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={cn("px-2 py-1 rounded-full text-xs font-medium", statusColor)}>{statusLabel}</span>
-                          <span className="font-bold text-gray-900 whitespace-nowrap">{parseFloat(tx.amount || tx.restaurantReceives || '0').toFixed(2)} RON</span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </section>
+                </div>
+              )}
             </>
           )}
 

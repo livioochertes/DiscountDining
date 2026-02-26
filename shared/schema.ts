@@ -635,6 +635,9 @@ export const paymentTransactions = pgTable("payment_transactions", {
   voucherId: integer("voucher_id").references(() => purchasedVouchers.id),
   generalVoucherId: integer("general_voucher_id").references(() => customerGeneralVouchers.id),
   
+  // Tip tracking
+  tipAmount: decimal("tip_amount", { precision: 10, scale: 2 }).default("0.00"),
+  
   // Verification and processing
   processedAt: timestamp("processed_at"),
   verifiedBy: integer("verified_by"), // restaurant staff ID who verified
