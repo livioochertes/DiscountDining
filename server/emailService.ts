@@ -212,6 +212,11 @@ export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Prom
     return true;
   }
 
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('EATOFF:' + redeemCode)}&margin=10&format=png`;
+
+  const playStoreLink = '#';
+  const appStoreLink = '#';
+
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
       <div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); padding: 40px 30px; text-align: center;">
@@ -238,6 +243,11 @@ export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Prom
           ${giftType === 'product' ? `<p style="color: #555; margin: 5px 0 0 0; font-size: 14px;">${menuItemName} — ${restaurantName}</p>` : ''}
         </div>
 
+        <div style="text-align: center; margin: 30px 0;">
+          <p style="color: #888; margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Scanează codul QR pentru revendicare</p>
+          <img src="${qrCodeUrl}" alt="QR Code: ${redeemCode}" width="200" height="200" style="display: block; margin: 0 auto; border-radius: 8px;" />
+        </div>
+
         <div style="background: #f0f0f0; border-radius: 8px; padding: 15px; text-align: center; margin: 25px 0;">
           <p style="color: #888; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Codul tău de revendicare</p>
           <h2 style="color: #333; font-size: 28px; letter-spacing: 3px; margin: 0; font-family: monospace;">${redeemCode}</h2>
@@ -250,8 +260,26 @@ export async function sendGiftVoucherEmail(params: GiftVoucherEmailParams): Prom
         </div>
 
         <p style="color: #999; font-size: 13px; line-height: 1.6; text-align: center;">
-          Descarcă aplicația EatOff sau accesează contul tău pentru a revendica cadoul. Cadoul expiră în 30 de zile.
+          Descarcă aplicația EatOff pentru a revendica cadoul. Cadoul expiră în 30 de zile.
         </p>
+
+        <div style="text-align: center; margin: 25px 0 10px 0;">
+          <p style="color: #888; font-size: 12px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">Descarcă aplicația</p>
+          <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+            <tr>
+              <td style="padding-right: 10px;">
+                <a href="${playStoreLink}" style="text-decoration: none;">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" height="44" style="height: 44px; border-radius: 6px;" />
+                </a>
+              </td>
+              <td style="padding-left: 10px;">
+                <a href="${appStoreLink}" style="text-decoration: none;">
+                  <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="App Store" height="44" style="height: 44px; border-radius: 6px;" />
+                </a>
+              </td>
+            </tr>
+          </table>
+        </div>
 
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
           <p style="color: #bbb; font-size: 11px; margin: 0;">
