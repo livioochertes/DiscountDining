@@ -55,6 +55,19 @@ export function WalletCard({
   const formatAmount = (amount: number) => {
     return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
+
+  const formatSplitAmount = (amount: number, mainClass: string, smallClass: string) => {
+    const formatted = amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const dotIndex = formatted.lastIndexOf('.');
+    const intPart = formatted.substring(0, dotIndex);
+    const decPart = formatted.substring(dotIndex);
+    return (
+      <>
+        <span className={mainClass}>{intPart}</span>
+        <span className={smallClass}>{decPart} RON</span>
+      </>
+    );
+  };
   
   const displayCode = customerCode || 'CLI-000000';
   const displayName = userName || 'Member';
@@ -87,7 +100,9 @@ export function WalletCard({
         {!isGuest && (
           <div className="mb-6">
             <p className="text-white/70 text-sm font-medium mb-1">Available Balance</p>
-            <p className="text-4xl font-bold tracking-tight">{formatAmount(balance)} RON</p>
+            <p className="font-bold tracking-tight items-baseline">
+              {formatSplitAmount(balance, "text-4xl", "text-xl text-white/80")}
+            </p>
           </div>
         )}
 
@@ -96,7 +111,9 @@ export function WalletCard({
           <div className="flex items-center gap-6 mb-6">
             <div>
               <p className="text-white/60 text-xs">Cashback</p>
-              <p className="text-lg font-semibold">{formatAmount(cashback)} RON</p>
+              <p className="font-semibold items-baseline">
+                {formatSplitAmount(cashback, "text-lg", "text-[10px] text-white/70")}
+              </p>
             </div>
             <div className="h-8 w-px bg-white/20" />
             <div>
@@ -108,7 +125,9 @@ export function WalletCard({
                 <div className="h-8 w-px bg-white/20" />
                 <div>
                   <p className="text-white/60 text-xs">Credit</p>
-                  <p className="text-lg font-semibold">{formatAmount(creditAvailable)} RON</p>
+                  <p className="font-semibold items-baseline">
+                    {formatSplitAmount(creditAvailable, "text-lg", "text-[10px] text-white/70")}
+                  </p>
                 </div>
               </>
             )}

@@ -422,19 +422,28 @@ export default function MobileWallet() {
               {t.walletAddMoney || 'Adaugă bani'}
             </button>
           </div>
-          <p className="text-4xl font-bold tracking-tight mb-4">
-            {(
-              parseFloat(walletOverview?.personalBalance || '0') +
-              parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0') +
-              (walletOverview?.credit?.status === 'approved' ? parseFloat(walletOverview?.credit?.availableCredit || '0') : 0)
-            ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RON
+          <p className="font-bold tracking-tight mb-4 items-baseline">
+            {(() => {
+              const total = parseFloat(walletOverview?.personalBalance || '0') +
+                parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0') +
+                (walletOverview?.credit?.status === 'approved' ? parseFloat(walletOverview?.credit?.availableCredit || '0') : 0);
+              const formatted = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              const dotIndex = formatted.lastIndexOf('.');
+              return (
+                <>
+                  <span className="text-4xl">{formatted.substring(0, dotIndex)}</span>
+                  <span className="text-xl text-white/80">{formatted.substring(dotIndex)} RON</span>
+                </>
+              );
+            })()}
           </p>
           
           <div className="grid grid-cols-4 gap-3">
             <div>
               <p className="text-white/50 text-xs">{t.walletPersonal || 'Personal'}</p>
-              <p className="text-lg font-semibold text-blue-400">
-                {parseFloat(walletOverview?.personalBalance || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} RON
+              <p className="font-semibold text-blue-400 items-baseline">
+                <span className="text-lg">{parseFloat(walletOverview?.personalBalance || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                <span className="text-[10px] text-blue-400/70"> RON</span>
               </p>
             </div>
             <div>
@@ -443,8 +452,9 @@ export default function MobileWallet() {
             </div>
             <div>
               <p className="text-white/50 text-xs">{t.walletCashback || 'Cashback'}</p>
-              <p className="text-lg font-semibold text-green-400">
-                {parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} RON
+              <p className="font-semibold text-green-400 items-baseline">
+                <span className="text-lg">{parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                <span className="text-[10px] text-green-400/70"> RON</span>
               </p>
             </div>
             <div>
@@ -454,7 +464,8 @@ export default function MobileWallet() {
                 walletOverview?.credit?.status === 'approved' ? "text-white" : "text-red-400"
               )}>
                 {walletOverview?.credit?.status === 'approved' 
-                  ? `${parseFloat(walletOverview?.credit?.availableCredit || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} RON`
+                  ? <><span className="text-lg">{parseFloat(walletOverview?.credit?.availableCredit || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span><span className="text-[10px] text-white/70"> RON</span></>
+
                   : walletOverview?.credit?.status === 'pending'
                     ? (t.walletPending || 'Așteptare')
                     : (t.walletNotRequested || 'N/A')
