@@ -1183,6 +1183,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reverse Geocoding Proxy - converts GPS coordinates to address using Nominatim (free, no API key)
+  const geocodeCache = new Map<string, { data: any; timestamp: number }>();
+  const GEOCODE_CACHE_TTL = 30 * 60 * 1000;
+
   app.get("/api/reverse-geocode", async (req, res) => {
     try {
       const { lat, lng } = req.query;
@@ -1198,9 +1201,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid coordinates' });
       }
 
-      console.log('[Reverse Geocode] Looking up:', latitude, longitude);
+      const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+      const cached = geocodeCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < GEOCODE_CACHE_TTL) {
+        return res.json(cached.data);
+      }
 
-      // Use Nominatim (OpenStreetMap) for reverse geocoding - free and reliable
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`;
       
       const response = await fetch(url, {
@@ -1210,24 +1216,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!response.ok) {
-        console.error('[Reverse Geocode] Nominatim error:', response.status);
         return res.status(500).json({ error: 'Geocoding service error' });
       }
 
       const data = await response.json();
       
-      // Extract the most specific locality from the address
       const address = data.address || {};
       const locality = address.village || address.town || address.city || address.municipality || address.county || null;
       const country = address.country || null;
       const countryCode = address.country_code?.toUpperCase() || null;
-      
-      console.log('[Reverse Geocode] Found:', locality, '-', country);
 
-      res.json({
+      const result = {
         locality,
         country,
         countryCode,
+        city: address.city || address.town || address.municipality || address.village || null,
         displayName: data.display_name,
         address: {
           village: address.village,
@@ -1239,9 +1242,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           country: address.country,
           countryCode: address.country_code
         }
-      });
+      };
+
+      geocodeCache.set(cacheKey, { data: result, timestamp: Date.now() });
+
+      res.json(result);
     } catch (error: any) {
-      console.error('[Reverse Geocode] Server error:', error);
       res.status(500).json({ error: 'Failed to reverse geocode' });
     }
   });

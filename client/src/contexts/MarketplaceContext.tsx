@@ -36,25 +36,16 @@ const LOCATION_CHECK_INTERVAL = 10 * 60 * 1000;
 async function reverseGeocode(lat: number, lng: number): Promise<{ country: string; countryCode: string } | null> {
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=3&addressdetails=1`,
-      {
-        headers: {
-          'User-Agent': 'EatOff/1.0'
-        }
-      }
+      `${API_BASE_URL}/api/reverse-geocode?lat=${lat}&lng=${lng}`
     );
-    
-    if (response.status === 429) {
-      return null;
-    }
     
     if (!response.ok) {
       return null;
     }
     
     const data = await response.json();
-    const country = data.address?.country;
-    const countryCode = data.address?.country_code?.toUpperCase();
+    const country = data.country;
+    const countryCode = data.countryCode;
     
     if (country && countryCode) {
       return { country, countryCode };
@@ -284,18 +275,14 @@ export function MarketplaceProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(storedMarketplace);
         setMarketplace(parsed);
         setIsLoading(false);
-        fetchMarketplaces().then((mps) => {
-          if (mps.length > 0 && parsed) {
-            checkLocationMismatch(parsed, mps);
-          }
-        });
+        fetchMarketplaces();
       } catch {
         detectLocationAndSetMarketplace();
       }
     } else {
       detectLocationAndSetMarketplace();
     }
-  }, [detectLocationAndSetMarketplace, fetchMarketplaces, checkLocationMismatch]);
+  }, [detectLocationAndSetMarketplace, fetchMarketplaces]);
 
   return (
     <MarketplaceContext.Provider value={{

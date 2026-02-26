@@ -7,11 +7,11 @@ export function useAuth() {
     queryKey: ["/api/auth/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
-    staleTime: 0, // Always refetch to get latest auth state
+    staleTime: 30 * 1000,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    refetchInterval: false, // Disable background refetching for faster manual updates
-    gcTime: 0, // Clear from cache immediately when stale
+    refetchInterval: false,
+    gcTime: 5 * 60 * 1000,
   });
 
   return {

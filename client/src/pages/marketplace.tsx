@@ -621,7 +621,7 @@ export default function Marketplace() {
         try {
           const { latitude, longitude } = position.coords;
           const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`
+            `/api/reverse-geocode?lat=${latitude}&lng=${longitude}`
           );
           
           if (!response.ok) {
@@ -629,7 +629,7 @@ export default function Marketplace() {
           }
           
           const data = await response.json();
-          const city = data.address?.city || data.address?.town || data.address?.municipality || data.address?.village;
+          const city = data.locality || data.address?.city || data.address?.town || data.address?.municipality;
           
           if (city) {
             const matchedLocation = availableLocations.find(loc => 
