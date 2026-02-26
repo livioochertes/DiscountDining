@@ -796,8 +796,8 @@ export default function MobileRestaurantDashboard() {
                   onClick={() => setActiveTab('payments')}
                   className="flex-1 bg-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
                 >
-                  <Scan className="w-5 h-5" />
-                  Scanează Plată
+                  <DollarSign className="w-5 h-5" />
+                  Plăți
                 </button>
                 <button
                   onClick={() => setShowScanner(true)}
