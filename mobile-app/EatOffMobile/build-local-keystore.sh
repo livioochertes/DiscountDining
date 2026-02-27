@@ -16,20 +16,27 @@ if ! command -v keytool &> /dev/null; then
     fi
 fi
 
+# Require keystore password from environment
+if [ -z "$KEYSTORE_PASSWORD" ]; then
+  echo "Error: KEYSTORE_PASSWORD environment variable is not set."
+  echo "Set it before running this script: export KEYSTORE_PASSWORD=<your-password>"
+  exit 1
+fi
+
 # Generate local keystore
 echo "Generating local keystore..."
-keytool -genkeypair -v -keystore eatoff-release-key.keystore -alias eatoff-key-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass eatoff123 -keypass eatoff123 -dname "CN=EatOff, OU=Mobile, O=EatOff, L=City, ST=State, C=US"
+keytool -genkeypair -v -keystore eatoff-release-key.keystore -alias eatoff-key-alias -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" -dname "CN=EatOff, OU=Mobile, O=EatOff, L=City, ST=State, C=US"
 
 # Create credentials.json for local keystore
 echo "Creating credentials configuration..."
-cat > credentials.json << 'EOF'
+cat > credentials.json << EOF
 {
   "android": {
     "keystore": {
       "keystorePath": "./eatoff-release-key.keystore",
-      "keystorePassword": "eatoff123",
+      "keystorePassword": "$KEYSTORE_PASSWORD",
       "keyAlias": "eatoff-key-alias",
-      "keyPassword": "eatoff123"
+      "keyPassword": "$KEYSTORE_PASSWORD"
     }
   }
 }
