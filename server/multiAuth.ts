@@ -715,13 +715,7 @@ export async function setupMultiAuth(app: Express) {
             redirectUri: redirectUri
           });
           
-          console.log('[Apple OAuth] Token response received:', JSON.stringify({
-            hasIdToken: !!tokenResponse?.id_token,
-            hasAccessToken: !!tokenResponse?.access_token,
-            hasRefreshToken: !!tokenResponse?.refresh_token,
-            error: tokenResponse?.error || 'none',
-            errorDescription: tokenResponse?.error_description || 'none'
-          }));
+
         } catch (tokenError: any) {
           console.error('[Apple OAuth] Token exchange error:', tokenError.message);
           console.error('[Apple OAuth] Token exchange full error:', JSON.stringify(tokenError, null, 2));
