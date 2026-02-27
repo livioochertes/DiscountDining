@@ -335,7 +335,6 @@ export async function setupMultiAuth(app: Express) {
     console.log('APPLE_CLIENT_ID:', !!process.env.APPLE_CLIENT_ID);
     console.log('APPLE_TEAM_ID:', !!process.env.APPLE_TEAM_ID);
     console.log('APPLE_KEY_ID:', !!process.env.APPLE_KEY_ID);
-    console.log('APPLE_PRIVATE_KEY:', !!process.env.APPLE_PRIVATE_KEY);
   }
 
   passport.serializeUser((user: any, cb) => {
