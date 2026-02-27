@@ -1351,7 +1351,6 @@ export class MemStorage implements IStorage {
     });
 
     // Seed a demo customer with enhanced profile and hashed password
-    // Pre-computed bcrypt hash for 'DemoPassword123!' with salt rounds 10
     const hashedPassword = '$2b$10$QgLOwSB7TjMx640H0Kguu.WAMrNr32Z0xgMfY0HHn0bzJIy/Fwfbi';
     
     const customer: Customer = {
