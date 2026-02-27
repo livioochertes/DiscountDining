@@ -172,7 +172,6 @@ export function registerAdminRoutes(app: Express) {
 
       // Verify password
       const passwordValid = await bcrypt.compare(password, admin.passwordHash);
-      console.log('Password valid:', passwordValid);
       if (!passwordValid) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
