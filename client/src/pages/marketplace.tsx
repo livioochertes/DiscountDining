@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket, MapPin, Filter, User, Clock, Percent, X, Navigation, Search, Loader2, Heart, SlidersHorizontal, Flame, LogIn } from "lucide-react";
+import { TrendingUp, ChefHat, Star, ArrowRight, Store, Brain, Ticket, MapPin, Filter, User, Clock, Percent, X, Navigation, Search, Loader2, Heart, SlidersHorizontal, Flame, LogIn, Edit2, Save, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import RestaurantCard from "@/components/restaurant-card";
@@ -20,9 +20,11 @@ import { AIAssistant } from "@/components/AIAssistant";
 import { AIRecommendations } from "@/components/AIRecommendations";
 
 import { api, type RestaurantFilters } from "@/lib/api";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Restaurant } from "@shared/schema";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { imageCache } from "@/lib/imageCache";
 import { optimizeImageUrl } from "@/lib/imageOptimizer";
 import { instantImageLoader } from "@/lib/instantImageLoader";
@@ -278,6 +280,119 @@ export default function Marketplace() {
     enabled: isAuthenticated,
   });
   
+  // State for dietary profile editing in AI Menu
+  const { toast } = useToast();
+  const [profileCardExpanded, setProfileCardExpanded] = useState(true);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editDietaryTab, setEditDietaryTab] = useState<'basic' | 'goals' | 'preferences' | 'nutrition'>('basic');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+  const [editProfile, setEditProfile] = useState<any>({
+    age: '', gender: '', height: '', weight: '',
+    activityLevel: '', healthGoal: '', targetWeight: '',
+    budgetRange: '', diningFrequency: '',
+    dietaryPreferences: [] as string[], allergies: [] as string[], preferredCuisines: [] as string[],
+    calorieTarget: '', proteinTarget: '', carbTarget: '', fatTarget: '',
+  });
+
+  const startEditingProfile = () => {
+    if (userDietaryProfile) {
+      setEditProfile({
+        age: userDietaryProfile.age?.toString() || '',
+        gender: userDietaryProfile.gender || '',
+        height: userDietaryProfile.height?.toString() || '',
+        weight: userDietaryProfile.weight?.toString() || '',
+        activityLevel: userDietaryProfile.activityLevel || '',
+        healthGoal: userDietaryProfile.healthGoal || '',
+        targetWeight: userDietaryProfile.targetWeight?.toString() || '',
+        budgetRange: userDietaryProfile.budgetRange || '',
+        diningFrequency: userDietaryProfile.diningFrequency || '',
+        dietaryPreferences: userDietaryProfile.dietaryPreferences || [],
+        allergies: userDietaryProfile.allergies || [],
+        preferredCuisines: userDietaryProfile.preferredCuisines || [],
+        calorieTarget: userDietaryProfile.calorieTarget?.toString() || '',
+        proteinTarget: userDietaryProfile.proteinTarget?.toString() || '',
+        carbTarget: userDietaryProfile.carbTarget?.toString() || '',
+        fatTarget: userDietaryProfile.fatTarget?.toString() || '',
+      });
+    }
+    setEditDietaryTab('basic');
+    setIsEditingProfile(true);
+  };
+
+  const toggleEditArray = (field: string, value: string) => {
+    setEditProfile((prev: any) => ({
+      ...prev,
+      [field]: prev[field].includes(value)
+        ? prev[field].filter((v: string) => v !== value)
+        : [...prev[field], value]
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      await apiRequest('POST', '/api/dietary/profile', {
+        age: editProfile.age ? parseInt(editProfile.age) : undefined,
+        gender: editProfile.gender || undefined,
+        height: editProfile.height ? parseInt(editProfile.height) : undefined,
+        weight: editProfile.weight ? parseFloat(editProfile.weight) : undefined,
+        activityLevel: editProfile.activityLevel || undefined,
+        healthGoal: editProfile.healthGoal || undefined,
+        targetWeight: editProfile.targetWeight ? parseFloat(editProfile.targetWeight) : undefined,
+        budgetRange: editProfile.budgetRange || undefined,
+        diningFrequency: editProfile.diningFrequency || undefined,
+        dietaryPreferences: editProfile.dietaryPreferences,
+        allergies: editProfile.allergies,
+        preferredCuisines: editProfile.preferredCuisines,
+        calorieTarget: editProfile.calorieTarget ? parseInt(editProfile.calorieTarget) : undefined,
+        proteinTarget: editProfile.proteinTarget ? parseInt(editProfile.proteinTarget) : undefined,
+        carbTarget: editProfile.carbTarget ? parseInt(editProfile.carbTarget) : undefined,
+        fatTarget: editProfile.fatTarget ? parseInt(editProfile.fatTarget) : undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/dietary/profile'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dietary/recommendations'] });
+      setIsEditingProfile(false);
+      setProfileSaveSuccess(true);
+      setTimeout(() => setProfileSaveSuccess(false), 3000);
+    } catch (error: any) {
+      toast({ title: t.errorSaving || 'Error saving preferences', variant: 'destructive' });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const dietaryEditOptions = [
+    { key: 'vegetarian', label: 'Vegetarian' }, { key: 'vegan', label: 'Vegan' },
+    { key: 'pescatarian', label: 'Pescatarian' }, { key: 'keto', label: 'Ketogenic' },
+    { key: 'paleo', label: 'Paleo' }, { key: 'mediterranean', label: 'Mediterranean' },
+    { key: 'gluten_free', label: 'Gluten-Free' }, { key: 'dairy_free', label: 'Dairy-Free' },
+    { key: 'low_carb', label: 'Low Carb' }, { key: 'high_protein', label: 'High Protein' },
+  ];
+  const allergyEditOptions = [
+    { key: 'nuts', label: 'Tree Nuts' }, { key: 'peanuts', label: 'Peanuts' },
+    { key: 'dairy', label: 'Dairy' }, { key: 'gluten', label: 'Gluten' },
+    { key: 'shellfish', label: 'Shellfish' }, { key: 'fish', label: 'Fish' },
+    { key: 'eggs', label: 'Eggs' }, { key: 'soy', label: 'Soy' }, { key: 'sesame', label: 'Sesame' },
+  ];
+  const cuisineEditOptions = [
+    { key: 'italian', label: 'Italian' }, { key: 'chinese', label: 'Chinese' },
+    { key: 'mexican', label: 'Mexican' }, { key: 'indian', label: 'Indian' },
+    { key: 'japanese', label: 'Japanese' }, { key: 'thai', label: 'Thai' },
+    { key: 'mediterranean', label: 'Mediterranean' }, { key: 'american', label: 'American' },
+    { key: 'french', label: 'French' }, { key: 'korean', label: 'Korean' },
+    { key: 'greek', label: 'Greek' }, { key: 'spanish', label: 'Spanish' },
+  ];
+
+  const labelMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    dietaryEditOptions.forEach(o => { map[o.key] = o.label; });
+    allergyEditOptions.forEach(o => { map[o.key] = o.label; });
+    cuisineEditOptions.forEach(o => { map[o.key] = o.label; });
+    return map;
+  }, []);
+  const getLabel = (key: string) => labelMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
   // State for recommendation modal
   const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
   const [showRecommendationModal, setShowRecommendationModal] = useState(false);
@@ -1324,6 +1439,328 @@ export default function Marketplace() {
             {/* AI Menu Tab Content */}
             {activeTab === 'ai-menu' && (
               <div className="py-8">
+                {/* Dietary Profile Card */}
+                {isAuthenticated && useDietaryProfile && userDietaryProfile && (
+                  <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <button
+                      onClick={() => setProfileCardExpanded(!profileCardExpanded)}
+                      className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <User className="w-4.5 h-4.5 text-primary" />
+                        <span className="font-semibold text-sm">{t.myDietaryProfile || 'Profilul Meu Dietetic'}</span>
+                        {profileSaveSuccess && (
+                          <span className="flex items-center gap-1 text-xs text-green-600"><Check className="w-3.5 h-3.5" />{t.saved || 'Salvat!'}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!isEditingProfile && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); startEditingProfile(); setProfileCardExpanded(true); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            {t.editProfile || 'Editează'}
+                          </button>
+                        )}
+                        {profileCardExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                      </div>
+                    </button>
+
+                    {profileCardExpanded && !isEditingProfile && (
+                      <div className="px-5 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
+                          {userDietaryProfile.age && (
+                            <div className="text-center p-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                              <p className="text-[11px] text-gray-400 uppercase tracking-wide">{t.age || 'Vârstă'}</p>
+                              <p className="font-semibold text-sm">{userDietaryProfile.age} {t.years || 'ani'}</p>
+                            </div>
+                          )}
+                          {userDietaryProfile.gender && (
+                            <div className="text-center p-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                              <p className="text-[11px] text-gray-400 uppercase tracking-wide">{t.gender || 'Gen'}</p>
+                              <p className="font-semibold text-sm capitalize">{userDietaryProfile.gender}</p>
+                            </div>
+                          )}
+                          {userDietaryProfile.height && (
+                            <div className="text-center p-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                              <p className="text-[11px] text-gray-400 uppercase tracking-wide">{t.height || 'Înălțime'}</p>
+                              <p className="font-semibold text-sm">{userDietaryProfile.height} cm</p>
+                            </div>
+                          )}
+                          {userDietaryProfile.weight && (
+                            <div className="text-center p-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                              <p className="text-[11px] text-gray-400 uppercase tracking-wide">{t.weight || 'Greutate'}</p>
+                              <p className="font-semibold text-sm">{userDietaryProfile.weight} kg</p>
+                            </div>
+                          )}
+                          {userDietaryProfile.activityLevel && (
+                            <div className="text-center p-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
+                              <p className="text-[11px] text-gray-400 uppercase tracking-wide">{t.activityLevel || 'Activitate'}</p>
+                              <p className="font-semibold text-sm capitalize">{userDietaryProfile.activityLevel?.replace(/_/g, ' ')}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {userDietaryProfile.healthGoal && (
+                          <div className="mb-3">
+                            <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{t.healthGoal || 'Obiectiv'}</p>
+                            <Badge variant="outline" className="text-xs capitalize">{userDietaryProfile.healthGoal?.replace(/_/g, ' ')}</Badge>
+                            {userDietaryProfile.targetWeight && <span className="ml-2 text-xs text-gray-500">→ {userDietaryProfile.targetWeight} kg</span>}
+                          </div>
+                        )}
+
+                        {userDietaryProfile.dietaryPreferences?.length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{t.dietaryPreferences || 'Preferințe'}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {userDietaryProfile.dietaryPreferences.map((p: string) => (
+                                <Badge key={p} className="text-[11px] bg-primary/10 text-primary border-primary/20">{getLabel(p)}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {userDietaryProfile.allergies?.length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{t.allergies || 'Alergii'}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {userDietaryProfile.allergies.map((a: string) => (
+                                <Badge key={a} variant="destructive" className="text-[11px]">{getLabel(a)}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {userDietaryProfile.preferredCuisines?.length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{t.preferredCuisines || 'Bucătării preferate'}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {userDietaryProfile.preferredCuisines.map((c: string) => (
+                                <Badge key={c} variant="secondary" className="text-[11px]">{getLabel(c)}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {(userDietaryProfile.budgetRange || userDietaryProfile.diningFrequency) && (
+                          <div className="mb-2 flex flex-wrap gap-3">
+                            {userDietaryProfile.budgetRange && (
+                              <span className="text-xs text-gray-500">
+                                <span className="text-[11px] text-gray-400 uppercase tracking-wide mr-1">{t.budget || 'Buget'}:</span>
+                                {userDietaryProfile.budgetRange === 'low' ? '€5-15' : userDietaryProfile.budgetRange === 'medium' ? '€15-30' : userDietaryProfile.budgetRange === 'high' ? '€30+' : userDietaryProfile.budgetRange}
+                              </span>
+                            )}
+                            {userDietaryProfile.diningFrequency && (
+                              <span className="text-xs text-gray-500">
+                                <span className="text-[11px] text-gray-400 uppercase tracking-wide mr-1">{t.frequency || 'Frecvență'}:</span>
+                                {userDietaryProfile.diningFrequency === 'rarely' ? (t.rarely || 'Rar') : userDietaryProfile.diningFrequency === 'occasionally' ? '1-2x/lună' : userDietaryProfile.diningFrequency === 'regularly' ? '1-2x/săpt.' : userDietaryProfile.diningFrequency === 'frequently' ? '3+/săpt.' : userDietaryProfile.diningFrequency}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {(userDietaryProfile.calorieTarget || userDietaryProfile.proteinTarget || userDietaryProfile.carbTarget || userDietaryProfile.fatTarget) && (
+                          <div className="mt-2 flex flex-wrap gap-3">
+                            {userDietaryProfile.calorieTarget && <span className="text-xs text-gray-500"><Flame className="w-3 h-3 inline mr-0.5" />{userDietaryProfile.calorieTarget} kcal</span>}
+                            {userDietaryProfile.proteinTarget && <span className="text-xs text-gray-500">{t.protein || 'Proteine'}: {userDietaryProfile.proteinTarget}g</span>}
+                            {userDietaryProfile.carbTarget && <span className="text-xs text-gray-500">{t.carbs || 'Carbohidrați'}: {userDietaryProfile.carbTarget}g</span>}
+                            {userDietaryProfile.fatTarget && <span className="text-xs text-gray-500">{t.fat || 'Grăsimi'}: {userDietaryProfile.fatTarget}g</span>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {profileCardExpanded && isEditingProfile && (
+                      <div className="border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex border-b border-gray-200 dark:border-gray-700">
+                          {[
+                            { id: 'basic' as const, label: t.basicInfo || 'Info de Bază' },
+                            { id: 'goals' as const, label: t.healthGoals || 'Obiective' },
+                            { id: 'preferences' as const, label: t.foodPreferences || 'Preferințe' },
+                            { id: 'nutrition' as const, label: t.nutritionTargets || 'Nutriție' },
+                          ].map((tab) => (
+                            <button
+                              key={tab.id}
+                              onClick={() => setEditDietaryTab(tab.id)}
+                              className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors ${
+                                editDietaryTab === tab.id
+                                  ? 'text-primary border-b-2 border-primary bg-primary/5'
+                                  : 'text-gray-500 hover:text-gray-700'
+                              }`}
+                            >
+                              {tab.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                          {editDietaryTab === 'basic' && (
+                            <>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.age || 'Vârstă'}</label>
+                                  <Input type="number" value={editProfile.age} onChange={(e) => setEditProfile({...editProfile, age: e.target.value})} placeholder="ex. 25" className="h-9 text-sm" />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.gender || 'Gen'}</label>
+                                  <select value={editProfile.gender} onChange={(e) => setEditProfile({...editProfile, gender: e.target.value})} className="w-full h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-sm">
+                                    <option value="">{t.select || 'Selectează'}</option>
+                                    <option value="male">{t.male || 'Masculin'}</option>
+                                    <option value="female">{t.female || 'Feminin'}</option>
+                                    <option value="other">{t.other || 'Altul'}</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.height || 'Înălțime'} (cm)</label>
+                                  <Input type="number" value={editProfile.height} onChange={(e) => setEditProfile({...editProfile, height: e.target.value})} placeholder="ex. 170" className="h-9 text-sm" />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.weight || 'Greutate'} (kg)</label>
+                                  <Input type="text" value={editProfile.weight} onChange={(e) => setEditProfile({...editProfile, weight: e.target.value})} placeholder="ex. 70" className="h-9 text-sm" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 block mb-1">{t.activityLevel || 'Nivel Activitate'}</label>
+                                <select value={editProfile.activityLevel} onChange={(e) => setEditProfile({...editProfile, activityLevel: e.target.value})} className="w-full h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-sm">
+                                  <option value="">{t.select || 'Selectează'}</option>
+                                  <option value="sedentary">{t.sedentary || 'Sedentar'}</option>
+                                  <option value="lightly_active">{t.lightlyActive || 'Ușor Activ'}</option>
+                                  <option value="moderately_active">{t.moderatelyActive || 'Moderat Activ'}</option>
+                                  <option value="very_active">{t.veryActive || 'Foarte Activ'}</option>
+                                  <option value="extremely_active">{t.extremelyActive || 'Extrem de Activ'}</option>
+                                </select>
+                              </div>
+                            </>
+                          )}
+
+                          {editDietaryTab === 'goals' && (
+                            <>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.healthGoal || 'Obiectiv Sănătate'}</label>
+                                  <select value={editProfile.healthGoal} onChange={(e) => setEditProfile({...editProfile, healthGoal: e.target.value})} className="w-full h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-sm">
+                                    <option value="">{t.select || 'Selectează'}</option>
+                                    <option value="weight_loss">{t.weightLoss || 'Pierdere Greutate'}</option>
+                                    <option value="weight_gain">{t.weightGain || 'Câștig Greutate'}</option>
+                                    <option value="muscle_gain">{t.muscleGain || 'Câștig Muscular'}</option>
+                                    <option value="maintenance">{t.maintenance || 'Menținere'}</option>
+                                    <option value="general_health">{t.generalHealth || 'Sănătate Generală'}</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.targetWeight || 'Greutate Țintă'} (kg)</label>
+                                  <Input type="text" value={editProfile.targetWeight} onChange={(e) => setEditProfile({...editProfile, targetWeight: e.target.value})} placeholder="ex. 65" className="h-9 text-sm" />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.budgetRange || 'Buget'}</label>
+                                  <select value={editProfile.budgetRange} onChange={(e) => setEditProfile({...editProfile, budgetRange: e.target.value})} className="w-full h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-sm">
+                                    <option value="">{t.select || 'Selectează'}</option>
+                                    <option value="low">€5-15</option>
+                                    <option value="medium">€15-30</option>
+                                    <option value="high">€30+</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.diningFrequency || 'Frecvență'}</label>
+                                  <select value={editProfile.diningFrequency} onChange={(e) => setEditProfile({...editProfile, diningFrequency: e.target.value})} className="w-full h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-sm">
+                                    <option value="">{t.select || 'Selectează'}</option>
+                                    <option value="rarely">{t.rarely || 'Rar'}</option>
+                                    <option value="occasionally">1-2x/lună</option>
+                                    <option value="regularly">1-2x/săpt.</option>
+                                    <option value="frequently">3+/săpt.</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {editDietaryTab === 'preferences' && (
+                            <>
+                              <div>
+                                <label className="text-xs font-medium text-gray-600 block mb-2">{t.dietaryPreferences || 'Preferințe Dietetice'}</label>
+                                <div className="flex flex-wrap gap-2">
+                                  {dietaryEditOptions.map((opt) => (
+                                    <button key={opt.key} type="button" onClick={() => toggleEditArray('dietaryPreferences', opt.key)}
+                                      className={`px-3 py-1.5 border rounded-full text-xs transition-colors ${
+                                        editProfile.dietaryPreferences.includes(opt.key)
+                                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                                          : 'border-gray-200 hover:border-primary'
+                                      }`}
+                                    >{opt.label}</button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-600 block mb-2">{t.allergies || 'Alergii'}</label>
+                                <div className="flex flex-wrap gap-2">
+                                  {allergyEditOptions.map((opt) => (
+                                    <button key={opt.key} type="button" onClick={() => toggleEditArray('allergies', opt.key)}
+                                      className={`px-3 py-1.5 border rounded-full text-xs transition-colors ${
+                                        editProfile.allergies.includes(opt.key)
+                                          ? 'border-red-400 bg-red-50 text-red-600 font-medium'
+                                          : 'border-gray-200 hover:border-red-400'
+                                      }`}
+                                    >{opt.label}</button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-600 block mb-2">{t.preferredCuisines || 'Bucătării Preferate'}</label>
+                                <div className="flex flex-wrap gap-2">
+                                  {cuisineEditOptions.map((opt) => (
+                                    <button key={opt.key} type="button" onClick={() => toggleEditArray('preferredCuisines', opt.key)}
+                                      className={`px-3 py-1.5 border rounded-full text-xs transition-colors ${
+                                        editProfile.preferredCuisines.includes(opt.key)
+                                          ? 'border-green-500 bg-green-50 text-green-600 font-medium'
+                                          : 'border-gray-200 hover:border-green-500'
+                                      }`}
+                                    >{opt.label}</button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {editDietaryTab === 'nutrition' && (
+                            <>
+                              <p className="text-xs text-gray-500">{t.nutritionTargetsDesc || 'Setează țintele zilnice pentru recomandări personalizate.'}</p>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.calories || 'Calorii'}</label>
+                                  <Input type="number" value={editProfile.calorieTarget} onChange={(e) => setEditProfile({...editProfile, calorieTarget: e.target.value})} placeholder="ex. 2000" className="h-9 text-sm" />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.protein || 'Proteine'} (g)</label>
+                                  <Input type="number" value={editProfile.proteinTarget} onChange={(e) => setEditProfile({...editProfile, proteinTarget: e.target.value})} placeholder="ex. 150" className="h-9 text-sm" />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.carbs || 'Carbohidrați'} (g)</label>
+                                  <Input type="number" value={editProfile.carbTarget} onChange={(e) => setEditProfile({...editProfile, carbTarget: e.target.value})} placeholder="ex. 250" className="h-9 text-sm" />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">{t.fat || 'Grăsimi'} (g)</label>
+                                  <Input type="number" value={editProfile.fatTarget} onChange={(e) => setEditProfile({...editProfile, fatTarget: e.target.value})} placeholder="ex. 65" className="h-9 text-sm" />
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 px-5 pb-4">
+                          <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(false)} disabled={isSavingProfile}>
+                            {t.cancel || 'Anulează'}
+                          </Button>
+                          <Button size="sm" onClick={handleSaveProfile} disabled={isSavingProfile} className="gap-1.5">
+                            {isSavingProfile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                            {t.save || 'Salvează'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {!isAuthenticated && allEnhancedRecommendations.length > 0 ? (
                   <>
                     <AIRecommendations 
