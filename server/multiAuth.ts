@@ -770,13 +770,21 @@ export async function setupMultiAuth(app: Express) {
         }
         
         // Create/update user in database
-        const userData = {
+        // Only include firstName/lastName if Apple provided them (first sign-in only)
+        const userData: any = {
           id: `apple_${appleUser.sub}`,
           email: email || null,
-          firstName: firstName,
-          lastName: lastName,
-          profileImageUrl: null // Apple doesn't provide profile photos
+          profileImageUrl: null
         };
+        if (firstName) userData.firstName = firstName;
+        if (lastName) userData.lastName = lastName;
+        
+        // Check if user already exists to avoid overwriting name with null
+        const existingUser = await storage.getUser(`apple_${appleUser.sub}`);
+        if (existingUser) {
+          if (!userData.firstName && existingUser.firstName) userData.firstName = existingUser.firstName;
+          if (!userData.lastName && existingUser.lastName) userData.lastName = existingUser.lastName;
+        }
         
         await storage.upsertUser(userData);
         console.log('[Apple OAuth] User upserted:', userData.id);
@@ -823,6 +831,16 @@ export async function setupMultiAuth(app: Express) {
                 healthConditions: []
               });
               console.log('[Apple OAuth] Customer created with ID:', customer.id);
+            }
+            
+            // Update customer name if it's still "Apple User" and we now have a real name
+            if (customer && customer.name === 'Apple User') {
+              const realName = [userData.firstName, userData.lastName].filter(Boolean).join(' ');
+              if (realName && realName !== 'Apple User') {
+                await storage.updateCustomer(customer.id, { name: realName });
+                customer.name = realName;
+                console.log('[Apple OAuth] Updated customer name from "Apple User" to:', realName);
+              }
             }
             
             if (customer && !isMobileOAuth) {
