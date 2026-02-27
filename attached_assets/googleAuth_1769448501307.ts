@@ -553,13 +553,6 @@ export const isAuthenticated: RequestHandler = (req, res, next) => {
     }
   }
   
-  console.log('[isAuthenticated] No JWT token, checking cookie session:', {
-    path: requestPath,
-    method: requestMethod,
-    hasAuthHeader: !!authHeader,
-    isAuthenticated: req.isAuthenticated()
-  });
-  
   // Fall back to cookie-based session (web app)
   if (!req.isAuthenticated()) {
     console.warn('[isAuthenticated] ⚠️ Unauthorized access attempt:', {
