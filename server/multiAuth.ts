@@ -810,7 +810,7 @@ export async function setupMultiAuth(app: Express) {
             // If no customer exists with this email, create one
             if (!customer && user.email) {
               console.log('[Apple OAuth] No customer found, creating one for:', user.email);
-              const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(' ') || 'Apple User';
+              const fullName = [userData.firstName, userData.lastName].filter(Boolean).join(' ') || user.email?.split('@')[0] || 'User';
               customer = await storage.createCustomer({
                 name: fullName,
                 email: user.email,

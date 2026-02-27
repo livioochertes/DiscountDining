@@ -2170,15 +2170,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const updateSet: any = {
+      email: userData.email,
+      profileImageUrl: userData.profileImageUrl,
+      updatedAt: new Date(),
+    };
+    if (userData.firstName !== undefined && userData.firstName !== null) {
+      updateSet.firstName = userData.firstName;
+    }
+    if (userData.lastName !== undefined && userData.lastName !== null) {
+      updateSet.lastName = userData.lastName;
+    }
+
     const [user] = await db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
         target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
+        set: updateSet,
       })
       .returning();
     return user;
