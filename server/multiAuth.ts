@@ -7,13 +7,14 @@ import type { Express, RequestHandler } from "express";
 import MemoryStore from "memorystore";
 import crypto from "crypto";
 import { storage } from "./storage";
-import { pool } from "./db";
+import { db, pool } from "./db";
+import { sql } from "drizzle-orm";
 import ConnectPgSimple from "connect-pg-simple";
 
 // Ensure mobile_sessions table exists (called at startup)
 async function ensureMobileSessionsTable(): Promise<void> {
   try {
-    await pool.query(`
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS mobile_sessions (
         id SERIAL PRIMARY KEY,
         token VARCHAR(255) NOT NULL UNIQUE,
@@ -23,7 +24,7 @@ async function ensureMobileSessionsTable(): Promise<void> {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    await pool.query(`
+    await db.execute(sql`
       CREATE INDEX IF NOT EXISTS idx_mobile_sessions_token ON mobile_sessions(token)
     `);
     console.log('[Mobile Sessions] Table ensured');
