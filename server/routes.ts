@@ -228,7 +228,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { generateMobileSessionToken } = await import('./multiAuth');
       const sessionToken = await generateMobileSessionToken(user);
       
-      console.log('[Mobile Exchange] Session token generated for user:', user.id);
       return res.json({ 
         success: true, 
         sessionToken, // Mobile app stores this for future requests
