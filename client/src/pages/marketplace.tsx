@@ -1104,7 +1104,7 @@ export default function Marketplace() {
                     <span>Preferences:</span>
                   </div>
 
-                  {isAuthenticated && userDietaryProfile && (
+                  {isAuthenticated && (
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
                       <User className="w-4 h-4 text-primary" />
                       <Label htmlFor="use-dietary-profile" className="text-sm font-medium text-primary cursor-pointer">
@@ -1190,7 +1190,7 @@ export default function Marketplace() {
 
                 {/* CENTER: Based on badge */}
                 <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30 self-center">
-                  {isAuthenticated && useDietaryProfile && userDietaryProfile ? (
+                  {isAuthenticated && useDietaryProfile ? (
                     <>
                       <User className="w-3.5 h-3.5 mr-1.5 text-primary" />
                       Based on your Profile
@@ -1440,7 +1440,7 @@ export default function Marketplace() {
             {activeTab === 'ai-menu' && (
               <div className="py-8">
                 {/* Dietary Profile Card */}
-                {isAuthenticated && useDietaryProfile && userDietaryProfile && (
+                {isAuthenticated && useDietaryProfile && (
                   <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <button
                       onClick={() => setProfileCardExpanded(!profileCardExpanded)}
@@ -1454,7 +1454,7 @@ export default function Marketplace() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {!isEditingProfile && (
+                        {!isEditingProfile && userDietaryProfile && (
                           <button
                             onClick={(e) => { e.stopPropagation(); startEditingProfile(); setProfileCardExpanded(true); }}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -1467,7 +1467,27 @@ export default function Marketplace() {
                       </div>
                     </button>
 
-                    {profileCardExpanded && !isEditingProfile && (
+                    {profileCardExpanded && !isEditingProfile && !userDietaryProfile && (
+                      <div className="px-5 pb-5 border-t border-gray-100 dark:border-gray-700 pt-4 text-center">
+                        <Brain className="w-10 h-10 text-primary/40 mx-auto mb-3" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 font-medium">
+                          {t.noProfileYet || 'Nu ai completat încă profilul dietetic'}
+                        </p>
+                        <p className="text-xs text-gray-400 mb-4">
+                          {t.completeProfileForRecommendations || 'Completează-l pentru a primi recomandări personalizate bazate pe preferințele tale.'}
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => { startEditingProfile(); setProfileCardExpanded(true); }}
+                          className="gap-1.5"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          {t.completeProfile || 'Completează Profilul'}
+                        </Button>
+                      </div>
+                    )}
+
+                    {profileCardExpanded && !isEditingProfile && userDietaryProfile && (
                       <div className="px-5 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
                           {userDietaryProfile.age && (
