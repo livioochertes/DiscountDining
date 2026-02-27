@@ -160,8 +160,6 @@ export function registerAdminRoutes(app: Express) {
     try {
       const { email, password, twoFactorCode } = req.body;
 
-      console.log('Admin login attempt:', { email, password: password?.length, twoFactorCode });
-
       // Find admin user
       const admin = await storage.getAdminUserByEmail(email);
       console.log('Found admin:', admin ? { id: admin.id, email: admin.email, isActive: admin.isActive } : 'not found');
