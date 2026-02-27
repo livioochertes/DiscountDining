@@ -283,7 +283,6 @@ export async function setupMultiAuth(app: Express) {
       try {
         console.log('=== GOOGLE OAUTH STRATEGY CALLBACK ===');
         console.log('Profile received:', JSON.stringify(profile, null, 2));
-        console.log('Access token present:', !!accessToken);
         console.log('Email:', profile.emails?.[0]?.value);
         
         const user = await upsertUser(profile, 'google');
