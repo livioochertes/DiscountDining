@@ -129,10 +129,21 @@ export default function MobileRestaurantDashboard() {
             setScanError('Cod QR invalid. Scanează codul din profilul clientului.');
           }
         }
+      } else {
+        if (onScan) {
+          setPosStep('input');
+        } else {
+          setShowScanner(false);
+        }
       }
     } catch (error: any) {
       setIsScanning(false);
-      setScanError(error.message || 'Eroare la scanare');
+      if (onScan) {
+        setPosStep('input');
+      } else {
+        setShowScanner(false);
+      }
+      setScanError(null);
     }
   };
 
