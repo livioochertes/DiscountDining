@@ -58,14 +58,18 @@ router.get("/restaurant/:id/notifications/stream", requireAuth, async (req: any,
     "X-Accel-Buffering": "no",
   });
 
-  res.write(`event: connected\ndata: ${JSON.stringify({ restaurantId })}\n\n`);
+  const allRestaurantIds = restaurants.map(r => r.id);
+  res.write(`event: connected\ndata: ${JSON.stringify({ restaurantIds: allRestaurantIds })}\n\n`);
 
-  const client: SSEClient = { res, restaurantId };
-
-  if (!clients.has(restaurantId)) {
-    clients.set(restaurantId, new Set());
+  const sseClients: SSEClient[] = [];
+  for (const rId of allRestaurantIds) {
+    const client: SSEClient = { res, restaurantId: rId };
+    if (!clients.has(rId)) {
+      clients.set(rId, new Set());
+    }
+    clients.get(rId)!.add(client);
+    sseClients.push(client);
   }
-  clients.get(restaurantId)!.add(client);
 
   const heartbeat = setInterval(() => {
     try {
@@ -77,10 +81,12 @@ router.get("/restaurant/:id/notifications/stream", requireAuth, async (req: any,
 
   req.on("close", () => {
     clearInterval(heartbeat);
-    const set = clients.get(restaurantId);
-    if (set) {
-      set.delete(client);
-      if (set.size === 0) clients.delete(restaurantId);
+    for (const client of sseClients) {
+      const set = clients.get(client.restaurantId);
+      if (set) {
+        set.delete(client);
+        if (set.size === 0) clients.delete(client.restaurantId);
+      }
     }
   });
 });

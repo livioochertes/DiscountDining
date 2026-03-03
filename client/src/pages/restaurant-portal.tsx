@@ -1133,7 +1133,8 @@ export default function RestaurantPortal() {
                   {t.pendingVerification}
                 </Badge>
               )}
-              <RestaurantNotificationSystem 
+              <RestaurantNotificationSystem
+                restaurantId={restaurants[0]?.id}
                 onNavigateToReservation={handleNavigateToReservation}
                 onNavigateToOrder={handleNavigateToOrder}
               />
