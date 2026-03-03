@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import {
@@ -8,7 +8,7 @@ import {
   Send, Printer, ToggleLeft, ToggleRight, Edit2, Loader2,
   Clock, CheckCircle, XCircle, AlertCircle, Phone, Mail, MapPin,
   RefreshCw, DollarSign, Lock, ArrowLeft, Download, FileText,
-  Star, Shield, Receipt, Delete
+  Star, Shield, Receipt, Delete, Bell, BellOff, Volume2, VolumeX
 } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -71,6 +71,59 @@ export default function MobileRestaurantDashboard() {
   const [settlementDate, setSettlementDate] = useState(new Date().toISOString().split('T')[0]);
   const [historyFilter, setHistoryFilter] = useState<'today' | 'week' | 'month'>('today');
   const [posManualCode, setPosManualCode] = useState('');
+
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try { return localStorage.getItem('restaurant_sound_notifications') !== 'false'; } catch { return true; }
+  });
+  const [newAlerts, setNewAlerts] = useState<Array<{ id: string; type: 'reservation' | 'order'; message: string; timestamp: number }>>([]);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const lastSeenReservationIdsRef = useRef<Set<number>>(new Set());
+  const lastSeenOrderIdsRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+    };
+  }, []);
+
+  const playNotificationSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.frequency.setValueAtTime(880, ctx.currentTime);
+      osc1.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
+      osc2.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+      osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.3);
+      osc2.start(ctx.currentTime + 0.15);
+      osc2.stop(ctx.currentTime + 0.5);
+    } catch (e) {}
+  }, [soundEnabled]);
+
+  const toggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const next = !prev;
+      try { localStorage.setItem('restaurant_sound_notifications', String(next)); } catch {}
+      return next;
+    });
+  }, []);
 
   const parseQRValue = (scannedValue: string): { customerCode?: string; customerId?: string; error?: string } | null => {
     if (!scannedValue) return null;
@@ -163,6 +216,78 @@ export default function MobileRestaurantDashboard() {
   }, []);
 
   const restaurantId = session?.restaurant?.id;
+
+  useEffect(() => {
+    if (!restaurantId || !session?.token) return;
+
+    const sseUrl = `${API_BASE_URL}/api/restaurant/${restaurantId}/notifications/stream`;
+    const es = new EventSource(sseUrl, { withCredentials: true });
+    eventSourceRef.current = es;
+
+    es.addEventListener('new_reservation', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.id && lastSeenReservationIdsRef.current.has(data.id)) return;
+        if (data.id) lastSeenReservationIdsRef.current.add(data.id);
+        const alertId = `res-${data.id || Date.now()}`;
+        setNewAlerts(prev => [...prev, {
+          id: alertId,
+          type: 'reservation',
+          message: `Rezervare nouă: ${data.customerName || 'Client'} - ${data.partySize || '?'} persoane`,
+          timestamp: Date.now()
+        }]);
+        playNotificationSound();
+        queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/reservations', restaurantId] });
+      } catch {}
+    });
+
+    es.addEventListener('new_order', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.id && lastSeenOrderIdsRef.current.has(data.id)) return;
+        if (data.id) lastSeenOrderIdsRef.current.add(data.id);
+        const alertId = `ord-${data.id || Date.now()}`;
+        setNewAlerts(prev => [...prev, {
+          id: alertId,
+          type: 'order',
+          message: `Comandă nouă: #${data.orderNumber || data.id} - ${data.totalAmount || '?'}€`,
+          timestamp: Date.now()
+        }]);
+        playNotificationSound();
+        queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/orders', restaurantId] });
+      } catch {}
+    });
+
+    es.addEventListener('reservation_updated', () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/reservations', restaurantId] });
+    });
+
+    es.addEventListener('order_updated', () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/orders', restaurantId] });
+    });
+
+    es.onerror = () => {};
+
+    return () => {
+      es.close();
+      eventSourceRef.current = null;
+    };
+  }, [restaurantId, session?.token, playNotificationSound, queryClient]);
+
+  useEffect(() => {
+    if (newAlerts.length === 0) return;
+    const timer = setTimeout(() => {
+      setNewAlerts(prev => prev.filter(a => Date.now() - a.timestamp < 15000));
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [newAlerts]);
+
+  const dismissAlert = useCallback((id: string) => {
+    setNewAlerts(prev => prev.filter(a => a.id !== id));
+  }, []);
+
+  const pendingReservationAlerts = newAlerts.filter(a => a.type === 'reservation').length;
+  const pendingOrderAlerts = newAlerts.filter(a => a.type === 'order').length;
 
   const { data: cashbackGroups = [] } = useQuery<any[]>({
     queryKey: ['/api/restaurant', restaurantId, 'cashback-groups'],
@@ -431,8 +556,10 @@ export default function MobileRestaurantDashboard() {
   const confirmReservationMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations/${id}/confirm`, {
-        method: 'POST',
+        method: 'PATCH',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
       if (!response.ok) throw new Error('Failed to confirm');
       return response.json();
@@ -444,9 +571,11 @@ export default function MobileRestaurantDashboard() {
 
   const cancelReservationMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations/${id}/cancel`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations/${id}/reject`, {
+        method: 'PATCH',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
       if (!response.ok) throw new Error('Failed to cancel');
       return response.json();
@@ -740,15 +869,61 @@ export default function MobileRestaurantDashboard() {
               <p className="text-xs text-gray-500">{session.owner?.contactPersonName}</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleSound}
+              className={cn(
+                "p-2 rounded-xl transition-colors",
+                soundEnabled ? "text-primary hover:bg-primary/10" : "text-gray-400 hover:bg-gray-100"
+              )}
+              title={soundEnabled ? 'Sunet activat' : 'Sunet dezactivat'}
+            >
+              {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-4 space-y-4">
+          {newAlerts.length > 0 && (
+            <div className="space-y-2">
+              {newAlerts.map(alert => (
+                <div
+                  key={alert.id}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl border animate-pulse cursor-pointer",
+                    alert.type === 'reservation'
+                      ? "bg-blue-50 border-blue-200 text-blue-800"
+                      : "bg-orange-50 border-orange-200 text-orange-800"
+                  )}
+                  onClick={() => {
+                    setActiveTab(alert.type === 'reservation' ? 'reservations' : 'orders');
+                    dismissAlert(alert.id);
+                  }}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                    alert.type === 'reservation' ? "bg-blue-100" : "bg-orange-100"
+                  )}>
+                    {alert.type === 'reservation' ? <Calendar className="w-4 h-4" /> : <UtensilsCrossed className="w-4 h-4" />}
+                  </div>
+                  <p className="text-sm font-medium flex-1">{alert.message}</p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); dismissAlert(alert.id); }}
+                    className="p-1 hover:bg-white/50 rounded-lg"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {activeTab === 'home' && (
             <>
               <div className="grid grid-cols-2 gap-3">
@@ -2128,11 +2303,23 @@ export default function MobileRestaurantDashboard() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all min-w-0 flex-1",
+                  "flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all min-w-0 flex-1 relative",
                   isActive ? "text-primary" : "text-gray-400"
                 )}
               >
-                <Icon className={cn("w-5 h-5 mb-0.5", isActive && "text-primary")} />
+                <div className="relative">
+                  <Icon className={cn("w-5 h-5 mb-0.5", isActive && "text-primary")} />
+                  {tab.id === 'reservations' && pendingReservationAlerts > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+                      {pendingReservationAlerts}
+                    </span>
+                  )}
+                  {tab.id === 'orders' && pendingOrderAlerts > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+                      {pendingOrderAlerts}
+                    </span>
+                  )}
+                </div>
                 <span className={cn("text-[10px] font-medium truncate", isActive ? "text-primary" : "text-gray-400")}>{tab.label}</span>
               </button>
             );

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import Stripe from "stripe";
 import { z } from "zod";
 import { storage } from "./storage";
+import { notifyRestaurant } from "./sseNotifications";
 import { sendOrderNotificationToRestaurant, sendOrderConfirmationToCustomer } from "./emailService";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -107,6 +108,10 @@ export function registerOrderRoutes(app: Express) {
           totalPrice: item.totalPrice.toFixed(2),
           specialRequests: item.specialRequests,
         });
+      }
+
+      if (order.restaurantId) {
+        notifyRestaurant(order.restaurantId, { type: 'new_order', data: order });
       }
 
       res.json({

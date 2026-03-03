@@ -16,6 +16,7 @@ import { registerSupportRoutes } from "./supportRoutes";
 import { registerRecipeRoutes } from "./recipeRoutes";
 import { registerChefProfileRoutes } from "./chefProfileRoutes";
 import { giftRoutes } from "./giftRoutes";
+import { sseRouter } from "./sseNotifications";
 import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments, mobileFilters, marketingDeals, marketingDealRestaurants, restaurants, customerWallets } from "@shared/schema";
 import { asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -264,6 +265,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Loyalty system routes
   app.use('/api/loyalty', loyaltyRoutes);
+
+  // SSE real-time notification routes
+  app.use('/api', sseRouter);
 
   // Dietary recommendation routes
   registerDietaryRoutes(app);

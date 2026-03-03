@@ -1,6 +1,7 @@
 import express from 'express';
 import { storage } from './storage';
 import { orders, orderItems } from '../shared/schema';
+import { notifyRestaurant } from './sseNotifications';
 
 const router = express.Router();
 
@@ -60,6 +61,10 @@ router.post('/api/orders/create', async (req, res) => {
         };
         await storage.createOrderItem(orderItem);
       }
+    }
+
+    if (createdOrder.restaurantId) {
+      notifyRestaurant(createdOrder.restaurantId, { type: 'new_order', data: createdOrder });
     }
 
     res.status(201).json({

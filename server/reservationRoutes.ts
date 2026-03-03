@@ -6,6 +6,7 @@ import { requireAuth } from "./auth";
 import { sendSMS } from "./smsService";
 import { sendVerificationEmail } from "./emailService";
 import { sendReservationStatusNotification, sendReservationNotificationToRestaurant } from "./notificationService";
+import { notifyRestaurant } from "./sseNotifications";
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -62,6 +63,10 @@ export function registerReservationRoutes(app: Express) {
       
       const reservation = await storage.createReservation(finalReservationData);
       console.log("Created reservation:", reservation);
+
+      if (reservation.restaurantId) {
+        notifyRestaurant(reservation.restaurantId, { type: 'new_reservation', data: reservation });
+      }
       
       res.status(201).json(reservation);
     } catch (error: any) {
@@ -217,6 +222,10 @@ export function registerReservationRoutes(app: Express) {
         req.ownerId
       );
       
+      if (reservation.restaurantId) {
+        notifyRestaurant(reservation.restaurantId, { type: 'reservation_updated', data: { ...updatedReservation, status: 'confirmed' } });
+      }
+
       // Send notification to customer
       try {
         const restaurant = restaurants.find(r => r.id === reservation.restaurantId);
@@ -236,7 +245,6 @@ export function registerReservationRoutes(app: Express) {
         }
       } catch (notificationError) {
         console.error("Failed to send notification:", notificationError);
-        // Don't fail the request if notification fails
       }
       
       res.json(updatedReservation);
@@ -275,6 +283,10 @@ export function registerReservationRoutes(app: Express) {
         restaurantNotes || 'Cancelled by restaurant',
         req.ownerId
       );
+
+      if (reservation.restaurantId) {
+        notifyRestaurant(reservation.restaurantId, { type: 'reservation_updated', data: { ...updatedReservation, status: 'cancelled' } });
+      }
       
       // Send notification to customer
       try {
@@ -431,8 +443,11 @@ export function registerReservationRoutes(app: Express) {
         'confirmed', 
         restaurantNotes
       );
+
+      if (order.restaurantId) {
+        notifyRestaurant(order.restaurantId, { type: 'order_updated', data: { ...updatedOrder, status: 'confirmed' } });
+      }
       
-      // In production, you would send notification to customer here
       console.log(`Order ${id} confirmed by restaurant`);
       
       res.json(updatedOrder);
@@ -470,8 +485,11 @@ export function registerReservationRoutes(app: Express) {
         'cancelled', 
         restaurantNotes || 'Cancelled by restaurant'
       );
+
+      if (order.restaurantId) {
+        notifyRestaurant(order.restaurantId, { type: 'order_updated', data: { ...updatedOrder, status: 'cancelled' } });
+      }
       
-      // In production, you would send notification to customer here
       console.log(`Order ${id} rejected by restaurant`);
       
       res.json(updatedOrder);
