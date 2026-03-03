@@ -679,7 +679,7 @@ export default function MobileRestaurantDashboard() {
           return { date: settlementDate, totalSales: 0, transactionCount: 0, totalTips: 0, totalCommission: 0, totalNet: 0, averageTransaction: 0, paymentMethodBreakdown: {}, hourlyDistribution: {}, transactions: [] };
         }
         return response.json();
-      } catch {
+      } catch (e) {
         return { date: settlementDate, totalSales: 0, transactionCount: 0, totalTips: 0, totalCommission: 0, totalNet: 0, averageTransaction: 0, paymentMethodBreakdown: {}, hourlyDistribution: {}, transactions: [] };
       }
     },
@@ -1299,11 +1299,11 @@ export default function MobileRestaurantDashboard() {
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
                   />
 
-                  {settlementLoading || !settlementReport ? (
+                  {settlementLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     </div>
-                  ) : settlementReport.transactionCount === 0 ? (
+                  ) : !settlementReport || settlementReport.transactionCount === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                         <ClipboardList className="w-8 h-8 text-gray-400" />
