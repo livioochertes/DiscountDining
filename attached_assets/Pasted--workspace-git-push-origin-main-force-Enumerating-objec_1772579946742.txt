@@ -1,0 +1,45 @@
+~/workspace$ git push origin main --force
+Enumerating objects: 99, done.
+Counting objects: 100% (99/99), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (71/71), done.
+Writing objects: 100% (71/71), 27.74 KiB | 3.96 MiB/s, done.
+Total 71 (delta 62), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (62/62), completed with 25 local objects.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: 
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote: 
+remote:     - Push cannot contain secrets
+remote: 
+remote:     
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:     
+remote:     
+remote:       —— Google Cloud Service Account Credentials ——————————
+remote:        locations:
+remote:          - commit: a6c60175a7080d1727a96b700235a4d8f4d11d12
+remote:            path: attached_assets/eatoff-bc0d2-firebase-adminsdk-fbsvc-adabfaf29a_1772577922413.json:1
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/livioochertes/DiscountDining/security/secret-scanning/unblock-secret/3ASI0llsoGiQ54IivNsWx2b9BTk
+remote:     
+remote:     
+remote:       —— Google Cloud Service Account Credentials ——————————
+remote:        locations:
+remote:          - commit: 398416d158be1ee7baa4268fe709664ee1cb962a
+remote:            path: .replit:57
+remote:          - commit: a6c60175a7080d1727a96b700235a4d8f4d11d12
+remote:            path: .replit:57
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/livioochertes/DiscountDining/security/secret-scanning/unblock-secret/3ASI0hEDpG62yyHetm6uQw2nyqQ
+remote:     
+remote: 
+remote: 
+To https://github.com/livioochertes/DiscountDining.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/livioochertes/DiscountDining.git'
