@@ -124,8 +124,10 @@ export default function MobileRestaurantDashboard() {
           const parsed = parseQRValue(scannedValue || '');
           if (parsed) {
             setManualCustomerId(parsed.customerCode || parsed.customerId || '');
+            setShowScanner(true);
             scanEnrollMutation.mutate(parsed);
           } else {
+            setShowScanner(true);
             setScanError('Cod QR invalid. Scanează codul din profilul clientului.');
           }
         }
@@ -138,20 +140,18 @@ export default function MobileRestaurantDashboard() {
       }
     } catch (error: any) {
       setIsScanning(false);
+      const isCancelled = error?.message?.toLowerCase()?.includes('cancel') || error?.code === 'USER_CANCELED';
       if (onScan) {
         setPosStep('input');
-      } else {
+      } else if (isCancelled) {
         setShowScanner(false);
+      } else {
+        setShowScanner(true);
+        setScanError(error.message || 'Eroare la scanare');
       }
-      setScanError(null);
     }
   };
 
-  useEffect(() => {
-    if (showScanner && !scannedCustomer && !isScanning && Capacitor.isNativePlatform()) {
-      startQRScanner();
-    }
-  }, [showScanner]);
 
   useEffect(() => {
     const storedSession = localStorage.getItem('restaurantSession');
@@ -785,7 +785,13 @@ export default function MobileRestaurantDashboard() {
                   Plăți
                 </button>
                 <button
-                  onClick={() => setShowScanner(true)}
+                  onClick={() => {
+                    if (Capacitor.isNativePlatform()) {
+                      startQRScanner();
+                    } else {
+                      setShowScanner(true);
+                    }
+                  }}
                   className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
                 >
                   <UserPlus className="w-5 h-5" />
@@ -912,7 +918,13 @@ export default function MobileRestaurantDashboard() {
                     Clienți noi înrolați
                   </h2>
                   <button
-                    onClick={() => setShowScanner(true)}
+                    onClick={() => {
+                      if (Capacitor.isNativePlatform()) {
+                        startQRScanner();
+                      } else {
+                        setShowScanner(true);
+                      }
+                    }}
                     className="text-primary text-sm font-medium flex items-center gap-1"
                   >
                     Înrolează <ChevronRight className="w-4 h-4" />
@@ -1989,6 +2001,7 @@ export default function MobileRestaurantDashboard() {
                       setManualCustomerId('');
                       setScanError(null);
                       if (Capacitor.isNativePlatform()) {
+                        setShowScanner(false);
                         startQRScanner();
                       }
                     }}
