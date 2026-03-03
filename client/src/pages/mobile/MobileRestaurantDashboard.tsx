@@ -668,7 +668,7 @@ export default function MobileRestaurantDashboard() {
     return () => clearInterval(interval);
   }, [posStep, posRequestId]);
 
-  const { data: settlementReport } = useQuery<any>({
+  const { data: settlementReport, isLoading: settlementLoading, isError: settlementError } = useQuery<any>({
     queryKey: ['/api/wallet/pos-settlement-report', restaurantId, settlementDate],
     queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/wallet/pos-settlement-report/${restaurantId}?date=${settlementDate}`, {
@@ -1293,7 +1293,27 @@ export default function MobileRestaurantDashboard() {
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
                   />
 
-                  {settlementReport ? (
+                  {settlementLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                  ) : settlementError || !settlementReport ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <ClipboardList className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="font-semibold text-gray-700 mb-1">Nu s-a putut genera raportul</p>
+                      <p className="text-sm text-gray-500">Verifică conexiunea și încearcă din nou.</p>
+                    </div>
+                  ) : settlementReport.transactionCount === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <ClipboardList className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="font-semibold text-gray-700 mb-1">Nu există tranzacții</p>
+                      <p className="text-sm text-gray-500">Nu au fost înregistrate tranzacții pentru {new Date(settlementReport.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
+                    </div>
+                  ) : (
                     <div className="space-y-4">
                       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
                         <h4 className="font-semibold text-gray-900">Sumar - {new Date(settlementReport.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}</h4>
@@ -1347,10 +1367,6 @@ export default function MobileRestaurantDashboard() {
                       >
                         <Download className="w-5 h-5" /> Descarcă CSV
                       </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     </div>
                   )}
                 </div>
