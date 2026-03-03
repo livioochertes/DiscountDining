@@ -6,3 +6,4 @@ vite.config.ts.*
 *.tar.gz
 attached_assets/*firebase*.json
 attached_assets/*google-services*.json
+*.p8
