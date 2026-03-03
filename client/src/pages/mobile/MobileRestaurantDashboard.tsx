@@ -1309,7 +1309,7 @@ export default function MobileRestaurantDashboard() {
                         <ClipboardList className="w-8 h-8 text-gray-400" />
                       </div>
                       <p className="font-semibold text-gray-700 mb-1">Nu există tranzacții</p>
-                      <p className="text-sm text-gray-500">Nu au fost înregistrate tranzacții pentru {new Date(settlementReport.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
+                      <p className="text-sm text-gray-500">Nu au fost înregistrate tranzacții pentru {new Date(settlementDate + 'T00:00:00').toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
