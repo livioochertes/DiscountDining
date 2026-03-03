@@ -293,7 +293,8 @@ export default function MobileRestaurantDashboard() {
 
     const setupPush = async () => {
       try {
-        const { PushNotifications } = await import('@capacitor/push-notifications');
+        const pushModule = '@capacitor/push-notifications';
+        const { PushNotifications } = await import(/* @vite-ignore */ pushModule);
 
         const permResult = await PushNotifications.requestPermissions();
         if (permResult.receive !== 'granted') {
@@ -358,7 +359,8 @@ export default function MobileRestaurantDashboard() {
     return () => {
       cleanup = true;
       if (Capacitor.isNativePlatform()) {
-        import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+        const pm = '@capacitor/push-notifications';
+        import(/* @vite-ignore */ pm).then(({ PushNotifications }) => {
           PushNotifications.removeAllListeners();
         }).catch(() => {});
       }
