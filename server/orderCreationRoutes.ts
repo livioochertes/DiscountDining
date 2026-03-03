@@ -2,6 +2,7 @@ import express from 'express';
 import { storage } from './storage';
 import { orders, orderItems } from '../shared/schema';
 import { notifyRestaurant } from './sseNotifications';
+import { sendPushToRestaurantOwner } from './pushNotifications';
 
 const router = express.Router();
 
@@ -65,6 +66,12 @@ router.post('/api/orders/create', async (req, res) => {
 
     if (createdOrder.restaurantId) {
       notifyRestaurant(createdOrder.restaurantId, { type: 'new_order', data: createdOrder });
+      sendPushToRestaurantOwner(
+        createdOrder.restaurantId,
+        'Comandă nouă',
+        `#${createdOrder.orderNumber || createdOrder.id} - ${createdOrder.totalAmount || '?'}€`,
+        { type: 'new_order', orderId: String(createdOrder.id) }
+      );
     }
 
     res.status(201).json({

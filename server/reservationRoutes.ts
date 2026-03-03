@@ -7,6 +7,7 @@ import { sendSMS } from "./smsService";
 import { sendVerificationEmail } from "./emailService";
 import { sendReservationStatusNotification, sendReservationNotificationToRestaurant } from "./notificationService";
 import { notifyRestaurant } from "./sseNotifications";
+import { sendPushToRestaurantOwner } from "./pushNotifications";
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -66,6 +67,12 @@ export function registerReservationRoutes(app: Express) {
 
       if (reservation.restaurantId) {
         notifyRestaurant(reservation.restaurantId, { type: 'new_reservation', data: reservation });
+        sendPushToRestaurantOwner(
+          reservation.restaurantId,
+          'Rezervare nouă',
+          `${reservation.customerName || 'Client'} - ${reservation.partySize || '?'} persoane`,
+          { type: 'new_reservation', reservationId: String(reservation.id) }
+        );
       }
       
       res.status(201).json(reservation);

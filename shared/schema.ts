@@ -2480,3 +2480,19 @@ export const insertGiftVoucherSchema = createInsertSchema(giftVouchers).omit({
 
 export type GiftVoucher = typeof giftVouchers.$inferSelect;
 export type InsertGiftVoucher = z.infer<typeof insertGiftVoucherSchema>;
+
+export const devicePushTokens = pgTable("device_push_tokens", {
+  id: serial("id").primaryKey(),
+  ownerId: integer("owner_id").notNull().references(() => restaurantOwners.id),
+  token: text("token").notNull(),
+  platform: text("platform").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDevicePushTokenSchema = createInsertSchema(devicePushTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DevicePushToken = typeof devicePushTokens.$inferSelect;
+export type InsertDevicePushToken = z.infer<typeof insertDevicePushTokenSchema>;

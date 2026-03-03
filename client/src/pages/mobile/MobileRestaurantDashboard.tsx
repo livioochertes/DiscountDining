@@ -286,6 +286,85 @@ export default function MobileRestaurantDashboard() {
     setNewAlerts(prev => prev.filter(a => a.id !== id));
   }, []);
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !session?.token || !restaurantId) return;
+
+    let cleanup = false;
+
+    const setupPush = async () => {
+      try {
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+
+        const permResult = await PushNotifications.requestPermissions();
+        if (permResult.receive !== 'granted') {
+          console.log('[Push] Permission not granted');
+          return;
+        }
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', async (token) => {
+          if (cleanup) return;
+          try {
+            await fetch(`${API_BASE_URL}/api/push/register`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: token.value, platform: Capacitor.getPlatform() }),
+            });
+            console.log('[Push] Token registered');
+          } catch (e) {
+            console.error('[Push] Token registration failed:', e);
+          }
+        });
+
+        PushNotifications.addListener('registrationError', (error) => {
+          console.error('[Push] Registration error:', error);
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          const data = notification.data || {};
+          const alertType = data.type?.includes('reservation') ? 'reservation' : 'order';
+          const alertId = `push-${Date.now()}`;
+          setNewAlerts(prev => [...prev, {
+            id: alertId,
+            type: alertType as 'reservation' | 'order',
+            message: notification.body || notification.title || 'Notificare nouă',
+            timestamp: Date.now()
+          }]);
+          playNotificationSound();
+          if (data.type?.includes('reservation')) {
+            queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/reservations', restaurantId] });
+          } else {
+            queryClient.invalidateQueries({ queryKey: ['/api/restaurant-portal/orders', restaurantId] });
+          }
+        });
+
+        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+          const data = action.notification.data || {};
+          if (data.type?.includes('reservation')) {
+            setActiveTab('reservations');
+          } else if (data.type?.includes('order')) {
+            setActiveTab('orders');
+          }
+        });
+      } catch (e) {
+        console.log('[Push] Not available:', e);
+      }
+    };
+
+    setupPush();
+
+    return () => {
+      cleanup = true;
+      if (Capacitor.isNativePlatform()) {
+        import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+          PushNotifications.removeAllListeners();
+        }).catch(() => {});
+      }
+    };
+  }, [session?.token, restaurantId, playNotificationSound, queryClient]);
+
   const pendingReservationAlerts = newAlerts.filter(a => a.type === 'reservation').length;
   const pendingOrderAlerts = newAlerts.filter(a => a.type === 'order').length;
 

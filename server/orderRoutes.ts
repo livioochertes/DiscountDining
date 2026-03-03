@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { z } from "zod";
 import { storage } from "./storage";
 import { notifyRestaurant } from "./sseNotifications";
+import { sendPushToRestaurantOwner } from "./pushNotifications";
 import { sendOrderNotificationToRestaurant, sendOrderConfirmationToCustomer } from "./emailService";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -112,6 +113,12 @@ export function registerOrderRoutes(app: Express) {
 
       if (order.restaurantId) {
         notifyRestaurant(order.restaurantId, { type: 'new_order', data: order });
+        sendPushToRestaurantOwner(
+          order.restaurantId,
+          'Comandă nouă',
+          `#${order.orderNumber || order.id} - ${order.totalAmount || '?'}€`,
+          { type: 'new_order', orderId: String(order.id) }
+        );
       }
 
       res.json({
