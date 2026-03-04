@@ -16,7 +16,7 @@ import {
 } from "@shared/schema";
 import { eq, and, sql, desc, inArray, gt } from "drizzle-orm";
 import crypto from "crypto";
-import { generateMobileSessionToken } from "./multiAuth";
+import { generateMobileSessionToken, validateMobileSessionToken } from "./multiAuth";
 
 const router = Router();
 
@@ -213,16 +213,25 @@ router.post("/reset-password", async (req, res) => {
 // Get current owner authentication status
 router.get("/auth/user", async (req, res) => {
   try {
-    const ownerId = req.session?.ownerId;
+    let ownerId = req.session?.ownerId;
+    
+    if (!ownerId) {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+      if (token) {
+        const userData = await validateMobileSessionToken(token);
+        if (userData && userData.restaurantOwnerId) {
+          ownerId = userData.restaurantOwnerId;
+        }
+      }
+    }
     
     if (!ownerId) {
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    // Get owner details
     const owner = await storage.getRestaurantOwnerById(ownerId);
     if (!owner || !owner.isActive) {
-      req.session = null;
       return res.status(401).json({ message: "Account not found or inactive" });
     }
 

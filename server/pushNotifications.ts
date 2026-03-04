@@ -13,6 +13,7 @@ interface PushAuthRequest extends Request {
 router.post("/push/register", requireAuth, async (req: PushAuthRequest, res: Response) => {
   try {
     const { token, platform } = req.body;
+    console.log(`[Push] Register request from owner ${req.ownerId}, platform: ${platform}`);
 
     if (!token || !platform) {
       return res.status(400).json({ message: "Token and platform are required" });
@@ -23,6 +24,7 @@ router.post("/push/register", requireAuth, async (req: PushAuthRequest, res: Res
     }
 
     if (!req.ownerId) {
+      console.log('[Push] Register failed: no ownerId after requireAuth');
       return res.status(401).json({ message: "Authentication required" });
     }
 
@@ -32,6 +34,7 @@ router.post("/push/register", requireAuth, async (req: PushAuthRequest, res: Res
       .where(and(eq(devicePushTokens.ownerId, req.ownerId), eq(devicePushTokens.token, token)));
 
     if (existing.length > 0) {
+      console.log(`[Push] Token already registered for owner ${req.ownerId}`);
       return res.json({ message: "Token already registered" });
     }
 
@@ -41,9 +44,10 @@ router.post("/push/register", requireAuth, async (req: PushAuthRequest, res: Res
       platform,
     });
 
+    console.log(`[Push] Token registered successfully for owner ${req.ownerId}, platform: ${platform}`);
     res.json({ message: "Push token registered successfully" });
   } catch (error: any) {
-    console.error("Error registering push token:", error);
+    console.error("[Push] Error registering push token:", error);
     res.status(500).json({ message: "Failed to register push token" });
   }
 });
