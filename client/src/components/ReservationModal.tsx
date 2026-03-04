@@ -62,6 +62,7 @@ export default function ReservationModal({ open, onOpenChange, restaurant, vouch
         description: "Your reservation has been submitted. The restaurant will confirm it soon.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-reservations"] });
       onOpenChange(false);
       resetForm();
     },
