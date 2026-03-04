@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { insertTableReservationSchema, insertRestaurantAvailabilitySchema, customers, tableReservations, restaurants } from "@shared/schema";
+import { insertTableReservationSchema, insertRestaurantAvailabilitySchema, customers, tableReservations, restaurants, chefProfiles } from "@shared/schema";
 import { isAuthenticated } from "./replitAuth";
 import { requireAuth } from "./auth";
 import { sendSMS } from "./smsService";
@@ -137,8 +137,6 @@ export function registerReservationRoutes(app: Express) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      await storage.getReservationsByCustomer(customerId);
-      
       const reservationsWithRestaurant = await db
         .select({
           id: tableReservations.id,
@@ -148,14 +146,22 @@ export function registerReservationRoutes(app: Express) {
           customerPhone: tableReservations.customerPhone,
           restaurantId: tableReservations.restaurantId,
           restaurantName: restaurants.name,
+          restaurantCuisine: restaurants.cuisine,
+          restaurantAddress: restaurants.address,
+          restaurantLocation: restaurants.location,
+          restaurantImage: restaurants.imageUrl,
           reservationDate: tableReservations.reservationDate,
           partySize: tableReservations.partySize,
           specialRequests: tableReservations.specialRequests,
           status: tableReservations.status,
           createdAt: tableReservations.createdAt,
+          chefName: chefProfiles.chefName,
+          chefTitle: chefProfiles.title,
+          chefImage: chefProfiles.profileImage,
         })
         .from(tableReservations)
         .leftJoin(restaurants, eq(tableReservations.restaurantId, restaurants.id))
+        .leftJoin(chefProfiles, eq(restaurants.id, chefProfiles.restaurantId))
         .where(eq(tableReservations.customerId, customerId))
         .orderBy(sql`${tableReservations.reservationDate} DESC`);
 
@@ -170,6 +176,37 @@ export function registerReservationRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error fetching my reservations:", error);
       res.status(500).json({ message: "Failed to fetch reservations" });
+    }
+  });
+
+  app.delete("/api/reservations/:id", async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const customerId = await resolveCustomerId(req);
+      if (!customerId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const id = parseInt(req.params.id);
+      const reservation = await storage.getReservationById(id);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      if (reservation.customerId !== customerId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const resDate = new Date(reservation.reservationDate);
+      const now = new Date();
+      if (resDate > now && reservation.status !== 'cancelled') {
+        return res.status(400).json({ message: "Cannot delete future active reservations" });
+      }
+
+      await db.delete(tableReservations).where(eq(tableReservations.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting reservation:", error);
+      res.status(500).json({ message: "Failed to delete reservation" });
     }
   });
 
