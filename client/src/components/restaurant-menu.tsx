@@ -11,6 +11,7 @@ import { Plus, ShoppingCart, Star, Clock, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MenuCart, { type CartItem } from "./menu-cart";
 import type { MenuItem, Restaurant } from "@shared/schema";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 interface RestaurantMenuProps {
   restaurant: Restaurant;
@@ -23,6 +24,8 @@ interface AddToCartDialogProps {
 }
 
 function AddToCartDialog({ menuItem, onAddToCart }: AddToCartDialogProps) {
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [quantity, setQuantity] = useState(1);
   const [specialRequests, setSpecialRequests] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -56,7 +59,7 @@ function AddToCartDialog({ menuItem, onAddToCart }: AddToCartDialogProps) {
         <div className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground mb-2">{menuItem.description}</p>
-            <p className="text-lg font-semibold text-primary">€{menuItem.price}</p>
+            <p className="text-lg font-semibold text-primary">{cs}{menuItem.price}</p>
           </div>
 
           <div className="space-y-2">
@@ -100,7 +103,7 @@ function AddToCartDialog({ menuItem, onAddToCart }: AddToCartDialogProps) {
 
           <div className="flex justify-between items-center pt-4">
             <span className="text-lg font-semibold">
-              Total: €{(parseFloat(menuItem.price) * quantity).toFixed(2)}
+              Total: {cs}{(parseFloat(menuItem.price) * quantity).toFixed(2)}
             </span>
             <Button onClick={handleAddToCart} className="min-w-[120px]">
               Add to Cart
@@ -114,6 +117,8 @@ function AddToCartDialog({ menuItem, onAddToCart }: AddToCartDialogProps) {
 
 export default function RestaurantMenu({ restaurant, onOrderNow }: RestaurantMenuProps) {
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
@@ -271,7 +276,7 @@ export default function RestaurantMenu({ restaurant, onOrderNow }: RestaurantMen
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{item.name}</CardTitle>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-primary">€{item.price}</p>
+                      <p className="text-lg font-bold text-primary">{cs}{item.price}</p>
                       {item.isPopular && (
                         <Badge variant="secondary" className="text-xs">Popular</Badge>
                       )}

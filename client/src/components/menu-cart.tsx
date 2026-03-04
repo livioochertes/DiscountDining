@@ -9,11 +9,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useCart } from "@/contexts/CartContext";
 import { useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 export function MenuCart() {
   const { items, updateQuantity, removeFromCart, clearCart, canAccessCart, isAuthenticated } = useCart();
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [isOpen, setIsOpen] = useState(false);
 
   // Use useMemo to ensure immediate reactivity
@@ -111,7 +114,7 @@ export function MenuCart() {
                         )}
                         <div className="flex items-center justify-between mt-2">
                           <span className="font-medium text-primary">
-                            €{(parseFloat(item.menuItem.price.toString()) * item.quantity).toFixed(2)}
+                            {cs}{(parseFloat(item.menuItem.price.toString()) * item.quantity).toFixed(2)}
                           </span>
                           <div className="flex items-center gap-2">
                             <Button
@@ -152,7 +155,7 @@ export function MenuCart() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-lg font-semibold">
                   <span>Total</span>
-                  <span className="text-primary">€{totalPrice.toFixed(2)}</span>
+                  <span className="text-primary">{cs}{totalPrice.toFixed(2)}</span>
                 </div>
 
                 <Button 

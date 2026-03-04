@@ -11,6 +11,7 @@ import { useLocation } from "wouter";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
@@ -33,6 +34,8 @@ function CheckoutForm({ packageData, restaurant, onSuccess, user, isPayLater, pa
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,7 +83,7 @@ function CheckoutForm({ packageData, restaurant, onSuccess, user, isPayLater, pa
           if (result.success) {
             toast({
               title: "Authorization Successful",
-              description: `Your Pay Later voucher is activated! Payment of €${payLaterDetails?.originalAmount} will be charged in ${payLaterDetails?.paymentTermDays} days.`,
+              description: `Your Pay Later voucher is activated! Payment of ${cs}${payLaterDetails?.originalAmount} will be charged in ${payLaterDetails?.paymentTermDays} days.`,
             });
             onSuccess();
           } else {
@@ -136,7 +139,7 @@ function CheckoutForm({ packageData, restaurant, onSuccess, user, isPayLater, pa
           <h3 className="font-semibold text-blue-900 mb-2">Pay Later Details</h3>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• You'll receive {payLaterDetails.bonusPercentage}% bonus value immediately</li>
-            <li>• Payment of €{payLaterDetails.originalAmount} will be charged in {payLaterDetails.paymentTermDays} days</li>
+            <li>• Payment of {cs}{payLaterDetails.originalAmount} will be charged in {payLaterDetails.paymentTermDays} days</li>
             <li>• Your payment method will be securely saved for the future charge</li>
           </ul>
         </div>
@@ -199,6 +202,8 @@ export default function Checkout() {
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   // Show loading while checking authentication
   if (authLoading) {
