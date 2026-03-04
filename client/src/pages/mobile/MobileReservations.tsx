@@ -105,14 +105,10 @@ export default function MobileReservations() {
               const dayLabel = dayDate
                 ? dayDate.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
                 : 'Dată necunoscută';
-              const dayTotal = dayReservations.length;
-              const dayPersons = dayReservations.reduce((sum: number, r: any) => sum + getPartySize(r), 0);
-
               return (
                 <div key={dayKey}>
                   <div className="bg-primary/10 rounded-xl p-3 mb-2 border border-primary/20">
                     <p className="font-semibold text-gray-900 capitalize">{dayLabel}</p>
-                    <p className="text-sm text-gray-600">{dayTotal} rezervări · {dayPersons} persoane</p>
                   </div>
 
                   {timeIntervals.map(interval => {
@@ -124,14 +120,12 @@ export default function MobileReservations() {
                       .sort((a, b) => getResTime(a).localeCompare(getResTime(b)));
 
                     if (intervalRes.length === 0) return null;
-                    const intervalPersons = intervalRes.reduce((sum: number, r: any) => sum + getPartySize(r), 0);
 
                     return (
                       <div key={interval.key} className="mb-2">
                         <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
                           <Clock className="w-3.5 h-3.5 text-gray-400" />
                           <span className="text-xs font-medium text-gray-500">{interval.label}</span>
-                          <span className="text-xs text-gray-400">— {intervalRes.length} rezervări · {intervalPersons} persoane</span>
                         </div>
                         <div className="space-y-2">
                           {intervalRes.map((res: any) => {
