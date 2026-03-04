@@ -40,12 +40,17 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
       const tokenFromQuery = req.query.token as string | undefined;
       const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : tokenFromQuery;
       
+      console.log(`[requireAuth] Path: ${req.path}, hasAuthHeader: ${!!authHeader}, hasQueryToken: ${!!tokenFromQuery}, tokenPrefix: ${token ? token.substring(0, 10) + '...' : 'none'}`);
+      
       if (token) {
         const userData = await validateMobileSessionToken(token);
+        console.log(`[requireAuth] Token validated, userData: ${userData ? JSON.stringify({ id: userData.id, restaurantOwnerId: userData.restaurantOwnerId, type: userData.type }) : 'null'}`);
         if (userData && userData.restaurantOwnerId) {
           ownerId = userData.restaurantOwnerId;
         }
       }
+    } else {
+      console.log(`[requireAuth] Path: ${req.path}, using session ownerId: ${ownerId}`);
     }
     
     if (!ownerId) {

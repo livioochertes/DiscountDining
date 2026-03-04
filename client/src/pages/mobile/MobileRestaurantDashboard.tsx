@@ -239,18 +239,23 @@ export default function MobileRestaurantDashboard() {
     const parsed = JSON.parse(storedSession);
     setSession(parsed);
 
-    if (parsed.token) {
-      fetch(`${API_BASE_URL}/api/restaurant-portal/auth/user`, {
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${parsed.token}` },
-      }).then(res => {
-        if (res.status === 401) {
-          console.log('[RestaurantDashboard] Stale token, forcing re-login');
-          localStorage.removeItem('restaurantSession');
-          setLocation('/m/restaurant/signin');
-        }
-      }).catch(() => {});
+    if (!parsed.token) {
+      console.log('[RestaurantDashboard] No token in session, forcing re-login');
+      localStorage.removeItem('restaurantSession');
+      setLocation('/m/restaurant/signin');
+      return;
     }
+
+    fetch(`${API_BASE_URL}/api/restaurant-portal/auth/user`, {
+      credentials: 'include',
+      headers: { 'Authorization': `Bearer ${parsed.token}` },
+    }).then(res => {
+      if (res.status === 401) {
+        console.log('[RestaurantDashboard] Stale token, forcing re-login');
+        localStorage.removeItem('restaurantSession');
+        setLocation('/m/restaurant/signin');
+      }
+    }).catch(() => {});
   }, []);
 
   const restaurantId = session?.restaurant?.id;
