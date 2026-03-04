@@ -2092,7 +2092,12 @@ export default function MobileRestaurantDashboard() {
                               const intervalRes = dayReservations.filter(r => {
                                 const h = getResHour(r);
                                 return h >= interval.min && h < interval.max;
-                              }).sort((a, b) => getResTime(a).localeCompare(getResTime(b)));
+                              }).sort((a, b) => {
+                                const sa = (a.status || 'pending') === 'pending' ? 0 : 1;
+                                const sb = (b.status || 'pending') === 'pending' ? 0 : 1;
+                                if (sa !== sb) return sa - sb;
+                                return getResTime(a).localeCompare(getResTime(b));
+                              });
                               if (intervalRes.length === 0) return null;
                               const intervalPersons = intervalRes.reduce((sum: number, r: any) => sum + getPartySize(r), 0);
                               return (
@@ -2146,26 +2151,39 @@ export default function MobileRestaurantDashboard() {
                                               </div>
                                             )}
                                           </div>
-                                          {status === 'pending' && (
-                                            <div className="flex gap-2">
-                                              <button
-                                                onClick={() => confirmReservationMutation.mutate(res.id)}
-                                                disabled={confirmReservationMutation.isPending}
-                                                className="flex-1 bg-green-600 text-white px-3 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-1"
-                                              >
-                                                <Check className="w-4 h-4" />
-                                                Confirmă
-                                              </button>
-                                              <button
-                                                onClick={() => cancelReservationMutation.mutate(res.id)}
-                                                disabled={cancelReservationMutation.isPending}
-                                                className="flex-1 bg-red-600 text-white px-3 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-1"
-                                              >
-                                                <X className="w-4 h-4" />
-                                                Anulează
-                                              </button>
-                                            </div>
-                                          )}
+                                          {status === 'pending' && (() => {
+                                            const isConfirming = confirmReservationMutation.isPending && confirmReservationMutation.variables === res.id;
+                                            const isCancelling = cancelReservationMutation.isPending && cancelReservationMutation.variables === res.id;
+                                            const isProcessing = isConfirming || isCancelling;
+                                            return (
+                                              <div className="flex gap-2">
+                                                <button
+                                                  onClick={() => confirmReservationMutation.mutate(res.id)}
+                                                  disabled={isProcessing}
+                                                  className={cn(
+                                                    "flex-1 bg-green-600 text-white px-3 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-1 transition-all duration-150 active:scale-95",
+                                                    isConfirming && "bg-green-700 scale-95 opacity-80",
+                                                    isProcessing && !isConfirming && "opacity-50"
+                                                  )}
+                                                >
+                                                  {isConfirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                                  {isConfirming ? 'Se confirmă...' : 'Confirmă'}
+                                                </button>
+                                                <button
+                                                  onClick={() => cancelReservationMutation.mutate(res.id)}
+                                                  disabled={isProcessing}
+                                                  className={cn(
+                                                    "flex-1 bg-red-600 text-white px-3 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-1 transition-all duration-150 active:scale-95",
+                                                    isCancelling && "bg-red-700 scale-95 opacity-80",
+                                                    isProcessing && !isCancelling && "opacity-50"
+                                                  )}
+                                                >
+                                                  {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                                  {isCancelling ? 'Se anulează...' : 'Anulează'}
+                                                </button>
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                       );
                                     })}

@@ -1467,16 +1467,23 @@ export default function RestaurantPortal() {
                                         <p className="text-sm"><span className="font-medium">Special Requests:</span> {reservation.specialRequests}</p>
                                       </div>
                                     )}
-                                    <div className="flex gap-2">
-                                      <Button size="sm" className="flex-1" onClick={() => confirmReservationMutation.mutate({ id: reservation.id })} disabled={confirmReservationMutation.isPending}>
-                                        <CheckCircle className="w-4 h-4 mr-2" />
-                                        {confirmReservationMutation.isPending ? 'Confirming...' : 'Confirm'}
-                                      </Button>
-                                      <Button size="sm" variant="outline" className="flex-1" onClick={() => rejectReservationMutation.mutate({ id: reservation.id })} disabled={rejectReservationMutation.isPending}>
-                                        <XCircle className="w-4 h-4 mr-2" />
-                                        {rejectReservationMutation.isPending ? 'Declining...' : 'Decline'}
-                                      </Button>
-                                    </div>
+                                    {(() => {
+                                      const isConfirming = confirmReservationMutation.isPending && confirmReservationMutation.variables?.id === reservation.id;
+                                      const isDeclining = rejectReservationMutation.isPending && rejectReservationMutation.variables?.id === reservation.id;
+                                      const isProcessing = isConfirming || isDeclining;
+                                      return (
+                                        <div className="flex gap-2">
+                                          <Button size="sm" className="flex-1 transition-all duration-150 active:scale-95" onClick={() => confirmReservationMutation.mutate({ id: reservation.id })} disabled={isProcessing}>
+                                            {isConfirming ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                                            {isConfirming ? 'Confirming...' : 'Confirm'}
+                                          </Button>
+                                          <Button size="sm" variant="outline" className="flex-1 transition-all duration-150 active:scale-95" onClick={() => rejectReservationMutation.mutate({ id: reservation.id })} disabled={isProcessing}>
+                                            {isDeclining ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}
+                                            {isDeclining ? 'Declining...' : 'Decline'}
+                                          </Button>
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 ))}
                               </div>
