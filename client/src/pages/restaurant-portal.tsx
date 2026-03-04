@@ -1379,64 +1379,113 @@ export default function RestaurantPortal() {
                       <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4 animate-spin" />
                       <p className="text-muted-foreground">Loading reservations...</p>
                     </div>
-                  ) : reservations.filter((r: any) => r.status === 'pending').length > 0 ? (
-                    reservations.filter((r: any) => r.status === 'pending').map((reservation: any) => (
-                      <div key={reservation.id} id={`reservation-${reservation.id}`} className="border rounded-lg p-4 transition-all">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h4 className="font-medium">{reservation.customerName}</h4>
-                            <p className="text-sm text-muted-foreground">{reservation.customerEmail}</p>
-                          </div>
-                          <Badge variant="outline">Pending</Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                          <div>
-                            <span className="font-medium">Date:</span> {new Date(reservation.reservationDate).toLocaleDateString()}
-                          </div>
-                          <div>
-                            <span className="font-medium">Time:</span> {new Date(reservation.reservationDate).toLocaleTimeString()}
-                          </div>
-                          <div>
-                            <span className="font-medium">Party Size:</span> {reservation.partySize} people
-                          </div>
-                          <div>
-                            <span className="font-medium">Phone:</span> {reservation.customerPhone || 'Not provided'}
-                          </div>
-                        </div>
-                        {reservation.specialRequests && (
-                          <div className="mb-4">
-                            <p className="text-sm"><span className="font-medium">Special Requests:</span> {reservation.specialRequests}</p>
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            className="flex-1"
-                            onClick={() => confirmReservationMutation.mutate({ id: reservation.id })}
-                            disabled={confirmReservationMutation.isPending}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            {confirmReservationMutation.isPending ? 'Confirming...' : 'Confirm'}
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => rejectReservationMutation.mutate({ id: reservation.id })}
-                            disabled={rejectReservationMutation.isPending}
-                          >
-                            <XCircle className="w-4 h-4 mr-2" />
-                            {rejectReservationMutation.isPending ? 'Declining...' : 'Decline'}
-                          </Button>
-                        </div>
+                  ) : (() => {
+                    const getHour = (r: any) => {
+                      if (r.reservationTime) return parseInt(r.reservationTime.split(':')[0], 10);
+                      if (r.reservationDate) return new Date(r.reservationDate).getHours();
+                      return 12;
+                    };
+                    const padTime = (t: string) => { const p = t.split(':'); return (p[0] || '0').padStart(2, '0') + ':' + (p[1] || '00').padStart(2, '0'); };
+                    const getTime = (r: any) => {
+                      if (r.reservationTime) return padTime(r.reservationTime);
+                      if (r.reservationDate) return new Date(r.reservationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      return '00:00';
+                    };
+                    const getParty = (r: any) => r.partySize || r.guestCount || r.numberOfGuests || 0;
+                    const getLocalDateKey = (r: any) => {
+                      if (!r.reservationDate) return 'unknown';
+                      const d = new Date(r.reservationDate);
+                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    };
+                    const pending = [...reservations.filter((r: any) => r.status === 'pending')].sort((a: any, b: any) => {
+                      const ka = getLocalDateKey(a); const kb = getLocalDateKey(b);
+                      if (ka !== kb) return ka.localeCompare(kb);
+                      return getTime(a).localeCompare(getTime(b));
+                    });
+                    if (pending.length === 0) return (
+                      <div className="text-center py-8">
+                        <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-muted-foreground">No pending reservations</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-muted-foreground">No pending reservations</p>
-                    </div>
-                  )}
+                    );
+                    const dayGroups: Record<string, any[]> = {};
+                    pending.forEach((r: any) => {
+                      const key = getLocalDateKey(r);
+                      if (!dayGroups[key]) dayGroups[key] = [];
+                      dayGroups[key].push(r);
+                    });
+                    const intervals = [
+                      { key: 'early', label: 'Early (0-8)', min: 0, max: 8 },
+                      { key: 'morning', label: 'Morning (8-12)', min: 8, max: 12 },
+                      { key: 'afternoon', label: 'Afternoon (12-18)', min: 12, max: 18 },
+                      { key: 'evening', label: 'Evening (18-23)', min: 18, max: 23 },
+                      { key: 'late', label: 'Late (23+)', min: 23, max: 24 },
+                    ];
+                    return Object.entries(dayGroups).map(([dayKey, dayRes]) => {
+                      const dayDate = dayKey !== 'unknown' ? new Date(dayKey + 'T12:00:00') : null;
+                      const dayLabel = dayDate ? dayDate.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Unknown date';
+                      const dayPersons = dayRes.reduce((s: number, r: any) => s + getParty(r), 0);
+                      return (
+                        <div key={dayKey} className="mb-4">
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                            <p className="font-semibold text-gray-900">{dayLabel}</p>
+                            <p className="text-sm text-gray-600">{dayRes.length} reservations · {dayPersons} people</p>
+                          </div>
+                          {intervals.map(interval => {
+                            const iRes = dayRes.filter((r: any) => { const h = getHour(r); return h >= interval.min && h < interval.max; }).sort((a: any, b: any) => getTime(a).localeCompare(getTime(b)));
+                            if (iRes.length === 0) return null;
+                            const iPersons = iRes.reduce((s: number, r: any) => s + getParty(r), 0);
+                            return (
+                              <div key={interval.key} className="mb-3">
+                                <div className="flex items-center gap-2 px-2 py-1 mb-2">
+                                  <Clock className="w-4 h-4 text-gray-400" />
+                                  <span className="text-sm font-medium text-gray-500">{interval.label}</span>
+                                  <span className="text-sm text-gray-400">— {iRes.length} reservations · {iPersons} people</span>
+                                </div>
+                                {iRes.map((reservation: any) => (
+                                  <div key={reservation.id} id={`reservation-${reservation.id}`} className="border rounded-lg p-4 transition-all mb-2">
+                                    <div className="flex justify-between items-start mb-3">
+                                      <div>
+                                        <h4 className="font-medium">{reservation.customerName}</h4>
+                                        <p className="text-sm text-muted-foreground">{reservation.customerEmail}</p>
+                                      </div>
+                                      <Badge variant="outline">Pending</Badge>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                      <div>
+                                        <span className="font-medium">Time:</span> {getTime(reservation)}
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">Party Size:</span> {reservation.partySize} people
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">Phone:</span> {reservation.customerPhone || 'Not provided'}
+                                      </div>
+                                    </div>
+                                    {reservation.specialRequests && (
+                                      <div className="mb-4">
+                                        <p className="text-sm"><span className="font-medium">Special Requests:</span> {reservation.specialRequests}</p>
+                                      </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                      <Button size="sm" className="flex-1" onClick={() => confirmReservationMutation.mutate({ id: reservation.id })} disabled={confirmReservationMutation.isPending}>
+                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                        {confirmReservationMutation.isPending ? 'Confirming...' : 'Confirm'}
+                                      </Button>
+                                      <Button size="sm" variant="outline" className="flex-1" onClick={() => rejectReservationMutation.mutate({ id: reservation.id })} disabled={rejectReservationMutation.isPending}>
+                                        <XCircle className="w-4 h-4 mr-2" />
+                                        {rejectReservationMutation.isPending ? 'Declining...' : 'Decline'}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -1451,63 +1500,113 @@ export default function RestaurantPortal() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {reservations.filter((r: any) => r.status === 'confirmed').length > 0 ? (
-                    reservations.filter((r: any) => r.status === 'confirmed').map((reservation: any) => (
-                      <div key={reservation.id} id={`reservation-${reservation.id}`} className="border rounded-lg p-4 transition-all">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h4 className="font-medium">{reservation.customerName}</h4>
-                            <p className="text-sm text-muted-foreground">{reservation.customerEmail}</p>
-                          </div>
-                          <Badge variant="default">Confirmed</Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                          <div>
-                            <span className="font-medium">Date:</span> {new Date(reservation.reservationDate).toLocaleDateString()}
-                          </div>
-                          <div>
-                            <span className="font-medium">Time:</span> {new Date(reservation.reservationDate).toLocaleTimeString()}
-                          </div>
-                          <div>
-                            <span className="font-medium">Party Size:</span> {reservation.partySize} people
-                          </div>
-                          <div>
-                            <span className="font-medium">Phone:</span> {reservation.customerPhone || 'Not provided'}
-                          </div>
-                        </div>
-                        {reservation.specialRequests && (
-                          <div className="mb-4">
-                            <p className="text-sm"><span className="font-medium">Special Requests:</span> {reservation.specialRequests}</p>
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => handleViewDetails(reservation)}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => handleContactCustomer(reservation)}
-                          >
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            Contact Customer
-                          </Button>
-                        </div>
+                  {(() => {
+                    const getHour = (r: any) => {
+                      if (r.reservationTime) return parseInt(r.reservationTime.split(':')[0], 10);
+                      if (r.reservationDate) return new Date(r.reservationDate).getHours();
+                      return 12;
+                    };
+                    const padTime = (t: string) => { const p = t.split(':'); return (p[0] || '0').padStart(2, '0') + ':' + (p[1] || '00').padStart(2, '0'); };
+                    const getTime = (r: any) => {
+                      if (r.reservationTime) return padTime(r.reservationTime);
+                      if (r.reservationDate) return new Date(r.reservationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      return '00:00';
+                    };
+                    const getParty = (r: any) => r.partySize || r.guestCount || r.numberOfGuests || 0;
+                    const getLocalDateKey = (r: any) => {
+                      if (!r.reservationDate) return 'unknown';
+                      const d = new Date(r.reservationDate);
+                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    };
+                    const confirmed = [...reservations.filter((r: any) => r.status === 'confirmed')].sort((a: any, b: any) => {
+                      const ka = getLocalDateKey(a); const kb = getLocalDateKey(b);
+                      if (ka !== kb) return ka.localeCompare(kb);
+                      return getTime(a).localeCompare(getTime(b));
+                    });
+                    if (confirmed.length === 0) return (
+                      <div className="text-center py-8">
+                        <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-muted-foreground">No confirmed reservations</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-muted-foreground">No confirmed reservations</p>
-                    </div>
-                  )}
+                    );
+                    const dayGroups: Record<string, any[]> = {};
+                    confirmed.forEach((r: any) => {
+                      const key = getLocalDateKey(r);
+                      if (!dayGroups[key]) dayGroups[key] = [];
+                      dayGroups[key].push(r);
+                    });
+                    const intervals = [
+                      { key: 'early', label: 'Early (0-8)', min: 0, max: 8 },
+                      { key: 'morning', label: 'Morning (8-12)', min: 8, max: 12 },
+                      { key: 'afternoon', label: 'Afternoon (12-18)', min: 12, max: 18 },
+                      { key: 'evening', label: 'Evening (18-23)', min: 18, max: 23 },
+                      { key: 'late', label: 'Late (23+)', min: 23, max: 24 },
+                    ];
+                    return Object.entries(dayGroups).map(([dayKey, dayRes]) => {
+                      const dayDate = dayKey !== 'unknown' ? new Date(dayKey + 'T12:00:00') : null;
+                      const dayLabel = dayDate ? dayDate.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Unknown date';
+                      const dayPersons = dayRes.reduce((s: number, r: any) => s + getParty(r), 0);
+                      return (
+                        <div key={dayKey} className="mb-4">
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                            <p className="font-semibold text-gray-900">{dayLabel}</p>
+                            <p className="text-sm text-gray-600">{dayRes.length} reservations · {dayPersons} people</p>
+                          </div>
+                          {intervals.map(interval => {
+                            const iRes = dayRes.filter((r: any) => { const h = getHour(r); return h >= interval.min && h < interval.max; }).sort((a: any, b: any) => getTime(a).localeCompare(getTime(b)));
+                            if (iRes.length === 0) return null;
+                            const iPersons = iRes.reduce((s: number, r: any) => s + getParty(r), 0);
+                            return (
+                              <div key={interval.key} className="mb-3">
+                                <div className="flex items-center gap-2 px-2 py-1 mb-2">
+                                  <Clock className="w-4 h-4 text-gray-400" />
+                                  <span className="text-sm font-medium text-gray-500">{interval.label}</span>
+                                  <span className="text-sm text-gray-400">— {iRes.length} reservations · {iPersons} people</span>
+                                </div>
+                                {iRes.map((reservation: any) => (
+                                  <div key={reservation.id} id={`reservation-${reservation.id}`} className="border rounded-lg p-4 transition-all mb-2">
+                                    <div className="flex justify-between items-start mb-3">
+                                      <div>
+                                        <h4 className="font-medium">{reservation.customerName}</h4>
+                                        <p className="text-sm text-muted-foreground">{reservation.customerEmail}</p>
+                                      </div>
+                                      <Badge variant="default">Confirmed</Badge>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                      <div>
+                                        <span className="font-medium">Time:</span> {getTime(reservation)}
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">Party Size:</span> {reservation.partySize} people
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">Phone:</span> {reservation.customerPhone || 'Not provided'}
+                                      </div>
+                                    </div>
+                                    {reservation.specialRequests && (
+                                      <div className="mb-4">
+                                        <p className="text-sm"><span className="font-medium">Special Requests:</span> {reservation.specialRequests}</p>
+                                      </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleViewDetails(reservation)}>
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View Details
+                                      </Button>
+                                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleContactCustomer(reservation)}>
+                                        <MessageSquare className="w-4 h-4 mr-2" />
+                                        Contact Customer
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </CardContent>
             </Card>
