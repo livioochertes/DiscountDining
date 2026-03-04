@@ -26,6 +26,30 @@ interface RestaurantSession {
   restaurant: any;
 }
 
+function getRestaurantAuthHeaders(contentType?: boolean): Record<string, string> {
+  const headers: Record<string, string> = {};
+  try {
+    const stored = localStorage.getItem('restaurantSession');
+    if (stored) {
+      const s = JSON.parse(stored);
+      if (s.token) headers['Authorization'] = `Bearer ${s.token}`;
+    }
+  } catch {}
+  if (contentType) headers['Content-Type'] = 'application/json';
+  return headers;
+}
+
+function getRestaurantToken(): string | null {
+  try {
+    const stored = localStorage.getItem('restaurantSession');
+    if (stored) {
+      const s = JSON.parse(stored);
+      return s.token || null;
+    }
+  } catch {}
+  return null;
+}
+
 export default function MobileRestaurantDashboard() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
@@ -220,7 +244,8 @@ export default function MobileRestaurantDashboard() {
   useEffect(() => {
     if (!restaurantId || !session?.token) return;
 
-    const sseUrl = `${API_BASE_URL}/api/restaurant/${restaurantId}/notifications/stream`;
+    const token = getRestaurantToken();
+    const sseUrl = `${API_BASE_URL}/api/restaurant/${restaurantId}/notifications/stream${token ? `?token=${token}` : ''}`;
     const es = new EventSource(sseUrl, { withCredentials: true });
     eventSourceRef.current = es;
 
@@ -310,7 +335,7 @@ export default function MobileRestaurantDashboard() {
             await fetch(`${API_BASE_URL}/api/push/register`, {
               method: 'POST',
               credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
+              headers: getRestaurantAuthHeaders(true),
               body: JSON.stringify({ token: token.value, platform: Capacitor.getPlatform() }),
             });
             console.log('[Push] Token registered');
@@ -375,6 +400,7 @@ export default function MobileRestaurantDashboard() {
     queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/cashback-groups`, {
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch cashback groups');
       return response.json();
@@ -387,6 +413,7 @@ export default function MobileRestaurantDashboard() {
     queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/loyalty-groups`, {
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch loyalty groups');
       return response.json();
@@ -399,6 +426,7 @@ export default function MobileRestaurantDashboard() {
     queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/wallet/restaurant/${restaurantId}/transactions`, {
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch transactions');
       return response.json();
@@ -411,6 +439,7 @@ export default function MobileRestaurantDashboard() {
     queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/menu-items?restaurantId=${restaurantId}`, {
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch menu items');
       return response.json();
@@ -423,6 +452,7 @@ export default function MobileRestaurantDashboard() {
     queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations?restaurantId=${restaurantId}`, {
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch reservations');
       return response.json();
@@ -435,6 +465,7 @@ export default function MobileRestaurantDashboard() {
     queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/orders?restaurantId=${restaurantId}`, {
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch orders');
       return response.json();
@@ -447,6 +478,7 @@ export default function MobileRestaurantDashboard() {
     queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/api/restaurant/${restaurantId}/enrolled-customers?limit=3`, {
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch enrolled customers');
       return response.json();
@@ -467,7 +499,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/restaurant/${currentRestaurantId}/scan-enroll`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({
           ...params,
           restaurantId: currentRestaurantId,
@@ -494,6 +526,7 @@ export default function MobileRestaurantDashboard() {
     mutationFn: async (transactionId: string) => {
       const response = await fetch(`${API_BASE_URL}/api/wallet/payment/${transactionId}`, {
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
       if (!response.ok) throw new Error('Tranzacția nu a fost găsită');
       return response.json();
@@ -513,7 +546,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/wallet/payment/${transactionId}/accept`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({ restaurantId }),
       });
       if (!response.ok) throw new Error('Eroare la acceptarea plății');
@@ -535,7 +568,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/wallet/payment/${transactionId}/reject`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
       });
       if (!response.ok) throw new Error('Eroare la respingerea plății');
       return response.json();
@@ -556,7 +589,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/wallet/restaurant-payment-request`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -581,7 +614,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/menu-items/${id}`, {
         method: 'PUT',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({ isAvailable }),
       });
       if (!response.ok) throw new Error('Failed to update');
@@ -597,7 +630,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/menu-items/${id}`, {
         method: 'PUT',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({ price }),
       });
       if (!response.ok) throw new Error('Failed to update price');
@@ -615,7 +648,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/restaurants/${restaurantId}/menu`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify(data),
       });
       if (!response.ok) {
@@ -639,7 +672,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations/${id}/confirm`, {
         method: 'PATCH',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({}),
       });
       if (!response.ok) throw new Error('Failed to confirm');
@@ -655,7 +688,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/reservations/${id}/reject`, {
         method: 'PATCH',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({}),
       });
       if (!response.ok) throw new Error('Failed to cancel');
@@ -671,7 +704,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/restaurant-portal/orders/${id}/status`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({ status }),
       });
       if (!response.ok) throw new Error('Failed to update order');
@@ -728,7 +761,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/wallet/pos-payment-preview`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({ restaurantId, customerCode: data.customerCode, amount: data.amount }),
       });
       if (!response.ok) {
@@ -753,7 +786,7 @@ export default function MobileRestaurantDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/wallet/pos-payment-confirm`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getRestaurantAuthHeaders(true),
         body: JSON.stringify({ restaurantId, ...data }),
       });
       if (!response.ok) {
@@ -838,6 +871,7 @@ export default function MobileRestaurantDashboard() {
       await fetch(`${API_BASE_URL}/api/wallet/pos-payment-request/${posRequestId}/cancel`, {
         method: 'POST',
         credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
       });
     } catch (e) {}
     handlePosReset();
@@ -855,7 +889,7 @@ export default function MobileRestaurantDashboard() {
     const interval = setInterval(async () => {
       try {
         setPosWaitingElapsed(prev => prev + 3);
-        const response = await fetch(`${API_BASE_URL}/api/wallet/pos-payment-request/${posRequestId}/status`, { credentials: 'include' });
+        const response = await fetch(`${API_BASE_URL}/api/wallet/pos-payment-request/${posRequestId}/status`, { credentials: 'include', headers: getRestaurantAuthHeaders() });
         if (!response.ok) return;
         const data = await response.json();
         if (data.status === 'completed') {
@@ -884,6 +918,7 @@ export default function MobileRestaurantDashboard() {
       try {
         const response = await fetch(`${API_BASE_URL}/api/wallet/pos-settlement-report/${restaurantId}?date=${settlementDate}`, {
           credentials: 'include',
+        headers: getRestaurantAuthHeaders(),
         });
         if (!response.ok) {
           return { date: settlementDate, totalSales: 0, transactionCount: 0, totalTips: 0, totalCommission: 0, totalNet: 0, averageTransaction: 0, paymentMethodBreakdown: {}, hourlyDistribution: {}, transactions: [] };

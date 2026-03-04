@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { db } from "./db";
 import { restaurantOwners } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { validateMobileSessionToken } from "./multiAuth";
 
 declare global {
   namespace Express {
@@ -32,20 +33,31 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 // Authentication middleware for restaurant owners
 export async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
-    const ownerId = req.session?.ownerId;
+    let ownerId = req.session?.ownerId;
+    
+    if (!ownerId) {
+      const authHeader = req.headers.authorization;
+      const tokenFromQuery = req.query.token as string | undefined;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : tokenFromQuery;
+      
+      if (token) {
+        const userData = await validateMobileSessionToken(token);
+        if (userData && userData.restaurantOwnerId) {
+          ownerId = userData.restaurantOwnerId;
+        }
+      }
+    }
     
     if (!ownerId) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    // Verify owner exists and is active
     const [owner] = await db
       .select()
       .from(restaurantOwners)
       .where(eq(restaurantOwners.id, ownerId));
 
     if (!owner || !owner.isActive) {
-      req.session = null;
       return res.status(401).json({ message: "Account not found or inactive" });
     }
 

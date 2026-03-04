@@ -16,6 +16,7 @@ import {
 } from "@shared/schema";
 import { eq, and, sql, desc, inArray, gt } from "drizzle-orm";
 import crypto from "crypto";
+import { generateMobileSessionToken } from "./multiAuth";
 
 const router = Router();
 
@@ -82,7 +83,15 @@ router.post("/login", async (req, res) => {
       .where(eq(restaurants.ownerId, owner.id))
       .limit(1);
     
+    const mobileToken = await generateMobileSessionToken({
+      id: `restaurant_owner_${owner.id}`,
+      restaurantOwnerId: owner.id,
+      email: owner.email,
+      type: 'restaurant_owner',
+    });
+    
     res.json({
+      token: mobileToken,
       owner: {
         id: owner.id,
         email: owner.email,
