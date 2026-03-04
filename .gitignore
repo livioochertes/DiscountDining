@@ -7,4 +7,4 @@ vite.config.ts.*
 attached_assets/*firebase*.json
 attached_assets/*google-services*.json
 android/app/google-services.json
-*.p8
+*.p8.replit
