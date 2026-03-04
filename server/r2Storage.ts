@@ -91,6 +91,27 @@ export class R2StorageService {
       return false;
     }
   }
+
+  extractKeyFromUrl(url: string): string | null {
+    if (!url || !R2_PUBLIC_URL) return null;
+    const baseUrl = R2_PUBLIC_URL.replace(/\/$/, "");
+    if (url.startsWith(baseUrl + "/")) {
+      return url.substring(baseUrl.length + 1);
+    }
+    return null;
+  }
+
+  async deleteByUrl(url: string): Promise<boolean> {
+    const key = this.extractKeyFromUrl(url);
+    if (!key) return false;
+    try {
+      await this.deleteFile(key);
+      return true;
+    } catch (err) {
+      console.error(`Failed to delete R2 file ${key}:`, err);
+      return false;
+    }
+  }
 }
 
 export const r2Storage = new R2StorageService();

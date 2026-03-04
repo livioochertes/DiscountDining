@@ -334,12 +334,24 @@ router.delete("/restaurants/:id", requireAuth, async (req, res) => {
   try {
     const restaurantId = parseInt(req.params.id);
     
-    // Verify ownership
-    const restaurants = await storage.getRestaurantsByOwner(req.ownerId!);
-    const ownsRestaurant = restaurants.some(r => r.id === restaurantId);
+    const ownerRestaurants = await storage.getRestaurantsByOwner(req.ownerId!);
+    const restaurant = ownerRestaurants.find(r => r.id === restaurantId);
     
-    if (!ownsRestaurant) {
+    if (!restaurant) {
       return res.status(403).json({ message: "Access denied" });
+    }
+
+    const { r2Storage } = await import("./r2Storage");
+    if (r2Storage.isConfigured()) {
+      const items = await storage.getMenuItemsByRestaurant(restaurantId);
+      const imageUrls = [
+        restaurant.imageUrl,
+        ...items.map(i => i.imageUrl)
+      ].filter(Boolean) as string[];
+
+      await Promise.allSettled(
+        imageUrls.map(url => r2Storage.deleteByUrl(url))
+      );
     }
 
     await storage.deleteRestaurant(restaurantId);
@@ -809,6 +821,13 @@ router.delete("/menu-items/:id", requireAuth, async (req: any, res) => {
     const ownerRestaurants = await storage.getRestaurantsByOwner(ownerId);
     if (!ownerRestaurants.some(r => r.id === item.restaurantId)) {
       return res.status(403).json({ message: "Access denied" });
+    }
+
+    if (item.imageUrl) {
+      const { r2Storage } = await import("./r2Storage");
+      if (r2Storage.isConfigured()) {
+        await r2Storage.deleteByUrl(item.imageUrl);
+      }
     }
     
     await storage.deleteMenuItem(itemId);

@@ -1458,6 +1458,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/menu-items/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const item = await storage.getMenuItemById(id);
+      if (item?.imageUrl) {
+        const { r2Storage } = await import("./r2Storage");
+        if (r2Storage.isConfigured()) {
+          await r2Storage.deleteByUrl(item.imageUrl);
+        }
+      }
       const deleted = await storage.deleteMenuItem(id);
       
       if (!deleted) {
@@ -1473,6 +1480,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/packages/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const pkg = await storage.getPackageById(id);
+      if (pkg?.imageUrl) {
+        const { r2Storage } = await import("./r2Storage");
+        if (r2Storage.isConfigured()) {
+          await r2Storage.deleteByUrl(pkg.imageUrl);
+        }
+      }
       const success = await storage.deletePackage(id);
       
       if (!success) {

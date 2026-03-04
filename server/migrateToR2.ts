@@ -16,6 +16,19 @@ async function fetchImageBuffer(url: string): Promise<{ buffer: Buffer; contentT
   }
 }
 
+function needsMigration(imageUrl: string | null | undefined, r2PublicUrl: string): boolean {
+  if (!imageUrl) return false;
+  if (imageUrl.startsWith(r2PublicUrl)) return false;
+  if (imageUrl.startsWith("/objects/")) return true;
+  if (imageUrl.startsWith("http")) return true;
+  return false;
+}
+
+function getFullUrl(imageUrl: string, baseUrl: string): string {
+  if (imageUrl.startsWith("http")) return imageUrl;
+  return `${baseUrl}${imageUrl}`;
+}
+
 export async function migrateImagesToR2(baseUrl: string): Promise<{
   migrated: number;
   failed: number;
@@ -26,6 +39,7 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     throw new Error("R2 storage is not configured");
   }
 
+  const r2PublicUrl = (process.env.R2_PUBLIC_URL || "").replace(/\/$/, "");
   const details: string[] = [];
   let migrated = 0;
   let failed = 0;
@@ -36,12 +50,12 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     .from(restaurants);
 
   for (const r of allRestaurants) {
-    if (!r.imageUrl || !r.imageUrl.startsWith("/objects/")) {
+    if (!needsMigration(r.imageUrl, r2PublicUrl)) {
       skipped++;
       continue;
     }
 
-    const fetchUrl = `${baseUrl}${r.imageUrl}`;
+    const fetchUrl = getFullUrl(r.imageUrl!, baseUrl);
     details.push(`[restaurant ${r.id}] Fetching ${fetchUrl}`);
     const data = await fetchImageBuffer(fetchUrl);
 
@@ -52,7 +66,7 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     }
 
     try {
-      const ext = r.imageUrl.split(".").pop() || "jpg";
+      const ext = r.imageUrl!.split(".").pop()?.split("?")[0] || "jpg";
       const { publicUrl } = await r2Storage.uploadBuffer(data.buffer, `restaurant-${r.id}.${ext}`, data.contentType, "restaurants");
       await db.update(restaurants).set({ imageUrl: publicUrl }).where(eq(restaurants.id, r.id));
       migrated++;
@@ -68,12 +82,12 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     .from(menuItems);
 
   for (const mi of allMenuItems) {
-    if (!mi.imageUrl || !mi.imageUrl.startsWith("/objects/")) {
+    if (!needsMigration(mi.imageUrl, r2PublicUrl)) {
       skipped++;
       continue;
     }
 
-    const fetchUrl = `${baseUrl}${mi.imageUrl}`;
+    const fetchUrl = getFullUrl(mi.imageUrl!, baseUrl);
     details.push(`[menuItem ${mi.id}] Fetching ${fetchUrl}`);
     const data = await fetchImageBuffer(fetchUrl);
 
@@ -84,7 +98,7 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     }
 
     try {
-      const ext = mi.imageUrl.split(".").pop() || "jpg";
+      const ext = mi.imageUrl!.split(".").pop()?.split("?")[0] || "jpg";
       const { publicUrl } = await r2Storage.uploadBuffer(data.buffer, `menu-item-${mi.id}.${ext}`, data.contentType, "menu-items");
       await db.update(menuItems).set({ imageUrl: publicUrl }).where(eq(menuItems.id, mi.id));
       migrated++;
@@ -100,12 +114,12 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     .from(voucherPackages);
 
   for (const v of allVouchers) {
-    if (!v.imageUrl || !v.imageUrl.startsWith("/objects/")) {
+    if (!needsMigration(v.imageUrl, r2PublicUrl)) {
       skipped++;
       continue;
     }
 
-    const fetchUrl = `${baseUrl}${v.imageUrl}`;
+    const fetchUrl = getFullUrl(v.imageUrl!, baseUrl);
     details.push(`[voucher ${v.id}] Fetching ${fetchUrl}`);
     const data = await fetchImageBuffer(fetchUrl);
 
@@ -116,7 +130,7 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     }
 
     try {
-      const ext = v.imageUrl.split(".").pop() || "jpg";
+      const ext = v.imageUrl!.split(".").pop()?.split("?")[0] || "jpg";
       const { publicUrl } = await r2Storage.uploadBuffer(data.buffer, `voucher-${v.id}.${ext}`, data.contentType, "vouchers");
       await db.update(voucherPackages).set({ imageUrl: publicUrl }).where(eq(voucherPackages.id, v.id));
       migrated++;
@@ -132,12 +146,12 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     .from(eatoffVouchers);
 
   for (const ev of allEatoffVouchers) {
-    if (!ev.imageUrl || !ev.imageUrl.startsWith("/objects/")) {
+    if (!needsMigration(ev.imageUrl, r2PublicUrl)) {
       skipped++;
       continue;
     }
 
-    const fetchUrl = `${baseUrl}${ev.imageUrl}`;
+    const fetchUrl = getFullUrl(ev.imageUrl!, baseUrl);
     details.push(`[eatoffVoucher ${ev.id}] Fetching ${fetchUrl}`);
     const data = await fetchImageBuffer(fetchUrl);
 
@@ -148,7 +162,7 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     }
 
     try {
-      const ext = ev.imageUrl.split(".").pop() || "jpg";
+      const ext = ev.imageUrl!.split(".").pop()?.split("?")[0] || "jpg";
       const { publicUrl } = await r2Storage.uploadBuffer(data.buffer, `eatoff-voucher-${ev.id}.${ext}`, data.contentType, "vouchers");
       await db.update(eatoffVouchers).set({ imageUrl: publicUrl }).where(eq(eatoffVouchers.id, ev.id));
       migrated++;

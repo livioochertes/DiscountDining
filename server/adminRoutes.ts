@@ -1196,6 +1196,13 @@ export function registerAdminRoutes(app: Express) {
         return res.status(404).json({ message: "Menu item not found" });
       }
 
+      if (oldMenuItem.imageUrl) {
+        const { r2Storage } = await import("./r2Storage");
+        if (r2Storage.isConfigured()) {
+          await r2Storage.deleteByUrl(oldMenuItem.imageUrl);
+        }
+      }
+
       await db
         .delete(menuItems)
         .where(eq(menuItems.id, menuItemId));
@@ -1388,6 +1395,13 @@ export function registerAdminRoutes(app: Express) {
         return res.status(404).json({ message: "Voucher package not found" });
       }
 
+      if (oldVoucherPackage.imageUrl) {
+        const { r2Storage } = await import("./r2Storage");
+        if (r2Storage.isConfigured()) {
+          await r2Storage.deleteByUrl(oldVoucherPackage.imageUrl);
+        }
+      }
+
       await db
         .delete(voucherPackages)
         .where(eq(voucherPackages.id, voucherPackageId));
@@ -1534,6 +1548,13 @@ export function registerAdminRoutes(app: Express) {
       const oldVoucher = await storage.getEatoffVoucherById(voucherId);
       if (!oldVoucher) {
         return res.status(404).json({ error: 'EatOff voucher not found' });
+      }
+
+      if (oldVoucher.imageUrl) {
+        const { r2Storage } = await import("./r2Storage");
+        if (r2Storage.isConfigured()) {
+          await r2Storage.deleteByUrl(oldVoucher.imageUrl);
+        }
       }
       
       const deleted = await storage.deleteEatoffVoucher(voucherId);
