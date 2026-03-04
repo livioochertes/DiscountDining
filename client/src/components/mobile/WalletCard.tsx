@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Gift, Brain, Store, X, Crown } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownLeft, CreditCard, Gift, Brain, Store, X, Crown, CalendarCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
 import eatoffLogo from '@assets/eatoff_bun_1770069548389.png';
@@ -229,26 +229,28 @@ interface ActionRowProps {
   onCashback?: () => void;
   onCredit?: () => void;
   onRestaurants?: () => void;
+  onReservations?: () => void;
 }
 
-export function ActionRow({ onBuyVoucher, onAIMenu, onCashback, onCredit, onRestaurants }: ActionRowProps) {
+export function ActionRow({ onBuyVoucher, onAIMenu, onCashback, onCredit, onRestaurants, onReservations }: ActionRowProps) {
   const actions = [
     { icon: Gift, label: 'Voucher', onClick: onBuyVoucher, color: 'bg-orange-50 text-orange-600' },
     { icon: Brain, label: 'AI Menu', onClick: onAIMenu, color: 'bg-purple-50 text-purple-600' },
     { icon: Store, label: 'Restaurants', onClick: onRestaurants, color: 'bg-teal-50 text-teal-600' },
     { icon: Wallet, label: 'Cashback', onClick: onCashback, color: 'bg-green-50 text-green-600' },
     { icon: CreditCard, label: 'Credit', onClick: onCredit, color: 'bg-blue-50 text-blue-600' },
+    { icon: CalendarCheck, label: 'Rezervări', onClick: onReservations, color: 'bg-rose-50 text-rose-600' },
   ];
 
   return (
-    <div className="flex items-center justify-between gap-2 py-4">
+    <div className="flex items-center gap-3 py-4 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
       {actions.map((action) => {
         const Icon = action.icon;
         return (
           <button
             key={action.label}
             onClick={action.onClick}
-            className="flex flex-col items-center gap-2 flex-1"
+            className="flex flex-col items-center gap-2 flex-shrink-0 min-w-[56px]"
           >
             <div className={cn(
               "w-14 h-14 rounded-2xl flex items-center justify-center",

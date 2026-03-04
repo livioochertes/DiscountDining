@@ -702,6 +702,7 @@ export default function MobileHome() {
   const handleCashback = () => setLocation('/m/wallet?tab=cashback');
   const handleCredit = () => setLocation('/m/wallet?tab=credit');
   const handleRestaurants = () => setLocation('/m/explore?tab=restaurants');
+  const handleReservations = () => setLocation('/m/reservations');
 
   return (
     <MobileLayout>
@@ -772,6 +773,7 @@ export default function MobileHome() {
           onCashback={handleCashback}
           onCredit={handleCredit}
           onRestaurants={handleRestaurants}
+          onReservations={handleReservations}
         />
 
         {/* Search Bar */}
