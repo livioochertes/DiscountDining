@@ -5,7 +5,7 @@ import { useLocation } from 'wouter';
 import { Search, Bell, Store, ChevronRight, Star, MapPin, Loader2, Navigation, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
-import { getMobileSessionToken } from '@/lib/queryClient';
+import { getMobileSessionToken, getImageUrl } from '@/lib/queryClient';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { WalletCard, ActionRow } from '@/components/mobile/WalletCard';
 import { CategoryChips } from '@/components/mobile/CategoryChips';
@@ -146,7 +146,7 @@ function RestaurantVoucherRowHome({ data, onVoucherClick }: {
         <div className="w-14 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
           {restaurant.imageUrl ? (
             <img 
-              src={restaurant.imageUrl} 
+              src={getImageUrl(restaurant.imageUrl)} 
               alt={restaurant.name}
               className="w-full h-full object-cover"
             />

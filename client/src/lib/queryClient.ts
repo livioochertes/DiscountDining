@@ -39,6 +39,12 @@ function getFullUrl(url: string): string {
   return `${API_BASE_URL}${url}`;
 }
 
+export function getImageUrl(url: string | undefined | null): string {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  return `${API_BASE_URL}${url}`;
+}
+
 // Check if we're on a mobile route
 function isMobileRoute(): boolean {
   if (typeof window !== 'undefined') {

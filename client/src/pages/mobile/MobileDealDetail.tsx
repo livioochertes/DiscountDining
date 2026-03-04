@@ -3,6 +3,7 @@ import { useLocation, useRoute } from 'wouter';
 import { ArrowLeft, Star, MapPin, Store } from 'lucide-react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getImageUrl } from '@/lib/queryClient';
 
 export default function MobileDealDetail() {
   const [, params] = useRoute('/m/deal/:id');
@@ -87,7 +88,7 @@ export default function MobileDealDetail() {
                     <div className="w-14 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
                       {restaurant.imageUrl ? (
                         <img
-                          src={restaurant.imageUrl}
+                          src={getImageUrl(restaurant.imageUrl)}
                           alt={restaurant.name}
                           className="w-full h-full object-cover"
                         />

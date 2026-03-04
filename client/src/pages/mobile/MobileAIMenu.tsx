@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { api } from '@/lib/api';
+import { getImageUrl } from '@/lib/queryClient';
 
 function ExpandedRecommendation({ rec, setLocation, isAuthenticated }: { rec: any; setLocation: (path: string) => void; isAuthenticated: boolean }) {
   const [matchingItems, setMatchingItems] = useState<any[]>([]);
@@ -72,7 +73,7 @@ function ExpandedRecommendation({ rec, setLocation, isAuthenticated }: { rec: an
                   className="w-full flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl text-left hover:bg-gray-100 active:bg-gray-100 transition-colors"
                 >
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                    <img src={getImageUrl(item.imageUrl)} alt={item.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                   ) : (
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <UtensilsCrossed className="w-4 h-4 text-primary" />
@@ -631,7 +632,7 @@ export default function MobileAIMenu() {
                     <div className="w-16 rounded-xl overflow-hidden flex-shrink-0">
                       {rec.restaurant?.imageUrl ? (
                         <img
-                          src={rec.restaurant.imageUrl}
+                          src={getImageUrl(rec.restaurant.imageUrl)}
                           alt={rec.restaurant.name}
                           className="w-full h-full object-cover"
                         />

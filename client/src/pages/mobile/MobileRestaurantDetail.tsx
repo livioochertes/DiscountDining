@@ -8,6 +8,7 @@ import ReservationModal from '@/components/ReservationModal';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getImageUrl } from '@/lib/queryClient';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
@@ -40,7 +41,7 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
     <div className="flex gap-3 p-3 bg-white rounded-2xl border border-gray-100">
       {item.imageUrl && (
         <img 
-          src={item.imageUrl} 
+          src={getImageUrl(item.imageUrl)} 
           alt={item.name}
           className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
         />
@@ -261,7 +262,7 @@ export default function MobileRestaurantDetail() {
         {/* Hero Image */}
         <div className="relative h-56">
           <img
-            src={restaurant.imageUrl || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800'}
+            src={getImageUrl(restaurant.imageUrl) || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800'}
             alt={restaurant.name}
             className="w-full h-full object-cover"
           />

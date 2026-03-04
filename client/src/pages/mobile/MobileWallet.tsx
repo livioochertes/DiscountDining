@@ -10,7 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
-import { getMobileSessionToken } from '@/lib/queryClient';
+import { getMobileSessionToken, getImageUrl } from '@/lib/queryClient';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { useToast } from '@/hooks/use-toast';
@@ -591,7 +591,7 @@ export default function MobileWallet() {
                     <div className="w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
                       {restaurant.imageUrl ? (
                         <img 
-                          src={restaurant.imageUrl} 
+                          src={getImageUrl(restaurant.imageUrl)} 
                           alt={restaurant.name} 
                           className="w-full h-full object-cover"
                         />

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUserLocation, AVAILABLE_CITIES } from '@/hooks/useUserLocation';
 import { useAuth } from '@/hooks/useAuth';
+import { getImageUrl } from '@/lib/queryClient';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const API_BASE_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? 'https://eatoff.app' : '');
@@ -144,7 +145,7 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
         <div className="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
           {restaurant.imageUrl ? (
             <img 
-              src={restaurant.imageUrl} 
+              src={getImageUrl(restaurant.imageUrl)} 
               alt={restaurant.name}
               className="w-full h-full object-cover"
             />

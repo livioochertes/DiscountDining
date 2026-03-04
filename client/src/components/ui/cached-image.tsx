@@ -1,40 +1,45 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import { cn } from '@/lib/utils';
+import { getImageUrl } from '@/lib/queryClient';
 
 const imageCache = new Set<string>();
 const loadingImages = new Map<string, Promise<void>>();
 
 function preloadImage(src: string): Promise<void> {
-  if (imageCache.has(src)) {
+  const resolvedSrc = getImageUrl(src);
+  if (imageCache.has(resolvedSrc)) {
     return Promise.resolve();
   }
   
-  if (loadingImages.has(src)) {
-    return loadingImages.get(src)!;
+  if (loadingImages.has(resolvedSrc)) {
+    return loadingImages.get(resolvedSrc)!;
   }
   
   const promise = new Promise<void>((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      imageCache.add(src);
-      loadingImages.delete(src);
+      imageCache.add(resolvedSrc);
+      loadingImages.delete(resolvedSrc);
       resolve();
     };
     img.onerror = () => {
-      loadingImages.delete(src);
+      loadingImages.delete(resolvedSrc);
       reject();
     };
-    img.src = src;
+    img.src = resolvedSrc;
   });
   
-  loadingImages.set(src, promise);
+  loadingImages.set(resolvedSrc, promise);
   return promise;
 }
 
 export function preloadImages(urls: string[]) {
   urls.forEach(url => {
-    if (url && !imageCache.has(url)) {
-      preloadImage(url).catch(() => {});
+    if (url) {
+      const resolved = getImageUrl(url);
+      if (!imageCache.has(resolved)) {
+        preloadImage(url).catch(() => {});
+      }
     }
   });
 }
@@ -54,12 +59,13 @@ export const CachedImage = memo(function CachedImage({
   placeholderClassName,
   fallback
 }: CachedImageProps) {
-  const [loaded, setLoaded] = useState(() => imageCache.has(src));
+  const resolvedSrc = getImageUrl(src);
+  const [loaded, setLoaded] = useState(() => imageCache.has(resolvedSrc));
   const [error, setError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    if (imageCache.has(src)) {
+    if (imageCache.has(resolvedSrc)) {
       setLoaded(true);
       setError(false);
       return;
@@ -68,10 +74,10 @@ export const CachedImage = memo(function CachedImage({
     setLoaded(false);
     setError(false);
 
-    preloadImage(src)
+    preloadImage(resolvedSrc)
       .then(() => setLoaded(true))
       .catch(() => setError(true));
-  }, [src]);
+  }, [resolvedSrc]);
 
   if (error && fallback) {
     return <>{fallback}</>;
@@ -84,7 +90,7 @@ export const CachedImage = memo(function CachedImage({
       )}
       <img
         ref={imgRef}
-        src={src}
+        src={resolvedSrc}
         alt={alt}
         loading="lazy"
         decoding="async"
@@ -94,7 +100,7 @@ export const CachedImage = memo(function CachedImage({
           loaded ? "opacity-100" : "opacity-0"
         )}
         onLoad={() => {
-          imageCache.add(src);
+          imageCache.add(resolvedSrc);
           setLoaded(true);
         }}
         onError={() => setError(true)}
