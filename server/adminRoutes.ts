@@ -2024,6 +2024,13 @@ export function registerAdminRoutes(app: Express) {
         return res.status(404).json({ message: "Chef not found" });
       }
 
+      if (existing.profileImage) {
+        const { r2Storage } = await import("./r2Storage");
+        if (r2Storage.isConfigured()) {
+          await r2Storage.deleteByUrl(existing.profileImage);
+        }
+      }
+
       await db.update(menuItems).set({ signatureChefId: null }).where(eq(menuItems.signatureChefId, chefId));
       await db.delete(chefProfiles).where(eq(chefProfiles.id, chefId));
 

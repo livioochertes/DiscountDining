@@ -1373,6 +1373,13 @@ router.delete("/chefs/:id", requireAuth, async (req: any, res) => {
       return res.status(403).json({ message: "Not authorized to delete this chef" });
     }
     
+    if (existing.profileImage) {
+      const { r2Storage } = await import("./r2Storage");
+      if (r2Storage.isConfigured()) {
+        await r2Storage.deleteByUrl(existing.profileImage);
+      }
+    }
+
     await db.update(menuItems).set({ signatureChefId: null }).where(eq(menuItems.signatureChefId, chefId));
     await db.delete(chefProfiles).where(eq(chefProfiles.id, chefId));
     

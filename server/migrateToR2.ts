@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { restaurants, menuItems, voucherPackages, eatoffVouchers } from "@shared/schema";
+import { restaurants, menuItems, voucherPackages, eatoffVouchers, chefProfiles } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { r2Storage } from "./r2Storage";
 
@@ -170,6 +170,38 @@ export async function migrateImagesToR2(baseUrl: string): Promise<{
     } catch (err: any) {
       failed++;
       details.push(`[eatoffVoucher ${ev.id}] FAILED to upload: ${err.message}`);
+    }
+  }
+
+  const allChefs = await db
+    .select({ id: chefProfiles.id, profileImage: chefProfiles.profileImage, name: chefProfiles.name })
+    .from(chefProfiles);
+
+  for (const chef of allChefs) {
+    if (!needsMigration(chef.profileImage, r2PublicUrl)) {
+      skipped++;
+      continue;
+    }
+
+    const fetchUrl = getFullUrl(chef.profileImage!, baseUrl);
+    details.push(`[chef ${chef.id}] Fetching ${fetchUrl}`);
+    const data = await fetchImageBuffer(fetchUrl);
+
+    if (!data) {
+      failed++;
+      details.push(`[chef ${chef.id}] FAILED to fetch image`);
+      continue;
+    }
+
+    try {
+      const ext = chef.profileImage!.split(".").pop()?.split("?")[0] || "jpg";
+      const { publicUrl } = await r2Storage.uploadBuffer(data.buffer, `chef-${chef.id}.${ext}`, data.contentType, "chefs");
+      await db.update(chefProfiles).set({ profileImage: publicUrl }).where(eq(chefProfiles.id, chef.id));
+      migrated++;
+      details.push(`[chef ${chef.id}] OK → ${publicUrl}`);
+    } catch (err: any) {
+      failed++;
+      details.push(`[chef ${chef.id}] FAILED to upload: ${err.message}`);
     }
   }
 
