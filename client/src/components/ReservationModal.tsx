@@ -104,7 +104,7 @@ export default function ReservationModal({ open, onOpenChange, restaurant, vouch
 
     const reservationData = {
       restaurantId: restaurant.id,
-      customerId: user?.id || null, // Use authenticated user ID 
+      customerId: user?.customerId ? Number(user.customerId) : null,
       customerName,
       customerPhone,
       customerEmail,
