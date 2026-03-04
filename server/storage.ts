@@ -2867,6 +2867,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getReservationsByCustomer(customerId: number): Promise<TableReservation[]> {
+    const customer = await this.getCustomerById(customerId);
+    if (customer?.email) {
+      await db
+        .update(tableReservations)
+        .set({ customerId })
+        .where(
+          and(
+            eq(tableReservations.customerEmail, customer.email),
+            sql`${tableReservations.customerId} IS NULL`
+          )
+        );
+    }
+
     const reservations = await db
       .select()
       .from(tableReservations)

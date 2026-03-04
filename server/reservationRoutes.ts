@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { insertTableReservationSchema, insertRestaurantAvailabilitySchema } from "@shared/schema";
+import { insertTableReservationSchema, insertRestaurantAvailabilitySchema, customers } from "@shared/schema";
 import { isAuthenticated } from "./replitAuth";
 import { requireAuth } from "./auth";
 import { sendSMS } from "./smsService";
@@ -8,14 +8,61 @@ import { sendVerificationEmail } from "./emailService";
 import { sendReservationStatusNotification, sendReservationNotificationToRestaurant } from "./notificationService";
 import { notifyRestaurant } from "./sseNotifications";
 import { sendPushToRestaurantOwner } from "./pushNotifications";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 interface AuthenticatedRequest extends Request {
   user?: any;
+  mobileUser?: any;
 }
 
 // Restaurant owner authentication middleware
 interface RestaurantAuthRequest extends Request {
   ownerId?: number;
+}
+
+async function resolveCustomerId(req: AuthenticatedRequest): Promise<number | null> {
+  const mobileUser = req.mobileUser;
+  const user = req.user;
+  const authUser = mobileUser || user;
+
+  if (!authUser) return null;
+
+  if (typeof authUser.customerId === 'number') return authUser.customerId;
+  if (typeof authUser.id === 'number') return authUser.id;
+
+  const email = authUser.email || authUser.claims?.email;
+  const hasStringId = typeof authUser.id === 'string' || typeof authUser.claims?.sub === 'string';
+
+  if (email && hasStringId) {
+    let [customer] = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.email, email))
+      .limit(1);
+
+    if (!customer) {
+      const fullName = [authUser.firstName, authUser.lastName].filter(Boolean).join(' ') || authUser.claims?.first_name || 'User';
+      const [newCustomer] = await db
+        .insert(customers)
+        .values({
+          name: fullName,
+          email: email,
+          phone: null,
+          passwordHash: null,
+          balance: "0.00",
+          loyaltyPoints: 0,
+          totalPointsEarned: 0,
+          membershipTier: "Bronze"
+        })
+        .returning({ id: customers.id });
+      customer = newCustomer;
+    }
+
+    return customer?.id ?? null;
+  }
+
+  return null;
 }
 
 export function registerReservationRoutes(app: Express) {
@@ -29,11 +76,8 @@ export function registerReservationRoutes(app: Express) {
       const reservationData = insertTableReservationSchema.parse(req.body);
       console.log("Parsed reservation data:", reservationData);
       
-      // Check if user is authenticated (optional - allow guest reservations)
-      let customerId = null;
-      if (req.user?.claims?.sub) {
-        customerId = parseInt(req.user.claims.sub);
-      }
+      // Resolve customer ID from auth (supports OAuth, mobile, and direct auth)
+      const customerId = await resolveCustomerId(req);
       console.log("Customer ID:", customerId);
       
       // Basic validation for reservation date
@@ -82,17 +126,34 @@ export function registerReservationRoutes(app: Express) {
     }
   });
   
-  // Get customer's reservations
-  app.get("/api/customers/:customerId/reservations", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
+  // Get authenticated user's own reservations (mobile-friendly)
+  app.get("/api/my-reservations", async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const customerId = parseInt(req.params.customerId);
-      
-      // Ensure user can only access their own reservations
-      if (req.user?.claims?.sub && parseInt(req.user.claims.sub) !== customerId) {
-        return res.status(403).json({ message: "Access denied" });
+      const customerId = await resolveCustomerId(req);
+      if (!customerId) {
+        return res.status(401).json({ message: "Authentication required" });
       }
       
       const reservations = await storage.getReservationsByCustomer(customerId);
+      res.json(reservations);
+    } catch (error: any) {
+      console.error("Error fetching my reservations:", error);
+      res.status(500).json({ message: "Failed to fetch reservations" });
+    }
+  });
+
+  // Get customer's reservations by ID
+  app.get("/api/customers/:customerId/reservations", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const requestedCustomerId = parseInt(req.params.customerId);
+      const authCustomerId = await resolveCustomerId(req);
+      
+      // Ensure user can only access their own reservations
+      if (authCustomerId && authCustomerId !== requestedCustomerId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const reservations = await storage.getReservationsByCustomer(requestedCustomerId);
       res.json(reservations);
     } catch (error: any) {
       console.error("Error fetching customer reservations:", error);
@@ -128,7 +189,8 @@ export function registerReservationRoutes(app: Express) {
       }
       
       // Check if user owns this reservation
-      if (req.user?.claims?.sub && reservation.customerId && parseInt(req.user.claims.sub) !== reservation.customerId) {
+      const authCustomerId = await resolveCustomerId(req);
+      if (authCustomerId && reservation.customerId && authCustomerId !== reservation.customerId) {
         return res.status(403).json({ message: "Access denied" });
       }
       
