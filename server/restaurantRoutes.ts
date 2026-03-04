@@ -703,26 +703,37 @@ router.post("/menu-items/ai-generate-image", requireAuth, async (req: any, res) 
     }
 
     const { generateImageBuffer } = await import("./replit_integrations/image/client");
-    const { ObjectStorageService } = await import("./objectStorage");
+    const { r2Storage } = await import("./r2Storage");
 
     const prompt = `Professional food photography of "${name}"${category ? ` (${category})` : ''}, beautifully plated on a restaurant dish, top-down view, warm natural lighting, appetizing presentation, clean background, high quality food photography style`;
     
     const imageBuffer = await generateImageBuffer(prompt, "1024x1024");
     
-    const objectStorageService = new ObjectStorageService();
-    const { uploadUrl, objectPath } = await objectStorageService.getSignedUploadUrl(`${name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-ai.png`, "image/png");
-    
-    const uploadResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      body: imageBuffer,
-      headers: { "Content-Type": "image/png" }
-    });
+    if (r2Storage.isConfigured()) {
+      const { publicUrl } = await r2Storage.uploadBuffer(
+        imageBuffer as Buffer,
+        `${name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-ai.png`,
+        "image/png",
+        "menu-items"
+      );
+      res.json({ objectPath: publicUrl });
+    } else {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const { uploadUrl, objectPath } = await objectStorageService.getSignedUploadUrl(`${name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-ai.png`, "image/png");
+      
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        body: imageBuffer,
+        headers: { "Content-Type": "image/png" }
+      });
 
-    if (!uploadResponse.ok) {
-      throw new Error("Failed to upload AI-generated image to storage");
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload AI-generated image to storage");
+      }
+      
+      res.json({ objectPath });
     }
-    
-    res.json({ objectPath });
   } catch (error: any) {
     console.error("AI image generation error:", error?.message || error);
     res.status(500).json({ message: error?.message || "Failed to generate image" });

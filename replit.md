@@ -72,7 +72,8 @@ The financial management system provides comprehensive control over platform eco
 
 - **PostgreSQL**: Primary database for all application data (Neon-backed).
 - **Stripe**: Payment gateway for processing transactions.
-- **Object Storage**: Used for file uploads (e.g., recipe images).
+- **Cloudflare R2**: Primary image/file storage via S3-compatible API. Configured with `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`. Service: `server/r2Storage.ts`. Images served directly from Cloudflare CDN (zero egress). Folders: `restaurants/`, `menu-items/`, `vouchers/`. Falls back to Replit Object Storage (GCS proxy) if R2 env vars are missing.
+- **Replit Object Storage (legacy)**: GCS-backed via sidecar (`server/objectStorage.ts`). Old images with `/objects/` prefix still served via Express proxy route. Frontend `getImageUrl()` helper in `client/src/lib/queryClient.ts` resolves relative paths for native mobile.
 - **Capacitor**: Framework for building native mobile applications from the web codebase.
 - **OpenAI**: Powers the AI Support System via Replit AI Integrations.
 - **MLKit**: Used in Capacitor for QR code scanning functionalities in the restaurant portal.

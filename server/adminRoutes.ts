@@ -1551,12 +1551,23 @@ export function registerAdminRoutes(app: Express) {
     }
   });
 
-  // Object storage routes for file uploads
+  // Object storage routes for file uploads (R2 with GCS fallback)
   app.post("/api/admin/objects/upload", adminAuth, async (req: AdminAuthRequest, res: Response) => {
     try {
-      const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      res.json({ uploadURL });
+      const { r2Storage } = await import("./r2Storage");
+      if (r2Storage.isConfigured()) {
+        const { fileName, contentType } = req.body;
+        const { uploadUrl, publicUrl } = await r2Storage.getSignedUploadUrl(
+          fileName || "upload.jpg",
+          contentType || "image/jpeg",
+          "vouchers"
+        );
+        res.json({ uploadURL: uploadUrl, objectPath: publicUrl });
+      } else {
+        const objectStorageService = new ObjectStorageService();
+        const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+        res.json({ uploadURL });
+      }
     } catch (error) {
       console.error("Error generating upload URL:", error);
       res.status(500).json({ error: "Failed to generate upload URL" });
@@ -1570,21 +1581,38 @@ export function registerAdminRoutes(app: Express) {
     }
 
     try {
-      const objectStorageService = new ObjectStorageService();
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-        req.body.imageURL,
-        {
-          owner: "admin",
-          visibility: "public",
-        },
-      );
-
-      res.status(200).json({
-        objectPath: objectPath,
-      });
+      const { r2Storage } = await import("./r2Storage");
+      if (r2Storage.isConfigured() && req.body.imageURL.startsWith("http")) {
+        res.status(200).json({ objectPath: req.body.imageURL });
+      } else {
+        const objectStorageService = new ObjectStorageService();
+        const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+          req.body.imageURL,
+          {
+            owner: "admin",
+            visibility: "public",
+          },
+        );
+        res.status(200).json({ objectPath });
+      }
     } catch (error) {
       console.error("Error setting voucher image:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Migrate images from GCS to R2
+  app.post("/api/admin/migrate-to-r2", adminAuth, async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { migrateImagesToR2 } = await import("./migrateToR2");
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const baseUrl = `${protocol}://${host}`;
+      const result = await migrateImagesToR2(baseUrl);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Migration error:", error);
+      res.status(500).json({ error: error.message || "Migration failed" });
     }
   });
 
