@@ -7,7 +7,7 @@ import { sendSMS } from "./smsService";
 import { sendVerificationEmail } from "./emailService";
 import { sendReservationStatusNotification, sendReservationNotificationToRestaurant } from "./notificationService";
 import { notifyRestaurant } from "./sseNotifications";
-import { sendPushToRestaurantOwner } from "./pushNotifications";
+import { sendPushToRestaurantOwner, sendPushToCustomer } from "./pushNotifications";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
 
@@ -326,10 +326,30 @@ export function registerReservationRoutes(app: Express) {
         notifyRestaurant(reservation.restaurantId, { type: 'reservation_updated', data: { ...updatedReservation, status: 'confirmed' } });
       }
 
-      // Send notification to customer
       try {
         const restaurant = restaurants.find(r => r.id === reservation.restaurantId);
         if (restaurant && reservation.customerId) {
+          const resDate = new Date(reservation.reservationDate);
+          const dateStr = resDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+          const timeStr = resDate.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+          const notifTitle = 'Rezervare confirmată ✓';
+          const notifMessage = `Rezervarea ta la ${restaurant.name} pentru ${reservation.partySize} persoane pe ${dateStr} la ${timeStr} a fost confirmată!`;
+
+          await storage.createCustomerNotification({
+            customerId: reservation.customerId,
+            type: 'reservation_confirmed',
+            title: notifTitle,
+            message: notifMessage,
+            data: { reservationId: id, restaurantId: reservation.restaurantId, restaurantName: restaurant.name },
+            isRead: false,
+          });
+
+          sendPushToCustomer(reservation.customerId, notifTitle, notifMessage, {
+            type: 'reservation_confirmed',
+            reservationId: String(id),
+            restaurantId: String(reservation.restaurantId),
+          });
+
           await sendReservationStatusNotification({
             customerId: reservation.customerId,
             customerName: reservation.customerName,
@@ -337,8 +357,8 @@ export function registerReservationRoutes(app: Express) {
             customerPhone: reservation.customerPhone || undefined,
             reservationId: id,
             restaurantName: restaurant.name,
-            reservationDate: new Date(reservation.reservationDate).toLocaleDateString(),
-            reservationTime: new Date(reservation.reservationDate).toLocaleTimeString(),
+            reservationDate: dateStr,
+            reservationTime: timeStr,
             partySize: reservation.partySize,
             status: 'confirmed'
           });
@@ -388,10 +408,32 @@ export function registerReservationRoutes(app: Express) {
         notifyRestaurant(reservation.restaurantId, { type: 'reservation_updated', data: { ...updatedReservation, status: 'cancelled' } });
       }
       
-      // Send notification to customer
       try {
         const restaurant = restaurants.find(r => r.id === reservation.restaurantId);
         if (restaurant && reservation.customerId) {
+          const resDate = new Date(reservation.reservationDate);
+          const dateStr = resDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+          const timeStr = resDate.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+          const notifTitle = 'Rezervare refuzată';
+          const notifMessage = restaurantNotes 
+            ? `Ne pare rău, rezervarea ta la ${restaurant.name} pentru ${dateStr} la ${timeStr} nu a fost acceptată. Motiv: ${restaurantNotes}`
+            : `Ne pare rău, rezervarea ta la ${restaurant.name} pentru ${dateStr} la ${timeStr} nu a fost acceptată. Te rugăm să încerci altă dată.`;
+
+          await storage.createCustomerNotification({
+            customerId: reservation.customerId,
+            type: 'reservation_rejected',
+            title: notifTitle,
+            message: notifMessage,
+            data: { reservationId: id, restaurantId: reservation.restaurantId, restaurantName: restaurant.name },
+            isRead: false,
+          });
+
+          sendPushToCustomer(reservation.customerId, notifTitle, notifMessage, {
+            type: 'reservation_rejected',
+            reservationId: String(id),
+            restaurantId: String(reservation.restaurantId),
+          });
+
           await sendReservationStatusNotification({
             customerId: reservation.customerId,
             customerName: reservation.customerName,
@@ -399,8 +441,8 @@ export function registerReservationRoutes(app: Express) {
             customerPhone: reservation.customerPhone || undefined,
             reservationId: id,
             restaurantName: restaurant.name,
-            reservationDate: new Date(reservation.reservationDate).toLocaleDateString(),
-            reservationTime: new Date(reservation.reservationDate).toLocaleTimeString(),
+            reservationDate: dateStr,
+            reservationTime: timeStr,
             partySize: reservation.partySize,
             status: 'rejected'
           });

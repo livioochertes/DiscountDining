@@ -1976,6 +1976,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/notifications", async (req: any, res) => {
+    try {
+      const mobileUser = req.mobileUser || req.user;
+      let customerId: number | null = null;
+
+      if (mobileUser?.id && typeof mobileUser.id === 'string') {
+        if (mobileUser.id.startsWith('customer_')) {
+          customerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+        } else if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
+          const c = await storage.getCustomerByEmail(mobileUser.email);
+          if (c) customerId = c.id;
+        }
+      } else if (req.session?.customerId) {
+        customerId = req.session.customerId;
+      }
+
+      if (!customerId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const notifications = await storage.getCustomerNotifications(customerId, limit, offset);
+      res.json(notifications);
+    } catch (error: any) {
+      res.status(500).json({ message: "Error fetching notifications: " + error.message });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", async (req: any, res) => {
+    try {
+      const mobileUser = req.mobileUser || req.user;
+      let customerId: number | null = null;
+
+      if (mobileUser?.id && typeof mobileUser.id === 'string') {
+        if (mobileUser.id.startsWith('customer_')) {
+          customerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+        } else if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
+          const c = await storage.getCustomerByEmail(mobileUser.email);
+          if (c) customerId = c.id;
+        }
+      } else if (req.session?.customerId) {
+        customerId = req.session.customerId;
+      }
+
+      if (!customerId) {
+        return res.json({ count: 0 });
+      }
+
+      const count = await storage.getUnreadNotificationCount(customerId);
+      res.json({ count });
+    } catch (error: any) {
+      res.json({ count: 0 });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", async (req: any, res) => {
+    try {
+      const mobileUser = req.mobileUser || req.user;
+      let customerId: number | null = null;
+
+      if (mobileUser?.id && typeof mobileUser.id === 'string') {
+        if (mobileUser.id.startsWith('customer_')) {
+          customerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+        } else if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
+          const c = await storage.getCustomerByEmail(mobileUser.email);
+          if (c) customerId = c.id;
+        }
+      } else if (req.session?.customerId) {
+        customerId = req.session.customerId;
+      }
+
+      if (!customerId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const notifId = parseInt(req.params.id);
+      await storage.markNotificationRead(notifId, customerId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error marking notification as read" });
+    }
+  });
+
+  app.patch("/api/notifications/read-all", async (req: any, res) => {
+    try {
+      const mobileUser = req.mobileUser || req.user;
+      let customerId: number | null = null;
+
+      if (mobileUser?.id && typeof mobileUser.id === 'string') {
+        if (mobileUser.id.startsWith('customer_')) {
+          customerId = parseInt(mobileUser.id.replace('customer_', ''), 10);
+        } else if (mobileUser.id.startsWith('google_') || mobileUser.id.startsWith('apple_')) {
+          const c = await storage.getCustomerByEmail(mobileUser.email);
+          if (c) customerId = c.id;
+        }
+      } else if (req.session?.customerId) {
+        customerId = req.session.customerId;
+      }
+
+      if (!customerId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      await storage.markAllNotificationsRead(customerId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error marking notifications as read" });
+    }
+  });
+
   // Get reviews for a restaurant
   app.get("/api/restaurants/:id/reviews", async (req, res) => {
     try {

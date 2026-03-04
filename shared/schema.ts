@@ -2496,3 +2496,38 @@ export const insertDevicePushTokenSchema = createInsertSchema(devicePushTokens).
 
 export type DevicePushToken = typeof devicePushTokens.$inferSelect;
 export type InsertDevicePushToken = z.infer<typeof insertDevicePushTokenSchema>;
+
+export const customerNotifications = pgTable("customer_notifications", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").notNull().references(() => customers.id),
+  type: varchar("type", { length: 50 }).notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  data: jsonb("data"),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCustomerNotificationSchema = createInsertSchema(customerNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CustomerNotification = typeof customerNotifications.$inferSelect;
+export type InsertCustomerNotification = z.infer<typeof insertCustomerNotificationSchema>;
+
+export const customerPushTokens = pgTable("customer_push_tokens", {
+  id: serial("id").primaryKey(),
+  customerId: integer("customer_id").notNull().references(() => customers.id),
+  token: text("token").notNull(),
+  platform: text("platform").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCustomerPushTokenSchema = createInsertSchema(customerPushTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CustomerPushToken = typeof customerPushTokens.$inferSelect;
+export type InsertCustomerPushToken = z.infer<typeof insertCustomerPushTokenSchema>;

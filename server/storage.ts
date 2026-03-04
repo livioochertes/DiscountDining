@@ -79,7 +79,10 @@ import {
   type CustomerFavorite,
   type InsertCustomerFavorite,
   type CustomerReview,
-  type InsertCustomerReview
+  type InsertCustomerReview,
+  customerNotifications,
+  type CustomerNotification,
+  type InsertCustomerNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, ne } from "drizzle-orm";
@@ -364,6 +367,13 @@ export interface IStorage {
   updateReview(id: number, updates: Partial<InsertCustomerReview>): Promise<CustomerReview | undefined>;
   deleteReview(id: number): Promise<boolean>;
   getRestaurantAverageRating(restaurantId: number): Promise<{ avgRating: number; count: number }>;
+
+  // Customer Notification operations
+  createCustomerNotification(data: InsertCustomerNotification): Promise<CustomerNotification>;
+  getCustomerNotifications(customerId: number, limit?: number, offset?: number): Promise<CustomerNotification[]>;
+  getUnreadNotificationCount(customerId: number): Promise<number>;
+  markNotificationRead(id: number, customerId: number): Promise<boolean>;
+  markAllNotificationsRead(customerId: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -2158,6 +2168,14 @@ export class MemStorage implements IStorage {
     this.adminUsers.set(adminUser.id, adminUser);
     console.log('Seeded default admin user: admin@eatoff.com / eatoff2024');
   }
+
+  async createCustomerNotification(data: InsertCustomerNotification): Promise<CustomerNotification> {
+    return { id: 0, customerId: data.customerId, type: data.type, title: data.title, message: data.message, data: data.data ?? null, isRead: false, createdAt: new Date() };
+  }
+  async getCustomerNotifications(): Promise<CustomerNotification[]> { return []; }
+  async getUnreadNotificationCount(): Promise<number> { return 0; }
+  async markNotificationRead(): Promise<boolean> { return true; }
+  async markAllNotificationsRead(): Promise<boolean> { return true; }
 }
 
 // Database storage implementation
@@ -3391,6 +3409,40 @@ export class DatabaseStorage implements IStorage {
   async getAdminUserByEmail(email: string): Promise<any> {
     const [admin] = await db.select().from(eatoffAdmins).where(eq(eatoffAdmins.email, email));
     return admin;
+  }
+
+  async createCustomerNotification(data: InsertCustomerNotification): Promise<CustomerNotification> {
+    const [notification] = await db.insert(customerNotifications).values(data).returning();
+    return notification;
+  }
+
+  async getCustomerNotifications(customerId: number, limit: number = 50, offset: number = 0): Promise<CustomerNotification[]> {
+    return await db.select().from(customerNotifications)
+      .where(eq(customerNotifications.customerId, customerId))
+      .orderBy(desc(customerNotifications.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getUnreadNotificationCount(customerId: number): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)::int` })
+      .from(customerNotifications)
+      .where(and(eq(customerNotifications.customerId, customerId), eq(customerNotifications.isRead, false)));
+    return result[0]?.count || 0;
+  }
+
+  async markNotificationRead(id: number, customerId: number): Promise<boolean> {
+    const result = await db.update(customerNotifications)
+      .set({ isRead: true })
+      .where(and(eq(customerNotifications.id, id), eq(customerNotifications.customerId, customerId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async markAllNotificationsRead(customerId: number): Promise<boolean> {
+    await db.update(customerNotifications)
+      .set({ isRead: true })
+      .where(and(eq(customerNotifications.customerId, customerId), eq(customerNotifications.isRead, false)));
+    return true;
   }
 
 }

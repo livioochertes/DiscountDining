@@ -17,6 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useMarketplace } from '@/contexts/MarketplaceContext';
 import LanguageSelector from '@/components/LanguageSelector';
 import { useUserLocation } from '@/hooks/useUserLocation';
+import { useCustomerPushNotifications } from '@/hooks/useCustomerPushNotifications';
 
 interface EatoffVoucher {
   id: number;
@@ -202,6 +203,7 @@ export default function MobileHome() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
+  useCustomerPushNotifications();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeFilter, setActiveFilter] = useState<{ filterType?: string; filterValues?: string[] } | null>(null);
   const [showGreeting, setShowGreeting] = useState(true);
@@ -548,6 +550,12 @@ export default function MobileHome() {
     queryKey: ['/api/marketing-deals'],
   });
 
+  const { data: unreadNotifData } = useQuery<{ count: number }>({
+    queryKey: ['/api/notifications/unread-count'],
+    refetchInterval: 30000,
+  });
+  const unreadNotifCount = unreadNotifData?.count ?? 0;
+
   const activeVouchers = vouchers
     .filter(v => v.isActive)
     .sort((a, b) => {
@@ -744,9 +752,16 @@ export default function MobileHome() {
           </div>
           <div className="flex items-center gap-2">
             <LanguageSelector />
-            <button className="relative p-2 bg-gray-100 rounded-full">
+            <button 
+              className="relative p-2 bg-gray-100 rounded-full"
+              onClick={() => setLocation('/m/notifications')}
+            >
               <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              {(unreadNotifCount ?? 0) > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+                  {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
+                </span>
+              )}
             </button>
           </div>
         </div>

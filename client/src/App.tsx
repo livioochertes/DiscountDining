@@ -71,6 +71,7 @@ import MobileRestaurantSignIn from "@/pages/mobile/MobileRestaurantSignIn";
 import MobileRestaurantDashboard from "@/pages/mobile/MobileRestaurantDashboard";
 import MobileDealDetail from "@/pages/mobile/MobileDealDetail";
 import MobileReservations from "@/pages/mobile/MobileReservations";
+import MobileNotifications from "@/pages/mobile/MobileNotifications";
 import { useIsMobileApp } from "@/hooks/useIsMobile";
 import { isRestaurantApp } from "@/lib/appMode";
 import { useLocation } from "wouter";
@@ -278,6 +279,7 @@ function Router() {
       <Route path="/m/recipes/create" component={MobileRecipeCreate} />
       <Route path="/m/recipes/:id" component={MobileRecipeDetail} />
       <Route path="/m/reservations" component={MobileReservations} />
+      <Route path="/m/notifications" component={MobileNotifications} />
       <Route path="/m/deal/:id" component={MobileDealDetail} />
       <Route path="/m/restaurant/signin" component={MobileRestaurantSignIn} />
       <Route path="/m/restaurant/dashboard" component={MobileRestaurantDashboard} />
