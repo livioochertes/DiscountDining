@@ -1,0 +1,26 @@
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/node_modules/@capacitor/ios/CapacitorCordova/CapacitorCordova/Classes/Public/CDVWebViewProcessPoolFactory.h
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/node_modules/@capacitor/ios/CapacitorCordova/CapacitorCordova/Classes/Public/CDVWebViewProcessPoolFactory.h:23:31 'WKProcessPool' is deprecated: first deprecated in iOS 15.0 - Creating and using multiple instances of WKProcessPool no longer has any effect.
+
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/node_modules/@capacitor/ios/CapacitorCordova/CapacitorCordova/Classes/Public/CDVWebViewProcessPoolFactory.h:26:3 'WKProcessPool' is deprecated: first deprecated in iOS 15.0 - Creating and using multiple instances of WKProcessPool no longer has any effect.
+
+App
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/App.xcodeproj Update to recommended settings
+
+App
+No platform load command found in '/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/Pods/MLKitBarcodeScanning/Frameworks/MLKitBarcodeScanning.framework/MLKitBarcodeScanning', assuming: iOS
+
+Run script build phase '[CP] Embed Pods Frameworks' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase.
+
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/App/Assets.xcassets
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/App/Assets.xcassets: Failed to read file attributes for "/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/App/Assets.xcassets"
+
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/App/Assets.xcassets: None of the input catalogs contained a matching stickers icon set, app icon set, or icon stack named  "AppIcon".
+
+Pods
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/Pods/Pods.xcodeproj Update to recommended settings
+
+GoogleToolboxForMac
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/Pods/GoogleToolboxForMac/Foundation/GTMNSDictionary+URLArguments.m
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/Pods/GoogleToolboxForMac/Foundation/GTMNSDictionary+URLArguments.m:31:1 A function declaration without a prototype is deprecated in all versions of C
+
+/Users/liviu/Documents/GitHub/DiscountDining/capacitor-restaurant/ios/App/Pods/GoogleToolboxForMac/Foundation/GTMNSDictionary+URLArguments.m:32:1 A function declaration without a prototype is deprecated in all versions of C
