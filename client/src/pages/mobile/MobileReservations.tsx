@@ -199,7 +199,7 @@ export default function MobileReservations() {
   const sorted = [...reservations].sort((a, b) => {
     const da = new Date(a.reservationDate || 0).getTime();
     const db2 = new Date(b.reservationDate || 0).getTime();
-    return db2 - da;
+    return da - db2;
   });
 
   const dayGroups: Record<string, any[]> = {};
