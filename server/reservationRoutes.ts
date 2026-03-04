@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { insertTableReservationSchema, insertRestaurantAvailabilitySchema, customers } from "@shared/schema";
+import { insertTableReservationSchema, insertRestaurantAvailabilitySchema, customers, tableReservations, restaurants } from "@shared/schema";
 import { isAuthenticated } from "./replitAuth";
 import { requireAuth } from "./auth";
 import { sendSMS } from "./smsService";
@@ -9,7 +9,7 @@ import { sendReservationStatusNotification, sendReservationNotificationToRestaur
 import { notifyRestaurant } from "./sseNotifications";
 import { sendPushToRestaurantOwner } from "./pushNotifications";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -137,8 +137,36 @@ export function registerReservationRoutes(app: Express) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      const reservations = await storage.getReservationsByCustomer(customerId);
-      res.json(reservations);
+      await storage.getReservationsByCustomer(customerId);
+      
+      const reservationsWithRestaurant = await db
+        .select({
+          id: tableReservations.id,
+          customerId: tableReservations.customerId,
+          customerName: tableReservations.customerName,
+          customerEmail: tableReservations.customerEmail,
+          customerPhone: tableReservations.customerPhone,
+          restaurantId: tableReservations.restaurantId,
+          restaurantName: restaurants.name,
+          reservationDate: tableReservations.reservationDate,
+          partySize: tableReservations.partySize,
+          specialRequests: tableReservations.specialRequests,
+          status: tableReservations.status,
+          createdAt: tableReservations.createdAt,
+        })
+        .from(tableReservations)
+        .leftJoin(restaurants, eq(tableReservations.restaurantId, restaurants.id))
+        .where(eq(tableReservations.customerId, customerId))
+        .orderBy(sql`${tableReservations.reservationDate} DESC`);
+
+      const formatted = reservationsWithRestaurant.map(r => ({
+        ...r,
+        restaurantName: r.restaurantName || 'Unknown Restaurant',
+        date: r.reservationDate ? new Date(r.reservationDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : '',
+        time: r.reservationDate ? new Date(r.reservationDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '',
+      }));
+
+      res.json(formatted);
     } catch (error: any) {
       console.error("Error fetching my reservations:", error);
       res.status(500).json({ message: "Failed to fetch reservations" });
