@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import ReservationModal from "@/components/ReservationModal";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Import the VoucherDetailModal component from my-vouchers page
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -63,6 +64,22 @@ interface RecentVoucher {
   totalMeals: number;
   expiryDate: string;
   value: string;
+}
+
+interface Reservation {
+  id: number;
+  restaurantId: number;
+  customerId: number;
+  restaurantName: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  date: string;
+  time: string;
+  partySize: number;
+  specialRequests: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  createdAt: string;
 }
 
 function FeaturedChefsSection() {
@@ -177,7 +194,7 @@ export default function UserDashboard() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    if (tabParam && ['overview', 'orders', 'vouchers', 'points', 'profile'].includes(tabParam)) {
+    if (tabParam && ['overview', 'orders', 'reservations', 'vouchers', 'points', 'profile'].includes(tabParam)) {
       setSelectedTab(tabParam);
     }
   }, []);
@@ -234,6 +251,20 @@ export default function UserDashboard() {
   const { data: dietaryProfile } = useQuery<any>({
     queryKey: ["/api/dietary/profile"],
     enabled: !!user?.id,
+  });
+
+  const { data: myReservations, isLoading: isLoadingReservations } = useQuery<Reservation[]>({
+    queryKey: ['/api/my-reservations'],
+    enabled: !!user?.id,
+  });
+
+  const cancelReservationMutation = useMutation({
+    mutationFn: async (reservationId: number) => {
+      await apiRequest('PATCH', `/api/reservations/${reservationId}/cancel`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-reservations'] });
+    },
   });
 
   const getTierColor = (tier: string) => {
@@ -362,7 +393,7 @@ export default function UserDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg h-14">
+          <TabsList className="grid w-full grid-cols-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg h-14">
             <TabsTrigger 
               value="overview" 
               className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-200 font-medium text-sm h-12 rounded-md flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -376,6 +407,13 @@ export default function UserDashboard() {
             >
               <ShoppingBag className="h-4 w-4" />
               {t.orders}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="reservations" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-200 font-medium text-sm h-12 rounded-md flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              <Calendar className="h-4 w-4" />
+              {t.reservations || 'Reservations'}
             </TabsTrigger>
             <TabsTrigger 
               value="vouchers" 
@@ -568,6 +606,91 @@ export default function UserDashboard() {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reservations" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t.myReservations || 'My Reservations'}</CardTitle>
+                <CardDescription>{t.manageReservationsDescription || 'View and manage your restaurant reservations'}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingReservations ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+                    ))}
+                  </div>
+                ) : myReservations && myReservations.length > 0 ? (
+                  <div className="space-y-4">
+                    {myReservations.map((reservation) => {
+                      const getReservationStatusColor = (status: string) => {
+                        switch (status) {
+                          case 'pending': return 'bg-yellow-100 text-yellow-800';
+                          case 'confirmed': return 'bg-green-100 text-green-800';
+                          case 'cancelled': return 'bg-red-100 text-red-800';
+                          case 'completed': return 'bg-blue-100 text-blue-800';
+                          default: return 'bg-gray-100 text-gray-800';
+                        }
+                      };
+                      return (
+                        <Card key={reservation.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-lg">{reservation.restaurantName}</h4>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-4 w-4" />
+                                    {new Date(reservation.date).toLocaleDateString()}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-4 w-4" />
+                                    {reservation.time}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <User className="h-4 w-4" />
+                                    {reservation.partySize} {t.guests || 'guests'}
+                                  </span>
+                                </div>
+                                {reservation.specialRequests && (
+                                  <p className="text-sm text-muted-foreground italic">
+                                    "{reservation.specialRequests}"
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <Badge className={getReservationStatusColor(reservation.status)}>
+                                  {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                                </Badge>
+                                {(reservation.status === 'pending' || reservation.status === 'confirmed') && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    disabled={cancelReservationMutation.isPending}
+                                    onClick={() => cancelReservationMutation.mutate(reservation.id)}
+                                  >
+                                    {cancelReservationMutation.isPending ? (t.cancelling || 'Cancelling...') : (t.cancel || 'Cancel')}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-muted-foreground">{t.noReservationsYet || 'No reservations yet'}</p>
+                    <Link href="/">
+                      <Button className="mt-4">{t.browseRestaurants || 'Browse Restaurants'}</Button>
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

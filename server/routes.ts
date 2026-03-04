@@ -1649,8 +1649,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             authenticatedCustomerId = customerByEmail.id;
           }
         }
-      } else if (req.session?.ownerId) {
-        authenticatedCustomerId = req.session.ownerId;
+      } else if (req.session?.customerId) {
+        authenticatedCustomerId = req.session.customerId;
       }
       
       // Verify the authenticated user matches the requested customer
@@ -1713,8 +1713,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             authenticatedCustomerId = customerByEmail.id;
           }
         }
-      } else if (req.session?.ownerId) {
-        authenticatedCustomerId = req.session.ownerId;
+      } else if (req.session?.customerId) {
+        authenticatedCustomerId = req.session.customerId;
       }
       
       if (!authenticatedCustomerId) {
@@ -2857,12 +2857,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { restaurantId, items, customerInfo, pointsUsed, cardAmount, totalAmount } = req.body;
       
       // Check session-based authentication
-      if (!req.session?.ownerId) {
+      if (!req.session?.customerId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      // Get the user from the database using session ownerId
-      const user = await storage.getCustomer(req.session.ownerId);
+      // Get the user from the database using session customerId
+      const user = await storage.getCustomer(req.session.customerId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -2960,12 +2960,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { restaurantId, items, customerInfo, pointsToUse, totalAmount } = req.body;
       
       // Check session-based authentication
-      if (!req.session?.ownerId) {
+      if (!req.session?.customerId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      // Get the user from the database using session ownerId
-      const user = await storage.getCustomer(req.session.ownerId);
+      // Get the user from the database using session customerId
+      const user = await storage.getCustomer(req.session.customerId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }

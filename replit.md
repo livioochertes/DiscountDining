@@ -80,6 +80,12 @@ The financial management system provides comprehensive control over platform eco
 - **drizzle-orm**: Type-safe ORM for database interactions.
 - **wouter**: Client-side routing library for React.
 
+### Session & Authentication Architecture
+- **Restaurant owners**: `session.ownerId` — set in `server/restaurantRoutes.ts` (login/register), read by `requireAuth` middleware in `server/auth.ts` which looks up `restaurant_owners` table.
+- **Customers**: `session.customerId` — set in `server/multiAuth.ts` (Google/Apple OAuth), `server/userAuth.ts` (email/password, demo, 2FA). Read in `server/routes.ts` (wallet, orders), `server/userAuth.ts` (profile, settings), `server/reservationRoutes.ts` (resolveCustomerId fallback).
+- These two session keys are **intentionally separate** to prevent collision (previously both used `session.ownerId` which caused 401 errors when customers logged in via OAuth and then accessed the restaurant portal).
+- Mobile auth uses Bearer token → `req.mobileUser` (set in `server/routes.ts` middleware) instead of sessions.
+
 ## Known Configuration Notes
 - **SendGrid**: The `SENDGRID_API_KEY` environment variable is configured. The email service (`server/emailService.ts`) uses `no-replay@eatoff.app` as the sender address. All email functions (`sendGiftVoucherEmail`, `sendVerificationEmail`, `sendOrderConfirmationToCustomer`) use this same sender.
 - **wouter**: Client-side routing library for React.

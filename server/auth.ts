@@ -86,5 +86,6 @@ export async function optionalAuth(req: AuthenticatedRequest, res: Response, nex
 declare module "express-session" {
   interface SessionData {
     ownerId?: number;
+    customerId?: number;
   }
 }

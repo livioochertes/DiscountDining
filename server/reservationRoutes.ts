@@ -26,41 +26,44 @@ async function resolveCustomerId(req: AuthenticatedRequest): Promise<number | nu
   const user = req.user;
   const authUser = mobileUser || user;
 
-  if (!authUser) return null;
+  if (authUser) {
+    if (typeof authUser.customerId === 'number') return authUser.customerId;
+    if (typeof authUser.id === 'number') return authUser.id;
 
-  if (typeof authUser.customerId === 'number') return authUser.customerId;
-  if (typeof authUser.id === 'number') return authUser.id;
+    const email = authUser.email || authUser.claims?.email;
+    const hasStringId = typeof authUser.id === 'string' || typeof authUser.claims?.sub === 'string';
 
-  const email = authUser.email || authUser.claims?.email;
-  const hasStringId = typeof authUser.id === 'string' || typeof authUser.claims?.sub === 'string';
+    if (email && hasStringId) {
+      let [customer] = await db
+        .select({ id: customers.id })
+        .from(customers)
+        .where(eq(customers.email, email))
+        .limit(1);
 
-  if (email && hasStringId) {
-    let [customer] = await db
-      .select({ id: customers.id })
-      .from(customers)
-      .where(eq(customers.email, email))
-      .limit(1);
+      if (!customer) {
+        const fullName = [authUser.firstName, authUser.lastName].filter(Boolean).join(' ') || authUser.claims?.first_name || 'User';
+        const [newCustomer] = await db
+          .insert(customers)
+          .values({
+            name: fullName,
+            email: email,
+            phone: null,
+            passwordHash: null,
+            balance: "0.00",
+            loyaltyPoints: 0,
+            totalPointsEarned: 0,
+            membershipTier: "Bronze"
+          })
+          .returning({ id: customers.id });
+        customer = newCustomer;
+      }
 
-    if (!customer) {
-      const fullName = [authUser.firstName, authUser.lastName].filter(Boolean).join(' ') || authUser.claims?.first_name || 'User';
-      const [newCustomer] = await db
-        .insert(customers)
-        .values({
-          name: fullName,
-          email: email,
-          phone: null,
-          passwordHash: null,
-          balance: "0.00",
-          loyaltyPoints: 0,
-          totalPointsEarned: 0,
-          membershipTier: "Bronze"
-        })
-        .returning({ id: customers.id });
-      customer = newCustomer;
+      return customer?.id ?? null;
     }
-
-    return customer?.id ?? null;
   }
+
+  const sessionCustomerId = (req as any).session?.customerId;
+  if (typeof sessionCustomerId === 'number') return sessionCustomerId;
 
   return null;
 }

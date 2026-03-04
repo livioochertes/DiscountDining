@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   User, ChevronRight, ChevronDown, Settings, Bell, CreditCard, Heart, 
   HelpCircle, LogOut, Star, Shield, Globe, QrCode, Check, X, Trash2, Loader2,
-  Eye, EyeOff, MessageCircle, ChefHat, MapPin
+  Eye, EyeOff, MessageCircle, ChefHat, MapPin, Calendar
 } from 'lucide-react';
 import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { QRCodeSVG } from 'qrcode.react';
@@ -118,6 +118,21 @@ export default function MobileProfile() {
   });
 
   const paymentMethods = paymentMethodsData?.paymentMethods || [];
+
+  const { data: reservations = [], isLoading: isLoadingReservations } = useQuery<any[]>({
+    queryKey: ['/api/my-reservations'],
+    enabled: !!user?.id,
+  });
+
+  const cancelReservationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest('PATCH', `/api/reservations/${id}/cancel`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-reservations'] });
+      toast({ title: 'Reservation cancelled' });
+    },
+  });
 
   // Delete payment method mutation
   const deletePaymentMethodMutation = useMutation({
@@ -1565,6 +1580,67 @@ export default function MobileProfile() {
     </div>
   );
 
+  const renderReservationsContent = () => {
+    if (isLoadingReservations) {
+      return (
+        <div className="p-8 flex items-center justify-center bg-gray-50 border-t border-gray-100">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (reservations.length === 0) {
+      return (
+        <div className="p-4 space-y-3 bg-gray-50 border-t border-gray-100">
+          <div className="text-center py-6">
+            <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-500 text-sm">{t.noReservations || 'No reservations yet'}</p>
+          </div>
+        </div>
+      );
+    }
+
+    const statusColors: Record<string, string> = {
+      pending: 'bg-yellow-100 text-yellow-700',
+      confirmed: 'bg-green-100 text-green-700',
+      cancelled: 'bg-red-100 text-red-700',
+      completed: 'bg-blue-100 text-blue-700',
+    };
+
+    return (
+      <div className="p-4 space-y-3 bg-gray-50 border-t border-gray-100">
+        {reservations.map((reservation: any) => (
+          <div key={reservation.id} className="bg-white rounded-xl p-4 border border-gray-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-gray-900">{reservation.restaurantName || 'Restaurant'}</p>
+              <span className={cn('text-xs font-medium px-2 py-1 rounded-full', statusColors[reservation.status] || 'bg-gray-100 text-gray-600')}>
+                {reservation.status}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600">
+              {reservation.date} at {reservation.time}
+            </p>
+            <p className="text-sm text-gray-500">
+              {reservation.partySize} {t.guests || 'guests'}
+            </p>
+            {reservation.specialRequests && (
+              <p className="text-xs text-gray-400 italic">{reservation.specialRequests}</p>
+            )}
+            {(reservation.status === 'pending' || reservation.status === 'confirmed') && (
+              <button
+                onClick={() => cancelReservationMutation.mutate(reservation.id)}
+                disabled={cancelReservationMutation.isPending}
+                className="w-full mt-2 text-sm text-red-500 border border-red-200 rounded-xl py-2 hover:bg-red-50 disabled:opacity-50 transition-colors"
+              >
+                {cancelReservationMutation.isPending ? (t.cancelling || 'Cancelling...') : (t.cancelReservation || 'Cancel Reservation')}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderExpandedContent = (id: string) => {
     switch (id) {
       case 'personal': return renderPersonalInfoContent();
@@ -1577,6 +1653,7 @@ export default function MobileProfile() {
       case 'help': return renderHelpContent();
       case 'points': return renderLoyaltyPointsContent();
       case 'tier': return renderTierContent();
+      case 'reservations': return renderReservationsContent();
       default: return null;
     }
   };
@@ -1588,6 +1665,7 @@ export default function MobileProfile() {
         { id: 'personal', icon: User, label: t.personalInfo || 'Personal Information', subtitle: t.personalInfoSub || 'Name, email, phone', expandable: true },
         { id: 'dietary', icon: Heart, label: t.dietaryPreferences || 'Dietary Preferences', subtitle: t.dietarySub || 'Allergies, diet type', expandable: true },
         { id: 'payment', icon: CreditCard, label: t.paymentMethods || 'Payment Methods', subtitle: t.paymentSub || 'Cards, wallet', expandable: true },
+        { id: 'reservations', icon: Calendar, label: t.myReservations || 'My Reservations', subtitle: `${reservations.length} reservations`, expandable: true },
         { id: 'recipes', icon: ChefHat, label: t.myRecipes || 'My Recipes', subtitle: t.recipesSub || 'Share & discover recipes', onClick: () => setLocation('/m/recipes') },
       ],
     },

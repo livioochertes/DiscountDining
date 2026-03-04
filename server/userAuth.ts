@@ -103,7 +103,7 @@ export function registerUserAuthRoutes(app: Express) {
 
         // Create session
         if (req.session) {
-          req.session.ownerId = customer.id;
+          req.session.customerId = customer.id;
           req.session.save((err) => {
             if (err) console.error('Session save error:', err);
           });
@@ -285,7 +285,7 @@ export function registerUserAuthRoutes(app: Express) {
 
       // Create session (simple session management for demo)
       if (req.session) {
-        req.session.ownerId = customer.id;
+        req.session.customerId = customer.id;
         req.session.save((err) => {
           if (err) {
             console.error('Session save error:', err);
@@ -338,7 +338,7 @@ export function registerUserAuthRoutes(app: Express) {
 
       // Create session for web
       if (req.session) {
-        req.session.ownerId = customer.id;
+        req.session.customerId = customer.id;
         req.session.save((err) => {
           if (err) {
             console.error('Session save error:', err);
@@ -391,7 +391,7 @@ export function registerUserAuthRoutes(app: Express) {
 
       // Create session
       if (req.session) {
-        req.session.ownerId = customer.id;
+        req.session.customerId = customer.id;
         req.session.save((err) => {
           if (err) {
             console.error('Session save error:', err);
@@ -420,7 +420,7 @@ export function registerUserAuthRoutes(app: Express) {
   const logoutHandler = (req: Request, res: Response) => {
     if (req.session) {
       // Clear session data immediately for faster response
-      req.session.ownerId = undefined;
+      req.session.customerId = undefined;
       
       // Clear cookie immediately
       res.clearCookie('eatoff.sid');
@@ -537,11 +537,11 @@ export function registerUserAuthRoutes(app: Express) {
         }
       }
       
-      if (!req.session?.ownerId) {
+      if (!req.session?.customerId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      const customer = await storage.getCustomer(req.session.ownerId);
+      const customer = await storage.getCustomer(req.session.customerId);
 
       if (!customer) {
         return res.status(404).json({ message: 'User not found' });
@@ -606,8 +606,8 @@ export function registerUserAuthRoutes(app: Express) {
             customerId = newCustomer.id;
           }
         }
-      } else if (req.session?.ownerId) {
-        customerId = req.session.ownerId;
+      } else if (req.session?.customerId) {
+        customerId = req.session.customerId;
       }
 
       if (!customerId) {
@@ -669,8 +669,8 @@ export function registerUserAuthRoutes(app: Express) {
         const customer = await storage.getCustomerByEmail(mobileUser.email);
         return customer?.id || null;
       }
-    } else if (req.session?.ownerId) {
-      return req.session.ownerId;
+    } else if (req.session?.customerId) {
+      return req.session.customerId;
     }
     return null;
   }
@@ -1068,7 +1068,7 @@ export function registerUserAuthRoutes(app: Express) {
         });
       } else {
         // Web flow - set session
-        req.session.ownerId = tokenData.customerId;
+        req.session.customerId = tokenData.customerId;
         return res.json({ 
           success: true, 
           message: '2FA verification successful',

@@ -471,8 +471,8 @@ export async function setupMultiAuth(app: Express) {
           }
           
           if (customer && !isMobileOAuth) {
-            (req.session as any).ownerId = customer.id;
-            console.log('[Google OAuth] Set session ownerId:', customer.id);
+            (req.session as any).customerId = customer.id;
+            console.log('[Google OAuth] Set session customerId:', customer.id);
           }
           
           if (customer && customer.twoFactorEnabled) {
@@ -533,9 +533,9 @@ export async function setupMultiAuth(app: Express) {
           }
         }
         
-        // Web flow - save session explicitly before redirect to ensure ownerId persists
+        // Web flow - save session explicitly before redirect to ensure customerId persists
         console.log('[Google OAuth] Before save - Session ID:', req.sessionID);
-        console.log('[Google OAuth] Before save - ownerId:', (req.session as any).ownerId);
+        console.log('[Google OAuth] Before save - customerId:', (req.session as any).customerId);
         console.log('[Google OAuth] Before save - passport:', JSON.stringify((req.session as any).passport));
         req.session.save((saveErr) => {
           if (saveErr) {
@@ -837,8 +837,8 @@ export async function setupMultiAuth(app: Express) {
             }
             
             if (customer && !isMobileOAuth) {
-              (req.session as any).ownerId = customer.id;
-              console.log('[Apple OAuth] Set session ownerId:', customer.id);
+              (req.session as any).customerId = customer.id;
+              console.log('[Apple OAuth] Set session customerId:', customer.id);
             }
             
             if (customer && customer.twoFactorEnabled) {
@@ -885,9 +885,9 @@ export async function setupMultiAuth(app: Express) {
             }
           }
           
-          // Web flow - save session explicitly before redirect to ensure ownerId persists
+          // Web flow - save session explicitly before redirect to ensure customerId persists
           console.log('[Apple OAuth] Before save - Session ID:', req.sessionID);
-          console.log('[Apple OAuth] Before save - ownerId:', (req.session as any).ownerId);
+          console.log('[Apple OAuth] Before save - customerId:', (req.session as any).customerId);
           console.log('[Apple OAuth] Before save - passport:', JSON.stringify((req.session as any).passport));
           req.session.save((saveErr) => {
             if (saveErr) {
