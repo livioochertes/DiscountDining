@@ -101,9 +101,7 @@ app.get('/_health', (_req, res) => {
     serveStatic(app);
   }
 
-  // Use port 5000 for development, 8081 for production
-  // Port 8081 maps to external port 80 for deployment
-  const port = app.get("env") === "development" ? 5000 : 8081;
+  const port = parseInt(process.env.PORT || "5000", 10);
   
   // Add startup timeout handling for faster deployment
   const startupTimeout = setTimeout(() => {
