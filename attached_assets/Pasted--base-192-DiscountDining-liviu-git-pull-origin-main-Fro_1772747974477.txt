@@ -1,0 +1,31 @@
+(base) 192:DiscountDining liviu$ git pull origin main
+From https://github.com/livioochertes/DiscountDining
+ * branch            main       -> FETCH_HEAD
+   0a23995..f6e4c31  main       -> origin/main
+Updating 0a23995..f6e4c31
+error: short read while indexing android-app/EatOffAndroid/app/src/androidTest/java/com/eatoff/android/ExampleInstrumentedTest.java
+error: short read while indexing android-app/EatOffAndroid/app/src/main/java/com/eatoff/android/activities/LoginActivity.java
+error: short read while indexing android-app/EatOffAndroid/app/src/main/java/com/eatoff/android/adapters/RestaurantAdapter.java
+error: short read while indexing android-app/EatOffAndroid/app/src/main/java/com/eatoff/android/api/ApiClient.java
+error: short read while indexing android-app/EatOffAndroid/app/src/main/java/com/eatoff/android/models/Order.java
+error: short read while indexing android-app/EatOffAndroid/app/src/main/java/com/eatoff/android/utils/AuthManager.java
+error: short read while indexing android-app/EatOffAndroid/app/src/main/res/color/bottom_nav_color.xml
+error: short read while indexing android-app/EatOffAndroid/app/src/main/res/drawable/ic_add.xml
+error: short read while indexing android-app/EatOffAndroid/app/src/main/res/layout/activity_login.xml
+error: short read while indexing android-app/EatOffAndroid/app/src/main/res/menu/bottom_navigation.xml
+error: short read while indexing android-app/EatOffAndroid/app/src/main/res/values/themes.xml
+error: short read while indexing android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java
+error: short read while indexing android/app/src/main/res/drawable-land-xhdpi/splash.png
+error: short read while indexing android/app/src/main/res/drawable-land-xxhdpi/splash.png
+error: short read while indexing android/app/src/main/res/drawable-land-xxxhdpi/splash.png
+error: short read while indexing android/app/src/main/res/drawable-port-hdpi/splash.png
+error: short read while indexing android/app/src/main/res/drawable-port-mdpi/splash.png
+error: short read while indexing android/app/src/main/res/drawable-port-xhdpi/splash.png
+error: short read while indexing android/app/src/main/res/drawable-port-xxhdpi/splash.png
+error: short read while indexing android/app/src/main/res/layout/activity_main.xml
+error: short read while indexing android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+error: short read while indexing android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+error: short read while indexing android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+error: short read while indexing android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+error: short read while indexing android/app/src/main/res/values/ic_launcher_background.xml
+^C
