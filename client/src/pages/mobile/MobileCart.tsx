@@ -11,7 +11,6 @@ export default function MobileCart() {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
   const cs = marketplace?.currencySymbol || '€';
-  const { user } = useAuth();
   const { items, updateQuantity, removeFromCart, clearCart, getTotalPrice, getTotalItems, getRestaurantId, restaurantName } = useCart();
 
   const totalPrice = getTotalPrice();
