@@ -69,7 +69,7 @@ export default function MobileWallet() {
   const { t } = useLanguage();
   const { user, isLoading } = useAuth();
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   const [, setLocation] = useLocation();
   const urlParams = new URLSearchParams(window.location.search);
   const initialTab = (['vouchers', 'cashback', 'credit', 'personal'].includes(urlParams.get('tab') || '') 
@@ -1218,6 +1218,8 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
 }) {
   const stripe = useStripe();
   const elements = useElements();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [isProcessing, setIsProcessing] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
   
@@ -1253,7 +1255,7 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="bg-white rounded-lg p-3">
         <p className="text-sm text-gray-600 mb-1">
-          Suma: <span className="font-semibold">{amount} EUR</span>
+          Suma: <span className="font-semibold">{amount} {cs}</span>
         </p>
       </div>
       <div className="bg-white rounded-lg p-3">
@@ -1290,7 +1292,7 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
               Se procesează...
             </>
           ) : (
-            `Plătește ${amount} EUR`
+            `Plătește ${amount} ${cs}`
           )}
         </button>
       </div>
@@ -1302,7 +1304,7 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
 function PendingPaymentCard({ request }: { request: any }) {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
@@ -1650,7 +1652,7 @@ function PendingPaymentCard({ request }: { request: any }) {
 function ReceivedGiftCard({ gift }: { gift: any }) {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   const queryClient = useQueryClient();
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
@@ -1757,7 +1759,7 @@ type GiftStep = 'choose' | 'value' | 'product-restaurant' | 'product-menu' | 'pr
 function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   const queryClient = useQueryClient();
   const [step, setStep] = useState<GiftStep>('choose');
   const [giftType, setGiftType] = useState<'value' | 'product'>('value');
@@ -2262,7 +2264,7 @@ function TopUpModal({ isOpen, onClose, translations: t }: TopUpModalProps) {
   const [error, setError] = useState<string | null>(null);
   
   const currencyCode = marketplace?.currencyCode || 'RON';
-  const currencySymbol = marketplace?.currencySymbol || 'Lei';
+  const currencySymbol = marketplace?.currencySymbol || '€';
   const predefinedAmounts = [200, 300, 500, 1000];
   
   const handleTopUpWithCard = async () => {

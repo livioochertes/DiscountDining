@@ -56,7 +56,7 @@ interface RestaurantWithVouchers {
 
 function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   const discountPercent = parseFloat(voucher.discountPercentage) || 0;
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
@@ -200,7 +200,7 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
 function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
   const baseValue = totalValue / (1 + bonusPercent / 100);

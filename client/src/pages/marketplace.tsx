@@ -1030,9 +1030,9 @@ export default function Marketplace() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t.allPrices || 'All Prices'}</SelectItem>
-                  <SelectItem value="€">€ - {t.budget}</SelectItem>
-                  <SelectItem value="€€">€€ - {t.moderate}</SelectItem>
-                  <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
+                  <SelectItem value="€">{cs} - {t.budget}</SelectItem>
+                  <SelectItem value="€€">{cs}{cs} - {t.moderate}</SelectItem>
+                  <SelectItem value="€€€">{cs}{cs}{cs} - {t.upscale}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -1245,9 +1245,9 @@ export default function Marketplace() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">{t.allPrices || 'All Prices'}</SelectItem>
-                      <SelectItem value="€">€ - {t.budget}</SelectItem>
-                      <SelectItem value="€€">€€ - {t.moderate}</SelectItem>
-                      <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
+                      <SelectItem value="€">{cs} - {t.budget}</SelectItem>
+                      <SelectItem value="€€">{cs}{cs} - {t.moderate}</SelectItem>
+                      <SelectItem value="€€€">{cs}{cs}{cs} - {t.upscale}</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -1316,9 +1316,9 @@ export default function Marketplace() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t.allPrices || 'All Prices'}</SelectItem>
-                  <SelectItem value="€">€ - {t.budget}</SelectItem>
-                  <SelectItem value="€€">€€ - {t.moderate}</SelectItem>
-                  <SelectItem value="€€€">€€€ - {t.upscale}</SelectItem>
+                  <SelectItem value="€">{cs} - {t.budget}</SelectItem>
+                  <SelectItem value="€€">{cs}{cs} - {t.moderate}</SelectItem>
+                  <SelectItem value="€€€">{cs}{cs}{cs} - {t.upscale}</SelectItem>
                 </SelectContent>
               </Select>
 

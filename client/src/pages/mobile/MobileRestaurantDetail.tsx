@@ -41,7 +41,7 @@ interface VoucherPackage {
 function MenuItemCard({ item, onAdd, justAdded }: { item: MenuItem; onAdd: () => void; justAdded?: boolean }) {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   return (
     <div className="flex gap-3 p-3 bg-white rounded-2xl border border-gray-100">
       {item.imageUrl && (
@@ -68,7 +68,7 @@ function MenuItemCard({ item, onAdd, justAdded }: { item: MenuItem; onAdd: () =>
             {justAdded ? (
               <>
                 <Check className="w-4 h-4" />
-                <span>Adăugat</span>
+                <span>{t.added}</span>
               </>
             ) : (
               <>
@@ -86,7 +86,7 @@ function MenuItemCard({ item, onAdd, justAdded }: { item: MenuItem; onAdd: () =>
 function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPackage; onClick: () => void; isHighlighted?: boolean }) {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   const discount = parseFloat(pkg.discountPercentage) || 0;
   const bonus = parseFloat(pkg.bonusPercentage || '0') || 0;
   const pricePerMeal = parseFloat(pkg.pricePerMeal) || 0;
@@ -212,8 +212,8 @@ export default function MobileRestaurantDetail() {
       });
     }, 1500);
     toast({
-      title: `${item.name} adăugat`,
-      description: `1 × ${parseFloat(item.price).toFixed(2)} ${cs}`,
+      title: `${item.name} — ${t.added}`,
+      description: `1 × ${cs} ${parseFloat(item.price).toFixed(2)}`,
     });
   };
 
@@ -461,14 +461,14 @@ export default function MobileRestaurantDetail() {
       {getTotalItems() > 0 && (
         <div className="fixed bottom-24 left-4 right-4 z-50">
           <button
-            onClick={() => setLocation(`/restaurant/${restaurantId}/menu`)}
+            onClick={() => setLocation('/m/cart')}
             className="w-full bg-primary text-white rounded-2xl py-4 px-6 flex items-center justify-between shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center gap-3">
               <div className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
                 {getTotalItems()}
               </div>
-              <span className="font-semibold">Vezi coșul</span>
+              <span className="font-semibold">{t.viewCart}</span>
             </div>
             <span className="font-bold">{cs} {getTotalPrice().toFixed(2)}</span>
           </button>

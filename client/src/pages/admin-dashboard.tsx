@@ -7297,7 +7297,7 @@ export default function AdminDashboard() {
                                             </Button>
                                           </div>
                                           <p className="text-sm text-gray-500">{item.category}</p>
-                                          <p className="text-sm font-medium mt-1">{item.price} {restaurantDetails?.marketplace?.currencySymbol || 'RON'}</p>
+                                          <p className="text-sm font-medium mt-1">{item.price} {restaurantDetails?.marketplace?.currencySymbol || '€'}</p>
                                         </CardContent>
                                       </Card>
                                     ))}
@@ -7339,8 +7339,8 @@ export default function AdminDashboard() {
                                           </div>
                                           <p className="text-sm text-gray-500">{pkg.description}</p>
                                           <div className="flex justify-between mt-2">
-                                            <span className="text-sm">Valoare: {pkg.value} {restaurantDetails?.marketplace?.currencySymbol || 'RON'}</span>
-                                            <span className="text-sm font-medium text-green-600">Preț: {pkg.price} {restaurantDetails?.marketplace?.currencySymbol || 'RON'}</span>
+                                            <span className="text-sm">Valoare: {pkg.value} {restaurantDetails?.marketplace?.currencySymbol || '€'}</span>
+                                            <span className="text-sm font-medium text-green-600">Preț: {pkg.price} {restaurantDetails?.marketplace?.currencySymbol || '€'}</span>
                                           </div>
                                         </CardContent>
                                       </Card>

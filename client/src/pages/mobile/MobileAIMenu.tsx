@@ -113,7 +113,7 @@ function ExpandedRecommendation({ rec, setLocation, isAuthenticated }: { rec: an
 export default function MobileAIMenu() {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
-  const cs = marketplace?.currencySymbol || 'RON';
+  const cs = marketplace?.currencySymbol || '€';
   const { user, isLoading: authLoading } = useAuth();
   const isAuthenticated = !!user;
   const [, setLocation] = useLocation();
