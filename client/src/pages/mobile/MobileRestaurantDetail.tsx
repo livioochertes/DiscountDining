@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useRoute } from 'wouter';
-import { ArrowLeft, Star, MapPin, Clock, Ticket, ShoppingBag, Heart, Share2, ChevronRight, Calendar } from 'lucide-react';
+import { ArrowLeft, Star, MapPin, Clock, Ticket, ShoppingBag, Heart, Share2, ChevronRight, Calendar, Plus, Check } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import ReservationModal from '@/components/ReservationModal';
@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useMarketplace } from '@/contexts/MarketplaceContext';
+import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/hooks/use-toast';
 import { getImageUrl } from '@/lib/queryClient';
 
 const isNativePlatform = Capacitor.isNativePlatform();
@@ -36,7 +38,7 @@ interface VoucherPackage {
   type?: string;
 }
 
-function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
+function MenuItemCard({ item, onAdd, justAdded }: { item: MenuItem; onAdd: () => void; justAdded?: boolean }) {
   const { t } = useLanguage();
   const { marketplace } = useMarketplace();
   const cs = marketplace?.currencySymbol || 'RON';
@@ -56,9 +58,24 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
           <span className="font-semibold text-primary">{parseFloat(item.price).toFixed(0)} {cs}</span>
           <button
             onClick={onAdd}
-            className="bg-primary/10 text-primary text-xs font-medium px-3 py-1.5 rounded-full"
+            className={cn(
+              "flex items-center gap-1.5 font-semibold px-4 py-2 rounded-full text-sm transition-all active:scale-95 shadow-sm",
+              justAdded 
+                ? "bg-green-500 text-white" 
+                : "bg-primary text-white"
+            )}
           >
-            {t.addToCart}
+            {justAdded ? (
+              <>
+                <Check className="w-4 h-4" />
+                <span>Adăugat</span>
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                <span>{t.addToCart}</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -133,6 +150,11 @@ export default function MobileRestaurantDetail() {
   const [, params] = useRoute('/m/restaurant/:id');
   const restaurantId = params?.id;
   const { user } = useAuth();
+  const { addToCart, getTotalItems, getTotalPrice } = useCart();
+  const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
+  const [justAddedIds, setJustAddedIds] = useState<Set<number>>(new Set());
   
   const urlParams = new URLSearchParams(window.location.search);
   const initialTab = urlParams.get('tab') === 'vouchers' ? 'vouchers' : 'menu';
@@ -180,7 +202,19 @@ export default function MobileRestaurantDetail() {
       setLocation('/m/signin');
       return;
     }
-    console.log('Add to cart:', item);
+    addToCart(item as any, 1, undefined, restaurant?.name);
+    setJustAddedIds(prev => new Set(prev).add(item.id));
+    setTimeout(() => {
+      setJustAddedIds(prev => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    }, 1500);
+    toast({
+      title: `${item.name} adăugat`,
+      description: `1 × ${parseFloat(item.price).toFixed(2)} ${cs}`,
+    });
   };
 
   const handleBuyVoucher = (pkg: VoucherPackage) => {
@@ -382,6 +416,7 @@ export default function MobileRestaurantDetail() {
                         <MenuItemCard 
                           item={item} 
                           onAdd={() => handleAddToCart(item)}
+                          justAdded={justAddedIds.has(item.id)}
                         />
                       </div>
                     ))}
@@ -421,6 +456,24 @@ export default function MobileRestaurantDetail() {
           )}
         </div>
       </div>
+
+      {/* Floating Cart Button */}
+      {getTotalItems() > 0 && (
+        <div className="fixed bottom-24 left-4 right-4 z-50">
+          <button
+            onClick={() => setLocation(`/restaurant/${restaurantId}/menu`)}
+            className="w-full bg-primary text-white rounded-2xl py-4 px-6 flex items-center justify-between shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                {getTotalItems()}
+              </div>
+              <span className="font-semibold">Vezi coșul</span>
+            </div>
+            <span className="font-bold">{cs} {getTotalPrice().toFixed(2)}</span>
+          </button>
+        </div>
+      )}
 
       {/* Reservation Modal */}
       {restaurant && (
