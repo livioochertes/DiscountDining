@@ -162,7 +162,7 @@ export default function RestaurantVouchersPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold text-primary">
-                        {cs}{pkg.pricePerMeal ? parseFloat(pkg.pricePerMeal).toFixed(2) : '0.00'}/masă
+                        {cs} {pkg.pricePerMeal ? parseFloat(pkg.pricePerMeal).toFixed(2) : '0.00'}/masă
                       </span>
                     </div>
                     <Button 

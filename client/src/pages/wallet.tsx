@@ -425,7 +425,7 @@ export default function WalletPage() {
               <Euro className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{cs}{parseFloat(walletData.wallet.cashBalance || '0').toFixed(2)}</div>
+              <div className="text-2xl font-bold">{cs} {parseFloat(walletData.wallet.cashBalance || '0').toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">Top-up & bonusuri</p>
             </CardContent>
           </Card>
@@ -447,7 +447,7 @@ export default function WalletPage() {
               <TrendingUp className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{cs}{parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(2)}</div>
+              <div className="text-2xl font-bold">{cs} {parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">Din programul cashback</p>
             </CardContent>
           </Card>
@@ -460,7 +460,7 @@ export default function WalletPage() {
             <CardContent>
               <div className="text-2xl font-bold">
                 {walletOverview?.credit?.status === 'approved'
-                  ? `${cs}${parseFloat(walletOverview?.credit?.availableCredit || '0').toFixed(2)}`
+                  ? `${cs} ${parseFloat(walletOverview?.credit?.availableCredit || '0').toFixed(2)}`
                   : walletOverview?.credit?.status === 'pending'
                     ? 'În așteptare'
                     : 'N/A'}
@@ -580,7 +580,7 @@ export default function WalletPage() {
                         </div>
                         <div className="text-right">
                           <p className={`font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
-                            {isPositive ? "+" : "-"}{cs}{transaction.amount}
+                            {isPositive ? "+" : "-"}{cs} {transaction.amount}
                           </p>
                         </div>
                       </div>
@@ -634,7 +634,7 @@ export default function WalletPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Value:</span>
-                        <span className="font-medium">{cs}{voucher.purchasePrice}</span>
+                        <span className="font-medium">{cs} {voucher.purchasePrice}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Status:</span>
@@ -684,16 +684,16 @@ export default function WalletPage() {
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Price:</span>
                         <div className="text-right">
-                          <span className="font-bold">{cs}{voucher.price}</span>
+                          <span className="font-bold">{cs} {voucher.price}</span>
                           <span className="text-sm text-muted-foreground line-through ml-2">
-                            {cs}{voucher.originalValue}
+                            {cs} {voucher.originalValue}
                           </span>
                         </div>
                       </div>
 
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Discount:</span>
-                        <span className="font-medium">{cs}{voucher.discountValue}</span>
+                        <span className="font-medium">{cs} {voucher.discountValue}</span>
                       </div>
 
                       <div className="flex justify-between">
@@ -761,10 +761,10 @@ export default function WalletPage() {
                         </div>
                         <div className="text-right">
                           <p className={`font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
-                            {isPositive ? "+" : "-"}{cs}{transaction.amount}
+                            {isPositive ? "+" : "-"}{cs} {transaction.amount}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Balance: {cs}{transaction.balanceAfter}
+                            Balance: {cs} {transaction.balanceAfter}
                           </p>
                         </div>
                       </div>

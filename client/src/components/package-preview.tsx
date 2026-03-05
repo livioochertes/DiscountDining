@@ -55,7 +55,7 @@ export default function PackagePreview({
           </div>
           <div className="flex items-center gap-2">
             <Euro className="h-4 w-4 text-gray-500" />
-            <span>{cs}{pricePerMeal || 0}/meal</span>
+            <span>{cs} {pricePerMeal || 0}/meal</span>
           </div>
           <div className="flex items-center gap-2">
             <Percent className="h-4 w-4 text-gray-500" />
@@ -67,15 +67,15 @@ export default function PackagePreview({
           <div className="border-t pt-3 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Regular price:</span>
-              <span className="line-through text-gray-500">{cs}{regularPrice.toFixed(2)}</span>
+              <span className="line-through text-gray-500">{cs} {regularPrice.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Customer pays:</span>
-              <span className="font-semibold text-accent">{cs}{customerPrice.toFixed(2)}</span>
+              <span className="font-semibold text-accent">{cs} {customerPrice.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm font-medium">
               <span className="text-gray-600">Customer saves:</span>
-              <span className="text-accent">{cs}{savings.toFixed(2)}</span>
+              <span className="text-accent">{cs} {savings.toFixed(2)}</span>
             </div>
           </div>
         )}

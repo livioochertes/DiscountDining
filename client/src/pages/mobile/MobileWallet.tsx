@@ -641,7 +641,7 @@ export default function MobileWallet() {
                     </div>
                     
                     <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-gray-900">{cs}{remainingValue}</p>
+                      <p className="font-bold text-gray-900">{cs} {remainingValue}</p>
                       <p className="text-[10px] text-gray-400">{t.value}</p>
                     </div>
                   </div>

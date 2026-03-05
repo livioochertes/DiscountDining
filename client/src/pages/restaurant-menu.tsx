@@ -238,7 +238,7 @@ export default function RestaurantMenuPage() {
                 <CardContent className="p-4 flex flex-col flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-semibold text-lg">{item.name}</h4>
-                    <span className="text-primary font-bold text-lg">{cs}{item.price}</span>
+                    <span className="text-primary font-bold text-lg">{cs} {item.price}</span>
                   </div>
                   
                   {item.description && (
@@ -344,7 +344,7 @@ export default function RestaurantMenuPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold">{selectedMenuItem.name}</h3>
                   <p className="text-sm text-gray-600 line-clamp-2">{selectedMenuItem.description}</p>
-                  <p className="text-lg font-bold text-primary">{cs}{selectedMenuItem.price}</p>
+                  <p className="text-lg font-bold text-primary">{cs} {selectedMenuItem.price}</p>
                 </div>
               </div>
 
@@ -384,7 +384,7 @@ export default function RestaurantMenuPage() {
 
                 <div className="flex items-center justify-between pt-4 border-t">
                   <div className="text-lg font-semibold">
-                    Total: {cs}{(parseFloat(selectedMenuItem.price.toString()) * quantity).toFixed(2)}
+                    Total: {cs} {(parseFloat(selectedMenuItem.price.toString()) * quantity).toFixed(2)}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setSelectedMenuItem(null)}>

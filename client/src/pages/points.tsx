@@ -140,7 +140,7 @@ export default function PointsPage() {
             <CardContent>
               <div className="text-2xl font-bold">{pointsData?.currentPoints || 0}</div>
               <p className="text-xs text-muted-foreground">
-                Worth {cs}{calculateCashValue(pointsData?.currentPoints || 0)}
+                Worth {cs} {calculateCashValue(pointsData?.currentPoints || 0)}
               </p>
             </CardContent>
           </Card>
@@ -196,7 +196,7 @@ export default function PointsPage() {
                 />
                 {pointsToRedeem && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    = {cs}{calculateCashValue(parseInt(pointsToRedeem) || 0)}
+                    = {cs} {calculateCashValue(parseInt(pointsToRedeem) || 0)}
                   </p>
                 )}
               </div>
@@ -257,7 +257,7 @@ export default function PointsPage() {
                       {transaction.transactionType === 'earned' ? '+' : '-'}{transaction.pointsAmount}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {cs}{calculateCashValue(transaction.pointsAmount)}
+                      {cs} {calculateCashValue(transaction.pointsAmount)}
                     </p>
                   </div>
                 </div>
@@ -288,7 +288,7 @@ export default function PointsPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-red-600">-{redemption.pointsUsed} points</p>
-                      <p className="text-xs text-muted-foreground">{cs}{redemption.cashValue}</p>
+                      <p className="text-xs text-muted-foreground">{cs} {redemption.cashValue}</p>
                     </div>
                   </div>
                 ))}

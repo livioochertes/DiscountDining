@@ -83,7 +83,7 @@ function CheckoutForm({ packageData, restaurant, onSuccess, user, isPayLater, pa
           if (result.success) {
             toast({
               title: "Authorization Successful",
-              description: `Your Pay Later voucher is activated! Payment of ${cs}${payLaterDetails?.originalAmount} will be charged in ${payLaterDetails?.paymentTermDays} days.`,
+              description: `Your Pay Later voucher is activated! Payment of ${cs} ${payLaterDetails?.originalAmount} will be charged in ${payLaterDetails?.paymentTermDays} days.`,
             });
             onSuccess();
           } else {
@@ -139,7 +139,7 @@ function CheckoutForm({ packageData, restaurant, onSuccess, user, isPayLater, pa
           <h3 className="font-semibold text-blue-900 mb-2">Pay Later Details</h3>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• You'll receive {payLaterDetails.bonusPercentage}% bonus value immediately</li>
-            <li>• Payment of {cs}{payLaterDetails.originalAmount} will be charged in {payLaterDetails.paymentTermDays} days</li>
+            <li>• Payment of {cs} {payLaterDetails.originalAmount} will be charged in {payLaterDetails.paymentTermDays} days</li>
             <li>• Your payment method will be securely saved for the future charge</li>
           </ul>
         </div>
@@ -427,18 +427,18 @@ export default function Checkout() {
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
                   <span>Voucher Value:</span>
-                  <span className="font-medium">{cs}{regularPrice.toFixed(2)}</span>
+                  <span className="font-medium">{cs} {regularPrice.toFixed(2)}</span>
                 </div>
                 
                 {isPayLater ? (
                   <>
                     <div className="flex justify-between text-accent font-medium">
                       <span>You pay later:</span>
-                      <span>{cs}{customerPrice.toFixed(2)}</span>
+                      <span>{cs} {customerPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
                       <span>Price increase:</span>
-                      <span className="text-red-600">+{cs}{bonusAmount.toFixed(2)}</span>
+                      <span className="text-red-600">+{cs} {bonusAmount.toFixed(2)}</span>
                     </div>
                     <div className="text-xs text-gray-500">
                       Payment due in {(packageData as any).paymentTermDays || 30} days
@@ -448,11 +448,11 @@ export default function Checkout() {
                   <>
                     <div className="flex justify-between text-accent font-medium">
                       <span>Your price:</span>
-                      <span>{cs}{customerPrice.toFixed(2)}</span>
+                      <span>{cs} {customerPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
                       <span>You save:</span>
-                      <span className="text-green-600">-{cs}{savings.toFixed(2)}</span>
+                      <span className="text-green-600">-{cs} {savings.toFixed(2)}</span>
                     </div>
                   </>
                 )}
@@ -463,7 +463,7 @@ export default function Checkout() {
             
             <div className="flex justify-between font-semibold text-lg">
               <span>Total:</span>
-              <span>{cs}{customerPrice.toFixed(2)}</span>
+              <span>{cs} {customerPrice.toFixed(2)}</span>
             </div>
             
             <div className="text-xs text-gray-500 space-y-1">

@@ -560,7 +560,7 @@ export function AIRecommendations({ className, mealType, showFilters = true, rec
                     )}
                     
                     <div className="text-xl font-bold text-primary">
-                      {cs}{selectedRecommendation.menuItem.price}
+                      {cs} {selectedRecommendation.menuItem.price}
                     </div>
 
                     {selectedRecommendation.menuItem.category && (

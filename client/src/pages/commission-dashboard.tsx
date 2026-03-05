@@ -112,7 +112,7 @@ export default function CommissionDashboard() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `${cs}${amount.toFixed(2)}`;
+    return `${cs} ${amount.toFixed(2)}`;
   };
 
   const formatDate = (dateString: string) => {

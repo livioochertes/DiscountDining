@@ -36,7 +36,7 @@ export function AIPackageExplainer({
       setIsExpanded(true);
     },
     onError: () => {
-      setExplanation(`This package includes ${pkg.mealCount} meals at a ${pkg.discountPercentage}% discount, saving you ${cs}${savings.toFixed(2)}! Valid for ${pkg.validityMonths} months.`);
+      setExplanation(`This package includes ${pkg.mealCount} meals at a ${pkg.discountPercentage}% discount, saving you ${cs} ${savings.toFixed(2)}! Valid for ${pkg.validityMonths} months.`);
       setIsExpanded(true);
     }
   });

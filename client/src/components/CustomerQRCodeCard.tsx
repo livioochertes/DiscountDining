@@ -159,7 +159,7 @@ export default function CustomerQRCodeCard({ customerId }: CustomerQRCodeCardPro
                           <div>
                             <p className="font-medium text-sm">{loyalty.restaurant?.name}</p>
                             <p className="text-xs text-gray-500">
-                              {loyalty.totalVisits || 0} vizite • {cs}{parseFloat(loyalty.totalSpend || "0").toFixed(2)} cheltuiți
+                              {loyalty.totalVisits || 0} vizite • {cs} {parseFloat(loyalty.totalSpend || "0").toFixed(2)} cheltuiți
                             </p>
                           </div>
                           {loyalty.category && (

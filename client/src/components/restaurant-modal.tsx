@@ -93,14 +93,14 @@ function PackageCard({ package: pkg, restaurant, onPurchase, isPopular = false }
         <div className="space-y-2 mb-6">
           <div className="flex justify-between text-sm">
             <span>Voucher Value:</span>
-            <span className="font-medium">{cs}{regularPrice.toFixed(2)}</span>
+            <span className="font-medium">{cs} {regularPrice.toFixed(2)}</span>
           </div>
           
           {isPayLater ? (
             <>
               <div className="flex justify-between text-sm">
                 <span>You pay later:</span>
-                <span className="font-semibold text-accent">{cs}{customerPrice.toFixed(2)}</span>
+                <span className="font-semibold text-accent">{cs} {customerPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm font-medium">
                 <span>Price increase:</span>
@@ -114,7 +114,7 @@ function PackageCard({ package: pkg, restaurant, onPurchase, isPopular = false }
             <>
               <div className="flex justify-between text-sm">
                 <span>Your price:</span>
-                <span className="font-semibold text-accent">{cs}{customerPrice.toFixed(2)}</span>
+                <span className="font-semibold text-accent">{cs} {customerPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm font-medium">
                 <span>You save:</span>

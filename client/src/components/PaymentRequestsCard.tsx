@@ -109,7 +109,7 @@ export default function PaymentRequestsCard({ customerId }: PaymentRequestsCardP
                         <p className="text-sm text-gray-600">{pr.description || "Plată în restaurant"}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold">{cs}{parseFloat(pr.finalAmount).toFixed(2)}</p>
+                        <p className="text-lg font-bold">{cs} {parseFloat(pr.finalAmount).toFixed(2)}</p>
                         {pr.discountApplied && parseFloat(pr.discountApplied) > 0 && (
                           <p className="text-xs text-green-600">
                             -{parseFloat(pr.discountApplied).toFixed(2)}{cs} reducere fidelitate
@@ -123,7 +123,7 @@ export default function PaymentRequestsCard({ customerId }: PaymentRequestsCardP
                         <Clock className="h-3 w-3" />
                         Expiră în: {formatTimeLeft(pr.expiresAt)}
                       </span>
-                      <span>Sumă inițială: {cs}{parseFloat(pr.amount).toFixed(2)}</span>
+                      <span>Sumă inițială: {cs} {parseFloat(pr.amount).toFixed(2)}</span>
                     </div>
 
                     <div className="flex gap-2">
@@ -168,7 +168,7 @@ export default function PaymentRequestsCard({ customerId }: PaymentRequestsCardP
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">{cs}{parseFloat(pr.finalAmount).toFixed(2)}</p>
+                      <p className="font-medium">{cs} {parseFloat(pr.finalAmount).toFixed(2)}</p>
                       <Badge variant={
                         pr.status === "completed" ? "default" :
                         pr.status === "rejected" ? "destructive" : "secondary"

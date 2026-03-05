@@ -418,7 +418,7 @@ function AIMenuContent({ selectedFilters, setSelectedFilters, expandedItem, setE
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <span>{item.calories} kcal</span>
-                  <span>{cs}{item.price.toFixed(2)}</span>
+                  <span>{cs} {item.price.toFixed(2)}</span>
                 </div>
                 <div className="flex gap-1">
                   {item.tags.slice(0, 2).map((tag) => (

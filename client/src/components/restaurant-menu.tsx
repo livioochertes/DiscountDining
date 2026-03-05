@@ -59,7 +59,7 @@ function AddToCartDialog({ menuItem, onAddToCart }: AddToCartDialogProps) {
         <div className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground mb-2">{menuItem.description}</p>
-            <p className="text-lg font-semibold text-primary">{cs}{menuItem.price}</p>
+            <p className="text-lg font-semibold text-primary">{cs} {menuItem.price}</p>
           </div>
 
           <div className="space-y-2">
@@ -103,7 +103,7 @@ function AddToCartDialog({ menuItem, onAddToCart }: AddToCartDialogProps) {
 
           <div className="flex justify-between items-center pt-4">
             <span className="text-lg font-semibold">
-              Total: {cs}{(parseFloat(menuItem.price) * quantity).toFixed(2)}
+              Total: {cs} {(parseFloat(menuItem.price) * quantity).toFixed(2)}
             </span>
             <Button onClick={handleAddToCart} className="min-w-[120px]">
               Add to Cart
@@ -276,7 +276,7 @@ export default function RestaurantMenu({ restaurant, onOrderNow }: RestaurantMen
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{item.name}</CardTitle>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-primary">{cs}{item.price}</p>
+                      <p className="text-lg font-bold text-primary">{cs} {item.price}</p>
                       {item.isPopular && (
                         <Badge variant="secondary" className="text-xs">Popular</Badge>
                       )}

@@ -265,11 +265,11 @@ export default function VoucherModal({ voucher, isOpen, onClose }: VoucherModalP
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Paid:</span>
-                    <span className="font-medium">{cs}{voucher.purchasePrice}</span>
+                    <span className="font-medium">{cs} {voucher.purchasePrice}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Discount Received:</span>
-                    <span className="font-medium text-green-600">{cs}{voucher.discountReceived}</span>
+                    <span className="font-medium text-green-600">{cs} {voucher.discountReceived}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">QR Code ID:</span>

@@ -481,7 +481,7 @@ export default function RestaurantHeatMap() {
                                         <CardContent className="p-4">
                                           <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-medium text-sm">{item.name}</h4>
-                                            <span className="font-bold text-primary">{cs}{item.price}</span>
+                                            <span className="font-bold text-primary">{cs} {item.price}</span>
                                           </div>
                                           {item.description && (
                                             <p className="text-xs text-muted-foreground mb-2">

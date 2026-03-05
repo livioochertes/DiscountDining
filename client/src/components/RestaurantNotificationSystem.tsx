@@ -107,7 +107,7 @@ export default function RestaurantNotificationSystem({
           id: `order-${data.id}`,
           type: 'order',
           title: 'New Order',
-          message: `#${data.orderNumber || data.id} — ${cs}${data.totalAmount || '?'}${data.restaurantName ? ` at ${data.restaurantName}` : ''}`,
+          message: `#${data.orderNumber || data.id} — ${cs} ${data.totalAmount || '?'}${data.restaurantName ? ` at ${data.restaurantName}` : ''}`,
           timestamp: new Date(),
           data,
           isRead: false

@@ -454,7 +454,7 @@ export default function ChefProfilePage() {
                               <p className="text-sm text-gray-600 line-clamp-2 mb-2">{dish.description}</p>
                               <div className="flex items-center justify-between">
                                 <span className="text-teal-600 font-bold">
-                                  {dish.price ? `${cs}${parseFloat(dish.price).toFixed(2)}` : '—'}
+                                  {dish.price ? `${cs} ${parseFloat(dish.price).toFixed(2)}` : '—'}
                                 </span>
                                 <div className="flex items-center gap-2 text-xs text-gray-500">
                                   {dish.preparationTime && dish.preparationTime > 0 && (

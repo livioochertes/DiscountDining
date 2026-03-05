@@ -114,7 +114,7 @@ export function MenuCart() {
                         )}
                         <div className="flex items-center justify-between mt-2">
                           <span className="font-medium text-primary">
-                            {cs}{(parseFloat(item.menuItem.price.toString()) * item.quantity).toFixed(2)}
+                            {cs} {(parseFloat(item.menuItem.price.toString()) * item.quantity).toFixed(2)}
                           </span>
                           <div className="flex items-center gap-2">
                             <Button
@@ -155,7 +155,7 @@ export function MenuCart() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-lg font-semibold">
                   <span>Total</span>
-                  <span className="text-primary">{cs}{totalPrice.toFixed(2)}</span>
+                  <span className="text-primary">{cs} {totalPrice.toFixed(2)}</span>
                 </div>
 
                 <Button 

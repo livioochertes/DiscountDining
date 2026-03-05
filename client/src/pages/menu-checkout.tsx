@@ -104,7 +104,7 @@ const MixedPaymentForm = ({ orderDetails, restaurantId, items, customerInfo, poi
           <div className="flex items-center space-x-2">
             <Award className="h-4 w-4" />
             <CreditCard className="h-4 w-4" />
-            <span>Pay {pointsToUse.toLocaleString()} Points + {cs}{orderDetails.cardAmount}</span>
+            <span>Pay {pointsToUse.toLocaleString()} Points + {cs} {orderDetails.cardAmount}</span>
           </div>
         )}
       </Button>
@@ -210,7 +210,7 @@ const CheckoutForm = ({ orderDetails, restaurantId, items, customerInfo }: {
         size="lg" 
         disabled={!stripe || isProcessing}
       >
-        {isProcessing ? t.paymentProcessing : `${t.proceedToPayment} - ${cs}${orderDetails.totalAmount}`}
+        {isProcessing ? t.paymentProcessing : `${t.proceedToPayment} - ${cs} ${orderDetails.totalAmount}`}
       </Button>
     </form>
   );
@@ -345,7 +345,7 @@ export default function MenuCheckout() {
       clearCart();
       toast({
         title: "Order Placed Successfully!",
-        description: `Paid with ${pointsToUse.toLocaleString()} points + ${cs}${(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)} by card`,
+        description: `Paid with ${pointsToUse.toLocaleString()} points + ${cs} ${(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)} by card`,
       });
       setLocation('/');
     },
@@ -699,7 +699,7 @@ export default function MenuCheckout() {
                         <p className="text-sm text-gray-600">{t.quantity}: {item.quantity}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{cs}{(parseFloat(item.menuItem.price.toString()) * item.quantity).toFixed(2)}</p>
+                        <p className="font-medium">{cs} {(parseFloat(item.menuItem.price.toString()) * item.quantity).toFixed(2)}</p>
                       </div>
                     </div>
                   ))}
@@ -709,7 +709,7 @@ export default function MenuCheckout() {
 
                 <div className="flex justify-between items-center text-lg font-semibold">
                   <span>Total</span>
-                  <span className="text-primary">{cs}{totalAmount.toFixed(2)}</span>
+                  <span className="text-primary">{cs} {totalAmount.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -966,7 +966,7 @@ export default function MenuCheckout() {
                                 <p className="text-sm text-gray-600">Pay with credit/debit card via Stripe</p>
                               </div>
                               <div className="text-right">
-                                <p className="font-bold text-lg">{cs}{totalAmount.toFixed(2)}</p>
+                                <p className="font-bold text-lg">{cs} {totalAmount.toFixed(2)}</p>
                               </div>
                             </div>
                           </div>
@@ -998,7 +998,7 @@ export default function MenuCheckout() {
                               </div>
                               <div className="text-right">
                                 <p className="font-bold text-lg">{totalAmountInPoints.toLocaleString()} pts</p>
-                                <p className="text-sm text-gray-600">≈ {cs}{totalAmount.toFixed(2)}</p>
+                                <p className="text-sm text-gray-600">≈ {cs} {totalAmount.toFixed(2)}</p>
                               </div>
                             </div>
                           </div>
@@ -1117,17 +1117,17 @@ export default function MenuCheckout() {
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
                                 <span>Total Order:</span>
-                                <span className="font-medium">{cs}{totalAmount.toFixed(2)}</span>
+                                <span className="font-medium">{cs} {totalAmount.toFixed(2)}</span>
                               </div>
                               {pointsToUse > 0 && (
                                 <>
                                   <div className="flex justify-between text-amber-700">
                                     <span>Points Payment:</span>
-                                    <span>-{cs}{calculatePointsValue(pointsToUse).toFixed(2)} ({pointsToUse.toLocaleString()} pts)</span>
+                                    <span>-{cs} {calculatePointsValue(pointsToUse).toFixed(2)} ({pointsToUse.toLocaleString()} pts)</span>
                                   </div>
                                   <div className="flex justify-between text-blue-700">
                                     <span>Card Payment:</span>
-                                    <span>{cs}{(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)}</span>
+                                    <span>{cs} {(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)}</span>
                                   </div>
                                   <Separator className="bg-amber-200" />
                                   <div className="flex justify-between font-medium text-amber-800">
@@ -1139,7 +1139,7 @@ export default function MenuCheckout() {
                               {pointsToUse === 0 && (
                                 <div className="flex justify-between text-blue-700">
                                   <span>Card Payment:</span>
-                                  <span>{cs}{totalAmount.toFixed(2)}</span>
+                                  <span>{cs} {totalAmount.toFixed(2)}</span>
                                 </div>
                               )}
                             </div>
@@ -1172,7 +1172,7 @@ export default function MenuCheckout() {
                             <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
                               <p className="text-sm text-blue-700">
                                 <CreditCard className="inline h-4 w-4 mr-1" />
-                                Partial payment: {pointsToUse.toLocaleString()} points + {cs}{(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)} by card
+                                Partial payment: {pointsToUse.toLocaleString()} points + {cs} {(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)} by card
                               </p>
                             </div>
                             {!clientSecret ? (

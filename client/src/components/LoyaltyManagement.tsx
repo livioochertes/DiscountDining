@@ -373,7 +373,7 @@ export default function LoyaltyManagement({ restaurants }: LoyaltyManagementProp
                         )}
                       </td>
                       <td className="py-2 px-3">{lc.totalVisits || 0}</td>
-                      <td className="py-2 px-3">{cs}{parseFloat(lc.totalSpend || "0").toFixed(2)}</td>
+                      <td className="py-2 px-3">{cs} {parseFloat(lc.totalSpend || "0").toFixed(2)}</td>
                       <td className="py-2 px-3">
                         {lc.lastVisitAt ? new Date(lc.lastVisitAt).toLocaleDateString() : "-"}
                       </td>
@@ -402,7 +402,7 @@ export default function LoyaltyManagement({ restaurants }: LoyaltyManagementProp
                     <p className="text-xs text-gray-500">{pr.description || "Plată generală"}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">{cs}{parseFloat(pr.finalAmount).toFixed(2)}</p>
+                    <p className="font-medium">{cs} {parseFloat(pr.finalAmount).toFixed(2)}</p>
                     <Badge variant={
                       pr.status === "completed" ? "default" :
                       pr.status === "pending" ? "secondary" :

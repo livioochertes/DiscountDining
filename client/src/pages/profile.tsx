@@ -327,7 +327,7 @@ export default function Profile() {
                   </div>
                   <div>
                     <span className="text-sm text-gray-600">Account Balance:</span>
-                    <p className="font-medium text-lg text-primary">{cs}{user?.balance || '0.00'}</p>
+                    <p className="font-medium text-lg text-primary">{cs} {user?.balance || '0.00'}</p>
                   </div>
                   <div>
                     <span className="text-sm text-gray-600">Loyalty Points:</span>

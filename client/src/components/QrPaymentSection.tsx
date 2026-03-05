@@ -189,7 +189,7 @@ export default function QrPaymentSection({ isOpen, onClose, customerId }: QrPaym
             <div className="space-y-4">
               <div className="space-y-2 text-sm">
                 <p><strong>Restaurant:</strong> {qrData.paymentDetails.restaurantName}</p>
-                <p><strong>Amount:</strong> {cs}{qrData.paymentDetails.amount}</p>
+                <p><strong>Amount:</strong> {cs} {qrData.paymentDetails.amount}</p>
                 <p><strong>Payment Method:</strong> {qrData.paymentDetails.paymentMethod}</p>
                 <p><strong>Expires:</strong> {new Date(qrData.paymentDetails.expiresAt).toLocaleTimeString()}</p>
               </div>
