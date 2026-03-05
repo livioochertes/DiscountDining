@@ -8,6 +8,7 @@ import ReservationModal from '@/components/ReservationModal';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { getImageUrl } from '@/lib/queryClient';
 
 const isNativePlatform = Capacitor.isNativePlatform();
@@ -37,6 +38,8 @@ interface VoucherPackage {
 
 function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   return (
     <div className="flex gap-3 p-3 bg-white rounded-2xl border border-gray-100">
       {item.imageUrl && (
@@ -50,7 +53,7 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
         <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
         <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{item.description}</p>
         <div className="flex items-center justify-between mt-2">
-          <span className="font-semibold text-primary">{parseFloat(item.price).toFixed(0)} RON</span>
+          <span className="font-semibold text-primary">{parseFloat(item.price).toFixed(0)} {cs}</span>
           <button
             onClick={onAdd}
             className="bg-primary/10 text-primary text-xs font-medium px-3 py-1.5 rounded-full"
@@ -65,6 +68,8 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 
 function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPackage; onClick: () => void; isHighlighted?: boolean }) {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   const discount = parseFloat(pkg.discountPercentage) || 0;
   const bonus = parseFloat(pkg.bonusPercentage || '0') || 0;
   const pricePerMeal = parseFloat(pkg.pricePerMeal) || 0;
@@ -114,7 +119,7 @@ function VoucherPackageCard({ pkg, onClick, isHighlighted }: { pkg: VoucherPacka
       <div className="flex items-end justify-between">
         <div>
           {pkg.mealCount > 0 && <span className="text-xs text-gray-400">{pkg.mealCount} {t.meals}</span>}
-          <p className="text-lg font-bold text-primary">{totalPrice.toFixed(0)} RON</p>
+          <p className="text-lg font-bold text-primary">{totalPrice.toFixed(0)} {cs}</p>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400" />
       </div>

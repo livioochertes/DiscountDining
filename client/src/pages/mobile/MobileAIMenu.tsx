@@ -6,6 +6,7 @@ import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { api } from '@/lib/api';
 import { getImageUrl } from '@/lib/queryClient';
 
@@ -111,6 +112,8 @@ function ExpandedRecommendation({ rec, setLocation, isAuthenticated }: { rec: an
 
 export default function MobileAIMenu() {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   const { user, isLoading: authLoading } = useAuth();
   const isAuthenticated = !!user;
   const [, setLocation] = useLocation();
@@ -564,9 +567,9 @@ export default function MobileAIMenu() {
                   className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white text-gray-700"
                 >
                   <option value="all">All Prices</option>
-                  <option value="€">€ - Budget</option>
-                  <option value="€€">€€ - Moderate</option>
-                  <option value="€€€">€€€ - Upscale</option>
+                  <option value="€">{cs} - Budget</option>
+                  <option value="€€">{cs}{cs} - Moderate</option>
+                  <option value="€€€">{cs}{cs}{cs} - Upscale</option>
                 </select>
                 <select
                   value={manualRating}

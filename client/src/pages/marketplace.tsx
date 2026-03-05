@@ -23,6 +23,7 @@ import { api, type RestaurantFilters } from "@/lib/api";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Restaurant } from "@shared/schema";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { imageCache } from "@/lib/imageCache";
@@ -206,6 +207,8 @@ export default function Marketplace() {
 
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const { isAuthenticated } = useAuth();
 
   const { data: restaurants = [], isLoading } = useQuery({
@@ -1566,7 +1569,7 @@ export default function Marketplace() {
                             {userDietaryProfile.budgetRange && (
                               <span className="text-xs text-gray-500">
                                 <span className="text-[11px] text-gray-400 uppercase tracking-wide mr-1">{t.budget || 'Buget'}:</span>
-                                {userDietaryProfile.budgetRange === 'low' ? '€5-15' : userDietaryProfile.budgetRange === 'medium' ? '€15-30' : userDietaryProfile.budgetRange === 'high' ? '€30+' : userDietaryProfile.budgetRange}
+                                {userDietaryProfile.budgetRange === 'low' ? `${cs}5-15` : userDietaryProfile.budgetRange === 'medium' ? `${cs}15-30` : userDietaryProfile.budgetRange === 'high' ? `${cs}30+` : userDietaryProfile.budgetRange}
                               </span>
                             )}
                             {userDietaryProfile.diningFrequency && (
@@ -1676,9 +1679,9 @@ export default function Marketplace() {
                                   <label className="text-xs text-gray-500 block mb-1">{t.budgetRange || 'Buget'}</label>
                                   <select value={editProfile.budgetRange} onChange={(e) => setEditProfile({...editProfile, budgetRange: e.target.value})} className="w-full h-9 px-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-sm">
                                     <option value="">{t.select || 'Selectează'}</option>
-                                    <option value="low">€5-15</option>
-                                    <option value="medium">€15-30</option>
-                                    <option value="high">€30+</option>
+                                    <option value="low">{cs}5-15</option>
+                                    <option value="medium">{cs}15-30</option>
+                                    <option value="high">{cs}30+</option>
                                   </select>
                                 </div>
                                 <div>

@@ -15,6 +15,7 @@ import { AIRecommendations } from "@/components/AIRecommendations";
 import RestaurantCard from "@/components/restaurant-card";
 import RestaurantModal from "@/components/restaurant-modal";
 import { api } from "@/lib/api";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import type { Restaurant } from "@shared/schema";
 import { 
   Brain, 
@@ -64,6 +65,8 @@ export default function DietaryRecommendationsPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const queryClient = useQueryClient();
 
   // Fetch restaurants data
@@ -455,7 +458,7 @@ export default function DietaryRecommendationsPage() {
                                 <p className="text-sm">{rec.menuItem?.description}</p>
                                 
                                 <div className="flex items-center justify-between">
-                                  <span className="font-semibold text-lg">€{rec.menuItem?.price}</span>
+                                  <span className="font-semibold text-lg">{cs}{rec.menuItem?.price}</span>
                                   {rec.menuItem?.calories && (
                                     <span className="text-sm text-muted-foreground">
                                       {rec.menuItem.calories} cal

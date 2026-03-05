@@ -92,7 +92,7 @@ function VoucherChipHome({ voucher, onClick }: { voucher: EatoffVoucher; onClick
       <span className={`${bgColor} text-white text-xs font-bold px-2 py-1 rounded-md whitespace-nowrap`}>
         {prefix}{displayPercent.toFixed(0)}%
       </span>
-      <span className="text-sm font-bold text-primary whitespace-nowrap">{totalValue.toFixed(0)} RON</span>
+      <span className="text-sm font-bold text-primary whitespace-nowrap">{totalValue.toFixed(0)} {marketplace?.currencySymbol || 'RON'}</span>
     </button>
   );
 }

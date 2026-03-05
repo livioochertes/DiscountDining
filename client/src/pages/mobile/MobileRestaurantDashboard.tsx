@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (Capacitor.isNativePlatform() ? 'https://eatoff.app' : '');
 
@@ -54,6 +55,8 @@ export default function MobileRestaurantDashboard() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [session, setSession] = useState<RestaurantSession | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>('home');
 
@@ -294,7 +297,7 @@ export default function MobileRestaurantDashboard() {
         setNewAlerts(prev => [...prev, {
           id: alertId,
           type: 'order',
-          message: `Comandă nouă: #${data.orderNumber || data.id} - ${data.totalAmount || '?'}€`,
+          message: `Comandă nouă: #${data.orderNumber || data.id} - ${data.totalAmount || '?'}${cs}`,
           timestamp: Date.now()
         }]);
         playNotificationSound();
@@ -956,8 +959,8 @@ export default function MobileRestaurantDashboard() {
       <style>body{font-family:sans-serif;padding:20px}h1{font-size:18px}table{width:100%;border-collapse:collapse;margin-top:10px}td,th{border:1px solid #ccc;padding:8px;text-align:left}</style></head>
       <body><h1>Comandă #${order.orderNumber || order.id}</h1>
       <p>Status: ${order.status}</p>
-      <p>Total: ${order.total || order.totalAmount} RON</p>
-      ${order.items ? `<table><tr><th>Produs</th><th>Cant.</th><th>Preț</th></tr>${order.items.map((i: any) => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${i.price} RON</td></tr>`).join('')}</table>` : ''}
+      <p>Total: ${order.total || order.totalAmount} ${cs}</p>
+      ${order.items ? `<table><tr><th>Produs</th><th>Cant.</th><th>Preț</th></tr>${order.items.map((i: any) => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${i.price} ${cs}</td></tr>`).join('')}</table>` : ''}
       </body></html>`;
     const w = window.open('', '_blank');
     if (w) { w.document.write(printContent); w.document.close(); w.print(); }
@@ -1074,7 +1077,7 @@ export default function MobileRestaurantDashboard() {
                     <TrendingUp className="w-4 h-4 text-blue-600" />
                     <span className="text-xs text-gray-500">Venituri azi</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">{todayRevenue.toFixed(2)} RON</p>
+                  <p className="text-2xl font-bold text-gray-900">{todayRevenue.toFixed(2)} {cs}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-gray-100">
                   <div className="flex items-center gap-2 mb-2">
@@ -1160,7 +1163,7 @@ export default function MobileRestaurantDashboard() {
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="text-right">
-                              <p className="font-bold text-gray-900 text-sm">{parseFloat(order.total || order.totalAmount || '0').toFixed(2)} RON</p>
+                              <p className="font-bold text-gray-900 text-sm">{parseFloat(order.total || order.totalAmount || '0').toFixed(2)} {cs}</p>
                               <p className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
                             <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -1309,7 +1312,7 @@ export default function MobileRestaurantDashboard() {
                       <p className="text-white/80 text-lg mb-2">{posCustomerPreview.customerName}</p>
                     )}
                     <p className="text-white/90 text-3xl font-bold mb-4">
-                      {posAmountNum.toFixed(2)} RON
+                      {posAmountNum.toFixed(2)} {cs}
                     </p>
                     <p className="text-white/60 text-sm mb-2">
                       Clientul poate adăuga tips înainte de aprobare
@@ -1341,14 +1344,14 @@ export default function MobileRestaurantDashboard() {
                     </div>
                     <p className="text-white text-3xl font-bold mb-2">Plată aprobată</p>
                     <p className="text-white/90 text-4xl font-bold mb-4">
-                      {posConfirmResult.amountPaid?.toFixed(2)} RON
+                      {posConfirmResult.amountPaid?.toFixed(2)} {cs}
                     </p>
                     {posConfirmResult.tipAmount > 0 && (
-                      <p className="text-white/80 text-sm mb-1">Tip: +{posConfirmResult.tipAmount?.toFixed(2)} RON</p>
+                      <p className="text-white/80 text-sm mb-1">Tip: +{posConfirmResult.tipAmount?.toFixed(2)} {cs}</p>
                     )}
                     {posConfirmResult.cashbackEarned > 0 && (
                       <p className="text-white/80 text-sm mb-4">
-                        Cashback acordat: {posConfirmResult.cashbackEarned?.toFixed(2)} RON
+                        Cashback acordat: {posConfirmResult.cashbackEarned?.toFixed(2)} {cs}
                       </p>
                     )}
                     <p className="text-white/50 text-xs mb-6">ID: #{posConfirmResult.requestId || posConfirmResult.transactionId}</p>
@@ -1396,12 +1399,12 @@ export default function MobileRestaurantDashboard() {
                     <div className="p-4 space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Subtotal</span>
-                        <span className="font-semibold">{posCustomerPreview.amount?.toFixed(2)} RON</span>
+                        <span className="font-semibold">{posCustomerPreview.amount?.toFixed(2)} {cs}</span>
                       </div>
                       {posCustomerPreview.discountPercent > 0 && (
                         <div className="flex justify-between text-sm">
                           <span className="text-green-600">Discount (-{posCustomerPreview.discountPercent}%)</span>
-                          <span className="text-green-600 font-semibold">-{posCustomerPreview.discountAmount?.toFixed(2)} RON</span>
+                          <span className="text-green-600 font-semibold">-{posCustomerPreview.discountAmount?.toFixed(2)} {cs}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-sm text-blue-600">
@@ -1410,11 +1413,11 @@ export default function MobileRestaurantDashboard() {
                       </div>
                       <div className="flex justify-between text-base font-bold border-t border-gray-100 pt-2">
                         <span>De plată</span>
-                        <span>{posCustomerPreview.amountAfterDiscount?.toFixed(2)} RON</span>
+                        <span>{posCustomerPreview.amountAfterDiscount?.toFixed(2)} {cs}</span>
                       </div>
                       <div className="flex justify-between text-sm mt-1">
                         <span className="text-emerald-600">Cashback (+{posCustomerPreview.cashbackPercent}%)</span>
-                        <span className="text-emerald-600 font-semibold">+{posCustomerPreview.cashbackAmount?.toFixed(2)} RON</span>
+                        <span className="text-emerald-600 font-semibold">+{posCustomerPreview.cashbackAmount?.toFixed(2)} {cs}</span>
                       </div>
                     </div>
 
@@ -1422,11 +1425,11 @@ export default function MobileRestaurantDashboard() {
                       <div className="bg-gray-50 rounded-xl p-3 space-y-2">
                         <div className="flex justify-between text-xs text-gray-500">
                           <span>Sold portofel</span>
-                          <span className="font-medium">{posCustomerPreview.walletBalance?.toFixed(2)} RON</span>
+                          <span className="font-medium">{posCustomerPreview.walletBalance?.toFixed(2)} {cs}</span>
                         </div>
                         <div className="flex justify-between text-xs text-gray-500">
                           <span>Cashback disponibil</span>
-                          <span className="font-medium">{posCustomerPreview.cashbackBalance?.toFixed(2)} RON</span>
+                          <span className="font-medium">{posCustomerPreview.cashbackBalance?.toFixed(2)} {cs}</span>
                         </div>
                         {!posCustomerPreview.hasSufficientFunds && (
                           <div className="flex items-center gap-1.5 text-red-600 text-xs font-medium mt-1">
@@ -1441,7 +1444,7 @@ export default function MobileRestaurantDashboard() {
                       <div className="px-4 pb-4">
                         <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                           <span>{posCustomerPreview.loyaltyProgress}% către {posCustomerPreview.nextTierName}</span>
-                          <span>-{posCustomerPreview.spendingToNextTier?.toFixed(0)} RON</span>
+                          <span>-{posCustomerPreview.spendingToNextTier?.toFixed(0)} {cs}</span>
                         </div>
                         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full rounded-full transition-all"
@@ -1549,7 +1552,7 @@ export default function MobileRestaurantDashboard() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-white rounded-xl p-3 border border-gray-100">
                             <p className="text-xs text-gray-500">Total încasat</p>
-                            <p className="font-bold text-lg text-gray-900">{totalFiltered.toFixed(2)} RON</p>
+                            <p className="font-bold text-lg text-gray-900">{totalFiltered.toFixed(2)} {cs}</p>
                           </div>
                           <div className="bg-white rounded-xl p-3 border border-gray-100">
                             <p className="text-xs text-gray-500">Nr. tranzacții</p>
@@ -1557,11 +1560,11 @@ export default function MobileRestaurantDashboard() {
                           </div>
                           <div className="bg-white rounded-xl p-3 border border-gray-100">
                             <p className="text-xs text-gray-500">Total tips</p>
-                            <p className="font-bold text-lg text-gray-900">{totalTips.toFixed(2)} RON</p>
+                            <p className="font-bold text-lg text-gray-900">{totalTips.toFixed(2)} {cs}</p>
                           </div>
                           <div className="bg-white rounded-xl p-3 border border-gray-100">
                             <p className="text-xs text-gray-500">Media/tranzacție</p>
-                            <p className="font-bold text-lg text-gray-900">{filtered.length > 0 ? (totalFiltered / filtered.length).toFixed(2) : '0.00'} RON</p>
+                            <p className="font-bold text-lg text-gray-900">{filtered.length > 0 ? (totalFiltered / filtered.length).toFixed(2) : '0.00'} {cs}</p>
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -1628,7 +1631,7 @@ export default function MobileRestaurantDashboard() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-green-50 rounded-xl p-3">
                             <p className="text-xs text-green-600">Total vânzări</p>
-                            <p className="font-bold text-xl text-green-800">{settlementReport.totalSales?.toFixed(2)} RON</p>
+                            <p className="font-bold text-xl text-green-800">{settlementReport.totalSales?.toFixed(2)} {cs}</p>
                           </div>
                           <div className="bg-blue-50 rounded-xl p-3">
                             <p className="text-xs text-blue-600">Nr. tranzacții</p>
@@ -1636,21 +1639,21 @@ export default function MobileRestaurantDashboard() {
                           </div>
                           <div className="bg-purple-50 rounded-xl p-3">
                             <p className="text-xs text-purple-600">Total tips</p>
-                            <p className="font-bold text-xl text-purple-800">{settlementReport.totalTips?.toFixed(2)} RON</p>
+                            <p className="font-bold text-xl text-purple-800">{settlementReport.totalTips?.toFixed(2)} {cs}</p>
                           </div>
                           <div className="bg-amber-50 rounded-xl p-3">
                             <p className="text-xs text-amber-600">Media/tranzacție</p>
-                            <p className="font-bold text-xl text-amber-800">{settlementReport.averageTransaction?.toFixed(2)} RON</p>
+                            <p className="font-bold text-xl text-amber-800">{settlementReport.averageTransaction?.toFixed(2)} {cs}</p>
                           </div>
                         </div>
                         <div className="border-t border-gray-100 pt-3 space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-500">Comision platformă</span>
-                            <span className="text-red-600 font-medium">-{settlementReport.totalCommission?.toFixed(2)} RON</span>
+                            <span className="text-red-600 font-medium">-{settlementReport.totalCommission?.toFixed(2)} {cs}</span>
                           </div>
                           <div className="flex justify-between text-base font-bold">
                             <span>Total net restaurant</span>
-                            <span className="text-green-700">{settlementReport.totalNet?.toFixed(2)} RON</span>
+                            <span className="text-green-700">{settlementReport.totalNet?.toFixed(2)} {cs}</span>
                           </div>
                         </div>
                       </div>
@@ -1661,7 +1664,7 @@ export default function MobileRestaurantDashboard() {
                           {Object.entries(settlementReport.paymentMethodBreakdown).map(([method, data]: [string, any]) => (
                             <div key={method} className="flex justify-between text-sm py-1 border-b border-gray-50 last:border-0">
                               <span className="text-gray-600 capitalize">{method.replace('_', ' ')}</span>
-                              <span className="font-medium">{data.count} tx · {data.total?.toFixed(2)} RON</span>
+                              <span className="font-medium">{data.count} tx · {data.total?.toFixed(2)} {cs}</span>
                             </div>
                           ))}
                         </div>
@@ -1698,7 +1701,7 @@ export default function MobileRestaurantDashboard() {
                     <p className="text-5xl font-bold text-gray-900 tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
                       {posAmountNum > 0 ? posAmountNum.toFixed(2) : '0.00'}
                     </p>
-                    <p className="text-lg text-gray-400 font-medium mt-1">RON</p>
+                    <p className="text-lg text-gray-400 font-medium mt-1">{cs}</p>
                     <p className="text-xs text-gray-400 mt-1">Clientul adaugă tips de pe telefon · Cashback automat</p>
                   </div>
 
@@ -1737,7 +1740,7 @@ export default function MobileRestaurantDashboard() {
                         <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
                         <>
-                          <Camera className="w-5 h-5" /> Încasează {posAmountNum > 0 ? `${posAmountNum.toFixed(2)} RON` : ''}
+                          <Camera className="w-5 h-5" /> Încasează {posAmountNum > 0 ? `${posAmountNum.toFixed(2)} ${cs}` : ''}
                         </>
                       )}
                     </button>
@@ -1827,7 +1830,7 @@ export default function MobileRestaurantDashboard() {
                         type="number"
                         value={newItemPrice}
                         onChange={(e) => setNewItemPrice(e.target.value)}
-                        placeholder="Preț (RON) *"
+                        placeholder={`Preț (${cs}) *`}
                         className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <input
@@ -1972,7 +1975,7 @@ export default function MobileRestaurantDashboard() {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-gray-900">{parseFloat(item.price || '0').toFixed(2)} RON</span>
+                              <span className="font-bold text-gray-900">{parseFloat(item.price || '0').toFixed(2)} {cs}</span>
                               <button
                                 onClick={() => { setEditingMenuItem(item.id); setEditPrice(item.price || ''); }}
                                 className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -2234,7 +2237,7 @@ export default function MobileRestaurantDashboard() {
                             <p className="text-xs text-gray-500 mt-0.5">{new Date(order.createdAt).toLocaleString('ro-RO')}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900">{parseFloat(order.total || order.totalAmount || '0').toFixed(2)} RON</span>
+                            <span className="font-bold text-gray-900">{parseFloat(order.total || order.totalAmount || '0').toFixed(2)} {cs}</span>
                             <ChevronRight className={cn("w-4 h-4 text-gray-400 transition-transform", isExpanded && "rotate-90")} />
                           </div>
                         </button>
@@ -2264,7 +2267,7 @@ export default function MobileRestaurantDashboard() {
                                 {order.items.map((item: any, idx: number) => (
                                   <div key={idx} className="flex justify-between text-sm">
                                     <span className="text-gray-700">{item.quantity}x {item.name}</span>
-                                    <span className="text-gray-500">{item.price} RON</span>
+                                    <span className="text-gray-500">{item.price} {cs}</span>
                                   </div>
                                 ))}
                               </div>

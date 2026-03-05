@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { QrCode, Copy, Check, X } from "lucide-react";
 
 interface QrPaymentSectionProps {
@@ -21,6 +22,8 @@ export default function QrPaymentSection({ isOpen, onClose, customerId }: QrPaym
   const [qrData, setQrData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const { data: restaurants = [] } = useQuery({
     queryKey: ["restaurants"],
@@ -138,7 +141,7 @@ export default function QrPaymentSection({ isOpen, onClose, customerId }: QrPaym
               </div>
 
               <div>
-                <Label htmlFor="amount">Amount (€)</Label>
+                <Label htmlFor="amount">Amount ({cs})</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -186,7 +189,7 @@ export default function QrPaymentSection({ isOpen, onClose, customerId }: QrPaym
             <div className="space-y-4">
               <div className="space-y-2 text-sm">
                 <p><strong>Restaurant:</strong> {qrData.paymentDetails.restaurantName}</p>
-                <p><strong>Amount:</strong> €{qrData.paymentDetails.amount}</p>
+                <p><strong>Amount:</strong> {cs}{qrData.paymentDetails.amount}</p>
                 <p><strong>Payment Method:</strong> {qrData.paymentDetails.paymentMethod}</p>
                 <p><strong>Expires:</strong> {new Date(qrData.paymentDetails.expiresAt).toLocaleTimeString()}</p>
               </div>

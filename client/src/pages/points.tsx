@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Award, CreditCard, ArrowRight, History, Gift, Star } from "lucide-react";
 import { SectionNavigation } from "@/components/SectionNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { queryClient } from "@/lib/queryClient";
 
 interface PointsData {
@@ -37,6 +38,8 @@ interface PointsRedemption {
 
 export default function PointsPage() {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [pointsToRedeem, setPointsToRedeem] = useState("");
   const [selectedRestaurant, setSelectedRestaurant] = useState("");
 
@@ -137,7 +140,7 @@ export default function PointsPage() {
             <CardContent>
               <div className="text-2xl font-bold">{pointsData?.currentPoints || 0}</div>
               <p className="text-xs text-muted-foreground">
-                Worth €{calculateCashValue(pointsData?.currentPoints || 0)}
+                Worth {cs}{calculateCashValue(pointsData?.currentPoints || 0)}
               </p>
             </CardContent>
           </Card>
@@ -178,7 +181,7 @@ export default function PointsPage() {
               <span>Redeem Points</span>
             </CardTitle>
             <CardDescription>
-              Convert your points to cash for payment at restaurants (100 points = €1.00)
+              Convert your points to cash for payment at restaurants (100 points = {cs}1.00)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -193,7 +196,7 @@ export default function PointsPage() {
                 />
                 {pointsToRedeem && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    = €{calculateCashValue(parseInt(pointsToRedeem) || 0)}
+                    = {cs}{calculateCashValue(parseInt(pointsToRedeem) || 0)}
                   </p>
                 )}
               </div>
@@ -254,7 +257,7 @@ export default function PointsPage() {
                       {transaction.transactionType === 'earned' ? '+' : '-'}{transaction.pointsAmount}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      €{calculateCashValue(transaction.pointsAmount)}
+                      {cs}{calculateCashValue(transaction.pointsAmount)}
                     </p>
                   </div>
                 </div>
@@ -285,7 +288,7 @@ export default function PointsPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-red-600">-{redemption.pointsUsed} points</p>
-                      <p className="text-xs text-muted-foreground">€{redemption.cashValue}</p>
+                      <p className="text-xs text-muted-foreground">{cs}{redemption.cashValue}</p>
                     </div>
                   </div>
                 ))}

@@ -5,6 +5,7 @@ import { StatusBar } from '@capacitor/status-bar';
 import { Home, Search, Brain, Wallet, User, CreditCard, Gift, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePendingPayments } from '@/hooks/usePendingPayments';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -25,6 +26,8 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
   const [location, setLocation] = useLocation();
   const [isCompact, setIsCompact] = useState(false);
   const [statusBarHeight, setStatusBarHeight] = useState(DEFAULT_STATUS_BAR_HEIGHT);
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const mainRef = useRef<HTMLElement>(null);
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -153,7 +156,7 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
                 <div className="flex-1 min-w-0 pr-10">
                   <p className="font-bold text-sm" style={{ color: '#10B981' }}>Solicitare de plată</p>
                   <p className="text-white/90 text-xs truncate">
-                    {newRequestAlert.restaurantName || 'Restaurant'} — {parseFloat(newRequestAlert.amount || 0).toFixed(2)} {newRequestAlert.currency || '€'}
+                    {newRequestAlert.restaurantName || 'Restaurant'} — {parseFloat(newRequestAlert.amount || 0).toFixed(2)} {newRequestAlert.currency || cs}
                   </p>
                 </div>
               </div>
@@ -187,7 +190,7 @@ export function MobileLayout({ children, hideNavigation }: MobileLayoutProps) {
                 <div className="flex-1 min-w-0 pr-10">
                   <p className="font-bold text-sm text-amber-300">Cadou primit!</p>
                   <p className="text-white/90 text-xs truncate">
-                    {newGiftAlert.senderName || 'Cineva'} ți-a trimis {parseFloat(newGiftAlert.amount || 0).toFixed(2)} {newGiftAlert.currency || 'RON'}
+                    {newGiftAlert.senderName || 'Cineva'} ți-a trimis {parseFloat(newGiftAlert.amount || 0).toFixed(2)} {newGiftAlert.currency || cs}
                   </p>
                 </div>
               </div>

@@ -27,6 +27,7 @@ import {
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { Link, useLocation } from "wouter";
 import ReservationModal from "@/components/ReservationModal";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -182,6 +183,8 @@ function FeaturedChefsSection() {
 export default function UserDashboard() {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [selectedTab, setSelectedTab] = useState("overview");
   const [selectedVoucher, setSelectedVoucher] = useState<any>(null);
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
@@ -348,19 +351,19 @@ export default function UserDashboard() {
               <CreditCard className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{userStats?.totalSpent?.toFixed(2) || '0.00'}</div>
+              <div className="text-2xl font-bold">{cs}{userStats?.totalSpent?.toFixed(2) || '0.00'}</div>
               <div className="text-xs text-muted-foreground mt-1 space-y-1">
                 <div className="flex justify-between">
                   <span>{t.vouchers}:</span>
-                  <span>€{userStats?.voucherValue?.toFixed(2) || '0.00'}</span>
+                  <span>{cs}{userStats?.voucherValue?.toFixed(2) || '0.00'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t.orders}:</span>
-                  <span>€{userStats?.orderValue?.toFixed(2) || '0.00'}</span>
+                  <span>{cs}{userStats?.orderValue?.toFixed(2) || '0.00'}</span>
                 </div>
                 <div className="flex justify-between font-medium text-green-600">
                   <span>{t.remainingValue || 'Remaining'}:</span>
-                  <span>€{userStats?.remainingValue?.toFixed(2) || '0.00'}</span>
+                  <span>{cs}{userStats?.remainingValue?.toFixed(2) || '0.00'}</span>
                 </div>
               </div>
             </CardContent>
@@ -385,7 +388,7 @@ export default function UserDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{user?.loyaltyPoints || 0}</div>
               <p className="text-xs text-muted-foreground">
-                {t.worth || 'Worth'} €{((user?.loyaltyPoints || 0) / 100).toFixed(2)}
+                {t.worth || 'Worth'} {cs}{((user?.loyaltyPoints || 0) / 100).toFixed(2)}
               </p>
             </CardContent>
           </Card>
@@ -505,7 +508,7 @@ export default function UserDashboard() {
                           <Badge className={getStatusColor(order.status)}>
                             {order.status}
                           </Badge>
-                          <p className="text-sm font-medium mt-1">€{order.totalAmount}</p>
+                          <p className="text-sm font-medium mt-1">{cs}{order.totalAmount}</p>
                         </div>
                       </div>
                     )) || (
@@ -541,7 +544,7 @@ export default function UserDashboard() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-medium">{voucher.mealsRemaining}/{voucher.totalMeals} {t.meals || 'meals'}</p>
-                          <p className="text-xs text-muted-foreground">€{voucher.value}</p>
+                          <p className="text-xs text-muted-foreground">{cs}{voucher.value}</p>
                         </div>
                       </div>
                     )) || (
@@ -593,7 +596,7 @@ export default function UserDashboard() {
                         <Badge className={getStatusColor(order.status)}>
                           {order.status}
                         </Badge>
-                        <p className="font-medium">€{order.totalAmount}</p>
+                        <p className="font-medium">{cs}{order.totalAmount}</p>
                       </div>
                     </div>
                   )) || (
@@ -712,7 +715,7 @@ export default function UserDashboard() {
                             <h4 className="font-medium">{voucher.restaurant?.name}</h4>
                             <p className="text-sm text-muted-foreground">{voucher.package?.name}</p>
                           </div>
-                          <Badge variant="secondary">€{voucher.purchasePrice}</Badge>
+                          <Badge variant="secondary">{cs}{voucher.purchasePrice}</Badge>
                         </div>
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">

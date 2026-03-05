@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, ShoppingBag, Calendar, X, Eye } from "lucide-react";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 interface Notification {
   id: string;
@@ -27,6 +28,8 @@ export default function RestaurantNotificationSystem({
   onNavigateToOrder 
 }: RestaurantNotificationSystemProps) {
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showPopup, setShowPopup] = useState(false);
   const [currentNotification, setCurrentNotification] = useState<Notification | null>(null);
@@ -104,7 +107,7 @@ export default function RestaurantNotificationSystem({
           id: `order-${data.id}`,
           type: 'order',
           title: 'New Order',
-          message: `#${data.orderNumber || data.id} — €${data.totalAmount || '?'}${data.restaurantName ? ` at ${data.restaurantName}` : ''}`,
+          message: `#${data.orderNumber || data.id} — ${cs}${data.totalAmount || '?'}${data.restaurantName ? ` at ${data.restaurantName}` : ''}`,
           timestamp: new Date(),
           data,
           isRead: false

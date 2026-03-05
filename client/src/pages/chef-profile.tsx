@@ -16,6 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 interface ChefProfile {
   id: number;
@@ -95,6 +96,8 @@ export default function ChefProfilePage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<ChefProfile>>({});
   const [newSpecialty, setNewSpecialty] = useState("");
@@ -451,7 +454,7 @@ export default function ChefProfilePage() {
                               <p className="text-sm text-gray-600 line-clamp-2 mb-2">{dish.description}</p>
                               <div className="flex items-center justify-between">
                                 <span className="text-teal-600 font-bold">
-                                  {dish.price ? `€${parseFloat(dish.price).toFixed(2)}` : '—'}
+                                  {dish.price ? `${cs}${parseFloat(dish.price).toFixed(2)}` : '—'}
                                 </span>
                                 <div className="flex items-center gap-2 text-xs text-gray-500">
                                   {dish.preparationTime && dish.preparationTime > 0 && (

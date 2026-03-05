@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { QrCode, Download, Loader2, Users } from "lucide-react";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,8 @@ interface CustomerQRCodeCardProps {
 export default function CustomerQRCodeCard({ customerId }: CustomerQRCodeCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [showLoyalty, setShowLoyalty] = useState(false);
 
   const { data: qrData, isLoading: qrLoading } = useQuery({
@@ -156,7 +159,7 @@ export default function CustomerQRCodeCard({ customerId }: CustomerQRCodeCardPro
                           <div>
                             <p className="font-medium text-sm">{loyalty.restaurant?.name}</p>
                             <p className="text-xs text-gray-500">
-                              {loyalty.totalVisits || 0} vizite • €{parseFloat(loyalty.totalSpend || "0").toFixed(2)} cheltuiți
+                              {loyalty.totalVisits || 0} vizite • {cs}{parseFloat(loyalty.totalSpend || "0").toFixed(2)} cheltuiți
                             </p>
                           </div>
                           {loyalty.category && (

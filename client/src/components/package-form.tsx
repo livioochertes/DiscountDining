@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, Calendar } from "lucide-react";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import PackagePreview from "@/components/package-preview";
 import { insertVoucherPackageSchema } from "@shared/schema";
 
@@ -30,6 +31,8 @@ interface PackageFormProps {
 }
 
 export default function PackageForm({ onSave, onCancel, initialData, isLoading }: PackageFormProps) {
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const form = useForm<PackageFormData>({
     resolver: zodResolver(packageFormSchema),
     defaultValues: {
@@ -118,7 +121,7 @@ export default function PackageForm({ onSave, onCancel, initialData, isLoading }
               name="pricePerMeal"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Price per Meal (€)</FormLabel>
+                  <FormLabel>Price per Meal ({cs})</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 

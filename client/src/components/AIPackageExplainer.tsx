@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import type { VoucherPackage } from "@shared/schema";
 
 interface AIPackageExplainerProps {
@@ -22,6 +23,8 @@ export function AIPackageExplainer({
 }: AIPackageExplainerProps) {
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const explainMutation = useMutation({
     mutationFn: async (packageData: any) => {
@@ -33,7 +36,7 @@ export function AIPackageExplainer({
       setIsExpanded(true);
     },
     onError: () => {
-      setExplanation(`This package includes ${pkg.mealCount} meals at a ${pkg.discountPercentage}% discount, saving you €${savings.toFixed(2)}! Valid for ${pkg.validityMonths} months.`);
+      setExplanation(`This package includes ${pkg.mealCount} meals at a ${pkg.discountPercentage}% discount, saving you ${cs}${savings.toFixed(2)}! Valid for ${pkg.validityMonths} months.`);
       setIsExpanded(true);
     }
   });

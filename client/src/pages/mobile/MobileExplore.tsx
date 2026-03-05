@@ -8,6 +8,7 @@ import { CategoryChips } from '@/components/mobile/CategoryChips';
 import { RestaurantCard } from '@/components/mobile/RestaurantCard';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { useUserLocation, AVAILABLE_CITIES } from '@/hooks/useUserLocation';
 import { useAuth } from '@/hooks/useAuth';
 import { getImageUrl } from '@/lib/queryClient';
@@ -54,6 +55,8 @@ interface RestaurantWithVouchers {
 }
 
 function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   const discountPercent = parseFloat(voucher.discountPercentage) || 0;
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
@@ -90,7 +93,7 @@ function VoucherChip({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
       <span className={`${bgColor} text-white text-xs font-bold px-2 py-1 rounded-md whitespace-nowrap`}>
         {prefix}{displayPercent.toFixed(0)}%
       </span>
-      <span className="text-sm font-bold text-primary whitespace-nowrap">{totalValue.toFixed(0)} RON</span>
+      <span className="text-sm font-bold text-primary whitespace-nowrap">{totalValue.toFixed(0)} {cs}</span>
     </button>
   );
 }
@@ -196,6 +199,8 @@ function RestaurantVoucherRow({ data, onVoucherClick }: {
 
 function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
   const baseValue = totalValue / (1 + bonusPercent / 100);
@@ -227,11 +232,11 @@ function VoucherCard({ voucher, onClick }: { voucher: EatoffVoucher; onClick: ()
       <div className="flex items-end justify-between">
         <div>
           <p className="text-xs text-gray-500">{t.totalValue}</p>
-          <p className="text-xl font-bold text-primary">{totalValue.toFixed(0)} RON</p>
+          <p className="text-xl font-bold text-primary">{totalValue.toFixed(0)} {cs}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-gray-500">{t.payOnly}</p>
-          <p className="text-lg font-semibold text-gray-900">{baseValue.toFixed(0)} RON</p>
+          <p className="text-lg font-semibold text-gray-900">{baseValue.toFixed(0)} {cs}</p>
         </div>
       </div>
       
@@ -413,7 +418,7 @@ function AIMenuContent({ selectedFilters, setSelectedFilters, expandedItem, setE
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <span>{item.calories} kcal</span>
-                  <span>€{item.price.toFixed(2)}</span>
+                  <span>{cs}{item.price.toFixed(2)}</span>
                 </div>
                 <div className="flex gap-1">
                   {item.tags.slice(0, 2).map((tag) => (

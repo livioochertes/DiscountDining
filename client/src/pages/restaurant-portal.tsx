@@ -23,12 +23,15 @@ import { useRestaurantAuth } from "@/hooks/useRestaurantAuth";
 import RestaurantNotificationSystem from "@/components/RestaurantNotificationSystem";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 export default function RestaurantPortal() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
   const { owner } = useRestaurantAuth();
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -1987,7 +1990,7 @@ export default function RestaurantPortal() {
                             >
                               {order.status}
                             </Badge>
-                            <p className="text-lg font-bold mt-1">€{order.totalAmount}</p>
+                            <p className="text-lg font-bold mt-1">{cs}{order.totalAmount}</p>
                           </div>
                         </div>
 
@@ -2132,7 +2135,7 @@ export default function RestaurantPortal() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500">Price per meal:</span>
-                              <span className="font-medium">€{parseFloat(pkg.pricePerMeal).toFixed(2)}</span>
+                              <span className="font-medium">{cs}{parseFloat(pkg.pricePerMeal).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500">Discount:</span>
@@ -2149,7 +2152,7 @@ export default function RestaurantPortal() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500">Total value:</span>
-                              <span className="font-medium">€{(pkg.mealCount * parseFloat(pkg.pricePerMeal)).toFixed(2)}</span>
+                              <span className="font-medium">{cs}{(pkg.mealCount * parseFloat(pkg.pricePerMeal)).toFixed(2)}</span>
                             </div>
                           </div>
 
@@ -2329,7 +2332,7 @@ export default function RestaurantPortal() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <span className="font-medium">€{parseFloat(customer.totalSpent || "0").toFixed(2)}</span>
+                                <span className="font-medium">{cs}{parseFloat(customer.totalSpent || "0").toFixed(2)}</span>
                               </TableCell>
                               <TableCell>
                                 <span className="text-sm">
@@ -2943,7 +2946,7 @@ export default function RestaurantPortal() {
                                 {(item.dietaryTags || []).map((tag: string) => (
                                   <Badge key={tag} variant="outline">{tag}</Badge>
                                 ))}
-                                <span className="text-sm font-medium text-gray-700">€{parseFloat(item.price).toFixed(2)}</span>
+                                <span className="text-sm font-medium text-gray-700">{cs}{parseFloat(item.price).toFixed(2)}</span>
                               </div>
                             </div>
                           </div>
@@ -3031,7 +3034,7 @@ export default function RestaurantPortal() {
                       </Select>
                     </div>
                     <div>
-                      <Label>Price (€) *</Label>
+                      <Label>Price ({cs}) *</Label>
                       <Input type="number" step="0.01" min="0" value={menuFormData.price} onChange={e => setMenuFormData(p => ({ ...p, price: e.target.value }))} />
                     </div>
                   </div>
@@ -4004,7 +4007,7 @@ export default function RestaurantPortal() {
                 {/* Pricing */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="pricePerMeal">Price per Meal (€)</Label>
+                    <Label htmlFor="pricePerMeal">Price per Meal ({cs})</Label>
                     <Input
                       id="pricePerMeal"
                       type="number"

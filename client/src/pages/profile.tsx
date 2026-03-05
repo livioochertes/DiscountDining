@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, Wallet, Activity, Heart, AlertTriangle, Target, ChefHat } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import LanguageSelector from "@/components/LanguageSelector";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient } from "@/lib/queryClient";
@@ -202,6 +203,8 @@ function DietaryProfileCard({ userId }: { userId?: string }) {
 export default function Profile() {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -324,7 +327,7 @@ export default function Profile() {
                   </div>
                   <div>
                     <span className="text-sm text-gray-600">Account Balance:</span>
-                    <p className="font-medium text-lg text-primary">€{user?.balance || '0.00'}</p>
+                    <p className="font-medium text-lg text-primary">{cs}{user?.balance || '0.00'}</p>
                   </div>
                   <div>
                     <span className="text-sm text-gray-600">Loyalty Points:</span>

@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { User, Heart, Target, ChefHat, Activity, Calculator } from "lucide-react";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { apiRequest } from "@/lib/queryClient";
 
 const dietaryProfileSchema = z.object({
@@ -85,6 +86,8 @@ export function DietaryProfileForm({ onSave }: DietaryProfileFormProps) {
   const [formLoading, setFormLoading] = useState(true);
   const [bmiData, setBmiData] = useState<{ bmi: number; category: string; recommendations: string[] } | null>(null);
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const form = useForm<DietaryProfileFormData>({
     resolver: zodResolver(dietaryProfileSchema),
@@ -451,9 +454,9 @@ export function DietaryProfileForm({ onSave }: DietaryProfileFormProps) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="low">Budget-Friendly (€5-15 per meal)</SelectItem>
-                            <SelectItem value="medium">Moderate (€15-30 per meal)</SelectItem>
-                            <SelectItem value="high">Premium (€30+ per meal)</SelectItem>
+                            <SelectItem value="low">Budget-Friendly ({cs}5-15 per meal)</SelectItem>
+                            <SelectItem value="medium">Moderate ({cs}15-30 per meal)</SelectItem>
+                            <SelectItem value="high">Premium ({cs}30+ per meal)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

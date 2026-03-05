@@ -427,18 +427,18 @@ export default function Checkout() {
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
                   <span>Voucher Value:</span>
-                  <span className="font-medium">€{regularPrice.toFixed(2)}</span>
+                  <span className="font-medium">{cs}{regularPrice.toFixed(2)}</span>
                 </div>
                 
                 {isPayLater ? (
                   <>
                     <div className="flex justify-between text-accent font-medium">
                       <span>You pay later:</span>
-                      <span>€{customerPrice.toFixed(2)}</span>
+                      <span>{cs}{customerPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
                       <span>Price increase:</span>
-                      <span className="text-red-600">+{bonusAmount.toFixed(2)} RON</span>
+                      <span className="text-red-600">+{cs}{bonusAmount.toFixed(2)}</span>
                     </div>
                     <div className="text-xs text-gray-500">
                       Payment due in {(packageData as any).paymentTermDays || 30} days
@@ -448,11 +448,11 @@ export default function Checkout() {
                   <>
                     <div className="flex justify-between text-accent font-medium">
                       <span>Your price:</span>
-                      <span>€{customerPrice.toFixed(2)}</span>
+                      <span>{cs}{customerPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-medium">
                       <span>You save:</span>
-                      <span className="text-green-600">-{savings.toFixed(2)} RON</span>
+                      <span className="text-green-600">-{cs}{savings.toFixed(2)}</span>
                     </div>
                   </>
                 )}
@@ -463,7 +463,7 @@ export default function Checkout() {
             
             <div className="flex justify-between font-semibold text-lg">
               <span>Total:</span>
-              <span>€{customerPrice.toFixed(2)}</span>
+              <span>{cs}{customerPrice.toFixed(2)}</span>
             </div>
             
             <div className="text-xs text-gray-500 space-y-1">

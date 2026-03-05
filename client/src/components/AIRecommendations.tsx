@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { 
   Brain, 
   Star, 
@@ -82,6 +83,8 @@ export function AIRecommendations({ className, mealType, showFilters = true, rec
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [, setLocation] = useLocation();
 
   // Navigation helper functions
@@ -557,7 +560,7 @@ export function AIRecommendations({ className, mealType, showFilters = true, rec
                     )}
                     
                     <div className="text-xl font-bold text-primary">
-                      €{selectedRecommendation.menuItem.price}
+                      {cs}{selectedRecommendation.menuItem.price}
                     </div>
 
                     {selectedRecommendation.menuItem.category && (

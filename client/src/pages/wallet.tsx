@@ -14,6 +14,7 @@ import QrPaymentSection from "@/components/QrPaymentSection";
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 import { 
   Wallet, 
   CreditCard, 
@@ -35,10 +36,11 @@ const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY
   : null;
 
 // Stripe Checkout Form Component
-const WalletStripeCheckout = ({ amount, customerId, onSuccess }: { 
+const WalletStripeCheckout = ({ amount, customerId, onSuccess, currencySymbol }: { 
   amount: string; 
   customerId: number; 
   onSuccess: () => void; 
+  currencySymbol: string;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -92,7 +94,7 @@ const WalletStripeCheckout = ({ amount, customerId, onSuccess }: {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Top-up amount: <span className="font-medium">€{amount}</span>
+          Top-up amount: <span className="font-medium">{currencySymbol}{amount}</span>
         </p>
         <p className="text-xs text-gray-500 mt-1">
           Payment will be processed to EatOff's account
@@ -118,7 +120,7 @@ const WalletStripeCheckout = ({ amount, customerId, onSuccess }: {
         disabled={!stripe || isProcessing}
         className="w-full"
       >
-        {isProcessing ? "Processing..." : `Pay €${amount}`}
+        {isProcessing ? "Processing..." : `Pay ${currencySymbol}${amount}`}
       </Button>
     </form>
   );
@@ -157,6 +159,8 @@ export default function WalletPage() {
   const queryClient = useQueryClient();
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const resolvedCustomerId = (user as any)?.customerId || user?.id;
 
@@ -421,7 +425,7 @@ export default function WalletPage() {
               <Euro className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{parseFloat(walletData.wallet.cashBalance || '0').toFixed(2)}</div>
+              <div className="text-2xl font-bold">{cs}{parseFloat(walletData.wallet.cashBalance || '0').toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">Top-up & bonusuri</p>
             </CardContent>
           </Card>
@@ -443,7 +447,7 @@ export default function WalletPage() {
               <TrendingUp className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(2)}</div>
+              <div className="text-2xl font-bold">{cs}{parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">Din programul cashback</p>
             </CardContent>
           </Card>
@@ -456,7 +460,7 @@ export default function WalletPage() {
             <CardContent>
               <div className="text-2xl font-bold">
                 {walletOverview?.credit?.status === 'approved'
-                  ? `€${parseFloat(walletOverview?.credit?.availableCredit || '0').toFixed(2)}`
+                  ? `${cs}${parseFloat(walletOverview?.credit?.availableCredit || '0').toFixed(2)}`
                   : walletOverview?.credit?.status === 'pending'
                     ? 'În așteptare'
                     : 'N/A'}
@@ -489,7 +493,7 @@ export default function WalletPage() {
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="topup-amount">Amount (€)</Label>
+                      <Label htmlFor="topup-amount">Amount ({cs})</Label>
                       <Input
                         id="topup-amount"
                         type="number"
@@ -576,7 +580,7 @@ export default function WalletPage() {
                         </div>
                         <div className="text-right">
                           <p className={`font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
-                            {isPositive ? "+" : "-"}€{transaction.amount}
+                            {isPositive ? "+" : "-"}{cs}{transaction.amount}
                           </p>
                         </div>
                       </div>
@@ -630,7 +634,7 @@ export default function WalletPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Value:</span>
-                        <span className="font-medium">€{voucher.purchasePrice}</span>
+                        <span className="font-medium">{cs}{voucher.purchasePrice}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Status:</span>
@@ -680,16 +684,16 @@ export default function WalletPage() {
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Price:</span>
                         <div className="text-right">
-                          <span className="font-bold">€{voucher.price}</span>
+                          <span className="font-bold">{cs}{voucher.price}</span>
                           <span className="text-sm text-muted-foreground line-through ml-2">
-                            €{voucher.originalValue}
+                            {cs}{voucher.originalValue}
                           </span>
                         </div>
                       </div>
 
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Discount:</span>
-                        <span className="font-medium">€{voucher.discountValue}</span>
+                        <span className="font-medium">{cs}{voucher.discountValue}</span>
                       </div>
 
                       <div className="flex justify-between">
@@ -757,10 +761,10 @@ export default function WalletPage() {
                         </div>
                         <div className="text-right">
                           <p className={`font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
-                            {isPositive ? "+" : "-"}€{transaction.amount}
+                            {isPositive ? "+" : "-"}{cs}{transaction.amount}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Balance: €{transaction.balanceAfter}
+                            Balance: {cs}{transaction.balanceAfter}
                           </p>
                         </div>
                       </div>
@@ -803,6 +807,7 @@ export default function WalletPage() {
                   amount={topUpAmount}
                   customerId={resolvedCustomerId || 0}
                   onSuccess={handleStripeSuccess}
+                  currencySymbol={cs}
                 />
               </Elements>
             </div>

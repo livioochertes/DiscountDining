@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Users, Plus, Edit, Trash2, QrCode, CreditCard, Loader2, ScanLine } from "lucide-react";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,8 @@ interface LoyaltyManagementProps {
 export default function LoyaltyManagement({ restaurants }: LoyaltyManagementProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(
     restaurants.length > 0 ? restaurants[0].id : null
   );
@@ -370,7 +373,7 @@ export default function LoyaltyManagement({ restaurants }: LoyaltyManagementProp
                         )}
                       </td>
                       <td className="py-2 px-3">{lc.totalVisits || 0}</td>
-                      <td className="py-2 px-3">€{parseFloat(lc.totalSpend || "0").toFixed(2)}</td>
+                      <td className="py-2 px-3">{cs}{parseFloat(lc.totalSpend || "0").toFixed(2)}</td>
                       <td className="py-2 px-3">
                         {lc.lastVisitAt ? new Date(lc.lastVisitAt).toLocaleDateString() : "-"}
                       </td>
@@ -399,7 +402,7 @@ export default function LoyaltyManagement({ restaurants }: LoyaltyManagementProp
                     <p className="text-xs text-gray-500">{pr.description || "Plată generală"}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">€{parseFloat(pr.finalAmount).toFixed(2)}</p>
+                    <p className="font-medium">{cs}{parseFloat(pr.finalAmount).toFixed(2)}</p>
                     <Badge variant={
                       pr.status === "completed" ? "default" :
                       pr.status === "pending" ? "secondary" :
@@ -469,7 +472,7 @@ export default function LoyaltyManagement({ restaurants }: LoyaltyManagementProp
                 />
               </div>
               <div>
-                <Label>Cheltuieli minime (€)</Label>
+                <Label>Cheltuieli minime ({cs})</Label>
                 <Input 
                   type="number"
                   value={categoryForm.minSpend}
@@ -515,7 +518,7 @@ export default function LoyaltyManagement({ restaurants }: LoyaltyManagementProp
               />
             </div>
             <div>
-              <Label>Suma (€)</Label>
+              <Label>Suma ({cs})</Label>
               <Input 
                 type="number"
                 step="0.01"

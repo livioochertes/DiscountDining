@@ -730,9 +730,9 @@ export default function MobileProfile() {
                   className="w-full p-3 border border-gray-200 rounded-xl bg-white text-[16px] appearance-none"
                 >
                   <option value="">{t.select || 'Select'}</option>
-                  <option value="low">{t.budgetLow || 'Budget (€5-15)'}</option>
-                  <option value="medium">{t.budgetMedium || 'Moderate (€15-30)'}</option>
-                  <option value="high">{t.budgetHigh || 'Premium (€30+)'}</option>
+                  <option value="low">{t.budgetLow || `Budget (${marketplace?.currencySymbol || '€'}5-15)`}</option>
+                  <option value="medium">{t.budgetMedium || `Moderate (${marketplace?.currencySymbol || '€'}15-30)`}</option>
+                  <option value="high">{t.budgetHigh || `Premium (${marketplace?.currencySymbol || '€'}30+)`}</option>
                 </select>
               </div>
               <div>
@@ -1510,7 +1510,7 @@ export default function MobileProfile() {
         <ul className="space-y-2 text-sm text-gray-600">
           <li className="flex items-center gap-2">
             <span className="w-2 h-2 bg-primary rounded-full" />
-            {t.earnPerOrder || '1 point for every 1 RON spent'}
+            {t.earnPerOrder || `1 point for every 1 ${marketplace?.currencySymbol || 'RON'} spent`}
           </li>
           <li className="flex items-center gap-2">
             <span className="w-2 h-2 bg-primary rounded-full" />

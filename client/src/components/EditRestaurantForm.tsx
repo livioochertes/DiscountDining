@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, Truck, MapPin, DollarSign, Loader2 } from "lucide-react";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 // Operating hours schema
 const operatingHoursSchema = z.object({
@@ -91,6 +92,8 @@ interface EditRestaurantFormProps {
 export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRestaurantFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   // Get marketplace for country code
   const { data: marketplaces = [] } = useQuery<any[]>({
@@ -601,7 +604,7 @@ export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRest
                   </div>
                   
                   <div>
-                    <Label htmlFor="deliveryFee">Delivery Fee (€)</Label>
+                    <Label htmlFor="deliveryFee">Delivery Fee ({cs})</Label>
                     <Input
                       id="deliveryFee"
                       type="number"
@@ -613,7 +616,7 @@ export function EditRestaurantForm({ restaurant, onSuccess, onCancel }: EditRest
                   </div>
                   
                   <div>
-                    <Label htmlFor="minimumDeliveryOrder">Minimum Order (€)</Label>
+                    <Label htmlFor="minimumDeliveryOrder">Minimum Order ({cs})</Label>
                     <Input
                       id="minimumDeliveryOrder"
                       type="number"

@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, DollarSign, Building2, Users, CreditCard, BarChart3, Calendar, Download } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from "recharts";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 interface CommissionMetrics {
   totalEarnings: number;
@@ -37,6 +38,9 @@ interface ChartData {
 }
 
 export default function CommissionDashboard() {
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
+
   const [metrics, setMetrics] = useState<CommissionMetrics>({
     totalEarnings: 125634.89,
     monthlyEarnings: 23456.78,
@@ -108,7 +112,7 @@ export default function CommissionDashboard() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `€${amount.toFixed(2)}`;
+    return `${cs}${amount.toFixed(2)}`;
   };
 
   const formatDate = (dateString: string) => {

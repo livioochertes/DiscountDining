@@ -68,6 +68,8 @@ interface WalletOverview {
 export default function MobileWallet() {
   const { t } = useLanguage();
   const { user, isLoading } = useAuth();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   const [, setLocation] = useLocation();
   const urlParams = new URLSearchParams(window.location.search);
   const initialTab = (['vouchers', 'cashback', 'credit', 'personal'].includes(urlParams.get('tab') || '') 
@@ -288,7 +290,7 @@ export default function MobileWallet() {
       const min = parseFloat(selectedCreditType.minCustomAmount || '100');
       const max = parseFloat(selectedCreditType.maxCustomAmount || '10000');
       if (!customAmount || isNaN(amount) || amount < min || amount > max) {
-        errors.customAmount = `Suma trebuie să fie între ${min} și ${max} RON`;
+        errors.customAmount = `Suma trebuie să fie între ${min} și ${max} ${cs}`;
       }
     }
     
@@ -447,7 +449,7 @@ export default function MobileWallet() {
               return (
                 <>
                   <span className="text-4xl">{formatted.substring(0, dotIndex)}</span>
-                  <span className="text-xl text-white/80">{formatted.substring(dotIndex)} RON</span>
+                  <span className="text-xl text-white/80">{formatted.substring(dotIndex)} {cs}</span>
                 </>
               );
             })()}
@@ -458,7 +460,7 @@ export default function MobileWallet() {
               <p className="text-white/50 text-xs">{t.walletPersonal || 'Personal'}</p>
               <p className="font-semibold text-blue-400 items-baseline">
                 <span className="text-lg">{parseFloat(walletOverview?.personalBalance || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                <span className="text-[10px] text-blue-400/70"> RON</span>
+                <span className="text-[10px] text-blue-400/70"> {cs}</span>
               </p>
             </div>
             <div>
@@ -469,7 +471,7 @@ export default function MobileWallet() {
               <p className="text-white/50 text-xs">{t.walletCashback || 'Cashback'}</p>
               <p className="font-semibold text-green-400 items-baseline">
                 <span className="text-lg">{parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                <span className="text-[10px] text-green-400/70"> RON</span>
+                <span className="text-[10px] text-green-400/70"> {cs}</span>
               </p>
             </div>
             <div>
@@ -479,7 +481,7 @@ export default function MobileWallet() {
                 walletOverview?.credit?.status === 'approved' ? "text-white" : "text-red-400"
               )}>
                 {walletOverview?.credit?.status === 'approved' 
-                  ? <><span className="text-lg">{parseFloat(walletOverview?.credit?.availableCredit || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span><span className="text-[10px] text-white/70"> RON</span></>
+                  ? <><span className="text-lg">{parseFloat(walletOverview?.credit?.availableCredit || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span><span className="text-[10px] text-white/70"> {cs}</span></>
 
                   : walletOverview?.credit?.status === 'pending'
                     ? (t.walletPending || 'Așteptare')
@@ -639,7 +641,7 @@ export default function MobileWallet() {
                     </div>
                     
                     <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-gray-900">€{remainingValue}</p>
+                      <p className="font-bold text-gray-900">{cs}{remainingValue}</p>
                       <p className="text-[10px] text-gray-400">{t.value}</p>
                     </div>
                   </div>
@@ -656,7 +658,7 @@ export default function MobileWallet() {
               <div className="flex items-center justify-between mb-2">
                 <p className="text-green-700 font-medium">{t.walletEatoffCashback || 'Cashback EatOff'}</p>
                 <p className="text-2xl font-bold text-green-700">
-                  {parseFloat(walletOverview?.cashback?.eatoffCashbackBalance || '0').toFixed(2)} RON
+                  {parseFloat(walletOverview?.cashback?.eatoffCashbackBalance || '0').toFixed(2)} {cs}
                 </p>
               </div>
               <p className="text-sm text-green-600/70">{t.walletAppliedAutomatically || 'Se aplică automat la plată'}</p>
@@ -668,13 +670,13 @@ export default function MobileWallet() {
                 <div>
                   <p className="text-xs text-gray-500">{t.walletTotalEarned || 'Total câștigat'}</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {parseFloat(walletOverview?.cashback?.totalCashbackEarned || '0').toFixed(2)} RON
+                    {parseFloat(walletOverview?.cashback?.totalCashbackEarned || '0').toFixed(2)} {cs}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">{t.walletTotalUsed || 'Total folosit'}</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {parseFloat(walletOverview?.cashback?.totalCashbackUsed || '0').toFixed(2)} RON
+                    {parseFloat(walletOverview?.cashback?.totalCashbackUsed || '0').toFixed(2)} {cs}
                   </p>
                 </div>
               </div>
@@ -730,9 +732,9 @@ export default function MobileWallet() {
                   <div key={index} className="bg-white border border-gray-100 rounded-2xl p-3 flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600">Restaurant #{rc.restaurantId}</p>
-                      <p className="text-xs text-gray-400">Cheltuit: {parseFloat(rc.totalSpent || '0').toFixed(2)} RON</p>
+                      <p className="text-xs text-gray-400">Cheltuit: {parseFloat(rc.totalSpent || '0').toFixed(2)} {cs}</p>
                     </div>
-                    <p className="font-bold text-green-600">{parseFloat(rc.cashbackBalance || '0').toFixed(2)} RON</p>
+                    <p className="font-bold text-green-600">{parseFloat(rc.cashbackBalance || '0').toFixed(2)} {cs}</p>
                   </div>
                 ))}
               </>
@@ -811,7 +813,7 @@ export default function MobileWallet() {
                   {selectedCreditType?.isCustomAmount && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Suma dorită ({parseFloat(selectedCreditType.minCustomAmount || '100').toFixed(0)} - {parseFloat(selectedCreditType.maxCustomAmount || '10000').toFixed(0)} RON) *
+                        Suma dorită ({parseFloat(selectedCreditType.minCustomAmount || '100').toFixed(0)} - {parseFloat(selectedCreditType.maxCustomAmount || '10000').toFixed(0)} {cs}) *
                       </label>
                       <input
                         type="number"
@@ -951,7 +953,7 @@ export default function MobileWallet() {
                     
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Venit lunar (RON)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Venit lunar ({cs})</label>
                         <input
                           type="number"
                           value={creditForm.monthlyIncome}
@@ -1012,7 +1014,7 @@ export default function MobileWallet() {
                   </div>
                   <div className="flex items-baseline gap-1.5">
                     <p className="text-2xl font-bold text-red-600">
-                      {t.walletMaxAvailable} {maxCreditAmount > 0 ? maxCreditAmount : parseFloat(walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
+                      {t.walletMaxAvailable} {maxCreditAmount > 0 ? maxCreditAmount : parseFloat(walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} {cs}
                     </p>
                     <p className="text-xs text-red-500">{t.walletAvailableAfterApproval}</p>
                   </div>
@@ -1047,7 +1049,7 @@ export default function MobileWallet() {
                   </div>
                   <div className="flex items-baseline gap-1.5">
                     <p className="text-2xl font-bold text-amber-600">
-                      {parseFloat(walletOverview.credit.requestedAmount || walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} RON
+                      {parseFloat(walletOverview.credit.requestedAmount || walletOverview.credit.defaultDisplayLimit || '1000').toFixed(0)} {cs}
                     </p>
                     <p className="text-xs text-amber-500">{t.walletRequested}</p>
                   </div>
@@ -1073,7 +1075,7 @@ export default function MobileWallet() {
                   </div>
                   <div className="flex items-baseline gap-1.5">
                     <p className="text-2xl font-bold text-green-700">
-                      {parseFloat(walletOverview.credit.availableCredit || '0').toFixed(0)} RON
+                      {parseFloat(walletOverview.credit.availableCredit || '0').toFixed(0)} {cs}
                     </p>
                     <p className="text-xs text-green-600">{t.walletAvailable}</p>
                   </div>
@@ -1084,13 +1086,13 @@ export default function MobileWallet() {
                     <div>
                       <p className="text-[10px] text-gray-500">{t.walletTotalLimit}</p>
                       <p className="text-base font-bold text-gray-900">
-                        {parseFloat(walletOverview.credit.creditLimit || '0').toFixed(0)} RON
+                        {parseFloat(walletOverview.credit.creditLimit || '0').toFixed(0)} {cs}
                       </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-gray-500">{t.walletUsed}</p>
                       <p className="text-base font-bold text-gray-900">
-                        {parseFloat(walletOverview.credit.usedCredit || '0').toFixed(0)} RON
+                        {parseFloat(walletOverview.credit.usedCredit || '0').toFixed(0)} {cs}
                       </p>
                     </div>
                   </div>
@@ -1173,10 +1175,10 @@ export default function MobileWallet() {
                         "font-bold text-sm",
                         isPositive ? "text-green-600" : "text-red-600"
                       )}>
-                        {isPositive ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} RON
+                        {isPositive ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} {cs}
                       </p>
                       <p className="text-[10px] text-gray-400">
-                        Sold: {parseFloat(tx.balanceAfter || '0').toFixed(2)} RON
+                        Sold: {parseFloat(tx.balanceAfter || '0').toFixed(2)} {cs}
                       </p>
                     </div>
                   </div>
@@ -1299,6 +1301,8 @@ function TopUpStripeForm({ amount, onSuccess, onCancel }: {
 // Enhanced POS Payment Approval Card
 function PendingPaymentCard({ request }: { request: any }) {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
@@ -1417,14 +1421,14 @@ function PendingPaymentCard({ request }: { request: any }) {
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
           <p className="text-lg font-bold text-green-700">Plată aprobată!</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{parseFloat(paymentResult.amount).toFixed(2)} RON</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{parseFloat(paymentResult.amount).toFixed(2)} {cs}</p>
           {parseFloat(paymentResult.tipAmount || '0') > 0 && (
-            <p className="text-sm text-gray-500 mt-0.5">incl. bacșiș {parseFloat(paymentResult.tipAmount).toFixed(2)} RON</p>
+            <p className="text-sm text-gray-500 mt-0.5">incl. bacșiș {parseFloat(paymentResult.tipAmount).toFixed(2)} {cs}</p>
           )}
           {paymentResult.cashbackEarned > 0 && (
             <div className="mt-2 inline-flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
               <TrendingUp className="w-3.5 h-3.5" />
-              +{paymentResult.cashbackEarned.toFixed(2)} RON cashback
+              +{paymentResult.cashbackEarned.toFixed(2)} {cs} cashback
             </div>
           )}
         </div>
@@ -1494,7 +1498,7 @@ function PendingPaymentCard({ request }: { request: any }) {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xl font-bold text-gray-900">{baseAmount.toFixed(2)} RON</p>
+            <p className="text-xl font-bold text-gray-900">{baseAmount.toFixed(2)} {cs}</p>
             <p className="text-xs text-amber-600 font-medium">Apasă pentru detalii</p>
           </div>
         </div>
@@ -1522,7 +1526,7 @@ function PendingPaymentCard({ request }: { request: any }) {
       <div className="p-4 space-y-4">
         <div className="text-center">
           <p className="text-sm text-gray-500">Sumă de plată</p>
-          <p className="text-3xl font-bold text-gray-900">{baseAmount.toFixed(2)} RON</p>
+          <p className="text-3xl font-bold text-gray-900">{baseAmount.toFixed(2)} {cs}</p>
         </div>
 
         <div className="space-y-2">
@@ -1576,7 +1580,7 @@ function PendingPaymentCard({ request }: { request: any }) {
                 onChange={(e) => setCustomTipInput(e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
-              <span className="text-sm text-gray-500 font-medium">RON</span>
+              <span className="text-sm text-gray-500 font-medium">{cs}</span>
             </div>
           )}
         </div>
@@ -1584,7 +1588,7 @@ function PendingPaymentCard({ request }: { request: any }) {
         <div className="bg-green-50 border border-green-100 rounded-xl p-3">
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-xs font-medium text-green-700">Cashback la această plată</p>
-            <p className="text-sm font-bold text-green-700">+{cashbackToEarn.toFixed(2)} RON</p>
+            <p className="text-sm font-bold text-green-700">+{cashbackToEarn.toFixed(2)} {cs}</p>
           </div>
           <div className="w-full bg-green-200 rounded-full h-1.5">
             <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '35%' }} />
@@ -1595,22 +1599,22 @@ function PendingPaymentCard({ request }: { request: any }) {
         <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Subtotal</span>
-            <span className="text-gray-900 font-medium">{baseAmount.toFixed(2)} RON</span>
+            <span className="text-gray-900 font-medium">{baseAmount.toFixed(2)} {cs}</span>
           </div>
           {tipAmount > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Bacșiș</span>
-              <span className="text-gray-900 font-medium">+{tipAmount.toFixed(2)} RON</span>
+              <span className="text-gray-900 font-medium">+{tipAmount.toFixed(2)} {cs}</span>
             </div>
           )}
           <div className="border-t border-gray-200 pt-1.5 flex justify-between">
             <span className="text-sm font-bold text-gray-900">Total</span>
-            <span className="text-lg font-bold text-gray-900">{totalAmount.toFixed(2)} RON</span>
+            <span className="text-lg font-bold text-gray-900">{totalAmount.toFixed(2)} {cs}</span>
           </div>
           {cashbackToEarn > 0 && (
             <div className="flex justify-between text-xs">
               <span className="text-green-600">Cashback de primit</span>
-              <span className="text-green-600 font-medium">+{cashbackToEarn.toFixed(2)} RON</span>
+              <span className="text-green-600 font-medium">+{cashbackToEarn.toFixed(2)} {cs}</span>
             </div>
           )}
         </div>
@@ -1627,7 +1631,7 @@ function PendingPaymentCard({ request }: { request: any }) {
             ) : (
               <CheckCircle className="w-5 h-5" />
             )}
-            Aprobă plata · {totalAmount.toFixed(2)} RON
+            Aprobă plata · {totalAmount.toFixed(2)} {cs}
           </button>
           <button
             onClick={handleDecline}
@@ -1645,6 +1649,8 @@ function PendingPaymentCard({ request }: { request: any }) {
 
 function ReceivedGiftCard({ gift }: { gift: any }) {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   const queryClient = useQueryClient();
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
@@ -1707,7 +1713,7 @@ function ReceivedGiftCard({ gift }: { gift: any }) {
           <p className="font-semibold text-gray-900 text-sm">{gift.senderName || 'Cineva'}</p>
           <p className="text-xs text-gray-500">{timeAgo}</p>
           <p className="text-lg font-bold text-teal-700 mt-1">
-            {isValue ? `${amount.toFixed(2)} ${gift.currency || 'RON'}` : gift.menuItemName}
+            {isValue ? `${amount.toFixed(2)} ${gift.currency || cs}` : gift.menuItemName}
           </p>
           {!isValue && gift.restaurantName && (
             <p className="text-xs text-gray-500">{gift.restaurantName}</p>
@@ -1750,6 +1756,8 @@ type GiftStep = 'choose' | 'value' | 'product-restaurant' | 'product-menu' | 'pr
 
 function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || 'RON';
   const queryClient = useQueryClient();
   const [step, setStep] = useState<GiftStep>('choose');
   const [giftType, setGiftType] = useState<'value' | 'product'>('value');
@@ -1851,7 +1859,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
             </div>
             <div className="flex justify-between mb-2">
               <span className="text-sm text-gray-500">{t.giftAmount || 'Amount'}</span>
-              <span className="text-sm font-bold text-teal-700">{parsedAmount.toFixed(2)} RON</span>
+              <span className="text-sm font-bold text-teal-700">{parsedAmount.toFixed(2)} {cs}</span>
             </div>
             {recipientEmail && (
               <div className="flex justify-between">
@@ -1932,7 +1940,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
           {step === 'value' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">{t.giftAmount || 'Amount'} (RON)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t.giftAmount || 'Amount'} ({cs})</label>
                 <input
                   type="number"
                   value={amount}
@@ -1955,7 +1963,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                 </div>
                 <div className="mt-2 flex items-center gap-1.5">
                   <Wallet className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-xs text-gray-500">{t.giftAvailableBalance || 'Available balance'}: {personalBalance.toFixed(2)} RON</span>
+                  <span className="text-xs text-gray-500">{t.giftAvailableBalance || 'Available balance'}: {personalBalance.toFixed(2)} {cs}</span>
                 </div>
               </div>
 
@@ -2107,7 +2115,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                         <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
                         {item.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{item.description}</p>}
                       </div>
-                      <span className="text-sm font-bold text-orange-600 flex-shrink-0">{itemPrice.toFixed(2)} RON</span>
+                      <span className="text-sm font-bold text-orange-600 flex-shrink-0">{itemPrice.toFixed(2)} {cs}</span>
                     </button>
                   );
                 })}
@@ -2124,7 +2132,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-700 font-semibold">{selectedMenuItem?.name}</span>
-                  <span className="text-sm font-bold text-orange-600">{parsedAmount.toFixed(2)} RON</span>
+                  <span className="text-sm font-bold text-orange-600">{parsedAmount.toFixed(2)} {cs}</span>
                 </div>
               </div>
 
@@ -2205,7 +2213,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
               className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 bg-orange-500 text-white"
             >
               <Package className="w-5 h-5" />
-              {t.giftConfirmProduct || 'Confirm Product'} · {parsedAmount.toFixed(2)} RON
+              {t.giftConfirmProduct || 'Confirm Product'} · {parsedAmount.toFixed(2)} {cs}
             </button>
           </div>
         )}
@@ -2213,7 +2221,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
         {(step === 'value' || step === 'product-recipient') && (
           <div className="p-4 border-t flex-shrink-0">
             {parsedAmount > personalBalance && (
-              <p className="text-xs text-red-500 mb-2 text-center">{t.giftInsufficientFunds || 'Insufficient funds. Balance'}: {personalBalance.toFixed(2)} RON</p>
+              <p className="text-xs text-red-500 mb-2 text-center">{t.giftInsufficientFunds || 'Insufficient funds. Balance'}: {personalBalance.toFixed(2)} {cs}</p>
             )}
             <button
               onClick={handleSend}
@@ -2228,7 +2236,7 @@ function GiftSendFlow({ isOpen, onClose, personalBalance }: GiftSendFlowProps) {
               {isSending ? (
                 <><Loader2 className="w-5 h-5 animate-spin" />{t.giftSending || 'Sending...'}</>
               ) : (
-                <><Send className="w-5 h-5" />{t.giftSendButton || 'Send Gift'} · {parsedAmount.toFixed(2)} RON</>
+                <><Send className="w-5 h-5" />{t.giftSendButton || 'Send Gift'} · {parsedAmount.toFixed(2)} {cs}</>
               )}
             </button>
           </div>

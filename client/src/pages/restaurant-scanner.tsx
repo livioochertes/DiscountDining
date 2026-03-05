@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { QrCode, Camera, CheckCircle, XCircle, CreditCard, User, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 interface ScannedPayment {
   customerId: number;
@@ -54,6 +55,8 @@ export default function RestaurantScanner() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [restaurantId] = useState(1); // This would come from restaurant auth
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -144,7 +147,7 @@ export default function RestaurantScanner() {
       if (result.success) {
         toast({
           title: "Payment Successful",
-          description: `€${scannedData.amount} received from ${scannedData.customerName}`,
+          description: `${cs}${scannedData.amount} received from ${scannedData.customerName}`,
         });
       } else {
         toast({
@@ -266,7 +269,7 @@ export default function RestaurantScanner() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm text-muted-foreground">Amount</h4>
-                  <p className="text-2xl font-bold text-green-600">€{scannedData.amount}</p>
+                  <p className="text-2xl font-bold text-green-600">{cs}{scannedData.amount}</p>
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm text-muted-foreground">Payment Method</h4>
@@ -342,7 +345,7 @@ export default function RestaurantScanner() {
                     {paymentResult.paymentBreakdown.voucherValue > 0 && (
                       <div className="flex justify-between">
                         <span>Voucher Value:</span>
-                        <span>€{paymentResult.paymentBreakdown.voucherValue.toFixed(2)}</span>
+                        <span>{cs}{paymentResult.paymentBreakdown.voucherValue.toFixed(2)}</span>
                       </div>
                     )}
                     {paymentResult.paymentBreakdown.pointsUsed > 0 && (
@@ -354,13 +357,13 @@ export default function RestaurantScanner() {
                     {paymentResult.paymentBreakdown.cashUsed > 0 && (
                       <div className="flex justify-between">
                         <span>Cash Payment:</span>
-                        <span>€{paymentResult.paymentBreakdown.cashUsed.toFixed(2)}</span>
+                        <span>{cs}{paymentResult.paymentBreakdown.cashUsed.toFixed(2)}</span>
                       </div>
                     )}
                     {paymentResult.paymentBreakdown.generalVoucherDiscount > 0 && (
                       <div className="flex justify-between">
                         <span>Voucher Discount:</span>
-                        <span>€{paymentResult.paymentBreakdown.generalVoucherDiscount.toFixed(2)}</span>
+                        <span>{cs}{paymentResult.paymentBreakdown.generalVoucherDiscount.toFixed(2)}</span>
                       </div>
                     )}
                   </div>
@@ -373,16 +376,16 @@ export default function RestaurantScanner() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-orange-700">Total Transaction:</span>
-                      <span className="font-medium">€{paymentResult.transaction.amount}</span>
+                      <span className="font-medium">{cs}{paymentResult.transaction.amount}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-orange-700">Platform Commission ({paymentResult.commission.rate}%):</span>
-                      <span className="font-medium text-orange-800">-€{paymentResult.commission.amount}</span>
+                      <span className="font-medium text-orange-800">-{cs}{paymentResult.commission.amount}</span>
                     </div>
                     <Separator className="my-2" />
                     <div className="flex justify-between">
                       <span className="font-semibold text-green-700">Net Restaurant Amount:</span>
-                      <span className="font-bold text-green-800 text-lg">€{paymentResult.transaction.netRestaurantAmount}</span>
+                      <span className="font-bold text-green-800 text-lg">{cs}{paymentResult.transaction.netRestaurantAmount}</span>
                     </div>
                   </div>
                   <p className="text-xs text-orange-600 mt-2">

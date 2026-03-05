@@ -8,6 +8,7 @@ import PackageForm from "@/components/package-form";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 // Mock restaurant ID - in a real app, this would come from authentication
 const RESTAURANT_ID = 1;
@@ -16,6 +17,8 @@ export default function RestaurantAdmin() {
   const [showPackageForm, setShowPackageForm] = useState(false);
   const [editingPackage, setEditingPackage] = useState<any>(null);
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const { data: restaurant } = useQuery({
     queryKey: ['/api/restaurants', RESTAURANT_ID],
@@ -124,7 +127,7 @@ export default function RestaurantAdmin() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Sales:</span>
                   <span className="font-medium text-accent">
-                    €{analytics?.totalSales?.toFixed(2) || '0.00'}
+                    {cs}{analytics?.totalSales?.toFixed(2) || '0.00'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -183,7 +186,7 @@ export default function RestaurantAdmin() {
                           <div>
                             <h4 className="font-semibold text-secondary">{pkg.name}</h4>
                             <p className="text-sm text-gray-600">
-                              {pkg.mealCount} meals • €{pkg.pricePerMeal} per meal • {pkg.discountPercentage}% discount
+                              {pkg.mealCount} meals • {cs}{pkg.pricePerMeal} per meal • {pkg.discountPercentage}% discount
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -208,7 +211,7 @@ export default function RestaurantAdmin() {
                           </div>
                           <div>
                             <span className="text-gray-600">Revenue:</span>
-                            <div className="font-medium text-accent">€0.00</div>
+                            <div className="font-medium text-accent">{cs}0.00</div>
                           </div>
                           <div>
                             <span className="text-gray-600">Redeemed:</span>

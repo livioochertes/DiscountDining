@@ -54,6 +54,7 @@ import PackageForm from "@/components/package-form";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import LanguageSelector from "@/components/LanguageSelector";
 import ChefForm from "@/components/ChefForm";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 // EU Standard restaurant category options
 const CUISINE_OPTIONS = [
@@ -405,6 +406,8 @@ function UsersFinancialTab() {
   const [selectedMarketplaceId, setSelectedMarketplaceId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   interface Marketplace {
     id: number;
@@ -926,17 +929,17 @@ function UsersFinancialTab() {
                               {(user.customer.membershipTier || 'Bronze').charAt(0).toUpperCase() + (user.customer.membershipTier || 'bronze').slice(1)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">€{parseFloat(user.wallet?.cashBalance || user.customer.balance || '0').toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{cs}{parseFloat(user.wallet?.cashBalance || user.customer.balance || '0').toFixed(2)}</TableCell>
                           <TableCell className="text-right">
-                            €{parseFloat(user.vouchers?.totalValue || '0').toFixed(2)}
+                            {cs}{parseFloat(user.vouchers?.totalValue || '0').toFixed(2)}
                             {(user.vouchers?.activeCount || 0) > 0 && (
                               <span className="text-xs text-muted-foreground ml-1">({user.vouchers?.activeCount})</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">€{parseFloat(user.cashback?.totalCashbackBalance || '0').toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{cs}{parseFloat(user.cashback?.totalCashbackBalance || '0').toFixed(2)}</TableCell>
                           <TableCell className="text-right">
                             {user.credit?.status === 'approved' 
-                              ? `€${parseFloat(user.credit?.availableCredit || '0').toFixed(2)}`
+                              ? `${cs}${parseFloat(user.credit?.availableCredit || '0').toFixed(2)}`
                               : user.credit?.status === 'pending' ? 'Pending' : 'N/A'}
                           </TableCell>
                           <TableCell>
@@ -982,7 +985,7 @@ function UsersFinancialTab() {
                                         </div>
                                         <div className="text-right">
                                           <span className={tx.transactionType.includes('debit') ? 'text-red-600' : 'text-green-600'}>
-                                            {tx.transactionType.includes('debit') ? '-' : '+'}€{parseFloat(tx.amount).toFixed(2)}
+                                            {tx.transactionType.includes('debit') ? '-' : '+'}{cs}{parseFloat(tx.amount).toFixed(2)}
                                           </span>
                                           <span className="text-xs text-muted-foreground ml-2">
                                             {new Date(tx.createdAt).toLocaleDateString()}
@@ -1051,21 +1054,21 @@ function UsersFinancialTab() {
             <div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-lg text-sm mb-2">
               <div>
                 <span className="text-muted-foreground">Personal:</span>{' '}
-                <span className="font-semibold">€{parseFloat(selectedUserForAdjustment.wallet?.cashBalance || selectedUserForAdjustment.customer.balance || '0').toFixed(2)}</span>
+                <span className="font-semibold">{cs}{parseFloat(selectedUserForAdjustment.wallet?.cashBalance || selectedUserForAdjustment.customer.balance || '0').toFixed(2)}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Vouchere:</span>{' '}
-                <span className="font-semibold">€{parseFloat(selectedUserForAdjustment.vouchers?.totalValue || '0').toFixed(2)}</span>
+                <span className="font-semibold">{cs}{parseFloat(selectedUserForAdjustment.vouchers?.totalValue || '0').toFixed(2)}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Cashback:</span>{' '}
-                <span className="font-semibold">€{parseFloat(selectedUserForAdjustment.cashback?.totalCashbackBalance || '0').toFixed(2)}</span>
+                <span className="font-semibold">{cs}{parseFloat(selectedUserForAdjustment.cashback?.totalCashbackBalance || '0').toFixed(2)}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Credit:</span>{' '}
                 <span className="font-semibold">
                   {selectedUserForAdjustment.credit?.status === 'approved' 
-                    ? `€${parseFloat(selectedUserForAdjustment.credit?.availableCredit || '0').toFixed(2)}`
+                    ? `${cs}${parseFloat(selectedUserForAdjustment.credit?.availableCredit || '0').toFixed(2)}`
                     : selectedUserForAdjustment.credit?.status === 'pending' ? 'Pending' : 'N/A'}
                 </span>
               </div>
@@ -1101,7 +1104,7 @@ function UsersFinancialTab() {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount (€)</FormLabel>
+                    <FormLabel>Amount ({cs})</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -1193,7 +1196,7 @@ function UsersFinancialTab() {
                 name="minTransactionVolume"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Minimum Threshold (€)</FormLabel>
+                    <FormLabel>Minimum Threshold ({cs})</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -1212,7 +1215,7 @@ function UsersFinancialTab() {
                 name="maxTransactionVolume"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Maximum Threshold (€) - Leave empty for unlimited</FormLabel>
+                    <FormLabel>Maximum Threshold ({cs}) - Leave empty for unlimited</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -1904,6 +1907,8 @@ function EatOffVoucherManagement() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const eatoffVoucherForm = useForm<EatoffVoucherFormData>({
     resolver: zodResolver(eatoffVoucherSchema),
@@ -2091,9 +2096,9 @@ function EatOffVoucherManagement() {
                     <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
                       <span>Discount: {voucher.discountPercentage}%</span>
                       <span>Valid: {voucher.validityMonths} months</span>
-                      <span>Value: €{voucher.totalValue}</span>
+                      <span>Value: {cs}{voucher.totalValue}</span>
                       {voucher.mealCount && <span>Meals: {voucher.mealCount}</span>}
-                      {voucher.pricePerMeal && <span>Price/Meal: €{voucher.pricePerMeal}</span>}
+                      {voucher.pricePerMeal && <span>Price/Meal: {cs}{voucher.pricePerMeal}</span>}
                     </div>
                     {/* Pay Later Badge */}
                     {voucher.voucherType === 'pay_later' && (
@@ -2279,7 +2284,7 @@ function EatOffVoucherManagement() {
                   name="totalValue"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Value (€)</FormLabel>
+                      <FormLabel>Total Value ({cs})</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -2702,6 +2707,8 @@ function FinancesTabContent({ metrics }: { metrics?: DashboardMetrics }) {
   const [expandedSettlementId, setExpandedSettlementId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const { data: settlementMetrics, isLoading: metricsLoading } = useQuery<SettlementMetrics>({
     queryKey: ['/api/admin/settlements/metrics'],
@@ -2889,7 +2896,7 @@ function FinancesTabContent({ metrics }: { metrics?: DashboardMetrics }) {
   };
 
   const formatCurrency = (amount: string | number) => {
-    return `€${parseFloat(amount.toString()).toFixed(2)}`;
+    return `${cs}${parseFloat(amount.toString()).toFixed(2)}`;
   };
 
   const formatDateRange = (start: string, end: string) => {
@@ -3484,6 +3491,8 @@ function WalletCreditTab() {
   const [isCreatingCreditType, setIsCreatingCreditType] = useState(false);
   const [creditSubTab, setCreditSubTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const { toast } = useToast();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   // Fetch credit types
   const { data: creditTypes = [], refetch: refetchCreditTypes } = useQuery<CreditType[]>({
@@ -3605,7 +3614,7 @@ function WalletCreditTab() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Amount (RON)</label>
+                  <label className="text-sm font-medium">Amount ({cs})</label>
                   <Input
                     type="number"
                     value={newCreditType.amount}
@@ -3665,7 +3674,7 @@ function WalletCreditTab() {
               {newCreditType.isCustomAmount && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium">Min Amount (RON)</label>
+                    <label className="text-sm font-medium">Min Amount ({cs})</label>
                     <Input
                       type="number"
                       value={newCreditType.minCustomAmount}
@@ -3673,7 +3682,7 @@ function WalletCreditTab() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Max Amount (RON)</label>
+                    <label className="text-sm font-medium">Max Amount ({cs})</label>
                     <Input
                       type="number"
                       value={newCreditType.maxCustomAmount}
@@ -3703,7 +3712,7 @@ function WalletCreditTab() {
                       {type.description && <span className="text-gray-500 text-sm ml-2">- {type.description}</span>}
                     </div>
                     <Badge variant={type.isCustomAmount ? "secondary" : "default"}>
-                      {type.isCustomAmount ? `${type.minCustomAmount}-${type.maxCustomAmount} RON` : `${type.amount} RON`}
+                      {type.isCustomAmount ? `${type.minCustomAmount}-${type.maxCustomAmount} ${cs}` : `${type.amount} ${cs}`}
                     </Badge>
                     <span className="text-sm text-gray-500">{type.interestRate}% interest</span>
                     <span className="text-sm text-gray-500">{type.paymentTermDays} days</span>
@@ -3768,7 +3777,7 @@ function WalletCreditTab() {
                       CNP: {request.cnp || 'N/A'} | Phone: {request.phone || 'N/A'}
                     </div>
                     <div className="text-sm text-gray-500">
-                      Requested: {request.requestedAmount || request.creditLimit} RON
+                      Requested: {request.requestedAmount || request.creditLimit} {cs}
                     </div>
                     <div className="text-xs text-gray-400">
                       {new Date(request.createdAt).toLocaleDateString()}
@@ -3843,6 +3852,8 @@ function CommissionsTab({ setSelectedTab }: CommissionsTabProps) {
   const [editCashbackParticipant, setEditCashbackParticipant] = useState<boolean>(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const getToken = () => localStorage.getItem('adminToken') || '';
 
@@ -3944,7 +3955,7 @@ function CommissionsTab({ setSelectedTab }: CommissionsTabProps) {
             <CreditCard className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{totals.totalCommissionEarned.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{cs}{totals.totalCommissionEarned.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">All-time platform earnings</p>
           </CardContent>
         </Card>
@@ -3954,7 +3965,7 @@ function CommissionsTab({ setSelectedTab }: CommissionsTabProps) {
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{totals.monthlyCommission.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{cs}{totals.monthlyCommission.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
@@ -3964,7 +3975,7 @@ function CommissionsTab({ setSelectedTab }: CommissionsTabProps) {
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">€{totals.totalPendingSettlement.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-yellow-600">{cs}{totals.totalPendingSettlement.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Awaiting payout</p>
           </CardContent>
         </Card>
@@ -3974,7 +3985,7 @@ function CommissionsTab({ setSelectedTab }: CommissionsTabProps) {
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{totals.totalSettled.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{cs}{totals.totalSettled.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Paid out to restaurants</p>
           </CardContent>
         </Card>
@@ -4056,10 +4067,10 @@ function CommissionsTab({ setSelectedTab }: CommissionsTabProps) {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      €{restaurant.pendingSettlement.toLocaleString()}
+                      {cs}{restaurant.pendingSettlement.toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      €{restaurant.totalSettled.toLocaleString()}
+                      {cs}{restaurant.totalSettled.toLocaleString()}
                     </TableCell>
                     <TableCell>
                       {editingId === restaurant.id ? (
@@ -5001,6 +5012,8 @@ function HelpdeskTab() {
 
 export default function AdminDashboard() {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [selectedTab, setSelectedTab] = useState("overview");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(true);
@@ -6172,7 +6185,7 @@ export default function AdminDashboard() {
               </Tooltip>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{(metrics?.totalRevenue || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="text-2xl font-bold">{cs}{(metrics?.totalRevenue || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <p className="text-xs text-muted-foreground">
                 Platform transaction volume
               </p>
@@ -6192,7 +6205,7 @@ export default function AdminDashboard() {
               </Tooltip>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">€{(metrics?.totalCommission || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="text-2xl font-bold">{cs}{(metrics?.totalCommission || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <p className="text-xs text-muted-foreground">
                 Platform commission revenue (5%)
               </p>
@@ -6295,17 +6308,17 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                     <h4 className="font-medium text-blue-900 dark:text-blue-100">Today</h4>
-                    <p className="text-2xl font-bold text-blue-600">€{(metrics?.transactionStats?.dailyAmount || 0).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-600">{cs}{(metrics?.transactionStats?.dailyAmount || 0).toFixed(2)}</p>
                     <p className="text-sm text-blue-600">{metrics?.transactionStats?.dailyCount || 0} transactions</p>
                   </div>
                   <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                     <h4 className="font-medium text-green-900 dark:text-green-100">This Week</h4>
-                    <p className="text-2xl font-bold text-green-600">€{(metrics?.transactionStats?.weeklyAmount || 0).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-green-600">{cs}{(metrics?.transactionStats?.weeklyAmount || 0).toFixed(2)}</p>
                     <p className="text-sm text-green-600">{metrics?.transactionStats?.weeklyCount || 0} transactions</p>
                   </div>
                   <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                     <h4 className="font-medium text-purple-900 dark:text-purple-100">All Time</h4>
-                    <p className="text-2xl font-bold text-purple-600">€{(metrics?.transactionStats?.totalAmount || 0).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-purple-600">{cs}{(metrics?.transactionStats?.totalAmount || 0).toFixed(2)}</p>
                     <p className="text-sm text-purple-600">{metrics?.transactionStats?.total || 0} transactions</p>
                   </div>
                 </div>
@@ -6357,7 +6370,7 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <RechartsTooltip formatter={(value: number) => [`€${value.toFixed(2)}`, 'Amount']} />
+                      <RechartsTooltip formatter={(value: number) => [`${cs}${value.toFixed(2)}`, 'Amount']} />
                       <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -6451,7 +6464,7 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <RechartsTooltip formatter={(value: number) => [`€${value.toFixed(2)}`, 'Amount']} />
+                      <RechartsTooltip formatter={(value: number) => [`${cs}${value.toFixed(2)}`, 'Amount']} />
                       <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -7468,7 +7481,7 @@ export default function AdminDashboard() {
                                 <strong>Restaurants:</strong> {partner.restaurantCount || 0}
                               </span>
                               <span className="text-muted-foreground">
-                                <strong>Revenue:</strong> €{partner.totalRevenue?.toFixed(2) || '0.00'}
+                                <strong>Revenue:</strong> {cs}{partner.totalRevenue?.toFixed(2) || '0.00'}
                               </span>
                             </div>
                             <div className="mt-2 flex space-x-2">

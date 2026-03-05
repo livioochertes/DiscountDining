@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Check, X, Clock, Loader2, AlertCircle } from "lucide-react";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,8 @@ interface PaymentRequestsCardProps {
 export default function PaymentRequestsCard({ customerId }: PaymentRequestsCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const { data: paymentRequests = [], isLoading } = useQuery({
     queryKey: ["/api/loyalty/customers", customerId, "payment-requests"],
@@ -106,10 +109,10 @@ export default function PaymentRequestsCard({ customerId }: PaymentRequestsCardP
                         <p className="text-sm text-gray-600">{pr.description || "Plată în restaurant"}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold">€{parseFloat(pr.finalAmount).toFixed(2)}</p>
+                        <p className="text-lg font-bold">{cs}{parseFloat(pr.finalAmount).toFixed(2)}</p>
                         {pr.discountApplied && parseFloat(pr.discountApplied) > 0 && (
                           <p className="text-xs text-green-600">
-                            -{parseFloat(pr.discountApplied).toFixed(2)}€ reducere fidelitate
+                            -{parseFloat(pr.discountApplied).toFixed(2)}{cs} reducere fidelitate
                           </p>
                         )}
                       </div>
@@ -120,7 +123,7 @@ export default function PaymentRequestsCard({ customerId }: PaymentRequestsCardP
                         <Clock className="h-3 w-3" />
                         Expiră în: {formatTimeLeft(pr.expiresAt)}
                       </span>
-                      <span>Sumă inițială: €{parseFloat(pr.amount).toFixed(2)}</span>
+                      <span>Sumă inițială: {cs}{parseFloat(pr.amount).toFixed(2)}</span>
                     </div>
 
                     <div className="flex gap-2">
@@ -165,7 +168,7 @@ export default function PaymentRequestsCard({ customerId }: PaymentRequestsCardP
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">€{parseFloat(pr.finalAmount).toFixed(2)}</p>
+                      <p className="font-medium">{cs}{parseFloat(pr.finalAmount).toFixed(2)}</p>
                       <Badge variant={
                         pr.status === "completed" ? "default" :
                         pr.status === "rejected" ? "destructive" : "secondary"

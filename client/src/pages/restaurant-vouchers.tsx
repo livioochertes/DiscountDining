@@ -8,6 +8,7 @@ import { Star, MapPin, ArrowLeft, Ticket } from "lucide-react";
 import type { Restaurant, VoucherPackage } from "@shared/schema";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 export default function RestaurantVouchersPage() {
   const params = useParams();
@@ -15,6 +16,8 @@ export default function RestaurantVouchersPage() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -159,7 +162,7 @@ export default function RestaurantVouchersPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold text-primary">
-                        €{pkg.pricePerMeal ? parseFloat(pkg.pricePerMeal).toFixed(2) : '0.00'}/masă
+                        {cs}{pkg.pricePerMeal ? parseFloat(pkg.pricePerMeal).toFixed(2) : '0.00'}/masă
                       </span>
                     </div>
                     <Button 

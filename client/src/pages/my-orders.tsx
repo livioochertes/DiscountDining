@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { SectionNavigation } from "@/components/SectionNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 interface Order {
   id: number;
@@ -55,6 +56,8 @@ interface OrderItem {
 
 export default function MyOrders() {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [orderTypeFilter, setOrderTypeFilter] = useState("all");
@@ -219,7 +222,7 @@ export default function MyOrders() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-lg font-bold">€{order.totalAmount}</p>
+                            <p className="text-lg font-bold">{cs}{order.totalAmount}</p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               {order.items.length} item{order.items.length !== 1 ? 's' : ''}
                             </p>
@@ -296,7 +299,7 @@ export default function MyOrders() {
                                 <span className="text-gray-600 dark:text-gray-400">
                                   {item.quantity}x {item.menuItemName}
                                 </span>
-                                <span className="font-medium">€{item.totalPrice}</span>
+                                <span className="font-medium">{cs}{item.totalPrice}</span>
                               </div>
                             ))}
                             {order.items.length > 4 && (
@@ -361,7 +364,7 @@ export default function MyOrders() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Total Amount:</span>
-                      <span className="font-medium">€{selectedOrder.totalAmount}</span>
+                      <span className="font-medium">{cs}{selectedOrder.totalAmount}</span>
                     </div>
                   </div>
                 </div>
@@ -396,8 +399,8 @@ export default function MyOrders() {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">€{item.totalPrice}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">€{item.unitPrice} each</p>
+                        <p className="font-medium">{cs}{item.totalPrice}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{cs}{item.unitPrice} each</p>
                       </div>
                     </div>
                   ))}

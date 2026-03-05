@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, QrCode, CalendarCheck, Calendar, Percent } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import ReservationModal from "./ReservationModal";
 import { imageCache } from "@/lib/imageCache";
 import { instantImageLoader } from "@/lib/instantImageLoader";
@@ -18,6 +19,8 @@ interface VoucherModalProps {
 
 export default function VoucherModal({ voucher, isOpen, onClose }: VoucherModalProps) {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [qrCodeImage, setQrCodeImage] = useState<string>('');
   const [isLoadingQr, setIsLoadingQr] = useState(false);
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
@@ -262,11 +265,11 @@ export default function VoucherModal({ voucher, isOpen, onClose }: VoucherModalP
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Paid:</span>
-                    <span className="font-medium">€{voucher.purchasePrice}</span>
+                    <span className="font-medium">{cs}{voucher.purchasePrice}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Discount Received:</span>
-                    <span className="font-medium text-green-600">€{voucher.discountReceived}</span>
+                    <span className="font-medium text-green-600">{cs}{voucher.discountReceived}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">QR Code ID:</span>

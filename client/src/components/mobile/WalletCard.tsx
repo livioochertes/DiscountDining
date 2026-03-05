@@ -64,7 +64,7 @@ export function WalletCard({
     return (
       <>
         <span className={mainClass}>{intPart}</span>
-        <span className={smallClass}>{decPart} RON</span>
+        <span className={smallClass}>{decPart} {currencySymbol}</span>
       </>
     );
   };

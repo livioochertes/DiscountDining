@@ -2,9 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { ArrowRight, TrendingUp, Users, Star, DollarSign, Clock } from "lucide-react";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 
 export default function RestaurantSuccessStories() {
   const [, setLocation] = useLocation();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
 
   const successStories = [
     {
@@ -12,7 +15,7 @@ export default function RestaurantSuccessStories() {
       owner: "Marco Romano",
       location: "Downtown Rome",
       stats: {
-        monthlyRevenue: "€45,000",
+        monthlyRevenue: `${cs}45,000`,
         customerIncrease: "280%",
         vouchersActive: "1,250",
         rating: "4.8"
@@ -20,7 +23,7 @@ export default function RestaurantSuccessStories() {
       quote: "EatOff transformed our business completely. We went from struggling during slow seasons to having consistent revenue year-round through voucher pre-sales.",
       results: [
         "Increased customer base by 280% in 6 months",
-        "Generated €45,000 monthly recurring revenue",
+        `Generated ${cs}45,000 monthly recurring revenue`,
         "Improved cash flow with advance voucher sales",
         "Enhanced customer loyalty and retention"
       ]
@@ -48,7 +51,7 @@ export default function RestaurantSuccessStories() {
       owner: "Sophie Dubois",
       location: "Montmartre, Paris",
       stats: {
-        monthlyRevenue: "€38,500",
+        monthlyRevenue: `${cs}38,500`,
         customerIncrease: "190%",
         vouchersActive: "675",
         rating: "4.7"
@@ -196,7 +199,7 @@ export default function RestaurantSuccessStories() {
               <div className="text-gray-600">Partner Restaurants</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-green-600 mb-2">€2.5M+</div>
+              <div className="text-4xl font-bold text-green-600 mb-2">{cs}2.5M+</div>
               <div className="text-gray-600">Revenue Generated</div>
             </div>
             <div>

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MapPin, Star, Users, TrendingUp, Filter, Zap, Navigation, Menu, ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useMarketplace } from '@/contexts/MarketplaceContext';
 
 interface Restaurant {
   id: number;
@@ -62,6 +63,8 @@ const HEAT_COLORS = {
 
 export default function RestaurantHeatMap() {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [selectedRadius, setSelectedRadius] = useState([5]); // km
   const [selectedCuisine, setSelectedCuisine] = useState<string>('all');
@@ -478,7 +481,7 @@ export default function RestaurantHeatMap() {
                                         <CardContent className="p-4">
                                           <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-medium text-sm">{item.name}</h4>
-                                            <span className="font-bold text-primary">€{item.price}</span>
+                                            <span className="font-bold text-primary">{cs}{item.price}</span>
                                           </div>
                                           {item.description && (
                                             <p className="text-xs text-muted-foreground mb-2">

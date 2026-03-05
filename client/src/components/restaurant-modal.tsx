@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useLocation } from "wouter";
 import type { Restaurant, VoucherPackage } from "@shared/schema";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMarketplace } from "@/contexts/MarketplaceContext";
 import { AIPackageExplainer } from "./AIPackageExplainer";
 import ReservationModal from "./ReservationModal";
 import { useState, useEffect } from "react";
@@ -31,6 +32,8 @@ interface PackageCardProps {
 
 function PackageCard({ package: pkg, restaurant, onPurchase, isPopular = false }: PackageCardProps) {
   const { t } = useLanguage();
+  const { marketplace } = useMarketplace();
+  const cs = marketplace?.currencySymbol || '€';
   
   // Handle both meal-based packages and EatOff vouchers with totalValue
   let regularPrice, customerPrice, savings, isPayLater, bonusAmount;
@@ -90,18 +93,18 @@ function PackageCard({ package: pkg, restaurant, onPurchase, isPopular = false }
         <div className="space-y-2 mb-6">
           <div className="flex justify-between text-sm">
             <span>Voucher Value:</span>
-            <span className="font-medium">€{regularPrice.toFixed(2)}</span>
+            <span className="font-medium">{cs}{regularPrice.toFixed(2)}</span>
           </div>
           
           {isPayLater ? (
             <>
               <div className="flex justify-between text-sm">
                 <span>You pay later:</span>
-                <span className="font-semibold text-accent">€{customerPrice.toFixed(2)}</span>
+                <span className="font-semibold text-accent">{cs}{customerPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm font-medium">
                 <span>Price increase:</span>
-                <span className="text-red-600">+{bonusAmount.toFixed(2)} RON</span>
+                <span className="text-red-600">+{bonusAmount.toFixed(2)} {cs}</span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 Pay in {(pkg as any).paymentTermDays || 30} days
@@ -111,11 +114,11 @@ function PackageCard({ package: pkg, restaurant, onPurchase, isPopular = false }
             <>
               <div className="flex justify-between text-sm">
                 <span>Your price:</span>
-                <span className="font-semibold text-accent">€{customerPrice.toFixed(2)}</span>
+                <span className="font-semibold text-accent">{cs}{customerPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm font-medium">
                 <span>You save:</span>
-                <span className="text-green-600">-{savings.toFixed(2)} RON</span>
+                <span className="text-green-600">-{savings.toFixed(2)} {cs}</span>
               </div>
             </>
           )}
