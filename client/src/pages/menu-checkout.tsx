@@ -32,13 +32,14 @@ const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY
   : null;
 
 // Mixed Payment Form Component for points + card payments
-const MixedPaymentForm = ({ orderDetails, restaurantId, items, customerInfo, pointsToUse, mixedPaymentMutation }: {
+const MixedPaymentForm = ({ orderDetails, restaurantId, items, customerInfo, pointsToUse, mixedPaymentMutation, mobile }: {
   orderDetails: { totalAmount: string; pointsToUse: number; cardAmount: string };
   restaurantId: number;
   items: any[];
   customerInfo: any;
   pointsToUse: number;
   mixedPaymentMutation: any;
+  mobile?: boolean;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -61,7 +62,7 @@ const MixedPaymentForm = ({ orderDetails, restaurantId, items, customerInfo, poi
       const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/order-success`,
+          return_url: `${window.location.origin}${mobile ? '/m' : '/order-success'}`,
         },
         redirect: 'if_required'
       });
@@ -112,11 +113,13 @@ const MixedPaymentForm = ({ orderDetails, restaurantId, items, customerInfo, poi
   );
 };
 
-const CheckoutForm = ({ orderDetails, restaurantId, items, customerInfo }: { 
+const CheckoutForm = ({ orderDetails, restaurantId, items, customerInfo, onSuccess, mobile }: { 
   orderDetails: any;
   restaurantId: number;
   items: any[];
   customerInfo: any;
+  onSuccess?: () => void;
+  mobile?: boolean;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -141,7 +144,7 @@ const CheckoutForm = ({ orderDetails, restaurantId, items, customerInfo }: {
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/`,
+          return_url: `${window.location.origin}${mobile ? '/m' : '/'}`,
         },
         redirect: "if_required"
       });
@@ -175,7 +178,8 @@ const CheckoutForm = ({ orderDetails, restaurantId, items, customerInfo }: {
           title: "Order Placed Successfully!",
           description: "Your order has been confirmed and the restaurant has been notified.",
         });
-        setLocation('/');
+        if (onSuccess) onSuccess();
+        else setLocation('/');
       }
     } catch (error: any) {
       toast({
@@ -216,7 +220,7 @@ const CheckoutForm = ({ orderDetails, restaurantId, items, customerInfo }: {
   );
 };
 
-export default function MenuCheckout() {
+export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
   const { items, getTotalPrice, getRestaurantId, clearCart } = useCart();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -303,7 +307,7 @@ export default function MenuCheckout() {
         title: "Order Placed Successfully!",
         description: "Your order has been confirmed using EatOff points.",
       });
-      setLocation('/');
+      setLocation(mobile ? '/m' : '/');
     },
     onError: (error: any) => {
       toast({
@@ -347,7 +351,7 @@ export default function MenuCheckout() {
         title: "Order Placed Successfully!",
         description: `Paid with ${pointsToUse.toLocaleString()} points + ${cs} ${(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)} by card`,
       });
-      setLocation('/');
+      setLocation(mobile ? '/m' : '/');
     },
     onError: (error: any) => {
       toast({
@@ -636,7 +640,7 @@ export default function MenuCheckout() {
           <ShoppingCart className="h-16 w-16 mx-auto text-gray-400 mb-4" />
           <h2 className="text-2xl font-semibold text-gray-700 mb-2">Your cart is empty</h2>
           <p className="text-gray-500 mb-4">Add some items to your cart to continue with checkout</p>
-          <Button onClick={() => setLocation('/')}>Browse Restaurants</Button>
+          <Button onClick={() => setLocation(mobile ? '/m/explore' : '/')}>{t.browseRestaurants}</Button>
         </div>
       </div>
     );
@@ -657,7 +661,7 @@ export default function MenuCheckout() {
         ) : (
           <Button 
             variant="outline" 
-            onClick={() => setLocation(`/restaurant/${restaurantId}/menu`)}
+            onClick={() => setLocation(mobile ? '/m/cart' : `/restaurant/${restaurantId}/menu`)}
             className="mb-6"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1035,6 +1039,8 @@ export default function MenuCheckout() {
                                 restaurantId={restaurantId!}
                                 items={items}
                                 customerInfo={customerInfo}
+                                onSuccess={mobile ? () => setLocation('/m') : undefined}
+                                mobile={mobile}
                               />
                             </Elements>
                           </div>
@@ -1205,6 +1211,7 @@ export default function MenuCheckout() {
                                   customerInfo={customerInfo}
                                   pointsToUse={pointsToUse}
                                   mixedPaymentMutation={mixedPaymentMutation}
+                                  mobile={mobile}
                                 />
                               </Elements>
                             )}

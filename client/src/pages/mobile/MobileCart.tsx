@@ -19,7 +19,7 @@ export default function MobileCart() {
 
   const handleCheckout = () => {
     if (restaurantId) {
-      setLocation(`/menu-checkout?restaurantId=${restaurantId}`);
+      setLocation(`/m/checkout?restaurantId=${restaurantId}`);
     }
   };
 
@@ -28,7 +28,7 @@ export default function MobileCart() {
       <div className="min-h-screen bg-gray-50">
         <div className="sticky top-0 z-10 bg-white border-b px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => window.history.back()} className="p-1">
+            <button onClick={() => setLocation('/m/explore')} className="p-1">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
