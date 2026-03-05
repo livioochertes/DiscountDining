@@ -52,6 +52,7 @@ interface RestaurantWithVouchers {
 }
 
 function VoucherChipHome({ voucher, onClick }: { voucher: EatoffVoucher; onClick: () => void }) {
+  const { marketplace } = useMarketplace();
   const discountPercent = parseFloat(voucher.discountPercentage) || 0;
   const bonusPercent = parseFloat(voucher.bonusPercentage) || 0;
   const totalValue = parseFloat(voucher.totalValue) || 0;
