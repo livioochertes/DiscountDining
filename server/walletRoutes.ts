@@ -4264,4 +4264,281 @@ router.get("/pos-settlement-report/:restaurantId/csv", async (req: Request, res:
   }
 });
 
+router.post("/create-wallet-payment-order", async (req: Request, res: Response) => {
+  try {
+    const customerId = await getAuthCustomerId(req);
+    if (!customerId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const {
+      restaurantId,
+      items,
+      customerInfo,
+      pointsUsed = 0,
+      personalBalanceUsed = 0,
+      cashbackUsed = 0,
+      creditUsed = 0,
+      cardAmount = 0,
+      totalAmount,
+      paymentIntentId
+    } = req.body;
+
+    if (!restaurantId || !items || !Array.isArray(items) || items.length === 0 || !customerInfo || !totalAmount) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    if (!customerInfo.name || !customerInfo.email) {
+      return res.status(400).json({ message: "Customer name and email are required" });
+    }
+
+    const safePointsUsed = Math.max(0, Math.floor(Number(pointsUsed) || 0));
+    const safePersonal = Math.max(0, Number(personalBalanceUsed) || 0);
+    const safeCashback = Math.max(0, Number(cashbackUsed) || 0);
+    const safeCredit = Math.max(0, Number(creditUsed) || 0);
+    const safeCardAmount = Math.max(0, Number(cardAmount) || 0);
+    const safeTotalAmount = Number(totalAmount);
+
+    if (isNaN(safeTotalAmount) || safeTotalAmount <= 0) {
+      return res.status(400).json({ message: "Invalid total amount" });
+    }
+
+    // Verify Stripe payment if card amount > 0
+    if (safeCardAmount > 0.5 && paymentIntentId) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+        if (pi.status !== 'succeeded') {
+          return res.status(400).json({ message: `Card payment not confirmed. Status: ${pi.status}` });
+        }
+      } catch (stripeErr: any) {
+        console.error('[WalletPayment] Stripe verification error:', stripeErr.message);
+      }
+    }
+
+    const parsedRestaurantId = parseInt(restaurantId);
+    const sourceTotal = safePointsUsed / 100 + safePersonal + safeCashback + safeCredit + safeCardAmount;
+    if (Math.abs(sourceTotal - safeTotalAmount) > 0.05) {
+      return res.status(400).json({ 
+        message: `Payment sources (${sourceTotal.toFixed(2)}) don't match total (${safeTotalAmount.toFixed(2)})` 
+      });
+    }
+
+    if (safePersonal > 0) {
+      const walletResult = await db
+        .select({ cashBalance: customerWallets.cashBalance })
+        .from(customerWallets)
+        .where(eq(customerWallets.customerId, customerId))
+        .limit(1);
+      const currentBalance = parseFloat(walletResult[0]?.cashBalance || '0');
+      if (currentBalance < safePersonal) {
+        return res.status(400).json({ message: `Insufficient personal balance. Available: ${currentBalance.toFixed(2)}` });
+      }
+    }
+
+    if (safeCashback > 0) {
+      const cbResult = await db
+        .select({ totalCashbackBalance: customerCashbackBalance.totalCashbackBalance })
+        .from(customerCashbackBalance)
+        .where(eq(customerCashbackBalance.customerId, customerId))
+        .limit(1);
+      const currentCashback = parseFloat(cbResult[0]?.totalCashbackBalance || '0');
+      if (currentCashback < safeCashback) {
+        return res.status(400).json({ message: `Insufficient cashback balance. Available: ${currentCashback.toFixed(2)}` });
+      }
+    }
+
+    if (safeCredit > 0) {
+      const creditResult = await db
+        .select({ availableCredit: customerCreditAccount.availableCredit, status: customerCreditAccount.status })
+        .from(customerCreditAccount)
+        .where(eq(customerCreditAccount.customerId, customerId))
+        .limit(1);
+      const credit = creditResult[0];
+      if (!credit || credit.status !== 'approved') {
+        return res.status(400).json({ message: "Credit account not approved" });
+      }
+      const avCredit = parseFloat(credit.availableCredit || '0');
+      if (avCredit < safeCredit) {
+        return res.status(400).json({ message: `Insufficient credit. Available: ${avCredit.toFixed(2)}` });
+      }
+    }
+
+    if (safePointsUsed > 0) {
+      const customer = await storage.getCustomer(customerId);
+      if (!customer || (customer.loyaltyPoints || 0) < safePointsUsed) {
+        return res.status(400).json({ message: "Insufficient loyalty points" });
+      }
+    }
+
+    const orderNumber = `EO${Date.now().toString().slice(-8)}`;
+    const order = await storage.createOrder({
+      restaurantId: parsedRestaurantId,
+      customerId,
+      status: "confirmed",
+      orderNumber,
+      totalAmount: safeTotalAmount.toFixed(2),
+      paymentIntentId: paymentIntentId || `wallet_${Date.now()}`,
+      customerName: customerInfo.name,
+      customerPhone: customerInfo.phone || "",
+      customerEmail: customerInfo.email,
+      deliveryAddress: customerInfo.deliveryAddress || "",
+      specialInstructions: customerInfo.specialInstructions || "",
+      estimatedReadyTime: new Date(Date.now() + 45 * 60 * 1000),
+      completedAt: null
+    });
+
+    for (const item of items) {
+      const menuItem = await storage.getMenuItemById(item.menuItemId);
+      if (menuItem) {
+        await storage.createOrderItem({
+          orderId: order.id,
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+          unitPrice: menuItem.price,
+          totalPrice: (parseFloat(menuItem.price) * item.quantity).toFixed(2),
+          specialRequests: item.specialRequests || null
+        });
+      }
+    }
+
+    const commissionRate = 0.06;
+
+    if (safePointsUsed > 0) {
+      await storage.createPointsTransaction({
+        customerId,
+        orderId: order.id,
+        transactionType: "redeemed",
+        pointsAmount: safePointsUsed,
+        description: `Points redeemed for order: ${orderNumber}`
+      });
+      const pointsValue = safePointsUsed / 100;
+      try {
+        const { updateRestaurantFinancials, updateEatOffDailySummary } = await import('./routes');
+        await updateRestaurantFinancials(parsedRestaurantId, pointsValue, 'points', commissionRate);
+        await updateEatOffDailySummary(new Date(), pointsValue, 'points', commissionRate);
+      } catch (e) {
+        console.error('[WalletPayment] Error updating financials for points:', e);
+      }
+    }
+
+    if (safePersonal > 0) {
+      await db
+        .update(customerWallets)
+        .set({
+          cashBalance: sql`${customerWallets.cashBalance} - ${safePersonal.toFixed(2)}::numeric`
+        })
+        .where(eq(customerWallets.customerId, customerId));
+
+      await db.insert(walletTransactions).values({
+        customerId,
+        transactionType: 'payment',
+        amount: (-safePersonal).toFixed(2),
+        description: `Payment for order ${orderNumber} (personal balance)`,
+        balanceBefore: '0',
+        balanceAfter: '0',
+        restaurantId: parsedRestaurantId,
+        orderId: order.id
+      });
+    }
+
+    if (safeCashback > 0) {
+      await db
+        .update(customerCashbackBalance)
+        .set({
+          totalCashbackBalance: sql`${customerCashbackBalance.totalCashbackBalance} - ${safeCashback.toFixed(2)}::numeric`,
+          totalCashbackUsed: sql`${customerCashbackBalance.totalCashbackUsed} + ${safeCashback.toFixed(2)}::numeric`
+        })
+        .where(eq(customerCashbackBalance.customerId, customerId));
+
+      await db.insert(walletTransactions).values({
+        customerId,
+        transactionType: 'payment',
+        amount: (-safeCashback).toFixed(2),
+        description: `Payment for order ${orderNumber} (cashback)`,
+        balanceBefore: '0',
+        balanceAfter: '0',
+        restaurantId: parsedRestaurantId,
+        orderId: order.id
+      });
+    }
+
+    if (safeCredit > 0) {
+      await db
+        .update(customerCreditAccount)
+        .set({
+          availableCredit: sql`${customerCreditAccount.availableCredit} - ${safeCredit.toFixed(2)}::numeric`,
+          usedCredit: sql`${customerCreditAccount.usedCredit} + ${safeCredit.toFixed(2)}::numeric`
+        })
+        .where(eq(customerCreditAccount.customerId, customerId));
+
+      await db.insert(walletTransactions).values({
+        customerId,
+        transactionType: 'payment',
+        amount: (-safeCredit).toFixed(2),
+        description: `Payment for order ${orderNumber} (credit)`,
+        balanceBefore: '0',
+        balanceAfter: '0',
+        restaurantId: parsedRestaurantId,
+        orderId: order.id
+      });
+    }
+
+    if (safeCardAmount > 0) {
+      try {
+        const { updateRestaurantFinancials, updateEatOffDailySummary } = await import('./routes');
+        await updateRestaurantFinancials(parsedRestaurantId, safeCardAmount, 'cash', commissionRate);
+        await updateEatOffDailySummary(new Date(), safeCardAmount, 'cash', commissionRate);
+      } catch (e) {
+        console.error('[WalletPayment] Error updating financials for card:', e);
+      }
+    }
+
+    const walletTotal = safePersonal + safeCashback + safeCredit;
+    if (walletTotal > 0) {
+      try {
+        const { updateRestaurantFinancials, updateEatOffDailySummary } = await import('./routes');
+        await updateRestaurantFinancials(parsedRestaurantId, walletTotal, 'cash', commissionRate);
+        await updateEatOffDailySummary(new Date(), walletTotal, 'cash', commissionRate);
+      } catch (e) {
+        console.error('[WalletPayment] Error updating financials for wallet:', e);
+      }
+    }
+
+    await storage.createPointsTransaction({
+      customerId,
+      orderId: order.id,
+      transactionType: "earned",
+      pointsAmount: Math.floor(safeTotalAmount),
+      description: `Points earned from order: ${orderNumber}`
+    });
+
+    const paymentSources = [];
+    if (safePointsUsed > 0) paymentSources.push(`${safePointsUsed} points`);
+    if (safePersonal > 0) paymentSources.push(`personal: ${safePersonal.toFixed(2)}`);
+    if (safeCashback > 0) paymentSources.push(`cashback: ${safeCashback.toFixed(2)}`);
+    if (safeCredit > 0) paymentSources.push(`credit: ${safeCredit.toFixed(2)}`);
+    if (safeCardAmount > 0) paymentSources.push(`card: ${safeCardAmount.toFixed(2)}`);
+
+    console.log(`[WalletPayment] Order ${orderNumber} completed. Sources: ${paymentSources.join(', ')}`);
+
+    res.json({
+      success: true,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      pointsUsed: safePointsUsed,
+      personalBalanceUsed: safePersonal,
+      cashbackUsed: safeCashback,
+      creditUsed: safeCredit,
+      cardAmount: safeCardAmount,
+      totalAmount: safeTotalAmount,
+      pointsEarned: Math.floor(safeTotalAmount),
+      estimatedReadyTime: order.estimatedReadyTime
+    });
+
+  } catch (error: any) {
+    console.error("[WalletPayment] Error:", error);
+    res.status(500).json({ message: "Error processing wallet payment: " + error.message });
+  }
+});
+
 export { router as walletRoutes };

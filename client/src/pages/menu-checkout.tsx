@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, ShoppingCart, MapPin, X, Heart, Bookmark, Award, CreditCard } from "lucide-react";
+import { ArrowLeft, ShoppingCart, MapPin, X, Heart, Bookmark, Award, CreditCard, Wallet, Gift, BadgePercent, Landmark, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -108,6 +108,60 @@ const MixedPaymentForm = ({ orderDetails, restaurantId, items, customerInfo, poi
             <span>Pay {pointsToUse.toLocaleString()} Points + {cs} {orderDetails.cardAmount}</span>
           </div>
         )}
+      </Button>
+    </form>
+  );
+};
+
+const WalletCardForm = ({ walletCardAmount, walletPaymentMutation, mobile, cs }: {
+  walletCardAmount: number;
+  walletPaymentMutation: any;
+  mobile?: boolean;
+  cs: string;
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setIsProcessing(true);
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}${mobile ? '/m' : '/order-success'}`,
+        },
+        redirect: 'if_required'
+      });
+
+      if (error) {
+        toast({ title: "Payment Failed", description: error.message, variant: "destructive" });
+        setIsProcessing(false);
+        return;
+      }
+
+      walletPaymentMutation.mutate();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Payment failed", variant: "destructive" });
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement
+        options={{
+          layout: { type: 'tabs', defaultCollapsed: false, radios: false, spacedAccordionItems: false },
+          paymentMethodOrder: ['card', 'klarna', 'google_pay', 'apple_pay'],
+          wallets: { applePay: 'auto', googlePay: 'auto' }
+        }}
+      />
+      <Button type="submit" className="w-full" size="lg" disabled={!stripe || isProcessing}>
+        {isProcessing ? 'Processing...' : `Pay ${cs} ${walletCardAmount.toFixed(2)} by Card`}
       </Button>
     </form>
   );
@@ -241,7 +295,13 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
       address: string;
     } | null
   });
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'points'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'points' | 'wallet'>('stripe');
+  const [usePersonalBalance, setUsePersonalBalance] = useState(false);
+  const [personalBalanceAmount, setPersonalBalanceAmount] = useState(0);
+  const [useCashback, setUseCashback] = useState(false);
+  const [cashbackAmount, setCashbackAmount] = useState(0);
+  const [useCredit, setUseCredit] = useState(false);
+  const [creditAmount, setCreditAmount] = useState(0);
   const [pointsToUse, setPointsToUse] = useState(0);
   const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
   const [isPaymentInProgress, setIsPaymentInProgress] = useState(false);
@@ -362,6 +422,49 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
     },
   });
 
+  const walletPaymentMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/create-wallet-payment-order", {
+        restaurantId,
+        items: items.map(item => ({
+          menuItemId: item.menuItem.id,
+          quantity: item.quantity,
+          specialRequests: item.specialRequests
+        })),
+        customerInfo,
+        pointsUsed: pointsToUse,
+        personalBalanceUsed: usePersonalBalance ? personalBalanceAmount : 0,
+        cashbackUsed: useCashback ? cashbackAmount : 0,
+        creditUsed: useCredit ? creditAmount : 0,
+        cardAmount: walletCardAmount,
+        totalAmount
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet/overview'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/customers/${user?.id}/points`] });
+      clearCart();
+      const sources = [];
+      if (pointsToUse > 0) sources.push(`${pointsToUse} points`);
+      if (usePersonalBalance && personalBalanceAmount > 0) sources.push(`${cs} ${personalBalanceAmount.toFixed(2)} personal`);
+      if (useCashback && cashbackAmount > 0) sources.push(`${cs} ${cashbackAmount.toFixed(2)} cashback`);
+      if (useCredit && creditAmount > 0) sources.push(`${cs} ${creditAmount.toFixed(2)} credit`);
+      if (walletCardAmount > 0) sources.push(`${cs} ${walletCardAmount.toFixed(2)} card`);
+      toast({
+        title: "Order Placed Successfully!",
+        description: `Paid with ${sources.join(' + ')}`,
+      });
+      setLocation(mobile ? '/m' : '/');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process wallet payment",
+        variant: "destructive",
+      });
+    },
+  });
+
   const totalAmount = getTotalPrice();
   const restaurantId = getRestaurantId();
 
@@ -371,13 +474,35 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
     enabled: !!user?.id && isAuthenticated,
   });
 
+  // Fetch wallet overview for wallet payment sources
+  const { data: walletOverview } = useQuery<{
+    personalBalance: string;
+    cashback: { totalCashbackBalance: string; eatoffCashbackBalance: string };
+    credit: { status: string; creditLimit: string; availableCredit: string; usedCredit: string };
+  }>({
+    queryKey: ['/api/wallet/overview'],
+    enabled: isAuthenticated,
+  });
+
+  const availablePersonal = parseFloat(walletOverview?.personalBalance || '0');
+  const availableCashback = parseFloat(walletOverview?.cashback?.totalCashbackBalance || '0');
+  const availableCredit = walletOverview?.credit?.status === 'approved' ? parseFloat(walletOverview?.credit?.availableCredit || '0') : 0;
+  const totalWalletBalance = availablePersonal + availableCashback + availableCredit;
+
   // Points calculation functions
   const calculatePointsValue = (points: number) => points / 100;
-  const totalAmountInPoints = Math.ceil(totalAmount * 100); // Convert euros to points
+  const totalAmountInPoints = Math.ceil(totalAmount * 100);
   const userPoints = pointsData?.currentPoints || user?.loyaltyPoints || 0;
   const maxPointsUsable = Math.min(userPoints, totalAmountInPoints);
   const hasEnoughPoints = userPoints > 0;
-  const canPayWithPoints = isAuthenticated; // Always allow selecting points method when authenticated
+  const canPayWithPoints = isAuthenticated;
+
+  // Calculate wallet payment breakdown
+  const walletSourcesTotal = (usePersonalBalance ? personalBalanceAmount : 0) +
+    (useCashback ? cashbackAmount : 0) +
+    (useCredit ? creditAmount : 0) +
+    calculatePointsValue(pointsToUse);
+  const walletCardAmount = Math.max(0, totalAmount - walletSourcesTotal);
 
   // Function to cancel payment and reset state
   const cancelPayment = useCallback(() => {
@@ -387,6 +512,12 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
     setIsCreatingPaymentIntent(false);
     setPaymentMethod('stripe');
     setPointsToUse(0);
+    setUsePersonalBalance(false);
+    setPersonalBalanceAmount(0);
+    setUseCashback(false);
+    setCashbackAmount(0);
+    setUseCredit(false);
+    setCreditAmount(0);
     // Force re-render of payment section by triggering useEffect
     setCustomerInfo(prev => ({ ...prev }));
   }, []);
@@ -413,11 +544,14 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
     // Calculate remaining amount for partial payments
     const remainingAmount = paymentMethod === 'points' 
       ? totalAmount - calculatePointsValue(pointsToUse)
-      : totalAmount;
+      : paymentMethod === 'wallet'
+        ? walletCardAmount
+        : totalAmount;
     
     // Only create payment intent when Stripe payment is needed
     const needsStripePayment = paymentMethod === 'stripe' || 
-      (paymentMethod === 'points' && remainingAmount > 0);
+      (paymentMethod === 'points' && remainingAmount > 0) ||
+      (paymentMethod === 'wallet' && walletCardAmount > 0.5);
     
     // Only proceed if we need Stripe payment, have customer info, and aren't already creating a payment intent
     // Don't create payment intent if not needed, missing info, or already creating
@@ -425,14 +559,14 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
       return;
     }
       
-    const paymentAmount = paymentMethod === 'points' ? remainingAmount : totalAmount; // Use remaining amount for partial payments
+    const paymentAmount = (paymentMethod === 'points' || paymentMethod === 'wallet') ? remainingAmount : totalAmount;
     const actualRestaurantId = restaurantId || (items.length > 0 ? items[0].menuItem.restaurantId : null);
     
     // Create a unique key for this payment intent to prevent duplicates
     const paymentKey = `${actualRestaurantId}-${paymentAmount}-${items.length}-${paymentMethod}-${pointsToUse}`;
     
     // Only create payment intent if we don't have one, or if core parameters changed
-    const coreChanged = !clientSecret || paymentMethod !== 'points' || items.length === 0;
+    const coreChanged = !clientSecret || (paymentMethod !== 'points' && paymentMethod !== 'wallet') || items.length === 0;
     
     if (coreChanged) {
       // Create new payment intent for initial load or major changes
@@ -491,7 +625,7 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
     }
 
     // No cleanup needed since we're not using timeoutId in this conditional block
-  }, [customerInfo.name, customerInfo.phone, customerInfo.email, customerInfo.orderType, items.length, restaurantId, totalAmount, paymentMethod]); // Removed pointsToUse to prevent payment intent recreation on slider changes
+  }, [customerInfo.name, customerInfo.phone, customerInfo.email, customerInfo.orderType, items.length, restaurantId, totalAmount, paymentMethod, walletCardAmount]);
 
   // Don't reset client secret when switching payment methods - we might need it for partial payments
   // useEffect(() => {
@@ -506,14 +640,16 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
 
   // Set payment in progress when payment UI is shown
   useEffect(() => {
-    if (canProceedToPayment && (clientSecret || paymentMethod === 'points')) {
+    if (canProceedToPayment && (clientSecret || paymentMethod === 'points' || paymentMethod === 'wallet')) {
       setIsPaymentInProgress(true);
     }
   }, [canProceedToPayment, clientSecret, paymentMethod]);
 
   const finalAmount = paymentMethod === 'points' 
     ? Math.max(0, totalAmount - calculatePointsValue(pointsToUse))
-    : totalAmount;
+    : paymentMethod === 'wallet'
+      ? walletCardAmount
+      : totalAmount;
 
   console.log('Payment validation:', {
     name: customerInfo.name,
@@ -947,70 +1083,272 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
                     {isAuthenticated && (
                       <div className="space-y-4">
                         <h3 className="text-lg font-medium">Select Payment Method</h3>
-                        <div className="grid grid-cols-1 gap-4">
-                          {/* Stripe Payment Option */}
+                        <div className="grid grid-cols-1 gap-3">
+                          {/* Card Only */}
                           <div
-                            className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                            className={`p-3 border rounded-lg cursor-pointer transition-all ${
                               paymentMethod === 'stripe'
                                 ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                                 : 'border-gray-200 hover:border-gray-300'
                             }`}
-                            onClick={() => setPaymentMethod('stripe')}
+                            onClick={() => { setPaymentMethod('stripe'); setPointsToUse(0); }}
                           >
                             <div className="flex items-center space-x-3">
-                              <div className={`w-4 h-4 rounded-full border-2 ${
+                              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
                                 paymentMethod === 'stripe' ? 'border-primary bg-primary' : 'border-gray-300'
                               }`}>
-                                {paymentMethod === 'stripe' && (
-                                  <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                                )}
+                                {paymentMethod === 'stripe' && <div className="w-full h-full rounded-full bg-white scale-50" />}
                               </div>
-                              <CreditCard className="h-5 w-5 text-gray-600" />
-                              <div className="flex-1">
+                              <CreditCard className="h-5 w-5 text-gray-600 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
                                 <p className="font-medium">Card Payment</p>
-                                <p className="text-sm text-gray-600">Pay with credit/debit card via Stripe</p>
+                                <p className="text-sm text-gray-500">Credit/debit card via Stripe</p>
                               </div>
-                              <div className="text-right">
-                                <p className="font-bold text-lg">{cs} {totalAmount.toFixed(2)}</p>
-                              </div>
+                              <p className="font-bold">{cs} {totalAmount.toFixed(2)}</p>
                             </div>
                           </div>
 
-                          {/* Points Payment Option */}
+                          {/* EatOff Wallet (combines all sources) */}
                           <div
-                            className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                              paymentMethod === 'points'
+                            className={`border rounded-lg cursor-pointer transition-all ${
+                              paymentMethod === 'wallet'
                                 ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                                 : 'border-gray-200 hover:border-gray-300'
                             }`}
-                            onClick={() => setPaymentMethod('points')}
+                            onClick={() => setPaymentMethod('wallet')}
                           >
-                            <div className="flex items-center space-x-3">
-                              <div className={`w-4 h-4 rounded-full border-2 ${
-                                paymentMethod === 'points' ? 'border-primary bg-primary' : 'border-gray-300'
-                              }`}>
-                                {paymentMethod === 'points' && (
-                                  <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                                )}
-                              </div>
-                              <Award className="h-5 w-5 text-amber-600" />
-                              <div className="flex-1">
-                                <p className="font-medium">EatOff Points</p>
-                                <p className="text-sm text-gray-600">
-                                  Available: {userPoints.toLocaleString()} points
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold text-lg">{totalAmountInPoints.toLocaleString()} pts</p>
-                                <p className="text-sm text-gray-600">≈ {cs} {totalAmount.toFixed(2)}</p>
+                            <div className="p-3">
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                                  paymentMethod === 'wallet' ? 'border-primary bg-primary' : 'border-gray-300'
+                                }`}>
+                                  {paymentMethod === 'wallet' && <div className="w-full h-full rounded-full bg-white scale-50" />}
+                                </div>
+                                <Wallet className="h-5 w-5 text-primary flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium">EatOff Wallet</p>
+                                  <p className="text-sm text-gray-500">
+                                    Balance: {cs} {(totalWalletBalance + calculatePointsValue(userPoints)).toFixed(2)}
+                                  </p>
+                                </div>
                               </div>
                             </div>
+
+                            {paymentMethod === 'wallet' && (
+                              <div className="px-3 pb-3 space-y-3" onClick={(e) => e.stopPropagation()}>
+                                <Separator />
+                                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Select payment sources</p>
+
+                                {/* Loyalty Points */}
+                                <div className="flex items-center justify-between p-2.5 bg-amber-50 rounded-lg border border-amber-100">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Award className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium">Reward Points</p>
+                                      <p className="text-xs text-gray-500">{userPoints.toLocaleString()} pts ≈ {cs} {calculatePointsValue(userPoints).toFixed(2)}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {userPoints > 0 && (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={maxPointsUsable}
+                                        value={pointsToUse}
+                                        onChange={(e) => setPointsToUse(Math.min(parseInt(e.target.value) || 0, maxPointsUsable))}
+                                        className="w-20 h-8 text-right text-sm border rounded px-2"
+                                        placeholder="0"
+                                      />
+                                    )}
+                                    {userPoints > 0 && (
+                                      <button
+                                        onClick={() => setPointsToUse(pointsToUse > 0 ? 0 : maxPointsUsable)}
+                                        className={`text-xs px-2 py-1 rounded font-medium ${pointsToUse > 0 ? 'bg-amber-200 text-amber-800' : 'bg-gray-100 text-gray-600'}`}
+                                      >
+                                        {pointsToUse > 0 ? 'Clear' : 'Max'}
+                                      </button>
+                                    )}
+                                    {userPoints === 0 && <span className="text-xs text-gray-400">0 pts</span>}
+                                  </div>
+                                </div>
+
+                                {/* Personal Balance */}
+                                <div className={`flex items-center justify-between p-2.5 rounded-lg border ${usePersonalBalance ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-100'}`}>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Wallet className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium">Personal Balance</p>
+                                      <p className="text-xs text-gray-500">Available: {cs} {availablePersonal.toFixed(2)}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {availablePersonal > 0 && usePersonalBalance && (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={Math.min(availablePersonal, totalAmount)}
+                                        step="0.01"
+                                        value={personalBalanceAmount || ''}
+                                        onChange={(e) => setPersonalBalanceAmount(Math.min(parseFloat(e.target.value) || 0, availablePersonal, totalAmount))}
+                                        className="w-20 h-8 text-right text-sm border rounded px-2"
+                                        placeholder="0.00"
+                                      />
+                                    )}
+                                    {availablePersonal > 0 ? (
+                                      <button
+                                        onClick={() => {
+                                          if (usePersonalBalance) {
+                                            setUsePersonalBalance(false);
+                                            setPersonalBalanceAmount(0);
+                                          } else {
+                                            setUsePersonalBalance(true);
+                                            setPersonalBalanceAmount(Math.min(availablePersonal, totalAmount));
+                                          }
+                                        }}
+                                        className={`text-xs px-2 py-1 rounded font-medium ${usePersonalBalance ? 'bg-blue-200 text-blue-800' : 'bg-gray-100 text-gray-600'}`}
+                                      >
+                                        {usePersonalBalance ? 'Remove' : 'Use'}
+                                      </button>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">{cs} 0.00</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Cashback */}
+                                <div className={`flex items-center justify-between p-2.5 rounded-lg border ${useCashback ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-100'}`}>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <BadgePercent className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium">Cashback</p>
+                                      <p className="text-xs text-gray-500">Available: {cs} {availableCashback.toFixed(2)}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {availableCashback > 0 && useCashback && (
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={Math.min(availableCashback, totalAmount)}
+                                        step="0.01"
+                                        value={cashbackAmount || ''}
+                                        onChange={(e) => setCashbackAmount(Math.min(parseFloat(e.target.value) || 0, availableCashback, totalAmount))}
+                                        className="w-20 h-8 text-right text-sm border rounded px-2"
+                                        placeholder="0.00"
+                                      />
+                                    )}
+                                    {availableCashback > 0 ? (
+                                      <button
+                                        onClick={() => {
+                                          if (useCashback) {
+                                            setUseCashback(false);
+                                            setCashbackAmount(0);
+                                          } else {
+                                            setUseCashback(true);
+                                            setCashbackAmount(Math.min(availableCashback, totalAmount));
+                                          }
+                                        }}
+                                        className={`text-xs px-2 py-1 rounded font-medium ${useCashback ? 'bg-green-200 text-green-800' : 'bg-gray-100 text-gray-600'}`}
+                                      >
+                                        {useCashback ? 'Remove' : 'Use'}
+                                      </button>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">{cs} 0.00</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Credit */}
+                                {(availableCredit > 0 || walletOverview?.credit?.status === 'approved') && (
+                                  <div className={`flex items-center justify-between p-2.5 rounded-lg border ${useCredit ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-100'}`}>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <Landmark className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-medium">Credit</p>
+                                        <p className="text-xs text-gray-500">Available: {cs} {availableCredit.toFixed(2)}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {availableCredit > 0 && useCredit && (
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          max={Math.min(availableCredit, totalAmount)}
+                                          step="0.01"
+                                          value={creditAmount || ''}
+                                          onChange={(e) => setCreditAmount(Math.min(parseFloat(e.target.value) || 0, availableCredit, totalAmount))}
+                                          className="w-20 h-8 text-right text-sm border rounded px-2"
+                                          placeholder="0.00"
+                                        />
+                                      )}
+                                      {availableCredit > 0 ? (
+                                        <button
+                                          onClick={() => {
+                                            if (useCredit) {
+                                              setUseCredit(false);
+                                              setCreditAmount(0);
+                                            } else {
+                                              setUseCredit(true);
+                                              setCreditAmount(Math.min(availableCredit, totalAmount));
+                                            }
+                                          }}
+                                          className={`text-xs px-2 py-1 rounded font-medium ${useCredit ? 'bg-purple-200 text-purple-800' : 'bg-gray-100 text-gray-600'}`}
+                                        >
+                                          {useCredit ? 'Remove' : 'Use'}
+                                        </button>
+                                      ) : (
+                                        <span className="text-xs text-gray-400">{cs} 0.00</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Payment Breakdown */}
+                                <div className="bg-white border rounded-lg p-3 space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Order Total</span>
+                                    <span className="font-medium">{cs} {totalAmount.toFixed(2)}</span>
+                                  </div>
+                                  {pointsToUse > 0 && (
+                                    <div className="flex justify-between text-sm text-amber-700">
+                                      <span>Reward Points ({pointsToUse} pts)</span>
+                                      <span>-{cs} {calculatePointsValue(pointsToUse).toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  {usePersonalBalance && personalBalanceAmount > 0 && (
+                                    <div className="flex justify-between text-sm text-blue-700">
+                                      <span>Personal Balance</span>
+                                      <span>-{cs} {personalBalanceAmount.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  {useCashback && cashbackAmount > 0 && (
+                                    <div className="flex justify-between text-sm text-green-700">
+                                      <span>Cashback</span>
+                                      <span>-{cs} {cashbackAmount.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  {useCredit && creditAmount > 0 && (
+                                    <div className="flex justify-between text-sm text-purple-700">
+                                      <span>Credit</span>
+                                      <span>-{cs} {creditAmount.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  <Separator />
+                                  <div className="flex justify-between font-bold text-sm">
+                                    <span>{walletCardAmount > 0 ? 'Remaining (Card)' : 'Fully Covered'}</span>
+                                    <span className={walletCardAmount === 0 ? 'text-green-600' : 'text-primary'}>
+                                      {walletCardAmount > 0 ? `${cs} ${walletCardAmount.toFixed(2)}` : `${cs} 0.00 ✓`}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Payment Processing */}
+                    {/* Payment Processing — Card Only */}
                     {paymentMethod === 'stripe' && (
                       <div>
                         {isCreatingPaymentIntent || !clientSecret ? (
@@ -1048,180 +1386,59 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
                       </div>
                     )}
 
-                    {paymentMethod === 'points' && (
+                    {/* Payment Processing — Wallet */}
+                    {paymentMethod === 'wallet' && (
                       <div className="space-y-4">
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                          <div className="flex items-center space-x-2 mb-3">
-                            <Award className="h-5 w-5 text-amber-600" />
-                            <h4 className="font-medium text-amber-800">Choose Points to Use</h4>
-                          </div>
-
-                          {!hasEnoughPoints && (
-                            <div className="text-sm text-amber-700 bg-amber-100 rounded-md p-3 mb-3">
-                              You currently have 0 points. Earn points by placing orders — the remaining balance will be charged to your card.
-                            </div>
-                          )}
-                          
-                          {/* Points Slider */}
-                          <div className="space-y-3">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-medium">Points to use: {pointsToUse.toLocaleString()}</Label>
-                              <input
-                                type="range"
-                                min="0"
-                                max={maxPointsUsable}
-                                value={pointsToUse}
-                                onChange={(e) => setPointsToUse(parseInt(e.target.value))}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                                style={{
-                                  background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${(pointsToUse / maxPointsUsable) * 100}%, #e5e7eb ${(pointsToUse / maxPointsUsable) * 100}%, #e5e7eb 100%)`
-                                }}
-                              />
-                              <div className="flex justify-between text-xs text-gray-600">
-                                <span>0 points</span>
-                                <span>{maxPointsUsable.toLocaleString()} points max</span>
-                              </div>
-                            </div>
-                            
-                            {/* Quick Select Buttons */}
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPointsToUse(Math.floor(maxPointsUsable * 0.25))}
-                                className="text-xs"
-                              >
-                                25%
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPointsToUse(Math.floor(maxPointsUsable * 0.5))}
-                                className="text-xs"
-                              >
-                                50%
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPointsToUse(Math.floor(maxPointsUsable * 0.75))}
-                                className="text-xs"
-                              >
-                                75%
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPointsToUse(maxPointsUsable)}
-                                className="text-xs"
-                              >
-                                Max
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          {/* Payment Breakdown */}
-                          <div className="mt-4 pt-3 border-t border-amber-200">
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span>Total Order:</span>
-                                <span className="font-medium">{cs} {totalAmount.toFixed(2)}</span>
-                              </div>
-                              {pointsToUse > 0 && (
-                                <>
-                                  <div className="flex justify-between text-amber-700">
-                                    <span>Points Payment:</span>
-                                    <span>-{cs} {calculatePointsValue(pointsToUse).toFixed(2)} ({pointsToUse.toLocaleString()} pts)</span>
-                                  </div>
-                                  <div className="flex justify-between text-blue-700">
-                                    <span>Card Payment:</span>
-                                    <span>{cs} {(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)}</span>
-                                  </div>
-                                  <Separator className="bg-amber-200" />
-                                  <div className="flex justify-between font-medium text-amber-800">
-                                    <span>Points Remaining:</span>
-                                    <span>{(userPoints - pointsToUse).toLocaleString()} points</span>
-                                  </div>
-                                </>
-                              )}
-                              {pointsToUse === 0 && (
-                                <div className="flex justify-between text-blue-700">
-                                  <span>Card Payment:</span>
-                                  <span>{cs} {totalAmount.toFixed(2)}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Payment Action */}
-                        {pointsToUse >= totalAmountInPoints ? (
-                          // Full points payment
-                          <Button
-                            onClick={() => pointsPaymentMutation.mutate()}
-                            disabled={pointsToUse === 0 || pointsPaymentMutation.isPending}
-                            className="w-full"
-                          >
-                            {pointsPaymentMutation.isPending ? (
-                              <div className="flex items-center space-x-2">
-                                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                                <span>Processing Payment...</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <Award className="h-4 w-4" />
-                                <span>Pay with {pointsToUse.toLocaleString()} Points</span>
-                              </div>
-                            )}
-                          </Button>
-                        ) : (
-                          // Partial payment with card
-                          <div className="space-y-4">
+                        {walletCardAmount > 0.5 ? (
+                          <>
                             <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
                               <p className="text-sm text-blue-700">
                                 <CreditCard className="inline h-4 w-4 mr-1" />
-                                Partial payment: {pointsToUse.toLocaleString()} points + {cs} {(totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)} by card
+                                Wallet sources: {cs} {walletSourcesTotal.toFixed(2)} + Card: {cs} {walletCardAmount.toFixed(2)}
                               </p>
                             </div>
                             {!clientSecret ? (
                               <div className="text-center py-4">
                                 <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full mx-auto mb-2" />
-                                <p className="text-sm text-gray-600">Preparing payment...</p>
+                                <p className="text-sm text-gray-600">Preparing card payment...</p>
                               </div>
                             ) : (
-                              <Elements 
-                                key={clientSecret} // Force re-mount with new client secret
-                                stripe={stripePromise} 
-                                options={{ 
+                              <Elements
+                                key={`wallet-${clientSecret.slice(0, 10)}`}
+                                stripe={stripePromise}
+                                options={{
                                   clientSecret,
-                                  appearance: {
-                                    theme: 'stripe',
-                                    variables: {
-                                      colorPrimary: '#ea580c'
-                                    }
-                                  }
+                                  appearance: { theme: 'stripe', variables: { colorPrimary: '#ea580c' } }
                                 }}
                               >
-                                <MixedPaymentForm 
-                                  orderDetails={{ 
-                                    totalAmount: totalAmount.toFixed(2),
-                                    pointsToUse,
-                                    cardAmount: (totalAmount - calculatePointsValue(pointsToUse)).toFixed(2)
-                                  }}
-                                  restaurantId={restaurantId!}
-                                  items={items}
-                                  customerInfo={customerInfo}
-                                  pointsToUse={pointsToUse}
-                                  mixedPaymentMutation={mixedPaymentMutation}
+                                <WalletCardForm
+                                  walletCardAmount={walletCardAmount}
+                                  walletPaymentMutation={walletPaymentMutation}
                                   mobile={mobile}
+                                  cs={cs}
                                 />
                               </Elements>
                             )}
-                          </div>
+                          </>
+                        ) : (
+                          <Button
+                            onClick={() => walletPaymentMutation.mutate()}
+                            disabled={walletPaymentMutation.isPending || walletSourcesTotal < totalAmount - 0.02}
+                            className="w-full"
+                            size="lg"
+                          >
+                            {walletPaymentMutation.isPending ? (
+                              <div className="flex items-center space-x-2">
+                                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                                <span>Processing...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <Wallet className="h-4 w-4" />
+                                <span>Pay {cs} {totalAmount.toFixed(2)} with Wallet</span>
+                              </div>
+                            )}
+                          </Button>
                         )}
                       </div>
                     )}
