@@ -4,7 +4,7 @@ import MenuCheckout from '@/pages/menu-checkout';
 export default function MobileCheckout() {
   return (
     <MobileLayout hideNavigation>
-      <div className="pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div className="pb-[env(safe-area-inset-bottom)]">
         <MenuCheckout mobile />
       </div>
     </MobileLayout>

@@ -117,7 +117,7 @@ export default function MobileCart() {
         </div>
 
         {items.length > 0 && (
-          <div className="fixed bottom-20 left-0 right-0 bg-white border-t px-4 py-4 z-50">
+          <div className="fixed bottom-[5.5rem] left-0 right-0 bg-white border-t px-4 py-4 z-50 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-600">{totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
               <span className="font-bold text-lg">{cs} {totalPrice.toFixed(2)}</span>

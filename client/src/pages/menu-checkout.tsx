@@ -376,7 +376,8 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
   const totalAmountInPoints = Math.ceil(totalAmount * 100); // Convert euros to points
   const userPoints = pointsData?.currentPoints || user?.loyaltyPoints || 0;
   const maxPointsUsable = Math.min(userPoints, totalAmountInPoints);
-  const canPayWithPoints = isAuthenticated && userPoints > 0; // Allow partial payment with points
+  const hasEnoughPoints = userPoints > 0;
+  const canPayWithPoints = isAuthenticated; // Always allow selecting points method when authenticated
 
   // Function to cancel payment and reset state
   const cancelPayment = useCallback(() => {
@@ -648,7 +649,7 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className={`max-w-4xl mx-auto px-4 ${mobile ? 'py-3' : 'py-8'}`}>
         {isPaymentInProgress ? (
           <Button 
             variant="outline" 
@@ -981,8 +982,8 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
                               paymentMethod === 'points'
                                 ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                                 : 'border-gray-200 hover:border-gray-300'
-                            } ${!canPayWithPoints ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            onClick={() => canPayWithPoints && setPaymentMethod('points')}
+                            }`}
+                            onClick={() => setPaymentMethod('points')}
                           >
                             <div className="flex items-center space-x-3">
                               <div className={`w-4 h-4 rounded-full border-2 ${
@@ -996,8 +997,7 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
                               <div className="flex-1">
                                 <p className="font-medium">EatOff Points</p>
                                 <p className="text-sm text-gray-600">
-                                  Available: {userPoints.toLocaleString()} points 
-                                  {!canPayWithPoints && ' (insufficient points)'}
+                                  Available: {userPoints.toLocaleString()} points
                                 </p>
                               </div>
                               <div className="text-right">
@@ -1055,6 +1055,12 @@ export default function MenuCheckout({ mobile }: { mobile?: boolean } = {}) {
                             <Award className="h-5 w-5 text-amber-600" />
                             <h4 className="font-medium text-amber-800">Choose Points to Use</h4>
                           </div>
+
+                          {!hasEnoughPoints && (
+                            <div className="text-sm text-amber-700 bg-amber-100 rounded-md p-3 mb-3">
+                              You currently have 0 points. Earn points by placing orders — the remaining balance will be charged to your card.
+                            </div>
+                          )}
                           
                           {/* Points Slider */}
                           <div className="space-y-3">
