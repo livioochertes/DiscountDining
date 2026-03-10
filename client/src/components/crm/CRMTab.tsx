@@ -4,7 +4,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LayoutDashboard, Users, Layers, MessageSquare, Send, Zap, Settings, AlertCircle, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Layers, MessageSquare, Send, Zap, Settings, AlertCircle, BarChart3, Store } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import CRMDashboard from "./CRMDashboard";
 import CRMPricingPage from "./CRMPricingPage";
@@ -23,10 +24,14 @@ const PAID_PLANS = ["starter", "professional", "enterprise"];
 
 export default function CRMTab({ restaurants }: CRMTabProps) {
   const [crmSubNav, setCrmSubNav] = useState("dashboard");
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(
+    restaurants.length > 0 ? restaurants[0]?.id : null
+  );
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const restaurantId = restaurants.length > 0 ? restaurants[0]?.id : null;
+  const restaurantId = selectedRestaurantId;
+  const selectedRestaurantName = restaurants.find((r: any) => r.id === restaurantId)?.name || "";
 
   const { data: subscription, isLoading: loadingSub } = useQuery({
     queryKey: ["/api/crm/subscription", restaurantId],
@@ -85,6 +90,31 @@ export default function CRMTab({ restaurants }: CRMTabProps) {
 
   return (
     <div className="space-y-6">
+      {restaurants.length > 1 && (
+        <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+          <Store className="w-5 h-5 text-orange-500 shrink-0" />
+          <span className="text-sm font-medium text-gray-700">Restaurant:</span>
+          <Select
+            value={String(restaurantId)}
+            onValueChange={(v) => {
+              setSelectedRestaurantId(parseInt(v));
+              setCrmSubNav("dashboard");
+            }}
+          >
+            <SelectTrigger className="w-[280px]">
+              <SelectValue placeholder="Select restaurant" />
+            </SelectTrigger>
+            <SelectContent>
+              {restaurants.map((r: any) => (
+                <SelectItem key={r.id} value={String(r.id)}>
+                  {r.name} {r.location ? `(${r.location})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <CRMPricingPage restaurantId={restaurantId} currentPlan={currentPlan} />
 
       {hasPaidPlan && (
