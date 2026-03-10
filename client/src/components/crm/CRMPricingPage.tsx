@@ -169,17 +169,15 @@ export default function CRMPricingPage({ restaurantId, currentPlan }: CRMPricing
             <p className="text-xs text-gray-500">{currentPlanData?.description}</p>
           </div>
         </div>
-        {!isTopPlan && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowPlans(true)}
-            className="gap-1.5 text-orange-600 border-orange-200 hover:bg-orange-50"
-          >
-            <ArrowUpCircle className="w-3.5 h-3.5" />
-            Change Plan
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowPlans(true)}
+          className="gap-1.5 text-orange-600 border-orange-200 hover:bg-orange-50"
+        >
+          <ArrowUpCircle className="w-3.5 h-3.5" />
+          Change Plan
+        </Button>
       </div>
     );
   }
