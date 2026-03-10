@@ -3,7 +3,8 @@ import { eq, and, inArray, lte, gte, sql } from "drizzle-orm";
 import {
   crmAutomations, crmSubscriptions, orders, customers,
   customerSpecialDates, tableReservations, restaurants,
-  customerCashbackEnrollments, customerLoyaltyEnrollments
+  customerCashbackEnrollments, customerLoyaltyEnrollments,
+  cashbackGroups
 } from "@shared/schema";
 
 const recentlySent = new Map<string, number>();
@@ -29,8 +30,8 @@ function cleanupOldEntries() {
 }
 
 async function sendMessage(channelType: string, customer: any, restaurantName: string, subject: string, message: string) {
-  const customerName = customer.firstName || customer.name || '';
-  const firstName = customer.firstName || (customer.name ? customer.name.split(' ')[0] : '');
+  const customerName = customer.name || '';
+  const firstName = customer.name ? customer.name.split(' ')[0] : '';
   const personalizedMessage = message
     .replace(/\{customer_name\}/g, customerName.trim())
     .replace(/\{first_name\}/g, firstName)
@@ -68,7 +69,8 @@ async function getRestaurantCustomerIds(restaurantId: number): Promise<number[]>
   const cashback = await db
     .select({ customerId: customerCashbackEnrollments.customerId })
     .from(customerCashbackEnrollments)
-    .where(eq((customerCashbackEnrollments as any).restaurantId, restaurantId));
+    .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+    .where(eq(cashbackGroups.restaurantId, restaurantId));
   const loyalty = await db
     .select({ customerId: customerLoyaltyEnrollments.customerId })
     .from(customerLoyaltyEnrollments)

@@ -322,7 +322,7 @@ export default function CRMAnalytics({ restaurantId }: CRMAnalyticsProps) {
                       </td>
                       <td className="py-3 pr-4">
                         <p className="font-medium">
-                          {c.firstName || ""} {c.lastName || c.email || "Unknown"}
+                          {c.name || c.email || "Unknown"}
                         </p>
                         {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
                       </td>

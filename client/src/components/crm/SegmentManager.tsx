@@ -514,7 +514,7 @@ export default function SegmentManager({ restaurantId, subscription }: SegmentMa
                         >
                           <div>
                             <p className="text-sm font-medium">
-                              {member.firstName || ""} {member.lastName || ""}
+                              {member.name || member.email || "Unknown"}
                             </p>
                             <p className="text-xs text-gray-500">{member.email}</p>
                           </div>

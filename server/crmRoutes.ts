@@ -9,6 +9,7 @@ import {
   customerSpecialDates, customerCrmNotes, crmAutomations,
   customers, orders, orderItems, restaurants, menuItems,
   customerCashbackEnrollments, customerLoyaltyEnrollments,
+  cashbackGroups,
   tableReservations, restaurantOwners
 } from "@shared/schema";
 
@@ -291,16 +292,17 @@ crmRouter.get("/customers/:restaurantId", requireCrmFeature("customer_list"), as
     const cashbackEnrollments = await db
       .select({
         customerId: customerCashbackEnrollments.customerId,
-        totalSpent: customerCashbackEnrollments.totalSpent,
+        totalSpendInGroup: customerCashbackEnrollments.totalSpendInGroup,
         enrolledAt: customerCashbackEnrollments.enrolledAt,
       })
       .from(customerCashbackEnrollments)
-      .where(eq(customerCashbackEnrollments.restaurantId, restaurantId));
+      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(eq(cashbackGroups.restaurantId, restaurantId));
 
     const loyaltyEnrollments = await db
       .select({
         customerId: customerLoyaltyEnrollments.customerId,
-        totalSpent: customerLoyaltyEnrollments.totalSpent,
+        totalSpentAtRestaurant: customerLoyaltyEnrollments.totalSpentAtRestaurant,
         enrolledAt: customerLoyaltyEnrollments.enrolledAt,
       })
       .from(customerLoyaltyEnrollments)
@@ -324,8 +326,7 @@ crmRouter.get("/customers/:restaurantId", requireCrmFeature("customer_list"), as
     if (search) {
       const s = search.toLowerCase();
       customerList = customerList.filter(c =>
-        c.firstName?.toLowerCase().includes(s) ||
-        c.lastName?.toLowerCase().includes(s) ||
+        c.name?.toLowerCase().includes(s) ||
         c.email?.toLowerCase().includes(s) ||
         c.phone?.includes(s)
       );
@@ -335,7 +336,7 @@ crmRouter.get("/customers/:restaurantId", requireCrmFeature("customer_list"), as
       .select({
         customerId: orders.customerId,
         totalAmount: orders.totalAmount,
-        createdAt: orders.createdAt,
+        orderDate: orders.orderDate,
       })
       .from(orders)
       .where(and(
@@ -349,8 +350,8 @@ crmRouter.get("/customers/:restaurantId", requireCrmFeature("customer_list"), as
       const existing = ordersByCustomer.get(cid) || { count: 0, total: 0, lastDate: null };
       existing.count++;
       existing.total += parseFloat(o.totalAmount || "0");
-      if (!existing.lastDate || (o.createdAt && o.createdAt > existing.lastDate)) {
-        existing.lastDate = o.createdAt;
+      if (!existing.lastDate || (o.orderDate && o.orderDate > existing.lastDate)) {
+        existing.lastDate = o.orderDate;
       }
       ordersByCustomer.set(cid, existing);
     }
@@ -372,11 +373,10 @@ crmRouter.get("/customers/:restaurantId", requireCrmFeature("customer_list"), as
         const loyalEnrollment = loyaltyEnrollments.find(e => e.customerId === c.id);
         return {
           id: c.id,
-          firstName: c.firstName,
-          lastName: c.lastName,
+          name: c.name,
           email: c.email,
           phone: c.phone,
-          profileImageUrl: c.profileImageUrl,
+          profilePicture: c.profilePicture,
           customerCode: c.customerCode,
           loyaltyPoints: c.loyaltyPoints || 0,
           totalSpent: stats.total,
@@ -426,7 +426,7 @@ crmRouter.get("/customers/:restaurantId/:customerId", requireCrmFeature("custome
       .select()
       .from(orders)
       .where(and(eq(orders.restaurantId, restaurantId), eq(orders.customerId, customerId)))
-      .orderBy(desc(orders.createdAt));
+      .orderBy(desc(orders.orderDate));
 
     const reservations = await db
       .select()
@@ -494,17 +494,16 @@ crmRouter.get("/customers/:restaurantId/:customerId", requireCrmFeature("custome
 
     const hourDistribution = new Array(24).fill(0);
     for (const o of customerOrdersList) {
-      if (o.createdAt) hourDistribution[o.createdAt.getHours()]++;
+      if (o.orderDate) hourDistribution[o.orderDate.getHours()]++;
     }
 
     res.json({
       customer: {
         id: customer.id,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
+        name: customer.name,
         email: customer.email,
         phone: customer.phone,
-        profileImageUrl: customer.profileImageUrl,
+        profilePicture: customer.profilePicture,
         customerCode: customer.customerCode,
         loyaltyPoints: customer.loyaltyPoints || 0,
         dietaryPreferences: customer.dietaryPreferences,
@@ -515,9 +514,9 @@ crmRouter.get("/customers/:restaurantId/:customerId", requireCrmFeature("custome
         totalSpent,
         orderCount,
         avgOrderValue: orderCount > 0 ? totalSpent / orderCount : 0,
-        lastOrderDate: customerOrdersList[0]?.createdAt || null,
-        visitFrequency: orderCount > 0 && customerOrdersList[customerOrdersList.length - 1]?.createdAt
-          ? orderCount / Math.max(1, Math.ceil((Date.now() - customerOrdersList[customerOrdersList.length - 1].createdAt!.getTime()) / (1000 * 60 * 60 * 24 * 30)))
+        lastOrderDate: customerOrdersList[0]?.orderDate || null,
+        visitFrequency: orderCount > 0 && customerOrdersList[customerOrdersList.length - 1]?.orderDate
+          ? orderCount / Math.max(1, Math.ceil((Date.now() - customerOrdersList[customerOrdersList.length - 1].orderDate!.getTime()) / (1000 * 60 * 60 * 24 * 30)))
           : 0,
       },
       orders: customerOrdersList.slice(0, 20),
@@ -599,7 +598,8 @@ crmRouter.post("/segments/:restaurantId/auto-generate", requireCrmFeature("custo
     const cashbackEnrollments = await db
       .select({ customerId: customerCashbackEnrollments.customerId })
       .from(customerCashbackEnrollments)
-      .where(eq(customerCashbackEnrollments.restaurantId, restaurantId));
+      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(eq(cashbackGroups.restaurantId, restaurantId));
     const loyaltyEnrollments = await db
       .select({ customerId: customerLoyaltyEnrollments.customerId })
       .from(customerLoyaltyEnrollments)
@@ -618,7 +618,7 @@ crmRouter.post("/segments/:restaurantId/auto-generate", requireCrmFeature("custo
       .select({
         customerId: orders.customerId,
         totalAmount: orders.totalAmount,
-        createdAt: orders.createdAt,
+        orderDate: orders.orderDate,
       })
       .from(orders)
       .where(and(eq(orders.restaurantId, restaurantId), inArray(orders.customerId, allCustomerIds)));
@@ -632,8 +632,8 @@ crmRouter.post("/segments/:restaurantId/auto-generate", requireCrmFeature("custo
       const s = stats.get(cid)!;
       s.count++;
       s.total += parseFloat(o.totalAmount || "0");
-      if (!s.lastDate || (o.createdAt && o.createdAt > s.lastDate)) s.lastDate = o.createdAt;
-      if (!s.firstDate || (o.createdAt && o.createdAt < s.firstDate)) s.firstDate = o.createdAt;
+      if (!s.lastDate || (o.orderDate && o.orderDate > s.lastDate)) s.lastDate = o.orderDate;
+      if (!s.firstDate || (o.orderDate && o.orderDate < s.firstDate)) s.firstDate = o.orderDate;
     }
 
     const now = Date.now();
@@ -728,8 +728,7 @@ crmRouter.get("/segments/:restaurantId/:segmentId/members", requireCrmFeature("s
     const members = await db
       .select({
         id: customers.id,
-        firstName: customers.firstName,
-        lastName: customers.lastName,
+        name: customers.name,
         email: customers.email,
         phone: customers.phone,
         addedAt: customerSegmentMembers.addedAt,
@@ -829,8 +828,7 @@ crmRouter.get("/feedback/:restaurantId", requireCrmFeature("feedback"), async (r
         ambienceRating: customerFeedback.ambienceRating,
         comment: customerFeedback.comment,
         createdAt: customerFeedback.createdAt,
-        customerFirstName: customers.firstName,
-        customerLastName: customers.lastName,
+        customerName: customers.name,
         customerEmail: customers.email,
       })
       .from(customerFeedback)
@@ -944,7 +942,8 @@ crmRouter.post("/campaigns/:restaurantId/:campaignId/send", requireCrmFeature("c
       const cashbackE = await db
         .select({ customerId: customerCashbackEnrollments.customerId })
         .from(customerCashbackEnrollments)
-        .where(eq(customerCashbackEnrollments.restaurantId, restaurantId));
+        .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+        .where(eq(cashbackGroups.restaurantId, restaurantId));
       const loyaltyE = await db
         .select({ customerId: customerLoyaltyEnrollments.customerId })
         .from(customerLoyaltyEnrollments)
@@ -970,8 +969,8 @@ crmRouter.post("/campaigns/:restaurantId/:campaignId/send", requireCrmFeature("c
     for (const customer of recipientCustomers) {
       try {
         const personalizedMessage = campaign.messageBody
-          .replace(/\{customer_name\}/g, `${customer.firstName || ''} ${customer.lastName || ''}`.trim())
-          .replace(/\{first_name\}/g, customer.firstName || '');
+          .replace(/\{customer_name\}/g, customer.name || '')
+          .replace(/\{first_name\}/g, (customer.name || '').split(' ')[0]);
 
         if (campaign.channelType === "push") {
           try {
@@ -1207,7 +1206,8 @@ crmRouter.get("/analytics/:restaurantId", requireCrmFeature("analytics"), async 
     const cashbackE = await db
       .select({ customerId: customerCashbackEnrollments.customerId })
       .from(customerCashbackEnrollments)
-      .where(eq(customerCashbackEnrollments.restaurantId, restaurantId));
+      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
+      .where(eq(cashbackGroups.restaurantId, restaurantId));
     const loyaltyE = await db
       .select({ customerId: customerLoyaltyEnrollments.customerId })
       .from(customerLoyaltyEnrollments)
@@ -1243,7 +1243,7 @@ crmRouter.get("/analytics/:restaurantId", requireCrmFeature("analytics"), async 
       .select({
         customerId: orders.customerId,
         totalAmount: orders.totalAmount,
-        createdAt: orders.createdAt,
+        orderDate: orders.orderDate,
       })
       .from(orders)
       .where(and(eq(orders.restaurantId, restaurantId), inArray(orders.customerId, allCustomerIds)));
@@ -1262,8 +1262,8 @@ crmRouter.get("/analytics/:restaurantId", requireCrmFeature("analytics"), async 
       const s = customerStats.get(o.customerId!)!;
       s.total += parseFloat(o.totalAmount || "0");
       s.count++;
-      if (!s.lastDate || (o.createdAt && o.createdAt > s.lastDate)) s.lastDate = o.createdAt;
-      if (!s.firstDate || (o.createdAt && o.createdAt < s.firstDate)) s.firstDate = o.createdAt;
+      if (!s.lastDate || (o.orderDate && o.orderDate > s.lastDate)) s.lastDate = o.orderDate;
+      if (!s.firstDate || (o.orderDate && o.orderDate < s.firstDate)) s.firstDate = o.orderDate;
     }
 
     let activeCustomers = 0;
@@ -1322,8 +1322,9 @@ crmRouter.get("/analytics/:restaurantId", requireCrmFeature("analytics"), async 
     const newEnrollments = await db
       .select({ count: sql<number>`count(*)` })
       .from(customerCashbackEnrollments)
+      .innerJoin(cashbackGroups, eq(customerCashbackEnrollments.groupId, cashbackGroups.id))
       .where(and(
-        eq(customerCashbackEnrollments.restaurantId, restaurantId),
+        eq(cashbackGroups.restaurantId, restaurantId),
         gte(customerCashbackEnrollments.enrolledAt, monthStart)
       ));
 
@@ -1357,7 +1358,7 @@ crmRouter.get("/analytics/:restaurantId", requireCrmFeature("analytics"), async 
     for (let i = 5; i >= 0; i--) {
       const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-      const monthOrders = allOrders.filter(o => o.createdAt && o.createdAt >= m && o.createdAt <= mEnd);
+      const monthOrders = allOrders.filter(o => o.orderDate && o.orderDate >= m && o.orderDate <= mEnd);
       const uniqueCustomers = new Set(monthOrders.map(o => o.customerId)).size;
       visitFrequency.push({
         month: m.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
@@ -1368,21 +1369,21 @@ crmRouter.get("/analytics/:restaurantId", requireCrmFeature("analytics"), async 
     topCustomersList.sort((a, b) => b.totalSpent - a.totalSpent);
     const top10 = topCustomersList.slice(0, 10);
     const topCustomerDetails = top10.length > 0
-      ? await db.select({ id: customers.id, firstName: customers.firstName, lastName: customers.lastName, email: customers.email })
+      ? await db.select({ id: customers.id, name: customers.name, email: customers.email })
           .from(customers)
           .where(inArray(customers.id, top10.map(t => t.id)))
       : [];
 
     const topCustomersEnriched = top10.map(t => {
       const details = topCustomerDetails.find(d => d.id === t.id);
-      return { ...t, firstName: details?.firstName, lastName: details?.lastName, email: details?.email };
+      return { ...t, name: details?.name, email: details?.email };
     });
 
     const revenueByMonth: { month: string; revenue: number; orders: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-      const monthOrders = allOrders.filter(o => o.createdAt && o.createdAt >= m && o.createdAt <= mEnd);
+      const monthOrders = allOrders.filter(o => o.orderDate && o.orderDate >= m && o.orderDate <= mEnd);
       revenueByMonth.push({
         month: m.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
         revenue: monthOrders.reduce((s, o) => s + parseFloat(o.totalAmount || "0"), 0),

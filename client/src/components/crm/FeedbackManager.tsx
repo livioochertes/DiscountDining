@@ -125,7 +125,7 @@ export default function FeedbackManager({ restaurantId }: FeedbackManagerProps) 
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium text-sm">
-                        {fb.customerFirstName || ""} {fb.customerLastName || fb.customerEmail || "Anonymous"}
+                        {fb.customerName || fb.customerEmail || "Anonymous"}
                       </span>
                       <span className="text-xs text-gray-400">
                         {fb.createdAt ? new Date(fb.createdAt).toLocaleDateString() : ""}

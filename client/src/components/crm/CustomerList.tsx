@@ -75,9 +75,6 @@ export default function CustomerList({ restaurantId }: CustomerListProps) {
   }
 
   function getDisplayName(c: any): string {
-    if (c.firstName || c.lastName) {
-      return `${c.firstName || ""} ${c.lastName || ""}`.trim();
-    }
     return c.name || c.email || "Unknown";
   }
 
@@ -143,8 +140,8 @@ export default function CustomerList({ restaurantId }: CustomerListProps) {
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">
-                      <button className="flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("firstName")}>
-                        Name{sortIndicator("firstName")}
+                      <button className="flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("name")}>
+                        Name{sortIndicator("name")}
                         <ArrowUpDown className="w-3 h-3" />
                       </button>
                     </th>
@@ -185,11 +182,11 @@ export default function CustomerList({ restaurantId }: CustomerListProps) {
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          {c.profileImageUrl ? (
-                            <img src={c.profileImageUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          {c.profilePicture ? (
+                            <img src={c.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-xs font-bold">
-                              {(c.firstName?.[0] || c.email?.[0] || "?").toUpperCase()}
+                              {(c.name?.[0] || c.email?.[0] || "?").toUpperCase()}
                             </div>
                           )}
                           <div>

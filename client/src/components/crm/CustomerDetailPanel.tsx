@@ -113,9 +113,6 @@ export default function CustomerDetailPanel({ restaurantId, customerId, onClose 
   const segments = data?.segments || [];
 
   function getDisplayName(): string {
-    if (customer?.firstName || customer?.lastName) {
-      return `${customer.firstName || ""} ${customer.lastName || ""}`.trim();
-    }
     return customer?.name || customer?.email || "Customer";
   }
 
@@ -142,11 +139,11 @@ export default function CustomerDetailPanel({ restaurantId, customerId, onClose 
         ) : (
           <div className="space-y-5 mt-4">
             <div className="flex items-start gap-4">
-              {customer.profileImageUrl ? (
-                <img src={customer.profileImageUrl} alt="" className="w-14 h-14 rounded-full object-cover" />
+              {customer.profilePicture ? (
+                <img src={customer.profilePicture} alt="" className="w-14 h-14 rounded-full object-cover" />
               ) : (
                 <div className="w-14 h-14 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-xl font-bold">
-                  {(customer.firstName?.[0] || customer.email?.[0] || "?").toUpperCase()}
+                  {(customer.name?.[0] || customer.email?.[0] || "?").toUpperCase()}
                 </div>
               )}
               <div className="flex-1 min-w-0">

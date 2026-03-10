@@ -117,7 +117,7 @@ export default function CRMDashboard({ restaurantId, subscription }: CRMDashboar
                       </span>
                       <div>
                         <p className="font-medium text-sm">
-                          {c.firstName || ""} {c.lastName || c.email || "Unknown"}
+                          {c.name || c.email || "Unknown"}
                         </p>
                         <p className="text-xs text-gray-500">{c.orderCount || 0} orders</p>
                       </div>
