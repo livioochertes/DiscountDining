@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
+import { startAutomationRunner } from "./crmAutomations";
 
 const app = express();
 
@@ -128,5 +129,6 @@ app.get('/_health', (_req, res) => {
   
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
+    startAutomationRunner();
   });
 })();

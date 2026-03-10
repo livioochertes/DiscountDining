@@ -24,6 +24,7 @@ import RestaurantNotificationSystem from "@/components/RestaurantNotificationSys
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
 import { useMarketplace } from "@/contexts/MarketplaceContext";
+import CRMTab from "@/components/crm/CRMTab";
 
 export default function RestaurantPortal() {
   const [, setLocation] = useLocation();
@@ -1153,7 +1154,7 @@ export default function RestaurantPortal() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-11 h-auto">
+          <TabsList className="grid w-full grid-cols-12 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-1 text-xs px-2">
               <BarChart3 className="w-3 h-3" />
               {t.overview}
@@ -1185,6 +1186,10 @@ export default function RestaurantPortal() {
             <TabsTrigger value="cashback" className="flex items-center gap-1 text-xs px-2">
               <CreditCard className="w-3 h-3" />
               Cashback
+            </TabsTrigger>
+            <TabsTrigger value="crm" className="flex items-center gap-1 text-xs px-2">
+              <TrendingUp className="w-3 h-3" />
+              CRM
             </TabsTrigger>
             <TabsTrigger value="menu" className="flex items-center gap-1 text-xs px-2">
               <Menu className="w-3 h-3" />
@@ -2838,6 +2843,11 @@ export default function RestaurantPortal() {
           {/* Cashback Groups Tab */}
           <TabsContent value="cashback" className="space-y-6">
             <RestaurantCashbackManagement restaurants={restaurants} />
+          </TabsContent>
+
+          {/* CRM Tab */}
+          <TabsContent value="crm" className="space-y-6">
+            <CRMTab restaurants={restaurants} />
           </TabsContent>
 
           {/* Menu Management Tab */}

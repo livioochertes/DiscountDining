@@ -23,6 +23,7 @@ import {
 import { SectionNavigation } from "@/components/SectionNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMarketplace } from "@/contexts/MarketplaceContext";
+import { FeedbackPrompt } from "@/components/mobile/FeedbackPrompt";
 
 interface Order {
   id: number;
@@ -62,6 +63,7 @@ export default function MyOrders() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [feedbackOrder, setFeedbackOrder] = useState<Order | null>(null);
 
   // Mock customer ID - would come from authentication
   const customerId = 1;
@@ -283,6 +285,7 @@ export default function MyOrders() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                onClick={() => setFeedbackOrder(order)}
                               >
                                 <Star className="h-4 w-4 mr-1" />
                                 Review
@@ -336,7 +339,16 @@ export default function MyOrders() {
           )}
         </div>
 
-        {/* Order Details Modal/Panel would go here */}
+        {feedbackOrder && (
+          <FeedbackPrompt
+            customerId={customerId}
+            restaurantId={feedbackOrder.restaurantId}
+            orderId={feedbackOrder.id}
+            restaurantName={feedbackOrder.restaurantName}
+            onDismiss={() => setFeedbackOrder(null)}
+          />
+        )}
+
         {selectedOrder && (
           <Card className="mt-6">
             <CardHeader>

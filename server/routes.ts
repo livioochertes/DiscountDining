@@ -16,6 +16,7 @@ import { registerSupportRoutes } from "./supportRoutes";
 import { registerRecipeRoutes } from "./recipeRoutes";
 import { registerChefProfileRoutes } from "./chefProfileRoutes";
 import { giftRoutes } from "./giftRoutes";
+import { crmRouter } from "./crmRoutes";
 import { sseRouter } from "./sseNotifications";
 import { pushRouter } from "./pushNotifications";
 import { insertVoucherPackageSchema, insertPurchasedVoucherSchema, insertUserAddressSchema, insertRestaurantEnrollmentSchema, restaurantEnrollments, mobileFilters, marketingDeals, marketingDealRestaurants, restaurants, customerWallets } from "@shared/schema";
@@ -266,6 +267,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Loyalty system routes
   app.use('/api/loyalty', loyaltyRoutes);
+
+  // CRM system routes
+  app.use('/api/crm', crmRouter);
 
   // SSE real-time notification routes
   app.use('/api', sseRouter);
