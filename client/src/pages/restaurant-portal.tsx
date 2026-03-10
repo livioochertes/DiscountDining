@@ -97,7 +97,8 @@ export default function RestaurantPortal() {
     email: '',
     contactPersonName: '',
     role: 'user', // admin, manager, user
-    password: ''
+    password: '',
+    hasCrmAccess: false
   });
   
   // Voucher package editing state
@@ -222,7 +223,8 @@ export default function RestaurantPortal() {
         email: '',
         contactPersonName: '',
         role: 'user',
-        password: ''
+        password: '',
+        hasCrmAccess: false
       });
       queryClient.invalidateQueries({ queryKey: ["/api/restaurant-portal/owner/users"] });
     },
@@ -396,7 +398,8 @@ export default function RestaurantPortal() {
       email: '',
       contactPersonName: '',
       role: 'user',
-      password: ''
+      password: '',
+      hasCrmAccess: false
     });
   };
 
@@ -1167,17 +1170,19 @@ export default function RestaurantPortal() {
               <BarChart3 className="w-4 h-4" />
               EatOff Dashboard
             </button>
-            <button
-              onClick={() => setMainSection("crm")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                mainSection === "crm"
-                  ? "bg-orange-500 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              CRM
-            </button>
+            {owner?.hasCrmAccess === true && (
+              <button
+                onClick={() => setMainSection("crm")}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  mainSection === "crm"
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                }`}
+              >
+                <TrendingUp className="w-4 h-4" />
+                CRM
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -2742,6 +2747,11 @@ export default function RestaurantPortal() {
                                 <Badge variant="outline">
                                   {user.role || 'User'}
                                 </Badge>
+                                {user.hasCrmAccess && (
+                                  <Badge variant="outline" className="text-orange-600 border-orange-200">
+                                    CRM
+                                  </Badge>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -2812,6 +2822,17 @@ export default function RestaurantPortal() {
                             />
                           </div>
                         </div>
+                        <div className="flex items-center gap-2 py-1">
+                          <input
+                            type="checkbox"
+                            id="userCrmAccess"
+                            checked={newUserFormData.hasCrmAccess}
+                            onChange={(e) => handleNewUserFormChange('hasCrmAccess', e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                          />
+                          <Label htmlFor="userCrmAccess" className="cursor-pointer">CRM Access</Label>
+                          <span className="text-xs text-gray-500">— allows this user to access the CRM module</span>
+                        </div>
                         <div className="flex gap-2">
                           <Button 
                             onClick={handleAddUser}
@@ -2826,7 +2847,8 @@ export default function RestaurantPortal() {
                                 email: '',
                                 contactPersonName: '',
                                 role: 'user',
-                                password: ''
+                                password: '',
+                                hasCrmAccess: false
                               });
                             }}
                           >

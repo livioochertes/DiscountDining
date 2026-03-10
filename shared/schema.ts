@@ -110,6 +110,7 @@ export const restaurantOwners = pgTable("restaurant_owners", {
   // Account Status
   isVerified: boolean("is_verified").default(false),
   isActive: boolean("is_active").default(true),
+  hasCrmAccess: boolean("has_crm_access").default(false),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

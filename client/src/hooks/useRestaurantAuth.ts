@@ -7,6 +7,7 @@ interface RestaurantOwner {
   companyName: string;
   isVerified: boolean;
   isActive: boolean;
+  hasCrmAccess?: boolean;
   contactPersonName?: string;
   companyPhone?: string;
   companyAddress?: string;

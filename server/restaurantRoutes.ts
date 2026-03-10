@@ -240,7 +240,8 @@ router.get("/auth/user", async (req, res) => {
       email: owner.email,
       companyName: owner.companyName,
       isVerified: owner.isVerified,
-      isActive: owner.isActive
+      isActive: owner.isActive,
+      hasCrmAccess: owner.hasCrmAccess ?? false
     });
   } catch (error: any) {
     console.error("Auth check error:", error);
@@ -471,29 +472,25 @@ router.put("/owner/password", requireAuth, async (req, res) => {
 // Add new user to company
 router.post("/owner/users", requireAuth, async (req, res) => {
   try {
-    const { email, contactPersonName, role, password } = req.body;
+    const { email, contactPersonName, role, password, hasCrmAccess } = req.body;
     
-    if (!email || !contactPersonName || !role || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!email || !contactPersonName || !password) {
+      return res.status(400).json({ message: "Email, name, and password are required" });
     }
     
-    // Get current owner information to copy company details
     const owner = await storage.getRestaurantOwnerById(req.ownerId!);
     if (!owner) {
       return res.status(404).json({ message: "Owner not found" });
     }
     
-    // Check if user with this email already exists
     const existingOwner = await storage.getRestaurantOwnerByEmail(email);
     if (existingOwner) {
       return res.status(400).json({ message: "User with this email already exists" });
     }
     
-    // Hash password
     const { hashPassword } = await import('./auth.js');
     const hashedPassword = await hashPassword(password);
     
-    // Create new user with same company details but different role
     const newUserData = {
       companyName: owner.companyName,
       email,
@@ -502,7 +499,7 @@ router.post("/owner/users", requireAuth, async (req, res) => {
       companyAddress: owner.companyAddress,
       passwordHash: hashedPassword,
       password: hashedPassword,
-      contactPersonTitle: role,
+      contactPersonTitle: role || 'user',
       contactPersonPhone: '',
       contactPersonEmail: email,
       businessRegistrationNumber: owner.businessRegistrationNumber,
@@ -517,12 +514,12 @@ router.post("/owner/users", requireAuth, async (req, res) => {
       bankAddress: owner.bankAddress,
       accountType: owner.accountType,
       isVerified: false,
-      isActive: true
+      isActive: true,
+      hasCrmAccess: hasCrmAccess === true
     };
     
     const newUser = await storage.createRestaurantOwner(newUserData);
     
-    // Return user info without password
     const { passwordHash, ...userResponse } = newUser;
     res.status(201).json(userResponse);
   } catch (error: any) {
@@ -929,67 +926,6 @@ router.get("/owner/profile", requireAuth, async (req, res) => {
   } catch (error: any) {
     console.error("Profile fetch error:", error);
     res.status(500).json({ message: "Failed to fetch profile" });
-  }
-});
-
-// Get all users for restaurant owner
-router.get("/owner/users", requireAuth, async (req, res) => {
-  try {
-    const ownerId = req.ownerId!;
-    const users = await storage.getRestaurantOwnerUsers(ownerId);
-    res.json(users);
-  } catch (error: any) {
-    console.error("Users fetch error:", error);
-    res.status(500).json({ message: "Failed to fetch users" });
-  }
-});
-
-// Add new user for restaurant owner
-router.post("/owner/users", requireAuth, async (req, res) => {
-  try {
-    const ownerId = req.ownerId!;
-    const { email, contactPersonName, role, password } = req.body;
-    
-    if (!email || !contactPersonName || !password) {
-      return res.status(400).json({ message: "Email, contact person name, and password are required" });
-    }
-    
-    // Hash password before storing
-    const { hashPassword } = await import('./auth.js');
-    const hashedPassword = await hashPassword(password);
-    
-    const userData = {
-      email,
-      contactPersonName,
-      role: role || 'user',
-      passwordHash: hashedPassword,
-      companyName: '',
-      companyPhone: '',
-      companyAddress: '',
-      contactPersonTitle: '',
-      contactPersonPhone: '',
-      contactPersonEmail: email,
-      businessRegistrationNumber: '',
-      taxId: '',
-      website: '',
-      bankName: '',
-      bankAccountNumber: '',
-      bankRoutingNumber: '',
-      bankAccountHolderName: '',
-      iban: '',
-      swiftCode: '',
-      bankAddress: '',
-      accountType: '',
-      isVerified: false,
-      isActive: true
-    };
-    
-    const newUser = await storage.createRestaurantOwner(userData);
-    const { passwordHash: _, ...userWithoutPassword } = newUser;
-    res.status(201).json(userWithoutPassword);
-  } catch (error: any) {
-    console.error("User creation error:", error);
-    res.status(400).json({ message: error.message || "Failed to create user" });
   }
 });
 
