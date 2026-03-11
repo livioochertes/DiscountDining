@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -925,6 +926,12 @@ export default function Marketplace() {
   }, [filters, activeTab, autoDetectLocation, sortBy, manualDietType, manualCalories, manualRating, useDietaryProfile, selectedMealType, recommendationType]);
 
   return (
+    <>
+    <SEOHead
+      title="EatOff - Marketplace de Vouchere pentru Restaurante"
+      description="Economisește la restaurantele tale preferate cu vouchere EatOff. Descoperă restaurante, cumpără vouchere cu discount și bucură-te de mese delicioase."
+      canonical="/"
+    />
     <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
       <section className="mb-12">
         {/* Tab Navigation + Location: Restaurants / AI Menu / Vouchers + Location Button */}
@@ -2297,5 +2304,6 @@ export default function Marketplace() {
         }}
       />
     </main>
+    </>
   );
 }

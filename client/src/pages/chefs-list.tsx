@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -63,6 +64,8 @@ export default function ChefsList() {
   const regularChefs = filteredChefs.filter(c => !c.profile.isFeatured);
 
   return (
+    <>
+    <SEOHead title="Chefi EatOff" description="Descoperă cei mai talentați chefi parteneri EatOff. Rezervă experiențe culinare unice și savurează preparate gătite de profesioniști." canonical="/chefs" />
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">
@@ -159,6 +162,7 @@ export default function ChefsList() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

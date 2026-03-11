@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useLayoutEffect, startTransition } from "react";
@@ -20,6 +21,8 @@ export default function CookiePolicy() {
   }, []);
 
   return (
+    <>
+    <SEOHead title="Politică de Cookie-uri" description="Politica de cookie-uri EatOff - ce cookie-uri folosim și cum le poți gestiona." canonical="/cookie-policy" />
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-8">
@@ -177,5 +180,6 @@ export default function CookiePolicy() {
         </div>
       </div>
     </div>
+    </>
   );
 }

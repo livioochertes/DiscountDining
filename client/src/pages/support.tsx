@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
@@ -117,6 +118,12 @@ export default function Support() {
   ];
 
   return (
+    <>
+    <SEOHead
+      title="Suport EatOff"
+      description="Ai nevoie de ajutor? Contactează echipa EatOff sau găsește răspunsuri la întrebările frecvente despre vouchere, rezervări și comenzi."
+      canonical="/support"
+    />
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
@@ -283,5 +290,6 @@ export default function Support() {
         </div>
       </div>
     </div>
+    </>
   );
 }

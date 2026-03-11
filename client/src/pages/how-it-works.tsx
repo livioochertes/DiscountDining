@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
@@ -57,6 +58,12 @@ export default function HowItWorks() {
   ];
 
   return (
+    <>
+    <SEOHead
+      title="Cum funcționează EatOff"
+      description="Descoperă cum funcționează EatOff - marketplace de vouchere pentru restaurante. Cumpără vouchere, rezervă mese și economisește la restaurantele tale preferate."
+      canonical="/how-it-works"
+    />
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
@@ -206,5 +213,6 @@ export default function HowItWorks() {
         </div>
       </div>
     </div>
+    </>
   );
 }

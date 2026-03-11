@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -146,6 +147,15 @@ export default function RestaurantReservationsPage() {
   }
 
   return (
+    <>
+    {restaurant && (
+      <SEOHead
+        title={`Rezervări ${restaurant.name}`}
+        description={`Rezervă o masă la restaurantul ${restaurant.name} pe EatOff. Rezervare online rapidă și simplă!`}
+        canonical={`/restaurant/${restaurantId}/reservations`}
+        ogImage={restaurant.imageUrl || undefined}
+      />
+    )}
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-6">
@@ -310,5 +320,6 @@ export default function RestaurantReservationsPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

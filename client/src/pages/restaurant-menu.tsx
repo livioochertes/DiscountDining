@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -146,6 +147,15 @@ export default function RestaurantMenuPage() {
   };
 
   return (
+    <>
+    {restaurant && (
+      <SEOHead
+        title={`Meniu ${restaurant.name}`}
+        description={`Descoperă meniul restaurantului ${restaurant.name} pe EatOff. ${restaurant.description ? restaurant.description.slice(0, 120) : 'Comandă online sau rezervă o masă.'}`}
+        canonical={`/restaurant/${restaurantId}/menu`}
+        ogImage={restaurant.imageUrl || undefined}
+      />
+    )}
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
@@ -408,5 +418,6 @@ export default function RestaurantMenuPage() {
 
 
     </div>
+    </>
   );
 }

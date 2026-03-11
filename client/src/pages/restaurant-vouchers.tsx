@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -90,6 +91,15 @@ export default function RestaurantVouchersPage() {
   }
 
   return (
+    <>
+    {restaurant && (
+      <SEOHead
+        title={`Vouchere ${restaurant.name}`}
+        description={`Cumpără vouchere cu discount pentru restaurantul ${restaurant.name} pe EatOff. Economisește la fiecare masă!`}
+        canonical={`/restaurant/${restaurantId}/vouchers`}
+        ogImage={restaurant.imageUrl || undefined}
+      />
+    )}
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-6">
@@ -186,5 +196,6 @@ export default function RestaurantVouchersPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

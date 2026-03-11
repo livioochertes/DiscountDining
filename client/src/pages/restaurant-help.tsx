@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
@@ -145,6 +146,12 @@ export default function RestaurantHelp() {
   ];
 
   return (
+    <>
+    <SEOHead
+      title="Ajutor pentru restaurante - EatOff"
+      description="Ghid complet pentru proprietarii de restaurante pe platforma EatOff. Află cum să gestionezi vouchere, rezervări și meniurile tale."
+      canonical="/restaurant-help"
+    />
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
@@ -276,5 +283,6 @@ export default function RestaurantHelp() {
         </div>
       </div>
     </div>
+    </>
   );
 }

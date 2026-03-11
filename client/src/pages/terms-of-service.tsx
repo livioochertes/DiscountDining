@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useLayoutEffect, startTransition } from "react";
@@ -20,6 +21,8 @@ export default function TermsOfService() {
   }, []);
 
   return (
+    <>
+    <SEOHead title="Termeni și Condiții" description="Termenii și condițiile de utilizare a platformei EatOff - drepturi, obligații și reguli pentru utilizatori și restaurante." canonical="/terms-of-service" />
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-8">
@@ -196,5 +199,6 @@ export default function TermsOfService() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { Switch, Route, Redirect } from "wouter";
 import { useState, startTransition, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
@@ -404,72 +405,78 @@ function App() {
   // Check if we're on admin routes - if so, render admin pages without main header/footer
   if (location.startsWith('/admin')) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <LanguageProvider>
-            <CartProvider>
-              <Switch>
-                <Route path="/admin" component={AdminDashboard} />
-                <Route path="/admin/restaurants" component={AdminDashboard} />
-                <Route path="/admin/users" component={AdminDashboard} />
-                <Route path="/admin/finances" component={AdminDashboard} />
-                <Route path="/admin/settings" component={AdminDashboard} />
-                <Route component={AdminDashboard} />
-              </Switch>
-              <Toaster />
-            </CartProvider>
-          </LanguageProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <LanguageProvider>
+              <CartProvider>
+                <Switch>
+                  <Route path="/admin" component={AdminDashboard} />
+                  <Route path="/admin/restaurants" component={AdminDashboard} />
+                  <Route path="/admin/users" component={AdminDashboard} />
+                  <Route path="/admin/finances" component={AdminDashboard} />
+                  <Route path="/admin/settings" component={AdminDashboard} />
+                  <Route component={AdminDashboard} />
+                </Switch>
+                <Toaster />
+              </CartProvider>
+            </LanguageProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
     );
   }
 
   // Mobile layout - clean, no header/footer
   if (isMobileRoute) {
     return (
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <LanguageProvider>
+              <MarketplaceProvider>
+                <CartProvider>
+                  <Router />
+                  <Toaster />
+                </CartProvider>
+              </MarketplaceProvider>
+            </LanguageProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+    );
+  }
+
+  return (
+    <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <LanguageProvider>
             <MarketplaceProvider>
               <CartProvider>
-                <Router />
+                <div className="min-h-screen bg-gray-50">
+                  <Header />
+                  <div
+                    className="bg-gray-50"
+                    style={{
+                      paddingTop: '60px',
+                      minHeight: 'calc(100vh - 60px)'
+                    }}
+                  >
+                    <Router />
+                    <Footer />
+                    <MenuCart />
+                    <GlobalRestaurantSwitchDialog />
+                    <CookieConsent />
+                  </div>
+                </div>
                 <Toaster />
               </CartProvider>
             </MarketplaceProvider>
           </LanguageProvider>
         </TooltipProvider>
       </QueryClientProvider>
-    );
-  }
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <LanguageProvider>
-          <MarketplaceProvider>
-            <CartProvider>
-              <div className="min-h-screen bg-gray-50">
-              <Header />
-              <div 
-                className="bg-gray-50" 
-                style={{ 
-                  paddingTop: '60px',
-                  minHeight: 'calc(100vh - 60px)'
-                }}
-              >
-                <Router />
-                <Footer />
-                <MenuCart />
-                <GlobalRestaurantSwitchDialog />
-                <CookieConsent />
-              </div>
-            </div>
-            <Toaster />
-            </CartProvider>
-          </MarketplaceProvider>
-        </LanguageProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    </HelmetProvider>
   );
 }
 

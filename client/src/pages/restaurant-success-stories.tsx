@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
@@ -94,6 +95,12 @@ export default function RestaurantSuccessStories() {
   ];
 
   return (
+    <>
+    <SEOHead
+      title="Povești de succes - Restaurante EatOff"
+      description="Descoperă cum restaurantele partenere EatOff și-au crescut vânzările și baza de clienți prin platforma noastră de vouchere."
+      canonical="/restaurant-success-stories"
+    />
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
@@ -239,5 +246,6 @@ export default function RestaurantSuccessStories() {
         </div>
       </div>
     </div>
+    </>
   );
 }

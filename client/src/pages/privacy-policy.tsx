@@ -1,3 +1,4 @@
+import SEOHead from "@/components/SEOHead";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -27,6 +28,8 @@ export default function PrivacyPolicy() {
   };
 
   return (
+    <>
+    <SEOHead title="Politică de Confidențialitate" description="Politica de confidențialitate EatOff - cum colectăm, folosim și protejăm datele tale personale." canonical="/privacy-policy" />
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-8">
@@ -166,5 +169,6 @@ export default function PrivacyPolicy() {
         </div>
       </div>
     </div>
+    </>
   );
 }
