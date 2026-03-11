@@ -176,6 +176,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader('Content-Type', 'application/json');
     res.json(appleAppSiteAssociation);
   });
+
+  // robots.txt
+  app.get('/robots.txt', (req, res) => {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /restaurant-portal\nDisallow: /restaurant-scanner\nDisallow: /api/\nSitemap: ${baseUrl}/sitemap.xml\n`);
+  });
+
+  // Dynamic Sitemap
+  app.get('/sitemap.xml', async (req, res) => {
+    try {
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+      // Static public pages
+      const staticPages = [
+        { url: '/', priority: '1.0', changefreq: 'daily' },
+        { url: '/login', priority: '0.5', changefreq: 'monthly' },
+        { url: '/register', priority: '0.5', changefreq: 'monthly' },
+        { url: '/how-it-works', priority: '0.8', changefreq: 'monthly' },
+        { url: '/support', priority: '0.6', changefreq: 'monthly' },
+        { url: '/chefs', priority: '0.7', changefreq: 'weekly' },
+        { url: '/restaurant-success-stories', priority: '0.7', changefreq: 'monthly' },
+        { url: '/restaurant-help', priority: '0.6', changefreq: 'monthly' },
+        { url: '/privacy-policy', priority: '0.3', changefreq: 'yearly' },
+        { url: '/terms-of-service', priority: '0.3', changefreq: 'yearly' },
+        { url: '/cookie-policy', priority: '0.3', changefreq: 'yearly' },
+      ];
+
+      // Fetch approved restaurants from DB
+      const allRestaurants = await storage.getRestaurants();
+      const approvedRestaurants = allRestaurants.filter((r: any) => r.isApproved && r.isActive !== false);
+
+      const now = new Date().toISOString();
+
+      const urls = [
+        ...staticPages.map(page => `
+    <url>
+      <loc>${baseUrl}${page.url}</loc>
+      <lastmod>${now}</lastmod>
+      <changefreq>${page.changefreq}</changefreq>
+      <priority>${page.priority}</priority>
+    </url>`),
+        ...approvedRestaurants.map((r: any) => `
+    <url>
+      <loc>${baseUrl}/restaurant/${r.id}/menu</loc>
+      <lastmod>${now}</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>0.8</priority>
+    </url>
+    <url>
+      <loc>${baseUrl}/restaurant/${r.id}/vouchers</loc>
+      <lastmod>${now}</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>0.7</priority>
+    </url>
+    <url>
+      <loc>${baseUrl}/restaurant/${r.id}/reservations</loc>
+      <lastmod>${now}</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>0.7</priority>
+    </url>`),
+      ];
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join('')}
+</urlset>`;
+
+      res.setHeader('Content-Type', 'application/xml');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.send(xml);
+    } catch (error) {
+      console.error('Sitemap generation error:', error);
+      res.status(500).send('Error generating sitemap');
+    }
+  });
   
   // Setup Replit Auth (includes session, passport, and OAuth routes)
   await setupAuth(app);
